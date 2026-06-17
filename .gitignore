@@ -1,0 +1,48 @@
+# IDEs and Editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw*
+.DS_Store
+
+# Node.js (React Web Apps)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+dist/
+build/
+.next/
+out/
+
+# Java (Maven / Gradle)
+target/
+!.mvn/wrapper/maven-wrapper.jar
+bin/
+.gradle/
+*.class
+*.jar
+*.war
+*.ear
+*.tar.gz
+*.zip
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+/android/key.properties
