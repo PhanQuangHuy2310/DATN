@@ -1,0 +1,45 @@
+server:
+  port: 8088
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/timtro_db}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:password}
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  jwt:
+    # Secret key phải đủ dài (ít nhất 256 bits cho HS256)
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    expiration-ms: 86400000 # 1 ngày (Access token)
+    refresh-expiration-ms: 604800000 # 7 ngày (Refresh token)
+
+# Cấu hình thanh toán MoMo (luồng Gateway captureWallet)
+momo:
+  partner-code: ${MOMO_PARTNER_CODE:MOMO}
+  access-key: ${MOMO_ACCESS_KEY:F8BBA842ECF85}
+  secret-key: ${MOMO_SECRET_KEY:K951B6PE1waDMi640xX08PD3vg6EkVlz}
+  endpoint: ${MOMO_ENDPOINT:https://test-payment.momo.vn/v2/gateway/api/create}
+  redirect-url: ${MOMO_REDIRECT_URL:http://localhost:5173/payment/result}
+  # IPN phải là URL công khai MoMo gọi tới được (dùng ngrok khi chạy local)
+  ipn-url: ${MOMO_IPN_URL:http://localhost:8080/api/public/webhook/momo}
+  premium-amount: ${MOMO_PREMIUM_AMOUNT:10000}

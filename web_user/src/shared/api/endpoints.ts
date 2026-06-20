@@ -1,0 +1,51 @@
+/** Central registry of REST endpoints (mirrors WebUser_UI_Prompt_Spec §4.1). */
+export const endpoints = {
+  auth: {
+    register: "/api/auth/register",
+    verifyOtp: "/api/auth/verify-otp",
+    resendOtp: "/api/auth/resend-otp",
+    login: "/api/auth/login",
+    refresh: "/api/auth/refresh",
+    me: "/api/auth/me",
+  },
+  listings: {
+    search: "/api/listings/search",
+    map: "/api/listings/nearby",
+    midpointSearch: "/api/listings/midpoint-search",
+    base: "/api/listings",
+    byId: (id: string | number) => `/api/listings/${id}`,
+    poi: (id: string | number) => `/api/listings/${id}/poi`,
+    clone: (id: string | number) => `/api/listings/${id}/clone`,
+    status: (id: string | number) => `/api/listings/${id}/status`,
+    mine: "/api/listings/mine",
+    featured: "/api/listings/featured",
+    latest: "/api/listings/latest",
+    roommates: "/api/listings/roommates",
+  },
+  appointments: {
+    base: "/api/appointments",
+    status: (id: string | number) => `/api/appointments/${id}/status`,
+    slots: (listingId: string | number) => `/api/listings/${listingId}/slots`,
+  },
+  reviews: {
+    byListing: (id: string | number) => `/api/listings/${id}/reviews`,
+    base: "/api/reviews",
+    reply: (id: string | number) => `/api/reviews/${id}/reply`,
+  },
+  reports: { base: "/api/reports" },
+  conversations: {
+    base: "/api/conversations",
+    messages: (id: string | number) => `/api/conversations/${id}/messages`,
+    start: "/api/conversations/start",
+  },
+  wishlist: {
+    base: "/api/wishlist",
+    toggle: (listingId: string | number) => `/api/wishlist/${listingId}`,
+  },
+  savedFilters: { base: "/api/saved-filters" },
+  notifications: { base: "/api/notifications" },
+  verification: { base: "/api/verification-requests" },
+  profile: { base: "/api/profile", password: "/api/profile/password" },
+  payments: { create: "/api/payment/momo/create-premium", verify: "/api/payments/verify" },
+  stats: { listings: "/api/statistics/landlord/last-7-days" },
+} as const;
