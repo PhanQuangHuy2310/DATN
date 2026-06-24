@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Mail, Lock } from "lucide-react";
-import { Button, Input, useToast } from "@/shared/ui";
+import { Button, Input, useToast, Tabs } from "@/shared/ui";
 import { getErrorMessage } from "@/shared/api";
 import { useLogin } from "@/features/auth";
+import type { UserRole } from "@/shared/types";
 import { AuthShell } from "./AuthShell";
 
 export function LoginPage() {
@@ -13,13 +14,14 @@ export function LoginPage() {
   const login = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<UserRole>("TENANT");
 
   const from = (location.state as { from?: string } | null)?.from ?? "/";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     login.mutate(
-      { email, password },
+      { email, password, role },
       {
         onSuccess: () => {
           toast.success("Đăng nhập thành công!");
@@ -44,6 +46,15 @@ export function LoginPage() {
       }
     >
       <form onSubmit={submit} className="space-y-4">
+        <Tabs
+          items={[
+            { value: "TENANT", label: "Người Thuê" },
+            { value: "LANDLORD", label: "Chủ Trọ" },
+          ]}
+          value={role}
+          onChange={(v) => setRole(v as UserRole)}
+          className="w-full flex"
+        />
         <Input
           name="email"
           label="Email"

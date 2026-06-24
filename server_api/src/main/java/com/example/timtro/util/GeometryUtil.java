@@ -29,4 +29,27 @@ public class GeometryUtil {
         Coordinate coordinate = new Coordinate(lng, lat);
         return geometryFactory.createPoint(coordinate);
     }
+
+    /**
+     * Tính toán trung điểm (midpoint) của danh sách các tọa độ.
+     * Sử dụng trung bình cộng (đủ độ chính xác cho phạm vi thành phố).
+     */
+    public static Point calculateMidpoint(java.util.List<com.example.timtro.dto.request.CoordinateDTO> coordinates) {
+        if (coordinates == null || coordinates.isEmpty()) {
+            return null;
+        }
+
+        double sumLat = 0;
+        double sumLng = 0;
+
+        for (com.example.timtro.dto.request.CoordinateDTO coord : coordinates) {
+            sumLat += coord.getLat();
+            sumLng += coord.getLng();
+        }
+
+        double midLat = sumLat / coordinates.size();
+        double midLng = sumLng / coordinates.size();
+
+        return createPoint(midLat, midLng);
+    }
 }

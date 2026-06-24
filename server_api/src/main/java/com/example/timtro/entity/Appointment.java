@@ -1,6 +1,8 @@
 package com.example.timtro.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -31,7 +33,8 @@ public class Appointment {
     private LocalDateTime scheduledAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false)
     private AppointmentStatus status;
 
     @Column(columnDefinition = "TEXT")

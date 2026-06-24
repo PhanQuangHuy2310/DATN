@@ -1,6 +1,8 @@
 package com.example.timtro.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -28,6 +30,7 @@ public class PaymentTransaction {
     private Long amount;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private TransactionStatus status;
 

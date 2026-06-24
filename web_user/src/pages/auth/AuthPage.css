@@ -1,0 +1,251 @@
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+.auth-body {
+    background-color: var(--color-paper-stone, #fcfaf2);
+    background: var(--color-paper-stone, #fcfaf2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    height: 100vh;
+    font-family: 'Montserrat', sans-serif;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.auth-body * {
+    box-sizing: border-box;
+}
+
+.auth-body .container {
+    background-color: #fff;
+    border-radius: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.35);
+    position: relative;
+    overflow: hidden;
+    width: 768px;
+    max-width: 100%;
+    min-height: 520px;
+}
+
+.auth-body .container p {
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.3px;
+    margin: 20px 0;
+}
+
+.auth-body .container span {
+    font-size: 12px;
+}
+
+.auth-body .container a {
+    color: #333;
+    font-size: 13px;
+    text-decoration: none;
+    margin: 15px 0 10px;
+}
+
+.auth-body .container button {
+    background-color: var(--color-cobalt-stamp, #ffaa85);
+    color: #fff;
+    font-size: 12px;
+    padding: 10px 45px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.auth-body .container button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.auth-body .container button.ghost-btn {
+    background-color: transparent;
+    border-color: #fff;
+}
+
+.auth-body .container form {
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 40px;
+    height: 100%;
+}
+
+.auth-body .container input,
+.auth-body .container select {
+    background-color: #eee;
+    border: none;
+    margin: 8px 0;
+    padding: 10px 15px;
+    font-size: 13px;
+    border-radius: 8px;
+    width: 100%;
+    outline: none;
+}
+
+.auth-body .form-container {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: all 0.6s ease-in-out;
+}
+
+.auth-body .sign-in {
+    left: 0;
+    width: 50%;
+    z-index: 2;
+}
+
+.auth-body .container.active .sign-in {
+    transform: translateX(100%);
+}
+
+.auth-body .sign-up {
+    left: 0;
+    width: 50%;
+    opacity: 0;
+    z-index: 1;
+}
+
+.auth-body .container.active .sign-up {
+    transform: translateX(100%);
+    opacity: 1;
+    z-index: 5;
+    animation: move 0.6s;
+}
+
+@keyframes move {
+    0%, 49.99% {
+        opacity: 0;
+        z-index: 1;
+    }
+    50%, 100% {
+        opacity: 1;
+        z-index: 5;
+    }
+}
+
+.auth-body .social-icons {
+    margin: 20px 0;
+}
+
+.auth-body .social-icons a {
+    border: 1px solid #ccc;
+    border-radius: 20%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 3px;
+    width: 40px;
+    height: 40px;
+}
+
+.auth-body .toggle-container {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    transition: all 0.6s ease-in-out;
+    border-radius: 150px 0 0 150px;
+    z-index: 1000;
+}
+
+.auth-body .container.active .toggle-container {
+    transform: translateX(-100%);
+    border-radius: 0 150px 150px 0;
+}
+
+.auth-body .toggle {
+    background-color: var(--color-cobalt-stamp, #ffaa85);
+    height: 100%;
+    background: var(--color-cobalt-stamp, #ffaa85);
+    color: #fff;
+    position: relative;
+    left: -100%;
+    height: 100%;
+    width: 200%;
+    transform: translateX(0);
+    transition: all 0.6s ease-in-out;
+}
+
+.auth-body .container.active .toggle {
+    transform: translateX(50%);
+}
+
+.auth-body .toggle-panel {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 30px;
+    text-align: center;
+    top: 0;
+    transform: translateX(0);
+    transition: all 0.6s ease-in-out;
+}
+
+.auth-body .toggle-left {
+    transform: translateX(-200%);
+}
+
+.auth-body .container.active .toggle-left {
+    transform: translateX(0);
+}
+
+.auth-body .toggle-right {
+    right: 0;
+    transform: translateX(0);
+}
+
+.auth-body .container.active .toggle-right {
+    transform: translateX(200%);
+}
+
+/* Radio buttons styling for role selection */
+.role-group {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    margin: 8px 0;
+}
+
+.role-group label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background-color: #eee;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: 0.3s;
+    border: 1px solid transparent;
+}
+
+.role-group input[type="radio"] {
+    display: none;
+}
+
+.role-group input[type="radio"]:checked + label {
+    background-color: var(--color-chalk, #f3ebe1);
+    border-color: var(--color-cobalt-stamp, #ffaa85);
+    color: var(--color-ink-black, #2c2520);
+    font-weight: 600;
+}

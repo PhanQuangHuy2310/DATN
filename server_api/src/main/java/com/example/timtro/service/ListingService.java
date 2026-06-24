@@ -25,14 +25,8 @@ public class ListingService {
 
     @Transactional
     public UUID createListing(ListingCreateRequest request, User landlord) {
-        // 1. Kiểm tra số lượng tin đăng hiện tại (không bị xóa/hủy/ẩn)
-        // Coi như các tin PENDING, APPROVED, RENTED là tin đang sử dụng hạn mức
-        // (Hoặc tuỳ logic thực tế, tạm đếm các tin khác REJECTED và HIDDEN)
         int activeListingCount = listingRepository.countByUserAndStatusNot(landlord, ListingStatus.HIDDEN);
         
-        // Nếu user có tin thứ 5 trở lên đã bị REJECTED thì vẫn tính là hạn ngạch? Tạm đếm khác HIDDEN.
-        
-        // Theo yêu cầu: nếu có từ 6 bài đăng trở lên (tức là active >= 5) thì phải check premium
         if (activeListingCount >= 5) {
             LocalDateTime premiumExpiry = landlord.getPremiumExpiryDate();
             if (premiumExpiry == null || premiumExpiry.isBefore(LocalDateTime.now())) {
@@ -40,7 +34,6 @@ public class ListingService {
             }
         }
 
-        // 2. Map DTO -> Entity
         Listing listing = Listing.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
@@ -52,7 +45,6 @@ public class ListingService {
                 .user(landlord)
                 .build();
 
-        // Map Costs
         if (request.getListingCosts() != null) {
             ListingCost listingCost = ListingCost.builder()
                     .listing(listing)
@@ -69,5 +61,102 @@ public class ListingService {
 
     public List<ListingDistanceProjection> searchListingsByRadius(double lat, double lng, double radiusInMeters) {
         return listingRepository.findListingsWithinRadius(lat, lng, radiusInMeters);
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<Listing> searchListings(
+            String keyword, java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice,
+            Double minArea, Double maxArea, org.springframework.data.domain.Pageable pageable) {
+
+        org.springframework.data.jpa.domain.Specification<Listing> spec = org.springframework.data.jpa.domain.Specification.where(
+                com.example.timtro.repository.specification.ListingSpecification.hasStatus(ListingStatus.APPROVED));
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            spec = spec.and(com.example.timtro.repository.specification.ListingSpecification.hasTitleContaining(keyword));
+        }
+        if (minPrice != null) {
+            spec = spec.and(com.example.timtro.repository.specification.ListingSpecification.priceGreaterThanOrEqualTo(minPrice));
+        }
+        if (maxPrice != null) {
+            spec = spec.and(com.example.timtro.repository.specification.ListingSpecification.priceLessThanOrEqualTo(maxPrice));
+        }
+        if (minArea != null) {
+            spec = spec.and(com.example.timtro.repository.specification.ListingSpecification.areaGreaterThanOrEqualTo(minArea));
+        }
+        if (maxArea != null) {
+            spec = spec.and(com.example.timtro.repository.specification.ListingSpecification.areaLessThanOrEqualTo(maxArea));
+        }
+
+        return listingRepository.findAll(spec, pageable);
+    }
+
+    @Transactional
+    public void changeListingStatus(UUID listingId, ListingStatus newStatus, String userEmail) {
+        Listing listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tin đăng"));
+
+        if (!listing.getUser().getEmail().equals(userEmail)) {
+            throw new IllegalArgumentException("Bạn không có quyền cập nhật tin đăng này");
+        }
+
+        listing.setStatus(newStatus);
+        listingRepository.save(listing);
+    }
+
+    public com.example.timtro.dto.response.MidpointSearchResponseDTO searchByMidpoint(com.example.timtro.dto.request.MidpointSearchRequestDTO request) {
+        org.locationtech.jts.geom.Point midpoint = GeometryUtil.calculateMidpoint(request.getCoordinates());
+        if (midpoint == null) {
+            throw new IllegalArgumentException("Không thể tính toán điểm trung vị từ danh sách tọa độ");
+        }
+
+        List<ListingDistanceProjection> listings = searchListingsByRadius(midpoint.getY(), midpoint.getX(), request.getRadius());
+
+        com.example.timtro.dto.request.CoordinateDTO midpointDto = new com.example.timtro.dto.request.CoordinateDTO();
+        midpointDto.setLat(midpoint.getY());
+        midpointDto.setLng(midpoint.getX());
+
+        return com.example.timtro.dto.response.MidpointSearchResponseDTO.builder()
+                .midpoint(midpointDto)
+                .listings(listings)
+                .build();
+    }
+    public List<com.example.timtro.dto.response.PoiDTO> getNearbyPois(UUID listingId) {
+        Listing listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tin đăng"));
+
+        // Mock POI Data (Trong thực tế sẽ gọi Google Places API hoặc Overpass API dựa trên listing.getGeom())
+        return List.of(
+                com.example.timtro.dto.response.PoiDTO.builder().name("Siêu thị Vinmart").type("supermarket").distanceInMeters(150.5).build(),
+                com.example.timtro.dto.response.PoiDTO.builder().name("Trạm xe buýt ngã tư").type("bus_station").distanceInMeters(300.0).build(),
+                com.example.timtro.dto.response.PoiDTO.builder().name("Chợ dân sinh").type("market").distanceInMeters(450.2).build()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public Listing getListingById(UUID id) {
+        return listingRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tin đăng"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Listing> getSimilarListings(UUID listingId) {
+        Listing listing = getListingById(listingId);
+        double minPrice = listing.getPrice() * 0.9;
+        double maxPrice = listing.getPrice() * 1.1;
+        
+        return listingRepository.findSimilarListingsNative(
+                listing.getId(), 
+                minPrice, 
+                maxPrice, 
+                listing.getGeom().getY(), 
+                listing.getGeom().getX(), 
+                5000.0, // 5km bán kính
+                5 // limit 5
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<Listing> getListingsByIds(List<UUID> ids) {
+        return listingRepository.findAllById(ids);
     }
 }

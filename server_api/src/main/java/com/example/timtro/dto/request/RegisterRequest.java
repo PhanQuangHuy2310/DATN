@@ -24,6 +24,9 @@ public class RegisterRequest {
     @NotBlank(message = "Họ và tên không được để trống")
     private String fullName;
 
+    @NotBlank(message = "Số điện thoại không được để trống")
+    private String phone;
+
     @NotNull(message = "Role không được để trống (TENANT hoặc LANDLORD)")
     private Role role;
 }

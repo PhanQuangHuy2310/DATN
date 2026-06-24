@@ -20,6 +20,16 @@ export function useListing(id: string | number) {
   });
 }
 
+export function useSimilarListings(id: string | number) {
+  return useQuery({
+    queryKey: ["listing", String(id), "similar"],
+    queryFn: async () => {
+      const res = await apiClient.get<Listing[]>(endpoints.listings.similar(id));
+      return res.data;
+    },
+  });
+}
+
 export function useListingPoi(id: string | number, enabled = true) {
   return useQuery({
     queryKey: ["listing", String(id), "poi"],

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Heart, MapPin, Ruler, Bike, BadgeCheck, Star } from "lucide-react";
+import { Heart, MapPin, Ruler, Bike, BadgeCheck, Star, Scale } from "lucide-react";
 import { Badge } from "@/shared/ui";
 import { cn } from "@/shared/lib/cn";
 import {
@@ -9,6 +9,7 @@ import {
   ALLEY_WIDTHS,
 } from "@/shared/lib";
 import type { Listing } from "./model";
+import { useComparisonStore } from "@/features/comparison/useComparisonStore";
 
 export interface ListingCardProps {
   listing: Listing;
@@ -75,19 +76,33 @@ export function ListingCard({
           {listing.status === "PENDING" && <Badge tone="warning">Chờ duyệt</Badge>}
         </div>
 
-        {onToggleFavorite && (
+        <div className="absolute right-2 top-2 flex flex-col gap-1.5">
           <button
             type="button"
-            aria-label="Lưu tin yêu thích"
+            aria-label="Thêm vào so sánh"
             onClick={(e) => {
               e.preventDefault();
-              onToggleFavorite(listing.id);
+              useComparisonStore.getState().addListing(String(listing.id));
             }}
-            className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-fog transition-colors hover:text-error"
+            className="rounded-full bg-white/90 p-1.5 text-fog transition-colors hover:text-cobalt"
           >
-            <Heart className={cn("size-4", listing.favorite && "fill-error text-error")} />
+            <Scale className="size-4" />
           </button>
-        )}
+
+          {onToggleFavorite && (
+            <button
+              type="button"
+              aria-label="Lưu tin yêu thích"
+              onClick={(e) => {
+                e.preventDefault();
+                onToggleFavorite(listing.id);
+              }}
+              className="rounded-full bg-white/90 p-1.5 text-fog transition-colors hover:text-error"
+            >
+              <Heart className={cn("size-4", listing.favorite && "fill-error text-error")} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Body */}

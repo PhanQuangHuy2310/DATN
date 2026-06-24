@@ -10,6 +10,7 @@ import {
   MapPin,
   Ruler,
   Bike,
+  Scale,
 } from "lucide-react";
 import { Badge, Button, Skeleton, EmptyState, useToast } from "@/shared/ui";
 import { cn } from "@/shared/lib/cn";
@@ -38,7 +39,10 @@ import {
   useListingPoi,
   useListingReviews,
   useStartChat,
+  useSimilarListings,
 } from "./hooks";
+import { ListingCard, ListingCardSkeleton } from "@/entities/listing";
+import { useComparisonStore } from "@/features/comparison/useComparisonStore";
 
 export function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +53,7 @@ export function ListingDetailPage() {
   const listingQuery = useListing(id!);
   const reviewsQuery = useListingReviews(id!);
   const poiQuery = useListingPoi(id!);
+  const similarQuery = useSimilarListings(id!);
   const startChat = useStartChat();
   const toggleFav = useToggleWishlist();
 
@@ -189,6 +194,23 @@ export function ListingDetailPage() {
           <Section title="Đánh giá & phản hồi">
             <ReviewSection listingId={listing.id} reviews={reviewsQuery.data ?? []} />
           </Section>
+
+          <Section title="Phòng trọ tương tự">
+            {similarQuery.isLoading ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <ListingCardSkeleton />
+                <ListingCardSkeleton />
+              </div>
+            ) : similarQuery.data && similarQuery.data.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {similarQuery.data.map((sim) => (
+                  <ListingCard key={sim.id} listing={sim} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-fog">Không tìm thấy phòng trọ nào tương tự.</p>
+            )}
+          </Section>
         </div>
 
         {/* RIGHT sticky panel */}
@@ -205,14 +227,28 @@ export function ListingDetailPage() {
                     <Ruler className="size-4" /> {formatArea(listing.area)}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => requireAuth(() => toggleFav.mutate(listing.id))}
-                  aria-label="Lưu yêu thích"
-                  className="rounded-full border border-line p-2 text-fog transition-colors hover:border-error hover:text-error"
-                >
-                  <Heart className={cn("size-5", listing.favorite && "fill-error text-error")} />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      useComparisonStore.getState().addListing(String(listing.id));
+                      toast.success("Đã thêm vào danh sách so sánh");
+                    }}
+                    aria-label="So sánh"
+                    title="Thêm vào so sánh"
+                    className="rounded-full border border-line p-2 text-fog transition-colors hover:border-cobalt hover:text-cobalt"
+                  >
+                    <Scale className="size-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => requireAuth(() => toggleFav.mutate(listing.id))}
+                    aria-label="Lưu yêu thích"
+                    className="rounded-full border border-line p-2 text-fog transition-colors hover:border-error hover:text-error"
+                  >
+                    <Heart className={cn("size-5", listing.favorite && "fill-error text-error")} />
+                  </button>
+                </div>
               </div>
 
               <div className="mt-4 space-y-2">

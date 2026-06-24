@@ -8,4 +8,6 @@ public interface ListingDistanceProjection {
     Double getPrice();
     Double getArea();
     Double getDistance();
+    Double getLat();
+    Double getLng();
 }

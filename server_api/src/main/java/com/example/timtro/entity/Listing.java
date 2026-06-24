@@ -1,6 +1,8 @@
 package com.example.timtro.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.*;
 import org.locationtech.jts.geom.Point;
 
@@ -42,7 +44,8 @@ public class Listing {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false)
     private ListingStatus status = ListingStatus.PENDING;
 
     @Column(name = "created_at", nullable = false, updatable = false)

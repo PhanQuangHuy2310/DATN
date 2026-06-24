@@ -12,4 +12,5 @@ import java.util.UUID;
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
     boolean existsByListingAndScheduledAtAndStatus(Listing listing, LocalDateTime scheduledAt, AppointmentStatus status);
+    boolean existsByListingIdAndTenantIdAndStatus(UUID listingId, UUID tenantId, AppointmentStatus status);
 }

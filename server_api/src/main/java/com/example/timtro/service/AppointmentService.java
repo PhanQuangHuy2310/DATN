@@ -44,4 +44,16 @@ public class AppointmentService {
         appointment = appointmentRepository.save(appointment);
         return appointment.getId();
     }
+    @Transactional
+    public void changeAppointmentStatus(UUID appointmentId, AppointmentStatus newStatus, String userEmail) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn"));
+
+        if (!appointment.getListing().getUser().getEmail().equals(userEmail)) {
+            throw new IllegalArgumentException("Bạn không có quyền duyệt lịch hẹn này");
+        }
+
+        appointment.setStatus(newStatus);
+        appointmentRepository.save(appointment);
+    }
 }

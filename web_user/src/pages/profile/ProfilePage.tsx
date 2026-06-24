@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { UserRound, Heart, BellRing, ShieldCheck } from "lucide-react";
+import { User, Users, Lock, ShieldCheck } from "lucide-react";
 import { cn } from "@/shared/lib/cn";
 import { useAuthStore } from "@/features/auth";
 import { isLandlord } from "@/entities/user";
@@ -8,18 +8,20 @@ import { PersonalInfoPanel } from "./panels/PersonalInfoPanel";
 import { WishlistPanel } from "./panels/WishlistPanel";
 import { SavedFiltersPanel } from "./panels/SavedFiltersPanel";
 import { VerificationPanel } from "./panels/VerificationPanel";
+import { LifestylePanel } from "./panels/LifestylePanel";
+import { SecurityPanel } from "./panels/SecurityPanel";
 
 const TABS = [
-  { id: "info", label: "Hồ sơ cá nhân", icon: UserRound },
-  { id: "wishlist", label: "Tin yêu thích", icon: Heart },
-  { id: "filters", label: "Bộ lọc đã lưu", icon: BellRing },
+  { id: "personal", label: "Thông tin cá nhân", icon: User },
   { id: "verification", label: "Xác minh chính chủ", icon: ShieldCheck, landlordOnly: true },
+  { id: "lifestyle", label: "Hồ sơ thói quen (Ở ghép)", icon: Users },
+  { id: "security", label: "Bảo mật", icon: Lock },
 ] as const;
 
 export function ProfilePage() {
   const { user } = useAuthStore();
   const [params, setParams] = useSearchParams();
-  const initial = params.get("tab") ?? "info";
+  const initial = params.get("tab") ?? "personal";
   const [tab, setTab] = useState(initial);
 
   const tabs = TABS.filter((t) => !("landlordOnly" in t && t.landlordOnly) || isLandlord(user));
@@ -56,10 +58,10 @@ export function ProfilePage() {
 
         {/* Content */}
         <div className="min-w-0">
-          {tab === "info" && <PersonalInfoPanel />}
-          {tab === "wishlist" && <WishlistPanel />}
-          {tab === "filters" && <SavedFiltersPanel />}
+          {tab === "personal" && <PersonalInfoPanel />}
           {tab === "verification" && <VerificationPanel />}
+          {tab === "lifestyle" && <LifestylePanel />}
+          {tab === "security" && <SecurityPanel />}
         </div>
       </div>
     </div>

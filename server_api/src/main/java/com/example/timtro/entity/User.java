@@ -2,6 +2,8 @@ package com.example.timtro.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +24,9 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, length = 100)
     private String email;
+
 
     @Column(nullable = false)
     private String password;
@@ -31,13 +34,25 @@ public class User {
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
+    @Column(length = 20)
+    private String phone;
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false)
     private Role role;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false)
     private UserStatus status;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean verified = false;
 
     @Column(name = "premium_expiry_date")
     private LocalDateTime premiumExpiryDate;

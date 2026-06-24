@@ -37,6 +37,8 @@ public class EmailOtpService {
 
         otpTokenRepository.save(otpToken);
 
+        log.info("=== DEV MODE: Mã OTP của {} là: {} ===", user.getEmail(), otpCode);
+        
         sendOtpEmail(user.getEmail(), otpCode);
     }
 

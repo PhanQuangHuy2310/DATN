@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   Plus,
   Menu,
@@ -13,45 +13,39 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Avatar, Button } from "@/shared/ui";
-import { config } from "@/shared/config";
 import { cn } from "@/shared/lib/cn";
 import { useClickOutside } from "@/shared/lib";
 import { useAuthStore } from "@/features/auth/authStore";
 import { isLandlord } from "@/entities/user";
 import { NotificationBell } from "./NotificationBell";
+import { PillNav } from "./PillNav";
+
+const logoSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="18" fill="%230066FF"/><text x="18" y="23" font-size="16" text-anchor="middle" fill="white" font-weight="bold" font-family="sans-serif">NT</text></svg>`;
 
 const NAV = [
   { to: "/", label: "Trang chủ", end: true },
   { to: "/search", label: "Tìm phòng" },
-  { to: "/search?type=ROOMMATE", label: "Ở ghép" },
+  { to: "/roommates", label: "Ở ghép" },
 ];
 
 export function Header() {
   const { isAuthenticated, user } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-4 px-4 sm:px-6">
-        <Brand />
-
-        <nav className="ml-2 hidden items-center gap-1 md:flex">
-          {NAV.map((n) => (
-            <NavLink
-              key={n.label}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) =>
-                cn(
-                  "rounded-[8.8px] px-3 py-2 text-sm font-medium transition-colors",
-                  isActive ? "text-cobalt" : "text-graphite hover:bg-white",
-                )
-              }
-            >
-              {n.label}
-            </NavLink>
-          ))}
-        </nav>
+        <PillNav
+          logo={logoSvg}
+          logoAlt="Nhà Trọ 360"
+          items={NAV.map((n) => ({ label: n.label, href: n.to }))}
+          activeHref={location.pathname + location.search}
+          baseColor="transparent"
+          pillColor="#ffffff"
+          hoveredPillTextColor="#ffffff"
+          pillTextColor="#120F17"
+        />
 
         <div className="ml-auto flex items-center gap-2">
           <Link to="/listings/create" className="hidden sm:block">
@@ -93,15 +87,6 @@ export function Header() {
 
       {mobileOpen && <MobileMenu onClose={() => setMobileOpen(false)} />}
     </header>
-  );
-}
-
-function Brand() {
-  return (
-    <Link to="/" className="flex shrink-0 items-center gap-2">
-      <span className="size-7 rounded-full bg-cobalt" />
-      <span className="text-lg font-semibold tracking-tight text-ink">{config.brandName}</span>
-    </Link>
   );
 }
 

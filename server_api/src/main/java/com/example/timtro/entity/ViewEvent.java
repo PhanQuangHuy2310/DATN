@@ -1,6 +1,8 @@
 package com.example.timtro.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -24,7 +26,8 @@ public class ViewEvent {
     private Listing listing;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "event_type", nullable = false, length = 20)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "event_type", nullable = false)
     private EventType eventType;
 
     @Column(name = "created_at", nullable = false, updatable = false)

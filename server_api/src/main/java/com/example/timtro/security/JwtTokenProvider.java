@@ -1,98 +1,107 @@
 package com.example.timtro.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.UnsupportedJwtException;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import com.example.timtro.entity.User;
+import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
-import javax.crypto.SecretKey;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.stream.Collectors;
+import java.util.StringJoiner;
+import java.util.UUID;
 
 @Component
 @Slf4j
 public class JwtTokenProvider {
 
-    @Value("${app.jwt.secret}")
-    private String jwtSecret;
+    @Value("${app.jwt.signerKey}")
+    protected String signerKey;
 
-    @Value("${app.jwt.expiration-ms}")
-    private long jwtExpirationMs;
+    @Value("${app.jwt.valid-duration}")
+    protected long validDuration;
 
-    @Value("${app.jwt.refresh-expiration-ms}")
-    private long refreshExpirationMs;
+    @Value("${app.jwt.refreshable-duration}")
+    protected long refreshableDuration;
 
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
+    // Generate Token from User
+    public String generateToken(User user) {
+        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
-    // Generate Access Token
-    public String generateAccessToken(Authentication authentication) {
-        String username = authentication.getName();
-        String roles = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
+        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                .subject(user.getId().toString())
+                .issuer("timtro.com")
+                .issueTime(new Date())
+                .expirationTime(new Date(
+                        Instant.now().plus(validDuration, ChronoUnit.SECONDS).toEpochMilli()
+                ))
+                .jwtID(UUID.randomUUID().toString())
+                .claim("scope", buildScope(user))
+                .build();
 
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+        Payload payload = new Payload(jwtClaimsSet.toJSONObject());
 
-        return Jwts.builder()
-                .subject(username)
-                .claim("roles", roles)
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(getSigningKey())
-                .compact();
-    }
+        JWSObject jwsObject = new JWSObject(header, payload);
 
-    // Generate Refresh Token
-    public String generateRefreshToken(Authentication authentication) {
-        String username = authentication.getName();
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + refreshExpirationMs);
-
-        return Jwts.builder()
-                .subject(username)
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(getSigningKey())
-                .compact();
-    }
-
-    // Extract Username
-    public String getUsernameFromJWT(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-
-        return claims.getSubject();
-    }
-
-    // Validate Token
-    public boolean validateToken(String authToken) {
         try {
-            Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(authToken);
-            return true;
-        } catch (MalformedJwtException ex) {
-            log.error("Invalid JWT token");
-        } catch (ExpiredJwtException ex) {
-            log.error("Expired JWT token");
-        } catch (UnsupportedJwtException ex) {
-            log.error("Unsupported JWT token");
-        } catch (IllegalArgumentException ex) {
-            log.error("JWT claims string is empty.");
+            jwsObject.sign(new MACSigner(signerKey.getBytes()));
+            return jwsObject.serialize();
+        } catch (JOSEException e) {
+            log.error("Cannot create token", e);
+            throw new RuntimeException(e);
         }
-        return false;
+    }
+
+    public String generateRefreshToken(User user) {
+        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
+
+        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                .subject(user.getId().toString())
+                .issuer("timtro.com")
+                .issueTime(new Date())
+                .expirationTime(new Date(
+                        Instant.now().plus(refreshableDuration, ChronoUnit.SECONDS).toEpochMilli()
+                ))
+                .jwtID(UUID.randomUUID().toString())
+                .build();
+
+        Payload payload = new Payload(jwtClaimsSet.toJSONObject());
+        JWSObject jwsObject = new JWSObject(header, payload);
+
+        try {
+            jwsObject.sign(new MACSigner(signerKey.getBytes()));
+            return jwsObject.serialize();
+        } catch (JOSEException e) {
+            log.error("Cannot create refresh token", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public com.nimbusds.jwt.SignedJWT verifyToken(String token) throws Exception {
+        com.nimbusds.jwt.SignedJWT signedJWT = com.nimbusds.jwt.SignedJWT.parse(token);
+        com.nimbusds.jose.JWSVerifier verifier = new com.nimbusds.jose.crypto.MACVerifier(signerKey.getBytes());
+        
+        if (!signedJWT.verify(verifier)) {
+            throw new RuntimeException("Invalid signature");
+        }
+        
+        Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+        if (expirationTime.before(new Date())) {
+            throw new RuntimeException("Token expired");
+        }
+        
+        return signedJWT;
+    }
+
+    private String buildScope(User user) {
+        StringJoiner stringJoiner = new StringJoiner(" ");
+        if (user.getRole() != null) {
+            stringJoiner.add("ROLE_" + user.getRole().name());
+        }
+        return stringJoiner.toString();
     }
 }

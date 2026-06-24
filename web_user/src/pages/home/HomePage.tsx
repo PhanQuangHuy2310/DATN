@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ShieldCheck, MapPinned, Users } from "lucide-react";
 import { ListingCard, ListingCardSkeleton } from "@/entities/listing";
-import { EmptyState } from "@/shared/ui";
+import { EmptyState, SplitText } from "@/shared/ui";
 import { config } from "@/shared/config";
+import gsap from "gsap";
 import {
   QuickSearchForm,
   DistrictQuickLinks,
@@ -33,10 +34,13 @@ function Hero() {
             Tìm kiếm không gian sống{" "}
             <span className="text-cobalt">minh bạch</span> — không qua môi giới
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-fog">
-            Kết nối trực tiếp với chủ trọ. Lọc theo giá, diện tích, ngõ ngách và
-            tìm phòng quanh điểm giữa nơi học và nơi làm của bạn.
-          </p>
+          <SplitText
+            text="Kết nối trực tiếp với chủ trọ. Lọc theo giá, diện tích, ngõ ngách và tìm phòng quanh điểm giữa nơi học và nơi làm của bạn."
+            className="mx-auto mt-4 max-w-xl text-fog text-base"
+            delay={20}
+            duration={1}
+            splitType="words"
+          />
         </div>
 
         <div className="mx-auto mt-8 max-w-3xl">
@@ -85,12 +89,24 @@ function SectionHeader({ title, to, cta }: { title: string; to: string; cta: str
 function RoommateSection() {
   const { data, isLoading } = useRoommateListings();
   const items = data ?? [];
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isLoading && items.length > 0 && containerRef.current) {
+      gsap.fromTo(
+        containerRef.current.children,
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, stagger: 0.1, duration: 0.5, ease: "power2.out", scrollTrigger: containerRef.current }
+      );
+    }
+  }, [isLoading, items]);
+
   if (!isLoading && items.length === 0) return null;
 
   return (
     <section className="mx-auto max-w-[1280px] px-4 py-12 sm:px-6">
       <SectionHeader title="Chuyên mục ở ghép" to="/search?type=ROOMMATE" cta="Xem tất cả" />
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div ref={containerRef} className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => <ListingCardSkeleton key={i} />)
           : items.slice(0, 4).map((l) => <ListingCard key={l.id} listing={l} />)}
@@ -102,6 +118,17 @@ function RoommateSection() {
 function LatestSection() {
   const { data, isLoading } = useLatestListings();
   const items = data ?? [];
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isLoading && items.length > 0 && containerRef.current) {
+      gsap.fromTo(
+        containerRef.current.children,
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, stagger: 0.1, duration: 0.5, ease: "power2.out", scrollTrigger: containerRef.current }
+      );
+    }
+  }, [isLoading, items]);
 
   return (
     <section className="mx-auto max-w-[1280px] px-4 pb-16 sm:px-6">
@@ -112,7 +139,7 @@ function LatestSection() {
           description="Hãy là người đầu tiên đăng tin phòng trọ trên nền tảng!"
         />
       ) : (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <div ref={containerRef} className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {isLoading
             ? Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />)
             : items.map((l) => <ListingCard key={l.id} listing={l} />)}

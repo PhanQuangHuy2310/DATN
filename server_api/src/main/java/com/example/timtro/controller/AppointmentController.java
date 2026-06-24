@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,5 +40,15 @@ public class AppointmentController {
         UUID appointmentId = appointmentService.bookAppointment(request, currentTenant);
         
         return ResponseEntity.ok(new MessageResponse("Đặt lịch thành công. ID: " + appointmentId));
+    }
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('LANDLORD')")
+    public ResponseEntity<MessageResponse> changeAppointmentStatus(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestParam com.example.timtro.entity.AppointmentStatus newStatus,
+            Authentication authentication) {
+        String email = authentication.getName();
+        appointmentService.changeAppointmentStatus(id, newStatus, email);
+        return ResponseEntity.ok(new MessageResponse("Cập nhật trạng thái lịch hẹn thành công"));
     }
 }

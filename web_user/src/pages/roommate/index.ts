@@ -1,0 +1,1 @@
+export { RoommatePage } from "./RoommatePage";

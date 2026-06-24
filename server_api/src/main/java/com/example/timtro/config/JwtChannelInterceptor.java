@@ -28,12 +28,15 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
             String authHeader = accessor.getFirstNativeHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
-                if (jwtTokenProvider.validateToken(token)) {
-                    String username = jwtTokenProvider.getUsernameFromJWT(token);
+                try {
+                    com.nimbusds.jwt.SignedJWT signedJWT = jwtTokenProvider.verifyToken(token);
+                    String username = signedJWT.getJWTClaimsSet().getSubject();
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     accessor.setUser(authentication);
+                } catch (Exception e) {
+                    // Invalid token, do not set user
                 }
             }
         }

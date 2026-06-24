@@ -10,16 +10,19 @@ import { AppointmentsPage } from "@/pages/appointments";
 import { ProfilePage } from "@/pages/profile";
 import { ChatPage } from "@/pages/chat";
 import { LandlordDashboardPage } from "@/pages/landlord-dashboard";
-import { LoginPage, RegisterPage } from "@/pages/auth";
+import { AuthPage } from "@/pages/auth";
 import { PaymentCallbackPage } from "@/pages/payment-callback";
+import { RoommatePage } from "@/pages/roommate";
 import { NotFoundPage } from "@/pages/not-found";
+import { ComparisonTray, ComparisonModal } from "@/features/comparison";
 
 export function App() {
   return (
-    <Routes>
+    <>
+      <Routes>
       {/* Auth screens — standalone, no chrome */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<AuthPage />} />
+      <Route path="/register" element={<AuthPage />} />
 
       {/* Full-height map / chat */}
       <Route element={<BareLayout />}>
@@ -38,6 +41,7 @@ export function App() {
       <Route element={<RootLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/listings/:id" element={<ListingDetailPage />} />
+        <Route path="/roommates" element={<RoommatePage />} />
         <Route
           path="/listings/create"
           element={
@@ -82,5 +86,8 @@ export function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
+      <ComparisonTray />
+      <ComparisonModal />
+    </>
   );
 }

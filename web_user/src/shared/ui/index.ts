@@ -13,6 +13,7 @@ export { Spinner } from "./Spinner";
 export { Avatar } from "./Avatar";
 export { Switch } from "./Switch";
 export { Tooltip } from "./Tooltip";
+export { SplitText } from "./SplitText";
 export { Tabs } from "./Tabs";
 export type { TabItem } from "./Tabs";
 export { RangeSlider } from "./RangeSlider";

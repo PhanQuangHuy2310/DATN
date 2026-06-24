@@ -32,7 +32,19 @@ export function useVerifyOtp() {
   return useMutation({
     mutationFn: async (payload: { email: string; otpCode: string }) => {
       const res = await apiClient.post(endpoints.auth.verifyOtp, payload);
-      return res.data as SessionResponse;
+      const data = res.data;
+      return {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        user: {
+          id: data.userId,
+          name: data.fullName,
+          email: data.email,
+          phone: data.phone,
+          role: data.role,
+          avatarUrl: data.avatarUrl,
+        }
+      } as unknown as SessionResponse;
     },
     onSuccess: (data) => setSession(data),
   });
@@ -50,9 +62,21 @@ export function useResendOtp() {
 export function useLogin() {
   const setSession = useAuthStore((s) => s.setSession);
   return useMutation({
-    mutationFn: async (payload: { email: string; password: string }) => {
+    mutationFn: async (payload: { email: string; password: string; role: UserRole }) => {
       const res = await apiClient.post(endpoints.auth.login, payload);
-      return res.data as SessionResponse;
+      const data = res.data;
+      return {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        user: {
+          id: data.userId,
+          name: data.fullName,
+          email: data.email,
+          phone: data.phone,
+          role: data.role,
+          avatarUrl: data.avatarUrl,
+        }
+      } as unknown as SessionResponse;
     },
     onSuccess: (data) => setSession(data),
   });

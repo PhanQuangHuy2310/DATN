@@ -12,7 +12,8 @@ import java.util.UUID;
 
 @Repository
 public interface OtpTokenRepository extends JpaRepository<OtpToken, UUID> {
-    
+    java.util.Optional<OtpToken> findTopByUserOrderByExpiryTimeDesc(com.example.timtro.entity.User user);
+
     @Modifying
     @Query("DELETE FROM OtpToken o WHERE o.expiryTime < :time")
     void deleteByExpiryTimeBefore(LocalDateTime time);
