@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+
+  drools-kie-server:
+    image: jboss/kie-server-showcase:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - KIE_SERVER_USER=kieserver
+      - KIE_SERVER_PWD=kieserver1!
