@@ -65,43 +65,39 @@ Hệ thống được xây dựng trên kiến trúc Microservices/Monorepo, tí
 
 Hệ thống quản lý 4 nhóm yêu cầu cốt lõi. Mỗi loại yêu cầu được gán Trọng số rủi ro (Risk Weight) để hệ thống tự động điều hướng sang AI duyệt (Auto-Approve) hoặc đưa vào luồng duyệt thủ công (Manual Approval).
 
-#### I. Nhóm Tài chính & Mua sắm (Finance & Procurement)
-*Đặc thù: Luôn gắn liền với dòng tiền, ngân sách. Cần Drools Rule Engine phân cấp duyệt theo hạn mức giá trị.*
+#### I. Nhóm Hành chính - Nhân sự (HR & Admin)
+*Đặc thù: Các tác vụ vận hành văn phòng thường ngày, số lượng nhiều, liên quan trực tiếp đến quyền lợi nhân viên, cần giải quyết nhanh chóng (Real-time).*
 
 | Loại Yêu cầu | Trọng số | Cơ chế xử lý | Ghi chú / Điều kiện AI & Rule Engine |
 |---|:---:|---|---|
-| **Mua sắm & Chi phí lớn** (Tài sản lớn, nhập hàng, gia hạn License) | 5 (Rất cao) | 🧑 **Manual (3+ cấp)** | Drools định tuyến duyệt: Trưởng phòng -> Kế toán trưởng -> Giám đốc. |
-| **Tạm ứng & Thanh toán** (Hoàn ứng, thanh toán NCC, chạy Ads) | 4 (Cao) | 🧑 **Manual (2 cấp)** | AI OCR bóc tách hóa đơn, tự động so sánh với đề xuất. Drools kiểm tra hạn mức phòng. |
-| **Kế toán & Chứng từ** (Xuất VAT, đối soát công nợ, duyệt hoa hồng) | 3-4 (Trung bình-Cao)| 🧑 **Manual (1-2 cấp)**| AI hỗ trợ kiểm tra chéo (cross-check) công thức bảng tính hoa hồng, phát hiện sai sót. |
+| **Leave Request (Yêu cầu nghỉ phép)**<br>Nghỉ phép năm, ốm, chế độ, WFH | 1-3 | 🤖 **AI Auto-Approve** / 🧑 **Manual (1 cấp)** | AI quét quỹ phép năm. Nghỉ < 3 ngày: Tự động cập nhật hệ thống. Nghỉ >= 3 ngày: Trưởng phòng duyệt để tiện sắp xếp công việc. |
+| **Equipment/Asset Request (Cấp phát tài sản)**<br>Cấp laptop, tai nghe, văn phòng phẩm | 2-3 | 🤖 **AI Auto-Approve** / 🧑 **Manual (1 cấp)** | AI kiểm tra tồn kho. Văn phòng phẩm lặt vặt: Tự động duyệt. Thiết bị giá trị (Laptop): Admin / IT Helpdesk duyệt. |
+| **Onboarding/Offboarding Request**<br>Cấp/thu hồi tài khoản email, máy móc | 3-4 | 🧑 **Manual (1-2 cấp)** | Trưởng phòng tạo yêu cầu -> Admin/IT cấp phát và xác nhận. Cần tuân thủ quy trình bảo mật nội bộ. |
+| **Overtime (OT) Request**<br>Đăng ký làm thêm giờ, tính OT / nghỉ bù | 2 | 🧑 **Manual (1 cấp)** | AI đối chiếu giới hạn giờ làm thêm trong tháng. Trưởng phòng phê duyệt theo kế hoạch công việc dự án. |
 
-#### II. Nhóm Vận hành Kinh doanh & E-commerce (Business & Ops)
-*Đặc thù: Xử lý liên tục, tốc độ cao, ảnh hưởng trực tiếp đến luân chuyển hàng hóa và doanh thu.*
-
-| Loại Yêu cầu | Trọng số | Cơ chế xử lý | Ghi chú / Điều kiện AI & Rule Engine |
-|---|:---:|---|---|
-| **Xử lý Đơn hàng ngoại lệ** (Hoàn tiền/Đền bù rủi ro vận chuyển) | 2 (Thấp) | 🤖 **AI Auto-Approve** | AI tra cứu lịch sử đơn hàng, nếu số tiền đền bù < hạn mức cho phép -> Tự động duyệt hoàn tiền ngay lập tức. |
-| **Quản lý Hàng hóa & Kho bãi** (Luân chuyển kho, xuất hàng mẫu/seeding) | 3 (Trung bình)| 🧑 **Manual (1 cấp)** | Thủ kho hoặc Quản lý kho duyệt. |
-| **Bán hàng & Khuyến mãi** (Tạo Flash Sale, Voucher, Cập nhật giá bán) | 4 (Cao) | 🧑 **Manual (2 cấp)** | AI phân tích biên độ lợi nhuận (Profit Margin). Nếu vi phạm luật giá sàn -> Bật cảnh báo đỏ cho người duyệt. |
-| **Đối tác & Hợp đồng** (Duyệt hợp đồng thương mại, Booking KOL/KOC) | 5 (Rất cao) | 🧑 **Manual (3 cấp)** | Cần sự phê duyệt của Pháp chế (Legal) và Quản lý Kinh doanh. |
-
-#### III. Nhóm Kỹ thuật & Giải pháp Công nghệ (Tech & IT Solutions)
-*Đặc thù: Quy trình chặt chẽ, liên quan đến tính bảo mật, toàn vẹn hệ thống (SDLC).*
+#### II. Nhóm Tài chính - Kế toán (Finance & Accounting)
+*Đặc thù: Luôn gắn liền với dòng tiền, ngân sách công ty. Cần Drools Rule Engine phân cấp duyệt theo hạn mức giá trị một cách chặt chẽ.*
 
 | Loại Yêu cầu | Trọng số | Cơ chế xử lý | Ghi chú / Điều kiện AI & Rule Engine |
 |---|:---:|---|---|
-| **Tích hợp & Khách hàng** (Trích xuất Data, Cấp môi trường UAT) | 3 (Trung bình)| 🧑 **Manual (1-2 cấp)**| AI kiểm tra và làm mờ (Masking) dữ liệu cá nhân (PII) trước khi cho phép Data Export. |
-| **Phát triển & Cập nhật Hệ thống** (Feature Request, Release, Downtime) | 4 (Cao) | 🧑 **Manual (2 cấp)** | Phê duyệt từ Tech Lead / PM. Đảm bảo tuân thủ quy trình CI/CD. |
-| **Hạ tầng & Bảo mật** (Cấp phát Server VM/DB, Mở Port, Cấu hình Firewall) | 5 (Rất cao) | 🧑 **Manual (2-3 cấp)**| Cần CTO hoặc Giám đốc ATTT phê duyệt vì rủi ro cấu hình sai dẫn đến lộ lọt dữ liệu. |
+| **Payment Request (Đề nghị thanh toán)**<br>Chi tiền tạm ứng, mua sắm, thanh toán cho nhà cung cấp | 4-5 | 🧑 **Manual (2-3 cấp)** | AI OCR bóc tách hóa đơn, tự động so sánh với đề xuất. Drools kiểm tra hạn mức và định tuyến duyệt (Trưởng phòng -> Kế toán trưởng -> Giám đốc). |
+| **Reimbursement Request (Hoàn ứng/Thanh toán)**<br>Hoàn lại tiền nhân viên đã ứng trước (tiếp khách, di chuyển) | 3-4 | 🧑 **Manual (1-2 cấp)** | AI hỗ trợ kiểm tra chéo hóa đơn bán lẻ, phát hiện hóa đơn trùng lặp/giả mạo. Trưởng phòng & Kế toán duyệt chi. |
 
-#### IV. Nhóm Hành chính & Quản trị Nhân sự (HR & Admin)
-*Đặc thù: Các tác vụ vận hành văn phòng thường ngày, số lượng nhiều, cần giải quyết tức thì (Real-time).*
+#### III. Nhóm Công nghệ thông tin / Kỹ thuật (IT / Tech Support)
+*Đặc thù: Quy trình chặt chẽ, liên quan đến tính bảo mật, toàn vẹn hệ thống và cấp quyền dữ liệu.*
 
 | Loại Yêu cầu | Trọng số | Cơ chế xử lý | Ghi chú / Điều kiện AI & Rule Engine |
 |---|:---:|---|---|
-| **Không gian & Cơ sở vật chất** (Mượn phòng họp/studio, sửa chữa, VPP) | 1 (Rất thấp) | 🤖 **AI Auto-Approve** | AI tự động quét lịch trống, kiểm tra định mức VPP. Nếu hợp lệ -> Phê duyệt ngay tức thì. |
-| **Thời gian làm việc** (Đi muộn/về sớm, quên chấm công, nghỉ phép < 3 ngày)| 1 (Rất thấp) | 🤖 **AI Auto-Approve** | AI quét quỹ phép năm, số lần đi muộn trong tháng. Nếu trong giới hạn -> Tự động cập nhật vào hệ thống nhân sự. |
-| **Quản lý Tài sản & Thiết bị** (Cấp phát laptop, mượn máy quay/thiết bị) | 3 (Trung bình)| 🧑 **Manual (1 cấp)** | Admin / IT Helpdesk duyệt dựa trên tồn kho thực tế. |
-| **Nhân sự & Phân quyền** (Nghỉ >= 3 ngày, Thuê Part-time, Cấp account/VPN)| 3 (Trung bình)| 🧑 **Manual (1-2 cấp)**| Trưởng phòng duyệt để tiện sắp xếp công việc thay thế, kiểm soát bảo mật hệ thống nội bộ. |
+| **IT Support Ticket / Access Request**<br>Báo lỗi IT, xin cấp quyền truy cập phần mềm/dữ liệu (Jira, Server...) | 2-4 | 🤖 **AI Hỗ trợ** / 🧑 **Manual (1-2 cấp)** | Xin quyền truy cập Data/Server (Rủi ro cao): Trưởng phòng & Tech Lead duyệt. Báo lỗi IT thông thường: Tự động phân luồng cho IT Support. |
+| **Software License Request**<br>Đề nghị mua bản quyền phần mềm mới | 4 | 🧑 **Manual (2 cấp)** | Drools kiểm tra ngân sách IT. Tech Lead và Kế toán duyệt để mua sắm. |
+
+#### IV. Nhóm Vận hành - Mua sắm (Operations & Procurement)
+*Đặc thù: Đảm bảo cơ sở vật chất và công cụ phục vụ kinh doanh, vận hành liên tục.*
+
+| Loại Yêu cầu | Trọng số | Cơ chế xử lý | Ghi chú / Điều kiện AI & Rule Engine |
+|---|:---:|---|---|
+| **Purchase Requisition (Yêu cầu mua sắm)**<br>Mua sắm thiết bị, công cụ phòng ban, nguyên vật liệu dự án | 4-5 | 🧑 **Manual (2-3+ cấp)** | AI phân tích báo giá so với thị trường. Drools định tuyến duyệt dựa trên ngân sách bộ phận (Trưởng phòng -> Mua sắm -> Giám đốc). |
+| **Facility Maintenance Request**<br>Báo cáo hỏng hóc văn phòng (điều hòa, bóng đèn, bàn ghế) | 1-2 | 🤖 **AI Auto-Approve** | AI phân loại mức độ khẩn cấp. Tự động đẩy ticket cho đội vận hành/bảo trì tòa nhà sửa chữa (Không cần duyệt phức tạp). |
 
 ---
 
