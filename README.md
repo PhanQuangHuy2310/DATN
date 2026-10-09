@@ -35,9 +35,10 @@ AI auto-approve, OCR/risk scoring, Drools, Elasticsearch, mobile native, OPA, wo
 
 ## Chạy backend foundation
 
-1. Sao chép `api_core/.env.example` thành `api_core/.env` và điền secret qua kênh an toàn.
+1. Khi chạy độc lập, sao chép `api_core/.env.example` thành `api_core/.env`, thay toàn bộ placeholder và nạp file bằng process manager; Django không tự đọc file `.env`.
 2. Dùng database login runtime chỉ thuộc nhóm `eas_api`; không dùng `postgres`, owner hoặc service-role key.
-3. Cài và kiểm tra:
+3. Kiểm tra cấu hình trước khi khởi động: `python scripts/validate_env.py --file api_core/.env --profile api`.
+4. Cài và kiểm tra:
 
 ```bash
 python -m venv .venv
@@ -46,11 +47,18 @@ set EAS_ENV=test
 .venv/Scripts/python manage.py test
 ```
 
-Chạy local bằng Docker sau khi Docker daemon hoạt động:
+Chạy local bằng Docker sau khi Docker daemon hoạt động. Docker Compose chỉ đọc `.env` ở thư mục gốc, không đọc `api_core/.env`:
 
 ```bash
-docker compose up --build api
+./scripts/manage_env.ps1 init
+# Thay mọi placeholder trong .env bằng credential đã rotate, sau đó:
+./scripts/manage_env.ps1 validate
+docker compose --env-file .env up --build
 ```
+
+Kiểm tra nhanh mà không hiển thị secret: `./scripts/manage_env.ps1 status`. Kiểm tra toàn bộ template trong CI: `./scripts/manage_env.ps1 validate-templates`.
+
+Hai frontend mặc định gọi API cùng origin qua Nginx. Khi chạy Vite riêng, đặt `VITE_API_BASE_URL=http://127.0.0.1:8000`; không thêm hậu tố `/api` hoặc `/api/v1` vì client đã truyền đường dẫn API đầy đủ.
 
 Endpoints nền tảng:
 

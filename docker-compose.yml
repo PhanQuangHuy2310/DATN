@@ -24,24 +24,31 @@ services:
     build:
       context: .
       dockerfile: api_core/Dockerfile
-    env_file:
-      - path: api_core/.env
-        required: false
     environment:
       DATABASE_URL: ${EAS_API_DATABASE_URL:?Set EAS_API_DATABASE_URL to the least-privilege API DSN}
       DJANGO_SECRET_KEY: ${EAS_DJANGO_SECRET_KEY:?Set EAS_DJANGO_SECRET_KEY to a random runtime secret}
       SUPABASE_URL: ${EAS_SUPABASE_URL:?Set EAS_SUPABASE_URL to the project URL}
       SUPABASE_SECRET_KEY: ${EAS_SUPABASE_SECRET_KEY:-}
-      EAS_ENV: development
-      EAS_RELEASE: local
-      DJANGO_DEBUG: "false"
-      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api
+      EAS_ENV: ${EAS_ENV:-development}
+      EAS_RELEASE: ${EAS_RELEASE:-local}
+      DJANGO_DEBUG: ${EAS_DJANGO_DEBUG:-false}
+      DJANGO_ALLOWED_HOSTS: ${EAS_DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,api}
       DJANGO_CSRF_TRUSTED_ORIGINS: ${EAS_CSRF_TRUSTED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
       EAS_ALLOW_ADMIN_DB: "false"
       EAS_REQUIRE_ACTIVE_RELEASES: ${EAS_REQUIRE_ACTIVE_RELEASES:-true}
-      EAS_REQUIRE_MOCK_SOURCES: "true"
+      EAS_REQUIRE_MOCK_SOURCES: ${EAS_REQUIRE_MOCK_SOURCES:-true}
       # Development may run without private Storage credentials; production defaults to true.
       EAS_REQUIRE_STORAGE: ${EAS_REQUIRE_STORAGE:-false}
+      EAS_STORAGE_BUCKET: ${EAS_STORAGE_BUCKET:-eas-private}
+      EAS_CLAMAV_HOST: clamav
+      EAS_CLAMAV_PORT: "3310"
+      EAS_SESSION_AGE_SECONDS: ${EAS_SESSION_AGE_SECONDS:-28800}
+      EAS_LOGIN_MAX_ATTEMPTS: ${EAS_LOGIN_MAX_ATTEMPTS:-5}
+      EAS_LOGIN_WINDOW_SECONDS: ${EAS_LOGIN_WINDOW_SECONDS:-900}
+      EAS_TRUST_PROXY_HEADERS: ${EAS_TRUST_PROXY_HEADERS:-false}
+      EAS_SSL_REDIRECT: ${EAS_SSL_REDIRECT:-true}
+      EAS_HSTS_PRELOAD: ${EAS_HSTS_PRELOAD:-false}
+      LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/0
     ports:
       - "127.0.0.1:8000:8000"
@@ -74,19 +81,21 @@ services:
       context: .
       dockerfile: api_core/Dockerfile
     command: ["python", "manage.py", "run_outbox_worker"]
-    env_file:
-      - path: api_core/.env.worker
-        required: false
     environment:
       DATABASE_URL: ${EAS_WORKER_DATABASE_URL:?Set EAS_WORKER_DATABASE_URL to the least-privilege worker DSN}
       DJANGO_SECRET_KEY: ${EAS_DJANGO_SECRET_KEY:?Set EAS_DJANGO_SECRET_KEY to a random runtime secret}
       SUPABASE_URL: ${EAS_SUPABASE_URL:?Set EAS_SUPABASE_URL to the project URL}
       SUPABASE_SECRET_KEY: ${EAS_SUPABASE_SECRET_KEY:-}
-      EAS_ENV: development
-      EAS_RELEASE: local
+      EAS_ENV: ${EAS_ENV:-development}
+      EAS_RELEASE: ${EAS_RELEASE:-local}
       EAS_ALLOW_ADMIN_DB: "false"
       EAS_REQUIRE_ACTIVE_RELEASES: ${EAS_REQUIRE_ACTIVE_RELEASES:-true}
-      EAS_REQUIRE_MOCK_SOURCES: "true"
+      EAS_REQUIRE_MOCK_SOURCES: ${EAS_REQUIRE_MOCK_SOURCES:-true}
+      EAS_REQUIRE_STORAGE: ${EAS_REQUIRE_STORAGE:-false}
+      EAS_STORAGE_BUCKET: ${EAS_STORAGE_BUCKET:-eas-private}
+      EAS_CLAMAV_HOST: clamav
+      EAS_CLAMAV_PORT: "3310"
+      LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/0
     read_only: true
     tmpfs:
