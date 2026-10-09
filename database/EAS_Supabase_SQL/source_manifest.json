@@ -1,0 +1,46 @@
+{
+  "artifact": "EAS PostgreSQL on Supabase",
+  "schema_version": "2.0.1",
+  "release_date": "2026-09-22",
+  "source_documents": [
+    {
+      "file": "00_Pham_vi_va_ke_hoach_v2.docx",
+      "version": "v2.0",
+      "bytes": 48772,
+      "sha256": "532e96c84ac465029c8298ca27ce2a4b91096f2267c7de9ef243f91564e95cea"
+    },
+    {
+      "file": "01_SRS_v2.docx",
+      "version": "v2.0",
+      "bytes": 57460,
+      "sha256": "7adaa76ae18829b7c5877aa7ee8f6dab2d50568348416e1d106da6ed79f7fc78"
+    },
+    {
+      "file": "02_Phan_tich_thiet_ke_v2.docx",
+      "version": "v2.0",
+      "bytes": 1450943,
+      "sha256": "2c9ddab7863a1006aeca9de2b4382c379596d3c7ab55c09a27165705eb46a7b2"
+    },
+    {
+      "file": "03_Du_lieu_va_API_v2.docx",
+      "version": "v2.0",
+      "bytes": 759398,
+      "sha256": "a4d6d322865629d3ea3f6b6c0fa5a42d759faaf8b9377e8d094b73942252726a"
+    },
+    {
+      "file": "04_Ke_hoach_va_ca_kiem_thu_v2.docx",
+      "version": "v2.0",
+      "bytes": 63213,
+      "sha256": "7ae7392e50d3ec693a3abefb4cfd2d8d88d8071645364daba1c04c9aa8ecc4d9"
+    },
+    {
+      "file": "05_Van_hanh_phap_ly_nghiem_thu_v2.docx",
+      "version": "v2.0",
+      "bytes": 48785,
+      "sha256": "50e56f1a2790a3febe8fbfd47d78a3573dca6fb4ef1ace045c5314616ab9c83f"
+    }
+  ],
+  "scope": "P0; 30 domain tables DB01-DB30; excludes Django framework tables, storage objects and P1",
+  "reference_document": "03_Du_lieu_va_API_v2.docx",
+  "verified_source_access": "Library documents read during this task; local source bytes hashed for traceability."
+}

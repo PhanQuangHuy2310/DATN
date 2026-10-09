@@ -1,23 +1,139 @@
-version: '3.8'
+name: eas
 
 services:
+  web:
+    build:
+      context: .
+      dockerfile: web_client/Dockerfile
+    ports:
+      - "127.0.0.1:${EAS_WEB_PORT:-8080}:8080"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=16m,noexec,nosuid,uid=101,gid=101,mode=0750
+      - /var/run:size=4m,noexec,nosuid,uid=101,gid=101,mode=0750
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: api_core/Dockerfile
+    env_file:
+      - path: api_core/.env
+        required: false
+    environment:
+      DATABASE_URL: ${EAS_API_DATABASE_URL:?Set EAS_API_DATABASE_URL to the least-privilege API DSN}
+      DJANGO_SECRET_KEY: ${EAS_DJANGO_SECRET_KEY:?Set EAS_DJANGO_SECRET_KEY to a random runtime secret}
+      SUPABASE_URL: ${EAS_SUPABASE_URL:?Set EAS_SUPABASE_URL to the project URL}
+      SUPABASE_SECRET_KEY: ${EAS_SUPABASE_SECRET_KEY:-}
+      EAS_ENV: development
+      EAS_RELEASE: local
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${EAS_CSRF_TRUSTED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      EAS_ALLOW_ADMIN_DB: "false"
+      EAS_REQUIRE_ACTIVE_RELEASES: ${EAS_REQUIRE_ACTIVE_RELEASES:-true}
+      EAS_REQUIRE_MOCK_SOURCES: "true"
+      # Development may run without private Storage credentials; production defaults to true.
+      EAS_REQUIRE_STORAGE: ${EAS_REQUIRE_STORAGE:-false}
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "127.0.0.1:8000:8000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      clamav:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: api_core/Dockerfile
+    command: ["python", "manage.py", "run_outbox_worker"]
+    env_file:
+      - path: api_core/.env.worker
+        required: false
+    environment:
+      DATABASE_URL: ${EAS_WORKER_DATABASE_URL:?Set EAS_WORKER_DATABASE_URL to the least-privilege worker DSN}
+      DJANGO_SECRET_KEY: ${EAS_DJANGO_SECRET_KEY:?Set EAS_DJANGO_SECRET_KEY to a random runtime secret}
+      SUPABASE_URL: ${EAS_SUPABASE_URL:?Set EAS_SUPABASE_URL to the project URL}
+      SUPABASE_SECRET_KEY: ${EAS_SUPABASE_SECRET_KEY:-}
+      EAS_ENV: development
+      EAS_RELEASE: local
+      EAS_ALLOW_ADMIN_DB: "false"
+      EAS_REQUIRE_ACTIVE_RELEASES: ${EAS_REQUIRE_ACTIVE_RELEASES:-true}
+      EAS_REQUIRE_MOCK_SOURCES: "true"
+      REDIS_URL: redis://redis:6379/0
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      redis:
+        condition: service_healthy
+      clamav:
+        condition: service_started
+    restart: unless-stopped
+
   redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    image: redis:8.0.3-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    read_only: true
+    tmpfs:
+      - /data:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-    ports:
-      - "9200:9200"
+  clamav:
+    image: clamav/clamav:1.4.3
+    volumes:
+      - clamav-db:/var/lib/clamav
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    restart: unless-stopped
 
-  drools-kie-server:
-    image: jboss/kie-server-showcase:latest
-    ports:
-      - "8080:8080"
-    environment:
-      - KIE_SERVER_USER=kieserver
-      - KIE_SERVER_PWD=kieserver1!
+volumes:
+  clamav-db:

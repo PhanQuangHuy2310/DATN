@@ -1,10 +1,14 @@
-# Deployment & Infrastructure
+# Deployment và vận hành
 
-Thư mục này chứa các kịch bản (scripts) và tệp cấu hình phục vụ cho việc **triển khai (Deploy)** và vận hành hệ thống.
+Repository hiện có Dockerfile/Compose cho API foundation. Đây chưa phải release pack production.
 
-Bao gồm:
-- Các tệp cấu hình Docker (`Dockerfile`, `docker-compose.yml`) cho các môi trường khác nhau.
-- Cấu hình CI/CD pipelines (GitHub Actions, GitLab CI, Jenkins...).
-- Kubernetes manifests (Deployment, Service, Ingress...) nếu sử dụng K8s.
-- Infrastructure as Code (Terraform, Ansible) để tự động hóa việc khởi tạo máy chủ, thiết lập môi trường.
-- Các script sao lưu (backup), phục hồi (restore) cơ sở dữ liệu và vận hành hệ thống định kỳ.
+## Cổng trước production
+
+- Rotate mọi credential từng xuất hiện trong Git/history/chat.
+- Tạo login tách biệt cho `eas_api`, `eas_worker`, migration và privacy.
+- Pin image bằng digest; tạo SBOM và chạy dependency/secret/image scan.
+- Cài reverse proxy/TLS, private storage/scanner, worker và telemetry.
+- Chạy staging tương đương production, load profile, backup/restore và rollback rehearsal.
+- Ghi image digest, config release IDs, backup point và actual test evidence vào biên bản G4/G5.
+
+Không dùng `docker-compose.yml` development làm bằng chứng production. Không đưa secret vào Compose, CI variables output hoặc image layer.

@@ -1,0 +1,7 @@
+{
+  "name": "eas-database-validation",
+  "private": true,
+  "type": "module",
+  "scripts": {"test": "node reproduce.mjs"},
+  "dependencies": {"@electric-sql/pglite": "0.5.8"}
+}

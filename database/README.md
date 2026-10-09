@@ -1,38 +1,31 @@
-# Cấu trúc Quản lý Database
+# Database EAS
 
-Thư mục `database/` được sử dụng để quản lý trực tiếp các thay đổi, logic và kiểm thử ở tầng Cơ sở dữ liệu (Database Layer). Phương pháp này (thường thấy khi dùng Sqitch hoặc Supabase) giúp tách biệt quản lý cấu trúc DB khỏi Backend, đảm bảo tính nhất quán của dữ liệu.
+Nguồn database hiện hành là [gói SQL EAS 2.0.1](EAS_Supabase_SQL/README_VI.md). Các thư mục `migrations/`, `functions/`, `verify/` ở cấp này chỉ là skeleton cũ và không được coi là migration framework đã triển khai.
 
-Dưới đây là tác dụng và nhiệm vụ chi tiết của 3 thư mục chính trong cấu trúc này:
+Gói [mock enterprise sources 1.0.0](mock_enterprise_sql/README.md) tạo 8 schema dữ liệu tổng hợp cho integration/demo. Đây là hệ thống nguồn giả lập tách khỏi `eas`, không phải dữ liệu production hay phần mở rộng tùy tiện của approval domain.
 
-## 1. Thư mục `migrations/`
-**Tác dụng:** Nơi chứa các file mã lệnh SQL chịu trách nhiệm làm thay đổi cấu trúc của cơ sở dữ liệu (Database Schema).
+## Baseline hiện có
 
-**Nhiệm vụ:**
-- Khởi tạo các bảng mới (CREATE TABLE).
-- Thay đổi cấu trúc bảng hiện có (Thêm, sửa, xóa cột - ALTER TABLE).
-- Thiết lập các ràng buộc dữ liệu (Primary Key, Foreign Key, Check Constraints, Index).
-- Quản lý các phiên bản cấu trúc dữ liệu theo thời gian (Version Control cho Database), giúp dễ dàng rollback lại trạng thái cũ nếu có lỗi xảy ra.
+- `00_eas_supabase_schema.sql`: cài mới schema `eas`, 30 bảng, role group, guard, RLS và reference data tối thiểu.
+- `02_verify_installation_READ_ONLY.sql`: kiểm tra an toàn trên database đã cài.
+- `03_database_regression_DEV_ONLY.sql`: regression có fixture và rollback; chỉ chạy trên database development riêng.
+- `01_demo_seed_DEV_ONLY.sql`: demo identity/config; không chạy trên production hoặc project chưa xác định môi trường.
+- `DATA_DICTIONARY.md` và catalog JSON: từ điển vật lý/truy nguyên.
 
-**Ví dụ thao tác:** Bạn cần thêm cột `risk_level` vào bảng `requests`. Bạn sẽ tạo một file SQL trong thư mục này (VD: `20260911_add_risk_level.sql`) chứa lệnh `ALTER TABLE requests ADD COLUMN risk_level INT;`.
+## Bằng chứng hiện tại
 
----
+- PGlite/PostgreSQL WASM: PASS, 86 SQL assertions.
+- Supabase project thật: read-only installation verification PASS; xem [biên bản](../docs/09_Bien_ban_kiem_chung_Supabase.md).
+- Chưa có bằng chứng concurrency đa session, load, backup/restore hoặc acceptance API.
 
-## 2. Thư mục `functions/`
-**Tác dụng:** Nơi chứa các đoạn mã xử lý logic nghiệp vụ được thực thi trực tiếp bên dưới Cơ sở dữ liệu (Stored Procedures, DB Functions, Triggers).
+## Quy tắc thay đổi
 
-**Nhiệm vụ:**
-- **Tạo Functions/Procedures:** Đóng gói các logic tính toán phức tạp thành hàm SQL có thể tái sử dụng. Việc chạy logic trực tiếp trên DB thường nhanh hơn rất nhiều so với việc tải toàn bộ dữ liệu lên Backend rồi mới tính toán.
-- **Xây dựng Triggers:** Lắng nghe các sự kiện (INSERT, UPDATE, DELETE) và tự động phản ứng lại. Ví dụ: tự động cập nhật trường `updated_at`, hoặc tự động ghi log vào bảng `audit_logs` mỗi khi trạng thái Yêu cầu bị thay đổi.
+`00_eas_supabase_schema.sql` là installer cho database mới, không phải công cụ upgrade production. Mọi thay đổi sau khi có dữ liệu phải là migration tăng dần, review riêng, có:
 
-**Ví dụ thao tác:** Bạn tạo một file `trigger_audit_log.sql` chứa lệnh tạo một Function ghi log và một Trigger gắn Function đó vào bảng `requests`.
+- ID/version và checksum bất biến.
+- Expand/contract tương thích N/N-1.
+- Precondition, forward verification và rollback/roll-forward plan.
+- Test trên bản restore production đã khử dữ liệu nhạy cảm.
+- Lock/time estimate và abort threshold.
 
----
-
-## 3. Thư mục `verify/`
-**Tác dụng:** Nơi chứa các đoạn script SQL đặc biệt dùng để kiểm tra (Test) xem các câu lệnh trong `migrations/` và `functions/` đã được áp dụng và cấu hình đúng hay chưa.
-
-**Nhiệm vụ:**
-- **Unit Test cho Database:** Đảm bảo rằng việc thay đổi database không phá vỡ cấu trúc hiện tại.
-- **Đảm bảo an toàn CI/CD:** Khi chạy tự động (deploy lên server), hệ thống sẽ chạy script verify. Nếu script verify gặp lỗi (ví dụ, cố gắng SELECT cột vừa tạo nhưng bị lỗi `column does not exist`), toàn bộ tiến trình thay đổi (migration) sẽ lập tức bị hủy bỏ (rollback).
-
-**Ví dụ thao tác:** Cùng với việc thêm cột `risk_level` ở trên, bạn tạo một file verify chứa câu truy vấn `SELECT risk_level FROM requests WHERE FALSE;`. Nếu cột này chưa được tạo thành công, lệnh SELECT sẽ báo lỗi và ngăn chặn rủi ro.
+Không dùng `CREATE TABLE IF NOT EXISTS` để che schema drift. Không sửa migration đã phát hành. Không chạy file `DEV_ONLY` trên project thật nếu chưa có xác nhận đó là môi trường development trống.

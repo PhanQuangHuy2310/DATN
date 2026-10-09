@@ -1,0 +1,124 @@
+{
+  "note": "Fixed fixture vectors only. Production must use a validated RFC8785 encoder and the agreed profile.",
+  "config_hash_profile": "SHA256(JCS({type_id,lifecycle,form_schema,route_rules,actor_bindings,sla_profile})); NFC strings. validation_hash additionally binds server version and boundary-test profile.",
+  "admin_events": [
+    {
+      "canonical_event": {
+        "id": "00000005-0000-4000-8000-000000000001",
+        "seq": "1",
+        "actor_id": "00000002-0000-4000-8000-000000000008",
+        "actor_kind": "HUMAN",
+        "action": "DEMO_IDENTITY_IMPORT",
+        "target_type": "identity_import",
+        "target_id": "DEMO_BOOTSTRAP",
+        "department_id": null,
+        "type_id": null,
+        "details": {
+          "users": 10,
+          "departments": 2,
+          "memberships": 12
+        },
+        "reason": "Development fixtures only; no production authorization.",
+        "correlation_id": "00000006-0000-4000-8000-000000000001",
+        "occurred_at": "2026-01-01T00:00:00.000000Z",
+        "hash_version": 1,
+        "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "scope_key": "ADMIN"
+      },
+      "canonical_utf8": "{\"action\":\"DEMO_IDENTITY_IMPORT\",\"actor_id\":\"00000002-0000-4000-8000-000000000008\",\"actor_kind\":\"HUMAN\",\"correlation_id\":\"00000006-0000-4000-8000-000000000001\",\"department_id\":null,\"details\":{\"departments\":2,\"memberships\":12,\"users\":10},\"hash_version\":1,\"id\":\"00000005-0000-4000-8000-000000000001\",\"occurred_at\":\"2026-01-01T00:00:00.000000Z\",\"prev_hash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"reason\":\"Development fixtures only; no production authorization.\",\"scope_key\":\"ADMIN\",\"seq\":\"1\",\"target_id\":\"DEMO_BOOTSTRAP\",\"target_type\":\"identity_import\",\"type_id\":null}",
+      "sha256": "d15fab6942d54502e496f491db4a3f459277f2891da5a58db6d613a66c7faf57"
+    },
+    {
+      "canonical_event": {
+        "id": "00000005-0000-4000-8000-000000000002",
+        "seq": "2",
+        "actor_id": "00000002-0000-4000-8000-000000000008",
+        "actor_kind": "HUMAN",
+        "action": "DEMO_RELEASE_PUBLISHED",
+        "target_type": "config_release",
+        "target_id": "00000003-0000-4000-8000-000000000001",
+        "department_id": null,
+        "type_id": "00000000-0000-4000-8000-000000000001",
+        "details": {
+          "release_id": "00000003-0000-4000-8000-000000000001",
+          "content_sha256": "1389c59a24ce11bb5d8e84fa1a2cdc2e97ea3b7470f1a5c0f1fc4c7a5b2e5ae7"
+        },
+        "reason": "Development fixtures only; no production authorization.",
+        "correlation_id": "00000006-0000-4000-8000-000000000002",
+        "occurred_at": "2026-01-01T00:00:00.000000Z",
+        "hash_version": 1,
+        "prev_hash": "d15fab6942d54502e496f491db4a3f459277f2891da5a58db6d613a66c7faf57",
+        "scope_key": "ADMIN"
+      },
+      "canonical_utf8": "{\"action\":\"DEMO_RELEASE_PUBLISHED\",\"actor_id\":\"00000002-0000-4000-8000-000000000008\",\"actor_kind\":\"HUMAN\",\"correlation_id\":\"00000006-0000-4000-8000-000000000002\",\"department_id\":null,\"details\":{\"content_sha256\":\"1389c59a24ce11bb5d8e84fa1a2cdc2e97ea3b7470f1a5c0f1fc4c7a5b2e5ae7\",\"release_id\":\"00000003-0000-4000-8000-000000000001\"},\"hash_version\":1,\"id\":\"00000005-0000-4000-8000-000000000002\",\"occurred_at\":\"2026-01-01T00:00:00.000000Z\",\"prev_hash\":\"d15fab6942d54502e496f491db4a3f459277f2891da5a58db6d613a66c7faf57\",\"reason\":\"Development fixtures only; no production authorization.\",\"scope_key\":\"ADMIN\",\"seq\":\"2\",\"target_id\":\"00000003-0000-4000-8000-000000000001\",\"target_type\":\"config_release\",\"type_id\":\"00000000-0000-4000-8000-000000000001\"}",
+      "sha256": "2354cfe655104c3ab93faea2102fba66499b76b61f4fcb4eb3e4165ccb45c846"
+    },
+    {
+      "canonical_event": {
+        "id": "00000005-0000-4000-8000-000000000003",
+        "seq": "3",
+        "actor_id": "00000002-0000-4000-8000-000000000008",
+        "actor_kind": "HUMAN",
+        "action": "DEMO_RELEASE_PUBLISHED",
+        "target_type": "config_release",
+        "target_id": "00000003-0000-4000-8000-000000000002",
+        "department_id": null,
+        "type_id": "00000000-0000-4000-8000-000000000002",
+        "details": {
+          "release_id": "00000003-0000-4000-8000-000000000002",
+          "content_sha256": "534ffd8b5053ba4ad73434a2c12d7736047e834b28a21490ad5b88916c50ff83"
+        },
+        "reason": "Development fixtures only; no production authorization.",
+        "correlation_id": "00000006-0000-4000-8000-000000000003",
+        "occurred_at": "2026-01-01T00:00:00.000000Z",
+        "hash_version": 1,
+        "prev_hash": "2354cfe655104c3ab93faea2102fba66499b76b61f4fcb4eb3e4165ccb45c846",
+        "scope_key": "ADMIN"
+      },
+      "canonical_utf8": "{\"action\":\"DEMO_RELEASE_PUBLISHED\",\"actor_id\":\"00000002-0000-4000-8000-000000000008\",\"actor_kind\":\"HUMAN\",\"correlation_id\":\"00000006-0000-4000-8000-000000000003\",\"department_id\":null,\"details\":{\"content_sha256\":\"534ffd8b5053ba4ad73434a2c12d7736047e834b28a21490ad5b88916c50ff83\",\"release_id\":\"00000003-0000-4000-8000-000000000002\"},\"hash_version\":1,\"id\":\"00000005-0000-4000-8000-000000000003\",\"occurred_at\":\"2026-01-01T00:00:00.000000Z\",\"prev_hash\":\"2354cfe655104c3ab93faea2102fba66499b76b61f4fcb4eb3e4165ccb45c846\",\"reason\":\"Development fixtures only; no production authorization.\",\"scope_key\":\"ADMIN\",\"seq\":\"3\",\"target_id\":\"00000003-0000-4000-8000-000000000002\",\"target_type\":\"config_release\",\"type_id\":\"00000000-0000-4000-8000-000000000002\"}",
+      "sha256": "3a258765da4fd2f54cc135640b7f0bf0aaee4b0ed4e803ce1774132f57dcb711"
+    },
+    {
+      "canonical_event": {
+        "id": "00000005-0000-4000-8000-000000000004",
+        "seq": "4",
+        "actor_id": "00000002-0000-4000-8000-000000000008",
+        "actor_kind": "HUMAN",
+        "action": "DEMO_RELEASE_PUBLISHED",
+        "target_type": "config_release",
+        "target_id": "00000003-0000-4000-8000-000000000003",
+        "department_id": null,
+        "type_id": "00000000-0000-4000-8000-000000000003",
+        "details": {
+          "release_id": "00000003-0000-4000-8000-000000000003",
+          "content_sha256": "6679b07bdd6f6a9b9052ebc6ad88e3206c3d883d3544754a53be16bfc4c7f7cd"
+        },
+        "reason": "Development fixtures only; no production authorization.",
+        "correlation_id": "00000006-0000-4000-8000-000000000004",
+        "occurred_at": "2026-01-01T00:00:00.000000Z",
+        "hash_version": 1,
+        "prev_hash": "3a258765da4fd2f54cc135640b7f0bf0aaee4b0ed4e803ce1774132f57dcb711",
+        "scope_key": "ADMIN"
+      },
+      "canonical_utf8": "{\"action\":\"DEMO_RELEASE_PUBLISHED\",\"actor_id\":\"00000002-0000-4000-8000-000000000008\",\"actor_kind\":\"HUMAN\",\"correlation_id\":\"00000006-0000-4000-8000-000000000004\",\"department_id\":null,\"details\":{\"content_sha256\":\"6679b07bdd6f6a9b9052ebc6ad88e3206c3d883d3544754a53be16bfc4c7f7cd\",\"release_id\":\"00000003-0000-4000-8000-000000000003\"},\"hash_version\":1,\"id\":\"00000005-0000-4000-8000-000000000004\",\"occurred_at\":\"2026-01-01T00:00:00.000000Z\",\"prev_hash\":\"3a258765da4fd2f54cc135640b7f0bf0aaee4b0ed4e803ce1774132f57dcb711\",\"reason\":\"Development fixtures only; no production authorization.\",\"scope_key\":\"ADMIN\",\"seq\":\"4\",\"target_id\":\"00000003-0000-4000-8000-000000000003\",\"target_type\":\"config_release\",\"type_id\":\"00000000-0000-4000-8000-000000000003\"}",
+      "sha256": "9ee4920888eea5d079ea8f73a8348aac7f352f229c6305bcee8986fcd0b29527"
+    }
+  ],
+  "config_releases": [
+    {
+      "release_id": "00000003-0000-4000-8000-000000000001",
+      "canonical_content": "{\"actor_bindings\":{\"departments\":{\"00000001-0000-4000-8000-000000000001\":{\"DIRECTOR\":\"00000002-0000-4000-8000-000000000005\",\"EXECUTOR_ASSET\":\"00000002-0000-4000-8000-000000000007\",\"EXECUTOR_IT\":\"00000002-0000-4000-8000-000000000006\",\"FINANCE\":\"00000002-0000-4000-8000-000000000004\"},\"00000001-0000-4000-8000-000000000002\":{\"DIRECTOR\":\"00000002-0000-4000-8000-000000000005\",\"EXECUTOR_ASSET\":\"00000002-0000-4000-8000-000000000007\",\"EXECUTOR_IT\":\"00000002-0000-4000-8000-000000000006\",\"FINANCE\":\"00000002-0000-4000-8000-000000000004\"}},\"schema_version\":1},\"form_schema\":{\"additionalProperties\":false,\"properties\":{\"end_date\":{\"format\":\"date\",\"type\":\"string\"},\"handover_user_id\":{\"format\":\"uuid\",\"type\":\"string\"},\"reason\":{\"maxLength\":2000,\"minLength\":10,\"type\":\"string\"},\"start_date\":{\"format\":\"date\",\"type\":\"string\"},\"title\":{\"maxLength\":150,\"minLength\":5,\"type\":\"string\"}},\"required\":[\"title\",\"reason\",\"start_date\",\"end_date\",\"handover_user_id\"],\"schema_version\":1,\"type\":\"object\"},\"lifecycle\":\"A\",\"route_rules\":{\"acceptor\":null,\"executor\":null,\"rules\":[{\"approvers\":[\"DIRECT_MANAGER\"],\"default\":true,\"id\":\"LEAVE-DEFAULT\"}],\"schema_version\":1},\"sla_profile\":{\"acceptance_hours\":null,\"approval_hours\":24,\"clock\":\"CALENDAR_UTC\",\"execution_hours\":null,\"reminder_fraction\":0.5,\"schema_version\":1},\"type_id\":\"00000000-0000-4000-8000-000000000001\"}",
+      "content_sha256": "1389c59a24ce11bb5d8e84fa1a2cdc2e97ea3b7470f1a5c0f1fc4c7a5b2e5ae7"
+    },
+    {
+      "release_id": "00000003-0000-4000-8000-000000000002",
+      "canonical_content": "{\"actor_bindings\":{\"departments\":{\"00000001-0000-4000-8000-000000000001\":{\"DIRECTOR\":\"00000002-0000-4000-8000-000000000005\",\"EXECUTOR_ASSET\":\"00000002-0000-4000-8000-000000000007\",\"EXECUTOR_IT\":\"00000002-0000-4000-8000-000000000006\",\"FINANCE\":\"00000002-0000-4000-8000-000000000004\"},\"00000001-0000-4000-8000-000000000002\":{\"DIRECTOR\":\"00000002-0000-4000-8000-000000000005\",\"EXECUTOR_ASSET\":\"00000002-0000-4000-8000-000000000007\",\"EXECUTOR_IT\":\"00000002-0000-4000-8000-000000000006\",\"FINANCE\":\"00000002-0000-4000-8000-000000000004\"}},\"schema_version\":1},\"form_schema\":{\"additionalProperties\":false,\"properties\":{\"app_code\":{\"enum\":[\"DEMO_PORTAL\"],\"type\":\"string\"},\"duration_days\":{\"maximum\":90,\"minimum\":1,\"type\":\"integer\"},\"purpose\":{\"maxLength\":2000,\"minLength\":10,\"type\":\"string\"},\"reason\":{\"maxLength\":2000,\"minLength\":10,\"type\":\"string\"},\"requested_role\":{\"enum\":[\"READ_BASIC\"],\"type\":\"string\"},\"title\":{\"maxLength\":150,\"minLength\":5,\"type\":\"string\"}},\"required\":[\"title\",\"reason\",\"app_code\",\"requested_role\",\"duration_days\",\"purpose\"],\"schema_version\":1,\"type\":\"object\"},\"lifecycle\":\"B\",\"route_rules\":{\"acceptor\":null,\"executor\":\"EXECUTOR_IT\",\"rules\":[{\"approvers\":[\"DIRECT_MANAGER\"],\"default\":true,\"id\":\"ACCESS-DEFAULT\"}],\"schema_version\":1},\"sla_profile\":{\"acceptance_hours\":null,\"approval_hours\":24,\"clock\":\"CALENDAR_UTC\",\"execution_hours\":12,\"reminder_fraction\":0.5,\"schema_version\":1},\"type_id\":\"00000000-0000-4000-8000-000000000002\"}",
+      "content_sha256": "534ffd8b5053ba4ad73434a2c12d7736047e834b28a21490ad5b88916c50ff83"
+    },
+    {
+      "release_id": "00000003-0000-4000-8000-000000000003",
+      "canonical_content": "{\"actor_bindings\":{\"departments\":{\"00000001-0000-4000-8000-000000000001\":{\"DIRECTOR\":\"00000002-0000-4000-8000-000000000005\",\"EXECUTOR_ASSET\":\"00000002-0000-4000-8000-000000000007\",\"EXECUTOR_IT\":\"00000002-0000-4000-8000-000000000006\",\"FINANCE\":\"00000002-0000-4000-8000-000000000004\"},\"00000001-0000-4000-8000-000000000002\":{\"DIRECTOR\":\"00000002-0000-4000-8000-000000000005\",\"EXECUTOR_ASSET\":\"00000002-0000-4000-8000-000000000007\",\"EXECUTOR_IT\":\"00000002-0000-4000-8000-000000000006\",\"FINANCE\":\"00000002-0000-4000-8000-000000000004\"}},\"schema_version\":1},\"form_schema\":{\"additionalProperties\":false,\"properties\":{\"amount_vnd\":{\"maximum\":1000000000000,\"minimum\":1,\"type\":\"integer\"},\"item_name\":{\"maxLength\":150,\"minLength\":2,\"type\":\"string\"},\"location\":{\"maxLength\":200,\"minLength\":2,\"type\":\"string\"},\"quantity\":{\"maximum\":100,\"minimum\":1,\"type\":\"integer\"},\"reason\":{\"maxLength\":2000,\"minLength\":10,\"type\":\"string\"},\"specs\":{\"maxLength\":2000,\"minLength\":10,\"type\":\"string\"},\"title\":{\"maxLength\":150,\"minLength\":5,\"type\":\"string\"}},\"required\":[\"title\",\"reason\",\"item_name\",\"quantity\",\"amount_vnd\",\"specs\",\"location\"],\"schema_version\":1,\"type\":\"object\"},\"lifecycle\":\"C\",\"route_rules\":{\"acceptor\":\"REQUESTER\",\"executor\":\"EXECUTOR_ASSET\",\"rules\":[{\"approvers\":[\"DIRECT_MANAGER\",\"FINANCE\",\"DIRECTOR\"],\"id\":\"EQ-HIGH\",\"priority\":10,\"when\":{\"amount_gt\":50000000}},{\"approvers\":[\"DIRECT_MANAGER\",\"FINANCE\"],\"id\":\"EQ-MID\",\"priority\":20,\"when\":{\"amount_gte\":10000000}},{\"approvers\":[\"DIRECT_MANAGER\"],\"default\":true,\"id\":\"EQ-DEFAULT\"}],\"schema_version\":1},\"sla_profile\":{\"acceptance_hours\":24,\"approval_hours\":24,\"clock\":\"CALENDAR_UTC\",\"execution_hours\":48,\"reminder_fraction\":0.5,\"schema_version\":1},\"type_id\":\"00000000-0000-4000-8000-000000000003\"}",
+      "content_sha256": "6679b07bdd6f6a9b9052ebc6ad88e3206c3d883d3544754a53be16bfc4c7f7cd"
+    }
+  ]
+}

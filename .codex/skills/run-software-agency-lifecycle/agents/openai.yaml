@@ -1,0 +1,4 @@
+interface:
+  display_name: "Software Agency Lifecycle"
+  short_description: "Review, design, build, test, and ship software"
+  default_prompt: "Use $run-software-agency-lifecycle to take this software project from critical requirements review through approved design, implementation, QA, and deployment."

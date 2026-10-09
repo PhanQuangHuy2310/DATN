@@ -1,9 +1,12 @@
-# Web Admin Portal
+# Web Admin — P0 cần triển khai
 
-Thư mục này chứa mã nguồn giao diện quản trị viên (Admin Portal) của hệ thống (thường sử dụng React.js, Vue.js hoặc Angular).
+Admin web cho POLICY_ADMIN, OPS_ADMIN và AUDITOR. Frontend chỉ gọi Django API qua `VITE_API_BASE_URL`.
 
-Đây là trung tâm điều khiển dành riêng cho bộ phận Quản trị hệ thống, Hành chính, Nhân sự, bao gồm các chức năng:
-- **Quản lý danh mục:** Thiết lập sơ đồ tổ chức (Phòng ban, Chức vụ), quản lý tài khoản người dùng và phân quyền.
-- **Thiết lập Workflow:** Cấu hình các quy trình phê duyệt động, quản lý các template biểu mẫu (Form Builder).
-- **Giám sát & Báo cáo:** Xem dashboard tổng quan, xuất báo cáo thống kê tình hình xử lý yêu cầu.
-- **Audit & Log:** Giao diện tra cứu Elasticsearch để kiểm tra dấu vết kiểm toán (Audit logs), phục vụ cho việc thanh tra và tuân thủ.
+Phạm vi P0:
+
+- Quản lý organization/user/role qua dry-run và apply có audit.
+- Soạn, validate, test vector và publish config release hữu hạn.
+- Gán thay có reason, outbox replay, SLA/incident view.
+- Audit/report đúng scope; không cung cấp đường bypass quyền.
+
+Không có drag-and-drop workflow builder hoặc giao diện Elasticsearch trong P0. Trạng thái hiện tại: chưa có application code để nghiệm thu.

@@ -1,0 +1,93 @@
+name: quality-gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  secret-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/check_repository_secrets.py
+
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      EAS_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api_core/requirements.txt
+      - run: python -m pip install --requirement api_core/requirements-dev.txt
+      - run: ruff check api_core manage.py test_logger.py scripts
+      - run: ruff format --check api_core manage.py test_logger.py scripts
+      - run: python -m pip_audit --requirement api_core/requirements.txt
+      - run: python manage.py test -v 2
+      - run: python -m unittest -v test_logger.py
+      - run: python -m compileall -q api_core manage.py test_logger.py
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: database/EAS_Supabase_SQL/validation/package-lock.json
+      - working-directory: database/EAS_Supabase_SQL/validation
+        run: npm ci
+      - working-directory: database/EAS_Supabase_SQL/validation
+        run: npm test
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web_client/package-lock.json
+      - working-directory: web_client
+        run: npm ci
+      - working-directory: web_client
+        run: npm audit --audit-level=high
+      - working-directory: web_client
+        run: npm run lint
+      - working-directory: web_client
+        run: npm run build
+
+  container-config:
+    runs-on: ubuntu-latest
+    env:
+      EAS_API_DATABASE_URL: postgresql://ci_api:ci_only@db.invalid:5432/postgres?sslmode=require
+      EAS_WORKER_DATABASE_URL: postgresql://ci_worker:ci_only@db.invalid:5432/postgres?sslmode=require
+      EAS_DJANGO_SECRET_KEY: ci-only-not-a-real-secret-000000000000000000000000000000
+      EAS_SUPABASE_URL: https://ci-project.invalid
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet
+      - run: docker compose build api web
+
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/validate_docs.py

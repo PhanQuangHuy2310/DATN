@@ -1,0 +1,829 @@
+{
+  "result": "PASS",
+  "source": "03_Du_lieu_va_API_v2.docx actual paragraph text",
+  "comparison": "Exact table and column names DB01-DB30; not an assertion of every service business rule.",
+  "source_tables": 30,
+  "source_columns": 260,
+  "rows": [
+    {
+      "source_id": "DB01",
+      "table": "security_epoch",
+      "expected_columns": [
+        "id",
+        "version",
+        "updated_at"
+      ],
+      "actual_columns": [
+        "id",
+        "version",
+        "updated_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB02",
+      "table": "department",
+      "expected_columns": [
+        "id",
+        "code",
+        "name",
+        "parent_id",
+        "is_active"
+      ],
+      "actual_columns": [
+        "id",
+        "code",
+        "name",
+        "parent_id",
+        "is_active"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB03",
+      "table": "app_user",
+      "expected_columns": [
+        "id",
+        "username",
+        "display_name",
+        "department_id",
+        "manager_id",
+        "is_active",
+        "must_change_password",
+        "auth_version",
+        "password_hash",
+        "created_at"
+      ],
+      "actual_columns": [
+        "id",
+        "username",
+        "display_name",
+        "department_id",
+        "manager_id",
+        "is_active",
+        "must_change_password",
+        "auth_version",
+        "password_hash",
+        "created_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB04",
+      "table": "role_membership",
+      "expected_columns": [
+        "id",
+        "user_id",
+        "role",
+        "scope_kind",
+        "department_id",
+        "type_scope",
+        "type_id",
+        "valid_from",
+        "valid_to",
+        "revoked_at"
+      ],
+      "actual_columns": [
+        "id",
+        "user_id",
+        "role",
+        "scope_kind",
+        "department_id",
+        "type_scope",
+        "type_id",
+        "valid_from",
+        "valid_to",
+        "revoked_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB05",
+      "table": "request_type",
+      "expected_columns": [
+        "id",
+        "code",
+        "lifecycle",
+        "is_active",
+        "active_release_id"
+      ],
+      "actual_columns": [
+        "id",
+        "code",
+        "lifecycle",
+        "is_active",
+        "active_release_id"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB06",
+      "table": "config_release",
+      "expected_columns": [
+        "id",
+        "type_id",
+        "version",
+        "state",
+        "lifecycle",
+        "form_schema",
+        "route_rules",
+        "actor_bindings",
+        "sla_profile",
+        "created_by",
+        "published_by",
+        "created_at",
+        "published_at",
+        "lock_version",
+        "content_sha256"
+      ],
+      "actual_columns": [
+        "id",
+        "type_id",
+        "version",
+        "state",
+        "lifecycle",
+        "form_schema",
+        "route_rules",
+        "actor_bindings",
+        "sla_profile",
+        "created_by",
+        "published_by",
+        "created_at",
+        "published_at",
+        "lock_version",
+        "content_sha256"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB07",
+      "table": "request",
+      "expected_columns": [
+        "id",
+        "code",
+        "requester_id",
+        "type_id",
+        "status",
+        "draft_payload",
+        "draft_amount_vnd",
+        "draft_release_id",
+        "origin_request_id",
+        "current_revision_id",
+        "lock_version",
+        "created_at",
+        "updated_at",
+        "approved_at",
+        "completed_at"
+      ],
+      "actual_columns": [
+        "id",
+        "code",
+        "requester_id",
+        "type_id",
+        "status",
+        "draft_payload",
+        "draft_amount_vnd",
+        "draft_release_id",
+        "origin_request_id",
+        "current_revision_id",
+        "lock_version",
+        "created_at",
+        "updated_at",
+        "approved_at",
+        "completed_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB08",
+      "table": "request_revision",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "revision_no",
+        "release_id",
+        "department_id",
+        "payload",
+        "amount_vnd",
+        "submitted_by",
+        "submitted_at",
+        "payload_sha256"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "revision_no",
+        "release_id",
+        "department_id",
+        "payload",
+        "amount_vnd",
+        "submitted_by",
+        "submitted_at",
+        "payload_sha256"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB09",
+      "table": "workflow_instance",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "revision_id",
+        "matched_rule_id",
+        "resolved_route",
+        "lifecycle",
+        "state",
+        "planned_executor_id",
+        "acceptor_id",
+        "created_at",
+        "closed_at"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "revision_id",
+        "matched_rule_id",
+        "resolved_route",
+        "lifecycle",
+        "state",
+        "planned_executor_id",
+        "acceptor_id",
+        "created_at",
+        "closed_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB10",
+      "table": "request_participant",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "user_id",
+        "first_joined_at",
+        "joined_as",
+        "read_revoked_at",
+        "read_revoked_reason"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "user_id",
+        "first_joined_at",
+        "joined_as",
+        "read_revoked_at",
+        "read_revoked_reason"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB11",
+      "table": "approval_step",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "instance_id",
+        "step_no",
+        "assignee_id",
+        "state",
+        "activated_at",
+        "closed_at"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "instance_id",
+        "step_no",
+        "assignee_id",
+        "state",
+        "activated_at",
+        "closed_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB12",
+      "table": "approval_decision",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "step_id",
+        "actor_id",
+        "outcome",
+        "reason",
+        "decided_at"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "step_id",
+        "actor_id",
+        "outcome",
+        "reason",
+        "decided_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB13",
+      "table": "execution_attempt",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "instance_id",
+        "attempt_no",
+        "executor_id",
+        "state",
+        "closure_kind",
+        "result_note",
+        "external_reference",
+        "started_at",
+        "submitted_at",
+        "closed_at"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "instance_id",
+        "attempt_no",
+        "executor_id",
+        "state",
+        "closure_kind",
+        "result_note",
+        "external_reference",
+        "started_at",
+        "submitted_at",
+        "closed_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB14",
+      "table": "acceptance_decision",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "attempt_id",
+        "actor_id",
+        "outcome",
+        "reason",
+        "decided_at"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "attempt_id",
+        "actor_id",
+        "outcome",
+        "reason",
+        "decided_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB15",
+      "table": "execution_issue",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "attempt_id",
+        "actor_id",
+        "kind",
+        "reason",
+        "created_at"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "attempt_id",
+        "actor_id",
+        "kind",
+        "reason",
+        "created_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB16",
+      "table": "attachment",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "uploader_id",
+        "storage_key",
+        "object_version",
+        "original_name",
+        "mime",
+        "size_bytes",
+        "sha256",
+        "scan_state",
+        "scan_attempts",
+        "created_at",
+        "scanned_at",
+        "deleted_at"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "uploader_id",
+        "storage_key",
+        "object_version",
+        "original_name",
+        "mime",
+        "size_bytes",
+        "sha256",
+        "scan_state",
+        "scan_attempts",
+        "created_at",
+        "scanned_at",
+        "deleted_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB17",
+      "table": "draft_attachment",
+      "expected_columns": [
+        "request_id",
+        "attachment_id",
+        "added_by",
+        "added_at"
+      ],
+      "actual_columns": [
+        "request_id",
+        "attachment_id",
+        "added_by",
+        "added_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB18",
+      "table": "revision_attachment",
+      "expected_columns": [
+        "revision_id",
+        "attachment_id",
+        "request_id"
+      ],
+      "actual_columns": [
+        "revision_id",
+        "attachment_id",
+        "request_id"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB19",
+      "table": "execution_attachment",
+      "expected_columns": [
+        "attempt_id",
+        "attachment_id",
+        "request_id"
+      ],
+      "actual_columns": [
+        "attempt_id",
+        "attachment_id",
+        "request_id"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB20",
+      "table": "sla_stage",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "kind",
+        "approval_step_id",
+        "attempt_id",
+        "started_at",
+        "due_at",
+        "closed_at",
+        "breached_at"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "kind",
+        "approval_step_id",
+        "attempt_id",
+        "started_at",
+        "due_at",
+        "closed_at",
+        "breached_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB21",
+      "table": "sla_alert",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "stage_id",
+        "kind",
+        "created_at"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "stage_id",
+        "kind",
+        "created_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB22",
+      "table": "audit_event",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "seq",
+        "actor_id",
+        "actor_kind",
+        "action",
+        "target_type",
+        "target_id",
+        "details",
+        "correlation_id",
+        "occurred_at",
+        "hash_version",
+        "prev_hash",
+        "hash"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "seq",
+        "actor_id",
+        "actor_kind",
+        "action",
+        "target_type",
+        "target_id",
+        "details",
+        "correlation_id",
+        "occurred_at",
+        "hash_version",
+        "prev_hash",
+        "hash"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB23",
+      "table": "admin_event",
+      "expected_columns": [
+        "id",
+        "seq",
+        "actor_id",
+        "actor_kind",
+        "action",
+        "target_type",
+        "target_id",
+        "department_id",
+        "type_id",
+        "details",
+        "reason",
+        "correlation_id",
+        "occurred_at",
+        "hash_version",
+        "prev_hash",
+        "hash"
+      ],
+      "actual_columns": [
+        "id",
+        "seq",
+        "actor_id",
+        "actor_kind",
+        "action",
+        "target_type",
+        "target_id",
+        "department_id",
+        "type_id",
+        "details",
+        "reason",
+        "correlation_id",
+        "occurred_at",
+        "hash_version",
+        "prev_hash",
+        "hash"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB24",
+      "table": "audit_head",
+      "expected_columns": [
+        "scope_key",
+        "seq",
+        "last_hash"
+      ],
+      "actual_columns": [
+        "scope_key",
+        "seq",
+        "last_hash"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB25",
+      "table": "audit_checkpoint",
+      "expected_columns": [
+        "id",
+        "scope_key",
+        "seq",
+        "hash",
+        "external_object_key",
+        "external_version",
+        "captured_at"
+      ],
+      "actual_columns": [
+        "id",
+        "scope_key",
+        "seq",
+        "hash",
+        "external_object_key",
+        "external_version",
+        "captured_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB26",
+      "table": "outbox_event",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "event_type",
+        "payload",
+        "state",
+        "dedupe_key",
+        "attempts",
+        "replay_count",
+        "available_at",
+        "lease_token",
+        "lease_until",
+        "created_at",
+        "sent_at",
+        "last_error_code"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "event_type",
+        "payload",
+        "state",
+        "dedupe_key",
+        "attempts",
+        "replay_count",
+        "available_at",
+        "lease_token",
+        "lease_until",
+        "created_at",
+        "sent_at",
+        "last_error_code"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB27",
+      "table": "notification",
+      "expected_columns": [
+        "id",
+        "event_id",
+        "recipient_id",
+        "request_id",
+        "label",
+        "created_at",
+        "read_at"
+      ],
+      "actual_columns": [
+        "id",
+        "event_id",
+        "recipient_id",
+        "request_id",
+        "label",
+        "created_at",
+        "read_at"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB28",
+      "table": "idempotency_record",
+      "expected_columns": [
+        "id",
+        "actor_id",
+        "command_scope",
+        "key",
+        "request_hash",
+        "http_status",
+        "response_body",
+        "request_id",
+        "created_at",
+        "expires_at",
+        "tombstone_until"
+      ],
+      "actual_columns": [
+        "id",
+        "actor_id",
+        "command_scope",
+        "key",
+        "request_hash",
+        "http_status",
+        "response_body",
+        "request_id",
+        "created_at",
+        "expires_at",
+        "tombstone_until"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB29",
+      "table": "privacy_case",
+      "expected_columns": [
+        "id",
+        "subject_user_id",
+        "case_type",
+        "status",
+        "requested_at",
+        "due_at",
+        "completed_at",
+        "policy_version",
+        "owner_id",
+        "decision_reference"
+      ],
+      "actual_columns": [
+        "id",
+        "subject_user_id",
+        "case_type",
+        "status",
+        "requested_at",
+        "due_at",
+        "completed_at",
+        "policy_version",
+        "owner_id",
+        "decision_reference"
+      ],
+      "missing": [],
+      "extra": []
+    },
+    {
+      "source_id": "DB30",
+      "table": "retention_hold",
+      "expected_columns": [
+        "id",
+        "request_id",
+        "reason",
+        "authority_reference",
+        "set_by",
+        "created_at",
+        "released_at",
+        "released_by"
+      ],
+      "actual_columns": [
+        "id",
+        "request_id",
+        "reason",
+        "authority_reference",
+        "set_by",
+        "created_at",
+        "released_at",
+        "released_by"
+      ],
+      "missing": [],
+      "extra": []
+    }
+  ]
+}

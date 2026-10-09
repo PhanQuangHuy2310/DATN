@@ -1,0 +1,102 @@
+-- SYNTHETIC DATA ONLY. Never use this file as production master data.
+BEGIN;
+SET LOCAL ROLE eas_migration;
+
+INSERT INTO mock_hr.department(id,code,name,cost_center,parent_id) VALUES
+('10000000-0000-4000-8000-000000000001','HQ','Ban điều hành','CC-100',NULL),
+('10000000-0000-4000-8000-000000000002','IT','Công nghệ thông tin','CC-210','10000000-0000-4000-8000-000000000001'),
+('10000000-0000-4000-8000-000000000003','SALES','Kinh doanh','CC-310','10000000-0000-4000-8000-000000000001'),
+('10000000-0000-4000-8000-000000000004','OPS','Vận hành','CC-410','10000000-0000-4000-8000-000000000001');
+
+INSERT INTO mock_hr.employee(id,employee_code,display_name,work_email,department_id,manager_id,job_title,employment_status,hired_on) VALUES
+('20000000-0000-4000-8000-000000000001','E0001','Nguyễn Minh An','an.nguyen@example.test','10000000-0000-4000-8000-000000000001',NULL,'Giám đốc điều hành','ACTIVE','2022-01-03'),
+('20000000-0000-4000-8000-000000000002','E0101','Trần Hải Bình','binh.tran@example.test','10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000001','Trưởng phòng CNTT','ACTIVE','2022-03-01'),
+('20000000-0000-4000-8000-000000000003','E0102','Lê Thu Chi','chi.le@example.test','10000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','Kỹ sư phần mềm','ACTIVE','2024-02-19'),
+('20000000-0000-4000-8000-000000000004','E0201','Phạm Gia Dũng','dung.pham@example.test','10000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000001','Quản lý khách hàng','ACTIVE','2023-06-12'),
+('20000000-0000-4000-8000-000000000005','E0301','Vũ Mai Hà','ha.vu@example.test','10000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000001','Quản lý vận hành','ON_LEAVE','2023-08-07');
+
+INSERT INTO mock_hr.leave_balance(id,employee_id,leave_type,year,entitled_days,used_days) VALUES
+('21000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000003','ANNUAL',2026,14,4.5),
+('21000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000003','SICK',2026,6,1),
+('21000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000004','ANNUAL',2026,14,12);
+
+INSERT INTO mock_assets.asset_category(id,code,name,requires_approval,max_loan_days) VALUES
+('30000000-0000-4000-8000-000000000001','LAPTOP','Máy tính xách tay',true,30),
+('30000000-0000-4000-8000-000000000002','AV','Thiết bị trình chiếu',true,7),
+('30000000-0000-4000-8000-000000000003','PERIPHERAL','Thiết bị ngoại vi',false,90);
+
+INSERT INTO mock_assets.asset(id,asset_code,name,category_id,serial_number,site_code,condition,availability_status,purchase_value_minor) VALUES
+('31000000-0000-4000-8000-000000000001','LT-0001','Laptop Developer 01','30000000-0000-4000-8000-000000000001','SYN-LT-0001','HCM-HQ','GOOD','AVAILABLE',3200000000),
+('31000000-0000-4000-8000-000000000002','LT-0002','Laptop Sales 01','30000000-0000-4000-8000-000000000001','SYN-LT-0002','HCM-HQ','GOOD','ON_LOAN',2400000000),
+('31000000-0000-4000-8000-000000000003','PJ-0001','Máy chiếu phòng họp','30000000-0000-4000-8000-000000000002','SYN-PJ-0001','HCM-HQ','FAIR','MAINTENANCE',1800000000);
+
+INSERT INTO mock_assets.asset_loan(id,asset_id,borrower_employee_id,source_request_id,starts_at,due_at,status) VALUES
+('32000000-0000-4000-8000-000000000001','31000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000004',NULL,'2026-10-01T01:00:00Z','2026-10-20T10:00:00Z','ACTIVE');
+
+INSERT INTO mock_facilities.site(id,site_code,name,timezone) VALUES
+('40000000-0000-4000-8000-000000000001','HCM-HQ','Trụ sở Thành phố Hồ Chí Minh','Asia/Ho_Chi_Minh'),
+('40000000-0000-4000-8000-000000000002','HN-BR','Chi nhánh Hà Nội','Asia/Ho_Chi_Minh');
+
+INSERT INTO mock_facilities.resource(id,resource_code,name,resource_type,site_id,capacity,availability_status) VALUES
+('41000000-0000-4000-8000-000000000001','MR-HCM-01','Phòng họp Hoa Sen','MEETING_ROOM','40000000-0000-4000-8000-000000000001',12,'AVAILABLE'),
+('41000000-0000-4000-8000-000000000002','DESK-HCM-01','Bàn linh hoạt 01','DESK','40000000-0000-4000-8000-000000000001',1,'AVAILABLE'),
+('41000000-0000-4000-8000-000000000003','CAR-HCM-01','Xe công tác 01','VEHICLE','40000000-0000-4000-8000-000000000001',7,'MAINTENANCE');
+
+INSERT INTO mock_facilities.reservation(id,resource_id,requester_employee_id,starts_at,ends_at,status,purpose) VALUES
+('42000000-0000-4000-8000-000000000001','41000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000004','2026-10-12T02:00:00Z','2026-10-12T03:00:00Z','CONFIRMED','Họp khách hàng mô phỏng');
+
+INSERT INTO mock_crm.customer(id,customer_code,legal_name,segment,account_status,account_owner_employee_id,tax_country) VALUES
+('50000000-0000-4000-8000-000000000001','CUS-0001','Công ty Mẫu Sao Việt','ENTERPRISE','ACTIVE','20000000-0000-4000-8000-000000000004','VN'),
+('50000000-0000-4000-8000-000000000002','CUS-0002','Doanh nghiệp Giả lập Ánh Dương','SMB','PROSPECT','20000000-0000-4000-8000-000000000004','VN');
+
+INSERT INTO mock_crm.contract(id,contract_code,customer_id,starts_on,ends_on,currency,value_minor,status) VALUES
+('51000000-0000-4000-8000-000000000001','CTR-2026-001','50000000-0000-4000-8000-000000000001','2026-01-01','2026-12-31','VND',150000000000,'ACTIVE');
+
+INSERT INTO mock_crm.support_case(id,case_code,customer_id,priority,category,status,owner_employee_id,opened_at) VALUES
+('52000000-0000-4000-8000-000000000001','CASE-0001','50000000-0000-4000-8000-000000000001','HIGH','SERVICE','OPEN','20000000-0000-4000-8000-000000000004','2026-10-08T03:00:00Z');
+
+INSERT INTO mock_procurement.supplier(id,supplier_code,legal_name,category,risk_rating,status) VALUES
+('60000000-0000-4000-8000-000000000001','SUP-IT-01','Nhà cung cấp Mẫu Công Nghệ','IT_EQUIPMENT','LOW','APPROVED'),
+('60000000-0000-4000-8000-000000000002','SUP-TRAVEL-01','Nhà cung cấp Mẫu Công Tác','TRAVEL','MEDIUM','APPROVED');
+
+INSERT INTO mock_procurement.catalog_item(id,sku,name,category,supplier_id,currency,unit_price_minor,status) VALUES
+('61000000-0000-4000-8000-000000000001','SKU-LT-STD','Laptop tiêu chuẩn','IT_EQUIPMENT','60000000-0000-4000-8000-000000000001','VND',2500000000,'ACTIVE'),
+('61000000-0000-4000-8000-000000000002','SKU-MON-27','Màn hình 27 inch','IT_EQUIPMENT','60000000-0000-4000-8000-000000000001','VND',650000000,'ACTIVE');
+
+INSERT INTO mock_procurement.purchase_order(id,po_code,supplier_id,requester_employee_id,currency,total_minor,status,issued_at) VALUES
+('62000000-0000-4000-8000-000000000001','PO-2026-001','60000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000002','VND',5000000000,'SENT','2026-10-01T02:00:00Z');
+
+INSERT INTO mock_it.application(id,app_code,name,data_classification,owner_employee_id) VALUES
+('70000000-0000-4000-8000-000000000001','CRM','Customer Relationship Management','CONFIDENTIAL','20000000-0000-4000-8000-000000000002'),
+('70000000-0000-4000-8000-000000000002','ERP','Enterprise Resource Planning','RESTRICTED','20000000-0000-4000-8000-000000000002');
+
+INSERT INTO mock_it.access_role(id,application_id,role_code,name,risk_level,requires_sod_review) VALUES
+('71000000-0000-4000-8000-000000000001','70000000-0000-4000-8000-000000000001','CRM_VIEWER','Xem dữ liệu CRM','MEDIUM',false),
+('71000000-0000-4000-8000-000000000002','70000000-0000-4000-8000-000000000002','ERP_AP_ADMIN','Quản trị công nợ phải trả','PRIVILEGED',true);
+
+INSERT INTO mock_it.user_access(id,employee_id,access_role_id,granted_at,status) VALUES
+('72000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000004','71000000-0000-4000-8000-000000000001','2026-01-02T02:00:00Z','ACTIVE');
+
+INSERT INTO mock_it.service_catalog(id,service_code,name,category,default_priority,target_hours) VALUES
+('73000000-0000-4000-8000-000000000001','IT-PASSWORD','Khôi phục tài khoản','ACCOUNT','HIGH',4),
+('73000000-0000-4000-8000-000000000002','IT-SOFTWARE','Cài đặt phần mềm','SOFTWARE','MEDIUM',16),
+('73000000-0000-4000-8000-000000000003','IT-SECURITY','Xử lý sự cố an toàn thông tin','SECURITY','CRITICAL',1);
+
+INSERT INTO mock_finance.cost_center_budget(id,cost_center,fiscal_year,currency,approved_minor,committed_minor,spent_minor) VALUES
+('80000000-0000-4000-8000-000000000001','CC-210',2026,'VND',100000000000,12000000000,35000000000),
+('80000000-0000-4000-8000-000000000002','CC-310',2026,'VND',160000000000,25000000000,52000000000);
+
+INSERT INTO mock_finance.expense_category(id,category_code,name,receipt_required_above_minor,daily_limit_minor,currency) VALUES
+('81000000-0000-4000-8000-000000000001','MEAL','Chi phí ăn uống',20000000,50000000,'VND'),
+('81000000-0000-4000-8000-000000000002','TAXI','Di chuyển nội đô',0,100000000,'VND'),
+('81000000-0000-4000-8000-000000000003','OFFICE','Văn phòng phẩm',0,NULL,'VND');
+
+INSERT INTO mock_travel.travel_policy(id,employee_grade,travel_mode,cabin_or_class,max_amount_minor,currency,requires_quote_count) VALUES
+('90000000-0000-4000-8000-000000000001','STAFF','AIR','ECONOMY',500000000,'VND',2),
+('90000000-0000-4000-8000-000000000002','MANAGER','HOTEL','STANDARD',250000000,'VND',2);
+
+INSERT INTO mock_travel.travel_option(id,option_code,travel_mode,origin,destination,departs_at,arrives_at,supplier_id,currency,price_minor,refundable,availability_status) VALUES
+('91000000-0000-4000-8000-000000000001','TRIP-SGN-HAN-01','AIR','SGN','HAN','2026-11-01T01:00:00Z','2026-11-01T03:10:00Z','60000000-0000-4000-8000-000000000002','VND',280000000,true,'AVAILABLE'),
+('91000000-0000-4000-8000-000000000002','TRIP-SGN-HAN-02','AIR','SGN','HAN','2026-11-01T06:00:00Z','2026-11-01T08:10:00Z','60000000-0000-4000-8000-000000000002','VND',220000000,false,'LIMITED');
+
+COMMIT;

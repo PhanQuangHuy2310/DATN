@@ -1,0 +1,416 @@
+{
+  "tested_at_utc": "2026-09-22T02:47:44.192Z",
+  "engine": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
+  "catalog": {
+    "tables": 30,
+    "columns": 260,
+    "foreign_keys": 72,
+    "checks": 139,
+    "indexes": 127,
+    "business_triggers": 52,
+    "rls_policies": 60
+  },
+  "test_count": 98,
+  "passed": 98,
+  "failed": 0,
+  "limitations": [
+    "PostgreSQL WASM engine; not an actual hosted Supabase project.",
+    "Single backend: no multi-session lock/race/load/backup/network/storage/Auth/API verification.",
+    "Tests cover database invariants, not all 100 SRS acceptance cases.",
+    "Fixture file rows are metadata only; they do not represent stored or scanned objects."
+  ],
+  "results": [
+    {
+      "test": "DDL install and commit",
+      "result": "PASS"
+    },
+    {
+      "test": "Bootstrap has 3 active demo releases and 10 unusable demo accounts",
+      "result": "PASS"
+    },
+    {
+      "test": "All 30 tables have RLS enabled",
+      "result": "PASS"
+    },
+    {
+      "test": "API cannot rewrite audit head directly",
+      "result": "PASS"
+    },
+    {
+      "test": "NULL-scoped duplicate membership rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "GLOBAL membership with department rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Role date interval rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Department cycle detected at deferred check",
+      "result": "PASS"
+    },
+    {
+      "test": "Manager cycle detected at deferred check",
+      "result": "PASS"
+    },
+    {
+      "test": "Published release immutable",
+      "result": "PASS"
+    },
+    {
+      "test": "Active release cannot cross request type",
+      "result": "PASS"
+    },
+    {
+      "test": "Unknown request status rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Draft release must match type",
+      "result": "PASS"
+    },
+    {
+      "test": "Origin owner cannot differ",
+      "result": "PASS"
+    },
+    {
+      "test": "Money must not be placed on leave",
+      "result": "PASS"
+    },
+    {
+      "test": "Money upper bound enforced",
+      "result": "PASS"
+    },
+    {
+      "test": "Version increment required",
+      "result": "PASS"
+    },
+    {
+      "test": "Draft cancellation allowed",
+      "result": "PASS"
+    },
+    {
+      "test": "Terminal request cannot reopen",
+      "result": "PASS"
+    },
+    {
+      "test": "Deferred circular FKs validate after all submissions",
+      "result": "PASS"
+    },
+    {
+      "test": "Revision cannot cross release type",
+      "result": "PASS"
+    },
+    {
+      "test": "Current revision cannot cross request",
+      "result": "PASS"
+    },
+    {
+      "test": "Workflow revision cannot cross request",
+      "result": "PASS"
+    },
+    {
+      "test": "Workflow composite FK isolates request ownership",
+      "result": "PASS"
+    },
+    {
+      "test": "Only one ACTIVE instance per request",
+      "result": "PASS"
+    },
+    {
+      "test": "Approval step cannot cross request",
+      "result": "PASS"
+    },
+    {
+      "test": "Only one ACTIVE step per instance",
+      "result": "PASS"
+    },
+    {
+      "test": "Requester cannot approve own request",
+      "result": "PASS"
+    },
+    {
+      "test": "Same approver cannot occupy two steps",
+      "result": "PASS"
+    },
+    {
+      "test": "Wrong actor cannot decide current step",
+      "result": "PASS"
+    },
+    {
+      "test": "Approval decision cross-request FK",
+      "result": "PASS"
+    },
+    {
+      "test": "Reject requires reason length",
+      "result": "PASS"
+    },
+    {
+      "test": "Only one open SLA stage per request",
+      "result": "PASS"
+    },
+    {
+      "test": "SLA subtype requires exactly one correct target",
+      "result": "PASS"
+    },
+    {
+      "test": "SLA target cannot cross request",
+      "result": "PASS"
+    },
+    {
+      "test": "SLA deadline cannot be extended",
+      "result": "PASS"
+    },
+    {
+      "test": "SLA alert deduplication",
+      "result": "PASS"
+    },
+    {
+      "test": "SLA alert cannot cross request",
+      "result": "PASS"
+    },
+    {
+      "test": "Lifecycle A completes after approval",
+      "result": "PASS"
+    },
+    {
+      "test": "Second approval decision rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Revision immutable even for schema owner",
+      "result": "PASS"
+    },
+    {
+      "test": "Decision immutable even for schema owner",
+      "result": "PASS"
+    },
+    {
+      "test": "One current execution attempt per instance",
+      "result": "PASS"
+    },
+    {
+      "test": "Execution cannot exist on A",
+      "result": "PASS"
+    },
+    {
+      "test": "RUNNING executor cannot be overwritten",
+      "result": "PASS"
+    },
+    {
+      "test": "Execution issue cannot cross request",
+      "result": "PASS"
+    },
+    {
+      "test": "B finish without evidence rejected at commit boundary",
+      "result": "PASS"
+    },
+    {
+      "test": "Lifecycle B completes with evidence",
+      "result": "PASS"
+    },
+    {
+      "test": "Execution attempt composite FK rejects cross-request target",
+      "result": "PASS"
+    },
+    {
+      "test": "Evidence must be uploaded by executor",
+      "result": "PASS"
+    },
+    {
+      "test": "Submitted result cannot be changed",
+      "result": "PASS"
+    },
+    {
+      "test": "Wrong acceptor cannot accept",
+      "result": "PASS"
+    },
+    {
+      "test": "Acceptance decision cannot cross request",
+      "result": "PASS"
+    },
+    {
+      "test": "Executor cannot accept own work even after reassignment",
+      "result": "PASS"
+    },
+    {
+      "test": "REWORK creates new attempt without replacing prior result",
+      "result": "PASS"
+    },
+    {
+      "test": "RUNNING reassignment preserves SLA identity and deadline",
+      "result": "PASS"
+    },
+    {
+      "test": "Lifecycle C completes after acceptance with retained attempts",
+      "result": "PASS"
+    },
+    {
+      "test": "Unscanned file cannot be attached",
+      "result": "PASS"
+    },
+    {
+      "test": "Cross-request file attachment rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Path separator in original filename rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "File larger than 10 MiB rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Unsupported MIME rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Sixth selected draft file rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Referenced attachment cannot be tombstoned",
+      "result": "PASS"
+    },
+    {
+      "test": "Historical revision cannot receive late files",
+      "result": "PASS"
+    },
+    {
+      "test": "Aggregate quota 200 MiB enforced under request lock",
+      "result": "PASS"
+    },
+    {
+      "test": "Audit append advances request head atomically",
+      "result": "PASS"
+    },
+    {
+      "test": "Audit previous hash mismatch rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "API cannot delete audit event",
+      "result": "PASS"
+    },
+    {
+      "test": "Outbox dedupe key uniqueness",
+      "result": "PASS"
+    },
+    {
+      "test": "PROCESSING requires lease token and attempts",
+      "result": "PASS"
+    },
+    {
+      "test": "DEAD requires four attempts",
+      "result": "PASS"
+    },
+    {
+      "test": "Notification cannot discard event request scope",
+      "result": "PASS"
+    },
+    {
+      "test": "Notification duplicate delivery rejected",
+      "result": "PASS"
+    },
+    {
+      "test": "Notification first read cannot be removed",
+      "result": "PASS"
+    },
+    {
+      "test": "Idempotency scope uniqueness",
+      "result": "PASS"
+    },
+    {
+      "test": "Worker cannot approve a request",
+      "result": "PASS"
+    },
+    {
+      "test": "Idempotency response cannot clear before 7 days",
+      "result": "PASS"
+    },
+    {
+      "test": "Idempotency tombstone cannot delete before 30 days",
+      "result": "PASS"
+    },
+    {
+      "test": "Worker can claim outbox with valid lease",
+      "result": "PASS"
+    },
+    {
+      "test": "Worker can ACK outbox",
+      "result": "PASS"
+    },
+    {
+      "test": "Worker can store scanner result",
+      "result": "PASS"
+    },
+    {
+      "test": "anon cannot read private EAS data",
+      "result": "PASS"
+    },
+    {
+      "test": "authenticated cannot read private EAS data",
+      "result": "PASS"
+    },
+    {
+      "test": "service_role cannot read private EAS data",
+      "result": "PASS"
+    },
+    {
+      "test": "Backup role can read all request rows",
+      "result": "PASS"
+    },
+    {
+      "test": "Backup role cannot mutate",
+      "result": "PASS"
+    },
+    {
+      "test": "Privacy deletion needs case context",
+      "result": "PASS"
+    },
+    {
+      "test": "Open legal hold blocks authorized privacy deletion",
+      "result": "PASS"
+    },
+    {
+      "test": "Case for different subject cannot delete request",
+      "result": "PASS"
+    },
+    {
+      "test": "Released hold cannot be reopened by update",
+      "result": "PASS"
+    },
+    {
+      "test": "Approved privacy deletion works after hold release",
+      "result": "PASS"
+    },
+    {
+      "test": "All remaining deferred constraints pass",
+      "result": "PASS"
+    },
+    {
+      "test": "Three core lifecycles preserve complete final state",
+      "result": "PASS"
+    },
+    {
+      "test": "Regression fixture transaction rolled back",
+      "result": "PASS"
+    },
+    {
+      "test": "Demo seed standalone commit",
+      "result": "PASS"
+    },
+    {
+      "test": "Initial installer refuses rerun without mutation",
+      "result": "PASS"
+    },
+    {
+      "test": "Seed hash vectors SHA256 bytes match all supplied values",
+      "result": "PASS"
+    }
+  ]
+}

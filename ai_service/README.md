@@ -1,9 +1,13 @@
-# AI Service
+# AI Service — P1, chưa triển khai
 
-Thư mục này chứa mã nguồn của **Module Trợ lý AI (AI Assistant Module)**. 
+AI không nằm trên đường quyết định hoặc tiêu chí nghiệm thu P0. Thư mục này chỉ giữ chỗ cho change request tương lai.
 
-Phân hệ này được xây dựng độc lập dựa trên FastAPI, giao tiếp với hệ thống chính thông qua REST API. Các chức năng chính bao gồm:
-- **OCR (Optical Character Recognition):** Trích xuất thông tin tự động từ hóa đơn, chứng từ đính kèm để giảm thiểu việc nhập liệu thủ công.
-- **Tóm tắt (Summarize):** Ứng dụng LLM để tóm tắt các yêu cầu dài hoặc phức tạp, hỗ trợ người phê duyệt ra quyết định nhanh hơn (đặc biệt hữu ích trên giao diện di động).
-- **Phát hiện bất thường (Anomaly Detection):** Chấm điểm rủi ro (Risk Scoring) và tự động gắn cờ cảnh báo đối với các yêu cầu có dấu hiệu bất thường (ví dụ: chi tiêu vượt mức).
-- **Tự động phê duyệt (Auto-Approve):** Thay mặt hệ thống duyệt ngay các yêu cầu có rủi ro thấp (ví dụ: mượn phòng họp, nghỉ phép ngắn ngày).
+Nguyên tắc nếu P1 được duyệt:
+
+- Chỉ tóm tắt/gợi ý, không auto-approve hoặc thay người có thẩm quyền.
+- Output phải được đánh dấu là AI-generated và không được dùng làm nguồn sự thật.
+- Có DPIA/threat model, data minimization, prompt-injection test và human review.
+- Không gửi tệp/dữ liệu cá nhân tới nhà cung cấp ngoài khi KD06/hợp đồng chưa chấp thuận.
+- Có cost cap, telemetry, kill switch và fallback không AI.
+
+Không đưa service này vào Compose hoặc sơ đồ As-is của P0.

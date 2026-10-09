@@ -1,0 +1,11 @@
+.git
+.codex
+.venv
+**/__pycache__
+**/*.pyc
+**/.env
+docs
+database/EAS_Supabase_SQL/validation/node_modules
+**/node_modules
+**/dist
+changelogs

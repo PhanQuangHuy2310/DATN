@@ -1,10 +1,13 @@
-# API Gateway
+# Edge/API Gateway
 
-Thư mục này cấu hình **API Gateway** cho hệ thống.
+P0 chỉ cần reverse proxy/TLS termination được cấu hình theo môi trường. Authorization nghiệp vụ vẫn nằm trong Django; proxy không được coi là nguồn quyền.
 
-API Gateway đóng vai trò là cửa ngõ duy nhất (Single Point of Entry) tiếp nhận mọi luồng request từ các Client (Web Admin, Web Client, Mobile App).
-Nhiệm vụ chính:
-- **Routing:** Định tuyến các request tới đúng service (API Core, AI Service,...).
-- **Load Balancing:** Cân bằng tải giữa các instances của các services.
-- **Bảo mật:** Xử lý xác thực (Authentication), phân quyền (Authorization), Rate limiting và ngăn chặn các luồng truy cập không hợp lệ.
-- **Gộp API (API Aggregation):** Tối ưu hóa số lượng request từ client bằng cách gộp nhiều phản hồi từ các services khác nhau.
+Yêu cầu tối thiểu trước production:
+
+- TLS, request-size limit, timeout và rate limit cho login/upload.
+- Forwarded-header allowlist và correlation ID.
+- Không log cookie, Authorization header, query token hoặc payload nhạy cảm.
+- Maintenance mode và health routing theo runbook.
+- Cấu hình được pin/version; không dùng dashboard thủ công làm nguồn duy nhất.
+
+Kong/service mesh không cần cho P0 nếu một reverse proxy đáp ứng các kiểm soát trên.

@@ -1,9 +1,10 @@
-# Business Rules Engine
+# Rules Engine — không dùng trong P0
 
-Thư mục này chứa mã nguồn và cấu hình cho **Module Đánh giá Luật Nghiệp vụ (Business Rule Engine)**, sử dụng **Drools KIE Server**.
+P0 không sử dụng Drools/KIE Server. Luật tuyến được lưu trong `config_release`, giới hạn bởi JSON schema/operator allowlist và được resolve bởi Django domain code. Cách này giảm deployment surface và giữ transaction/authorization trong một boundary dễ kiểm chứng.
 
-Drools đóng vai trò "Bộ não" đưa ra các quyết định luồng đi của hệ thống mà không cần hardcode vào Backend.
-- **Tập luật (Rules):** Lưu trữ các file luật định dạng `.drl`.
-- **Đầu vào:** Nhận thông tin về yêu cầu (Loại yêu cầu, Số tiền, Chức vụ người gửi...) từ hệ thống Core.
-- **Đầu ra:** Phân tích và trả về `ApprovalChain` (Danh sách chi tiết những người hoặc phòng ban cần duyệt, số cấp duyệt) và quy định về thời gian SLA tương ứng.
-Việc tách biệt Rule Engine giúp doanh nghiệp dễ dàng thay đổi chính sách phê duyệt mà không cần phải triển khai lại toàn bộ mã nguồn Backend.
+Chỉ xem xét external rules engine khi có change request chứng minh:
+
+- Số lượng/quy mô policy vượt khả năng cấu hình hữu hạn.
+- Có ownership, versioning, rollback và test vectors rõ ràng.
+- Không dùng `eval` hoặc cho policy tự ghi dữ liệu.
+- Failure mode đóng an toàn và không phá audit/idempotency.

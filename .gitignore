@@ -1,0 +1,46 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env*.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Node and frontend
+node_modules/
+playwright-report/
+test-results/
+dist/
+build/
+coverage/
+.vite/
+
+# Django/runtime
+*.sqlite3
+staticfiles/
+media/
+changelogs/**/*.log
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local Supabase state
+supabase/.temp/
+
+# Generated validation/render output
+.mermaid-validation/
