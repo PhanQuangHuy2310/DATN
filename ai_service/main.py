@@ -1,0 +1,90 @@
+"""
+AI Service — FastAPI Application Entry Point (main.py)
+
+Khởi động: uvicorn main:app --reload --host 0.0.0.0 --port 8001
+"""
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from loguru import logger
+import time
+
+from config import get_settings
+from routers import ocr, summarize, risk, auto_approve, classify, mock_context
+
+settings = get_settings()
+
+# ---------------------------------------------------------------------------
+# App instance
+# ---------------------------------------------------------------------------
+app = FastAPI(
+    title="Enterprise Approval System — AI Service",
+    description=(
+        "FastAPI service cung cấp 5 chức năng AI thông minh và dữ liệu ngữ cảnh mock:\n"
+        "1. **Smart Request Classifier** — Phân loại tự động loại yêu cầu, phòng ban, template từ văn bản tiếng Việt\n"
+        "2. **Risk & Fraud Scoring** — Đánh giá rủi ro và phát hiện bất thường bằng XGBoost (50.000 mẫu)\n"
+        "3. **Auto-Approve** — Quyết định tự động duyệt cho Template A + risk thấp\n"
+        "4. **OCR** — Bóc tách thông tin từ hóa đơn VAT / chứng từ\n"
+        "5. **Summarize** — Tóm tắt yêu cầu dài và phân tích tâm thế bằng Gemini LLM\n"
+        "6. **Mock Context** — Tra cứu dữ liệu từ 8 snapshot mock phục vụ quyết định AI"
+    ),
+    version="1.2.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# ---------------------------------------------------------------------------
+# Middleware
+# ---------------------------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration = round((time.time() - start) * 1000, 2)
+    logger.info(f"{request.method} {request.url.path} -> {response.status_code} ({duration}ms)")
+    return response
+
+
+@app.middleware("http")
+async def verify_internal_secret(request: Request, call_next):
+    public_paths = {"/docs", "/redoc", "/openapi.json", "/health", "/"}
+    if request.url.path in public_paths:
+        return await call_next(request)
+
+    secret = request.headers.get("X-Internal-Secret")
+    if secret != settings.internal_api_secret:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized: invalid internal secret"})
+
+    return await call_next(request)
+
+
+# ---------------------------------------------------------------------------
+# Routers
+# ---------------------------------------------------------------------------
+app.include_router(classify.router,     prefix="/ai/classify",     tags=["Smart Classification"])
+app.include_router(risk.router,         prefix="/ai/risk",         tags=["Risk & Fraud Scoring"])
+app.include_router(auto_approve.router, prefix="/ai/auto-approve", tags=["Auto Approve"])
+app.include_router(ocr.router,          prefix="/ai/ocr",          tags=["OCR"])
+app.include_router(summarize.router,    prefix="/ai/summarize",    tags=["Summarize"])
+app.include_router(mock_context.router, prefix="/ai/mock",         tags=["Mock Data Context"])
+
+
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
+@app.get("/health", tags=["Health"])
+async def health_check():
+    return {"status": "ok", "service": "ai-service", "version": "1.1.0"}
+
+
+@app.get("/", tags=["Health"])
+async def root():
+    return {"message": "Enterprise AI Service đang hoạt động. Truy cập /docs để xem chi tiết API."}

@@ -1,0 +1,34 @@
+{
+  "request_types": [
+    "access_permission",
+    "advance_payment",
+    "budget_approval",
+    "contract_payment",
+    "equipment_new",
+    "equipment_repair",
+    "expense_reimbursement",
+    "leave_annual",
+    "leave_unpaid",
+    "meeting_room",
+    "overtime",
+    "remote_work",
+    "stationery",
+    "travel",
+    "vehicle_booking",
+    "vpn_access"
+  ],
+  "departments": [
+    "finance",
+    "hr",
+    "it",
+    "legal",
+    "marketing",
+    "operations",
+    "sales"
+  ],
+  "templates": [
+    "A",
+    "B",
+    "C"
+  ]
+}

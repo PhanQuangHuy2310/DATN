@@ -1,0 +1,1693 @@
+{
+  "schema": "mock_hr",
+  "department": "HR",
+  "purpose": "Hệ thống HRIS — Quản lý nhân sự, phòng ban, ngày phép. Schema nền tảng, tất cả schema khác tham chiếu employee_id từ đây.",
+  "entities": {
+    "department": {
+      "table": "department",
+      "raw_count": 8,
+      "search_fields": [
+        "code",
+        "name"
+      ],
+      "data": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "code": "HQ",
+          "label": "Ban Điều Hành",
+          "cost_center": "CC-100",
+          "parent_id": null,
+          "ai_department": "operations",
+          "is_active": true
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "code": "IT",
+          "label": "Phòng Công Nghệ Thông Tin",
+          "cost_center": "CC-210",
+          "parent_id": "10000000-0000-4000-8000-000000000001",
+          "ai_department": "it",
+          "is_active": true
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000003",
+          "code": "SALES",
+          "label": "Phòng Kinh Doanh",
+          "cost_center": "CC-310",
+          "parent_id": "10000000-0000-4000-8000-000000000001",
+          "ai_department": "sales",
+          "is_active": true
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000004",
+          "code": "OPS",
+          "label": "Phòng Vận Hành & Hậu Cần",
+          "cost_center": "CC-410",
+          "parent_id": "10000000-0000-4000-8000-000000000001",
+          "ai_department": "operations",
+          "is_active": true
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "code": "FIN",
+          "label": "Phòng Tài Chính - Kế Toán",
+          "cost_center": "CC-510",
+          "parent_id": "10000000-0000-4000-8000-000000000001",
+          "ai_department": "finance",
+          "is_active": true
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000006",
+          "code": "HR",
+          "label": "Phòng Hành Chính - Nhân Sự",
+          "cost_center": "CC-610",
+          "parent_id": "10000000-0000-4000-8000-000000000001",
+          "ai_department": "hr",
+          "is_active": true
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000007",
+          "code": "MKT",
+          "label": "Phòng Marketing & Truyền Thông",
+          "cost_center": "CC-710",
+          "parent_id": "10000000-0000-4000-8000-000000000001",
+          "ai_department": "marketing",
+          "is_active": true
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000008",
+          "code": "LEGAL",
+          "label": "Phòng Pháp Chế & Tuân Thủ",
+          "cost_center": "CC-810",
+          "parent_id": "10000000-0000-4000-8000-000000000001",
+          "ai_department": "legal",
+          "is_active": true
+        }
+      ]
+    },
+    "employee_directory": {
+      "table": "employee_directory",
+      "raw_count": 55,
+      "search_fields": [
+        "employee_code",
+        "display_name",
+        "work_email"
+      ],
+      "data": [
+        {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "code": "E0001",
+          "label": "Nguyễn Minh An",
+          "email": "an.nguyen@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000001",
+          "manager_id": null,
+          "job_title": "Tổng Giám Đốc (CEO)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "code": "E0002",
+          "label": "Trần Thị Bích Ngọc",
+          "email": "ngoc.tran@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000001",
+          "manager_id": "20000000-0000-4000-8000-000000000001",
+          "job_title": "Phó Tổng Giám Đốc (COO)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000003",
+          "code": "E0101",
+          "label": "Trần Hải Bình",
+          "email": "binh.tran@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000002",
+          "job_title": "Trưởng phòng CNTT (CTO)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000004",
+          "code": "E0102",
+          "label": "Lê Thu Chi",
+          "email": "chi.le@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000003",
+          "job_title": "Kỹ sư phần mềm Senior (Tech Lead)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000005",
+          "code": "E0103",
+          "label": "Ngô Đình Khoa",
+          "email": "khoa.ngo@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000003",
+          "job_title": "Kỹ sư DevOps / Cloud Senior",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000006",
+          "code": "E0201",
+          "label": "Phạm Gia Dũng",
+          "email": "dung.pham@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000003",
+          "manager_id": "20000000-0000-4000-8000-000000000002",
+          "job_title": "Trưởng phòng Kinh Doanh (Head)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000007",
+          "code": "E0202",
+          "label": "Đỗ Thanh Hằng",
+          "email": "hang.do@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000003",
+          "manager_id": "20000000-0000-4000-8000-000000000006",
+          "job_title": "Quản lý khách hàng Key Account",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000008",
+          "code": "E0203",
+          "label": "Bùi Văn Long",
+          "email": "long.bui@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000003",
+          "manager_id": "20000000-0000-4000-8000-000000000006",
+          "job_title": "Chuyên viên kinh doanh B2B",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000009",
+          "code": "E0301",
+          "label": "Vũ Mai Hà",
+          "email": "ha.vu@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000004",
+          "manager_id": "20000000-0000-4000-8000-000000000002",
+          "job_title": "Trưởng phòng Vận Hành",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000010",
+          "code": "E0302",
+          "label": "Lý Hoàng Phúc",
+          "email": "phuc.ly@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000004",
+          "manager_id": "20000000-0000-4000-8000-000000000009",
+          "job_title": "Quản lý kho vận & Chuỗi cung ứng",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000011",
+          "code": "E0303",
+          "label": "Đinh Thị Hạnh",
+          "email": "hanh.dinh@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000004",
+          "manager_id": "20000000-0000-4000-8000-000000000009",
+          "job_title": "Nhân viên vận hành hiện trường",
+          "status": "ON_LEAVE",
+          "is_active": false
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000012",
+          "code": "E0401",
+          "label": "Hoàng Minh Đức",
+          "email": "duc.hoang@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000005",
+          "manager_id": "20000000-0000-4000-8000-000000000002",
+          "job_title": "Trưởng phòng Tài Chính (CFO)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000013",
+          "code": "E0402",
+          "label": "Nguyễn Thị Quỳnh",
+          "email": "quynh.nguyen@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000005",
+          "manager_id": "20000000-0000-4000-8000-000000000012",
+          "job_title": "Kế toán trưởng",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000014",
+          "code": "E0403",
+          "label": "Phan Văn Tài",
+          "email": "tai.phan@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000005",
+          "manager_id": "20000000-0000-4000-8000-000000000012",
+          "job_title": "Kế toán thanh toán & Công nợ",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000015",
+          "code": "E0501",
+          "label": "Lê Thị Hồng Nhung",
+          "email": "nhung.le@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000006",
+          "manager_id": "20000000-0000-4000-8000-000000000002",
+          "job_title": "Trưởng phòng HCNS (HR Manager)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000016",
+          "code": "E0502",
+          "label": "Trương Minh Quân",
+          "email": "quan.truong@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000006",
+          "manager_id": "20000000-0000-4000-8000-000000000015",
+          "job_title": "Chuyên viên tuyển dụng cấp cao",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000017",
+          "code": "E0503",
+          "label": "Cao Thùy Trang",
+          "email": "trang.cao@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000006",
+          "manager_id": "20000000-0000-4000-8000-000000000015",
+          "job_title": "Chuyên viên Tiền lương & Phúc lợi (C&B)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000018",
+          "code": "E0601",
+          "label": "Đặng Hữu Trí",
+          "email": "tri.dang@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000007",
+          "manager_id": "20000000-0000-4000-8000-000000000002",
+          "job_title": "Trưởng phòng Marketing (CMO)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000019",
+          "code": "E0602",
+          "label": "Mai Ngọc Ánh",
+          "email": "anh.mai@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000007",
+          "manager_id": "20000000-0000-4000-8000-000000000018",
+          "job_title": "Trưởng nhóm Nội dung (Content Lead)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000020",
+          "code": "E0603",
+          "label": "Hồ Quang Vinh",
+          "email": "vinh.ho@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000007",
+          "manager_id": "20000000-0000-4000-8000-000000000018",
+          "job_title": "Digital Ads & Performance Lead",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000021",
+          "code": "E0701",
+          "label": "Võ Thành Luân",
+          "email": "luan.vo@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000008",
+          "manager_id": "20000000-0000-4000-8000-000000000001",
+          "job_title": "Trưởng phòng Pháp Chế & Tuân Thủ",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000022",
+          "code": "E0702",
+          "label": "Tạ Thị Thanh Thảo",
+          "email": "thao.ta@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000008",
+          "manager_id": "20000000-0000-4000-8000-000000000021",
+          "job_title": "Chuyên viên Pháp lý Doanh Nghiệp",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000023",
+          "code": "E0104",
+          "label": "Nguyễn Quốc Bảo",
+          "email": "bao.nguyen@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000003",
+          "job_title": "QA Engineer",
+          "status": "TERMINATED",
+          "is_active": false
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000024",
+          "code": "E0204",
+          "label": "Lâm Thị Yến",
+          "email": "yen.lam@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000003",
+          "manager_id": "20000000-0000-4000-8000-000000000006",
+          "job_title": "Nhân viên kinh doanh",
+          "status": "OFFBOARDING",
+          "is_active": false
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000025",
+          "code": "E0003",
+          "label": "Phạm Quốc Bảo",
+          "email": "bao.pham@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000001",
+          "manager_id": "20000000-0000-4000-8000-000000000001",
+          "job_title": "Giám Đốc Chiến Lược (CSO)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000026",
+          "code": "E0004",
+          "label": "Vũ Hoàng Yến",
+          "email": "yen.vu@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000001",
+          "manager_id": "20000000-0000-4000-8000-000000000001",
+          "job_title": "Trợ Lý Ban Điều Hành",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000027",
+          "code": "E0105",
+          "label": "Đặng Tuấn Anh",
+          "email": "anh.dang@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000003",
+          "job_title": "Kỹ sư Backend (Python/Node)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000028",
+          "code": "E0106",
+          "label": "Phùng Thị Mai",
+          "email": "mai.phung@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000003",
+          "job_title": "Kỹ sư Frontend (React/Vue)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000029",
+          "code": "E0107",
+          "label": "Lý Gia Hưng",
+          "email": "hung.ly@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000003",
+          "job_title": "Chuyên viên IT Helpdesk",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000030",
+          "code": "E0108",
+          "label": "Dương Thùy Linh",
+          "email": "linh.duong@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000003",
+          "job_title": "Kỹ sư Bảo Mật (Security)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000031",
+          "code": "E0109",
+          "label": "Lâm Văn Hải",
+          "email": "hai.lam@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000004",
+          "job_title": "Kỹ sư Dữ Liệu (Data Engineer)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000032",
+          "code": "E0110",
+          "label": "Tạ Duy Khánh",
+          "email": "khanh.ta@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000002",
+          "manager_id": "20000000-0000-4000-8000-000000000004",
+          "job_title": "Thực tập sinh IT (Intern)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000033",
+          "code": "E0205",
+          "label": "Hà Vĩnh Thụy",
+          "email": "thuy.ha@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000003",
+          "manager_id": "20000000-0000-4000-8000-000000000006",
+          "job_title": "Chuyên viên Tư Vấn Giải Pháp",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000034",
+          "code": "E0206",
+          "label": "Chu Kim Ngân",
+          "email": "ngan.chu@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000003",
+          "manager_id": "20000000-0000-4000-8000-000000000006",
+          "job_title": "Account Executive (SME)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000035",
+          "code": "E0207",
+          "label": "Nguyễn Tấn Đạt",
+          "email": "dat.nguyen@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000003",
+          "manager_id": "20000000-0000-4000-8000-000000000006",
+          "job_title": "Chăm sóc khách hàng (Customer Success)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000036",
+          "code": "E0208",
+          "label": "Vương Thảo My",
+          "email": "my.vuong@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000007",
+          "manager_id": "20000000-0000-4000-8000-000000000007",
+          "job_title": "Thực tập sinh Kinh doanh",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000037",
+          "code": "E0304",
+          "label": "Lê Khắc Tiệp",
+          "email": "tiep.le@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000004",
+          "manager_id": "20000000-0000-4000-8000-000000000009",
+          "job_title": "Giám sát dịch vụ khách hàng",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000038",
+          "code": "E0305",
+          "label": "Bùi Bích Phương",
+          "email": "phuong.bui@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000004",
+          "manager_id": "20000000-0000-4000-8000-000000000009",
+          "job_title": "Điều phối viên giao vận (Logistics)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000039",
+          "code": "E0306",
+          "label": "Phạm Hùng Cường",
+          "email": "cuong.pham@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000004",
+          "manager_id": "20000000-0000-4000-8000-000000000010",
+          "job_title": "Nhân viên kiểm kê kho hàng",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000040",
+          "code": "E0307",
+          "label": "Ngô Thu Trang",
+          "email": "trang.ngo@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000004",
+          "manager_id": "20000000-0000-4000-8000-000000000009",
+          "job_title": "Tài xế công ty kiêm vận chuyển",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000041",
+          "code": "E0404",
+          "label": "Dương Quốc Thái",
+          "email": "thai.duong@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000005",
+          "manager_id": "20000000-0000-4000-8000-000000000012",
+          "job_title": "Chuyên viên Phân Tích Tài Chính",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000042",
+          "code": "E0405",
+          "label": "Trần Thảo Vy",
+          "email": "vy.tran@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000005",
+          "manager_id": "20000000-0000-4000-8000-000000000013",
+          "job_title": "Kế toán thuế & Báo cáo nội bộ",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000043",
+          "code": "E0406",
+          "label": "Lê Cẩm Tú",
+          "email": "tu.le@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000005",
+          "manager_id": "20000000-0000-4000-8000-000000000013",
+          "job_title": "Thủ quỹ công ty",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000044",
+          "code": "E0407",
+          "label": "Võ Hoàng Sơn",
+          "email": "son.vo@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000005",
+          "manager_id": "20000000-0000-4000-8000-000000000013",
+          "job_title": "Thực tập sinh Kế toán",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000045",
+          "code": "E0504",
+          "label": "Đặng Kim Chi",
+          "email": "chi.dang@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000006",
+          "manager_id": "20000000-0000-4000-8000-000000000015",
+          "job_title": "Chuyên viên Hành chính & Cơ sở vật chất",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000046",
+          "code": "E0505",
+          "label": "Nguyễn Tiến Dũng",
+          "email": "dung.nguyen@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000006",
+          "manager_id": "20000000-0000-4000-8000-000000000015",
+          "job_title": "Chuyên viên Đào tạo & Văn hóa",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000047",
+          "code": "E0506",
+          "label": "Mai Phương Thảo",
+          "email": "thao.mai@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000006",
+          "manager_id": "20000000-0000-4000-8000-000000000015",
+          "job_title": "Lễ tân kiêm Hành chính văn phòng",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000048",
+          "code": "E0604",
+          "label": "Vũ Khánh Huyền",
+          "email": "huyen.vu@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000007",
+          "manager_id": "20000000-0000-4000-8000-000000000018",
+          "job_title": "Chuyên viên Thiết kế đồ họa (UI/UX)",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000049",
+          "code": "E0605",
+          "label": "Trần Bảo Long",
+          "email": "long.tran@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000007",
+          "manager_id": "20000000-0000-4000-8000-000000000019",
+          "job_title": "Chuyên viên SEO & Content Creator",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000050",
+          "code": "E0606",
+          "label": "Phạm Diệu Linh",
+          "email": "linh.pham@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000007",
+          "manager_id": "20000000-0000-4000-8000-000000000018",
+          "job_title": "Chuyên viên Tổ chức Sự kiện / PR",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000051",
+          "code": "E0607",
+          "label": "Hoàng Gia Huy",
+          "email": "huy.hoang@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000007",
+          "manager_id": "20000000-0000-4000-8000-000000000020",
+          "job_title": "Thực tập sinh Marketing",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000052",
+          "code": "E0703",
+          "label": "Nguyễn Anh Tuấn",
+          "email": "tuan.nguyen@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000008",
+          "manager_id": "20000000-0000-4000-8000-000000000021",
+          "job_title": "Chuyên viên Hợp đồng & Sở hữu trí tuệ",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000053",
+          "code": "E0704",
+          "label": "Dương Mỹ Hạnh",
+          "email": "hanh.duong@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000008",
+          "manager_id": "20000000-0000-4000-8000-000000000021",
+          "job_title": "Chuyên viên Tuân thủ & Kiểm soát nội bộ",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000054",
+          "code": "E0705",
+          "label": "Bùi Đức Trọng",
+          "email": "trong.bui@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000008",
+          "manager_id": "20000000-0000-4000-8000-000000000021",
+          "job_title": "Chuyên viên Thủ tục Giấy phép",
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "20000000-0000-4000-8000-000000000055",
+          "code": "E0706",
+          "label": "Phạm Như Quỳnh",
+          "email": "quynh.pham@example.test",
+          "department_id": "10000000-0000-4000-8000-000000000008",
+          "manager_id": "20000000-0000-4000-8000-000000000022",
+          "job_title": "Trợ lý Pháp chế",
+          "status": "ACTIVE",
+          "is_active": true
+        }
+      ]
+    },
+    "leave_balance": {
+      "table": "leave_balance",
+      "raw_count": 108,
+      "search_fields": [
+        "leave_type"
+      ],
+      "data": [
+        {
+          "id": "21000000-0000-4000-8000-000000000001",
+          "employee_id": "20000000-0000-4000-8000-000000000001",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000002",
+          "employee_id": "20000000-0000-4000-8000-000000000001",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000003",
+          "employee_id": "20000000-0000-4000-8000-000000000002",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000004",
+          "employee_id": "20000000-0000-4000-8000-000000000002",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000005",
+          "employee_id": "20000000-0000-4000-8000-000000000025",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000006",
+          "employee_id": "20000000-0000-4000-8000-000000000025",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000007",
+          "employee_id": "20000000-0000-4000-8000-000000000026",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000008",
+          "employee_id": "20000000-0000-4000-8000-000000000026",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000009",
+          "employee_id": "20000000-0000-4000-8000-000000000003",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000010",
+          "employee_id": "20000000-0000-4000-8000-000000000003",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000011",
+          "employee_id": "20000000-0000-4000-8000-000000000004",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000012",
+          "employee_id": "20000000-0000-4000-8000-000000000004",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000013",
+          "employee_id": "20000000-0000-4000-8000-000000000005",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000014",
+          "employee_id": "20000000-0000-4000-8000-000000000005",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000015",
+          "employee_id": "20000000-0000-4000-8000-000000000027",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000016",
+          "employee_id": "20000000-0000-4000-8000-000000000027",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000017",
+          "employee_id": "20000000-0000-4000-8000-000000000028",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000018",
+          "employee_id": "20000000-0000-4000-8000-000000000028",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000019",
+          "employee_id": "20000000-0000-4000-8000-000000000029",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000020",
+          "employee_id": "20000000-0000-4000-8000-000000000029",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000021",
+          "employee_id": "20000000-0000-4000-8000-000000000030",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000022",
+          "employee_id": "20000000-0000-4000-8000-000000000030",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000023",
+          "employee_id": "20000000-0000-4000-8000-000000000031",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000024",
+          "employee_id": "20000000-0000-4000-8000-000000000031",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000025",
+          "employee_id": "20000000-0000-4000-8000-000000000032",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000026",
+          "employee_id": "20000000-0000-4000-8000-000000000032",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000027",
+          "employee_id": "20000000-0000-4000-8000-000000000006",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000028",
+          "employee_id": "20000000-0000-4000-8000-000000000006",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000029",
+          "employee_id": "20000000-0000-4000-8000-000000000007",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000030",
+          "employee_id": "20000000-0000-4000-8000-000000000007",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000031",
+          "employee_id": "20000000-0000-4000-8000-000000000008",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000032",
+          "employee_id": "20000000-0000-4000-8000-000000000008",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000033",
+          "employee_id": "20000000-0000-4000-8000-000000000024",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000034",
+          "employee_id": "20000000-0000-4000-8000-000000000024",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000035",
+          "employee_id": "20000000-0000-4000-8000-000000000033",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000036",
+          "employee_id": "20000000-0000-4000-8000-000000000033",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000037",
+          "employee_id": "20000000-0000-4000-8000-000000000034",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000038",
+          "employee_id": "20000000-0000-4000-8000-000000000034",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000039",
+          "employee_id": "20000000-0000-4000-8000-000000000035",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000040",
+          "employee_id": "20000000-0000-4000-8000-000000000035",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000041",
+          "employee_id": "20000000-0000-4000-8000-000000000036",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000042",
+          "employee_id": "20000000-0000-4000-8000-000000000036",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000043",
+          "employee_id": "20000000-0000-4000-8000-000000000009",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000044",
+          "employee_id": "20000000-0000-4000-8000-000000000009",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000045",
+          "employee_id": "20000000-0000-4000-8000-000000000010",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000046",
+          "employee_id": "20000000-0000-4000-8000-000000000010",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000047",
+          "employee_id": "20000000-0000-4000-8000-000000000011",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000048",
+          "employee_id": "20000000-0000-4000-8000-000000000011",
+          "type": "PARENTAL",
+          "year": "2026",
+          "entitled": 60,
+          "used": 30,
+          "remaining": 30
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000049",
+          "employee_id": "20000000-0000-4000-8000-000000000037",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000050",
+          "employee_id": "20000000-0000-4000-8000-000000000037",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000051",
+          "employee_id": "20000000-0000-4000-8000-000000000038",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000052",
+          "employee_id": "20000000-0000-4000-8000-000000000038",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000053",
+          "employee_id": "20000000-0000-4000-8000-000000000039",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000054",
+          "employee_id": "20000000-0000-4000-8000-000000000039",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000055",
+          "employee_id": "20000000-0000-4000-8000-000000000040",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000056",
+          "employee_id": "20000000-0000-4000-8000-000000000040",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000057",
+          "employee_id": "20000000-0000-4000-8000-000000000012",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000058",
+          "employee_id": "20000000-0000-4000-8000-000000000012",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000059",
+          "employee_id": "20000000-0000-4000-8000-000000000013",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000060",
+          "employee_id": "20000000-0000-4000-8000-000000000013",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000061",
+          "employee_id": "20000000-0000-4000-8000-000000000014",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000062",
+          "employee_id": "20000000-0000-4000-8000-000000000014",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000063",
+          "employee_id": "20000000-0000-4000-8000-000000000041",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000064",
+          "employee_id": "20000000-0000-4000-8000-000000000041",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000065",
+          "employee_id": "20000000-0000-4000-8000-000000000042",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000066",
+          "employee_id": "20000000-0000-4000-8000-000000000042",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000067",
+          "employee_id": "20000000-0000-4000-8000-000000000043",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000068",
+          "employee_id": "20000000-0000-4000-8000-000000000043",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000069",
+          "employee_id": "20000000-0000-4000-8000-000000000044",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000070",
+          "employee_id": "20000000-0000-4000-8000-000000000044",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000071",
+          "employee_id": "20000000-0000-4000-8000-000000000015",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000072",
+          "employee_id": "20000000-0000-4000-8000-000000000015",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000073",
+          "employee_id": "20000000-0000-4000-8000-000000000016",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000074",
+          "employee_id": "20000000-0000-4000-8000-000000000016",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000075",
+          "employee_id": "20000000-0000-4000-8000-000000000017",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000076",
+          "employee_id": "20000000-0000-4000-8000-000000000017",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000077",
+          "employee_id": "20000000-0000-4000-8000-000000000045",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000078",
+          "employee_id": "20000000-0000-4000-8000-000000000045",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000079",
+          "employee_id": "20000000-0000-4000-8000-000000000046",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000080",
+          "employee_id": "20000000-0000-4000-8000-000000000046",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000081",
+          "employee_id": "20000000-0000-4000-8000-000000000047",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000082",
+          "employee_id": "20000000-0000-4000-8000-000000000047",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000083",
+          "employee_id": "20000000-0000-4000-8000-000000000018",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000084",
+          "employee_id": "20000000-0000-4000-8000-000000000018",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000085",
+          "employee_id": "20000000-0000-4000-8000-000000000019",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000086",
+          "employee_id": "20000000-0000-4000-8000-000000000019",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000087",
+          "employee_id": "20000000-0000-4000-8000-000000000020",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000088",
+          "employee_id": "20000000-0000-4000-8000-000000000020",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000089",
+          "employee_id": "20000000-0000-4000-8000-000000000048",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000090",
+          "employee_id": "20000000-0000-4000-8000-000000000048",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000091",
+          "employee_id": "20000000-0000-4000-8000-000000000049",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000092",
+          "employee_id": "20000000-0000-4000-8000-000000000049",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000093",
+          "employee_id": "20000000-0000-4000-8000-000000000050",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000094",
+          "employee_id": "20000000-0000-4000-8000-000000000050",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000095",
+          "employee_id": "20000000-0000-4000-8000-000000000051",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000096",
+          "employee_id": "20000000-0000-4000-8000-000000000051",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000097",
+          "employee_id": "20000000-0000-4000-8000-000000000021",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000098",
+          "employee_id": "20000000-0000-4000-8000-000000000021",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000099",
+          "employee_id": "20000000-0000-4000-8000-000000000022",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000100",
+          "employee_id": "20000000-0000-4000-8000-000000000022",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000101",
+          "employee_id": "20000000-0000-4000-8000-000000000052",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 7.5,
+          "remaining": 6.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000102",
+          "employee_id": "20000000-0000-4000-8000-000000000052",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000103",
+          "employee_id": "20000000-0000-4000-8000-000000000053",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 10.5,
+          "remaining": 3.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000104",
+          "employee_id": "20000000-0000-4000-8000-000000000053",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000105",
+          "employee_id": "20000000-0000-4000-8000-000000000054",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 1.5,
+          "remaining": 12.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000106",
+          "employee_id": "20000000-0000-4000-8000-000000000054",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 2,
+          "remaining": 4
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000107",
+          "employee_id": "20000000-0000-4000-8000-000000000055",
+          "type": "ANNUAL",
+          "year": "2026",
+          "entitled": 14,
+          "used": 4.5,
+          "remaining": 9.5
+        },
+        {
+          "id": "21000000-0000-4000-8000-000000000108",
+          "employee_id": "20000000-0000-4000-8000-000000000055",
+          "type": "SICK",
+          "year": "2026",
+          "entitled": 6,
+          "used": 0,
+          "remaining": 6
+        }
+      ]
+    }
+  },
+  "meta": {
+    "total_records": 171,
+    "entity_count": 3,
+    "error_count": 0,
+    "source": "sql:database/mock_enterprise_sql/01_mock_seed_DEV_ONLY.sql",
+    "normalizer_version": "2.1.0"
+  }
+}

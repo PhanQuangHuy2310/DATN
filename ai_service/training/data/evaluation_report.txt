@@ -1,0 +1,38 @@
+BÁO CÁO HUẤN LUYỆN MÔ HÌNH XGBOOST RISK & FRAUD SCORING (50,000 MẪU)
+Thời gian: 2026-10-03 17:09:50
+Số lượng mẫu test: 7,500
+Accuracy: 99.92%
+Macro F1: 0.9993
+Weighted F1: 0.9992
+
+CLASSIFICATION REPORT:
+              precision    recall  f1-score   support
+
+      Risk 1     1.0000    1.0000    1.0000      1094
+      Risk 2     0.9996    1.0000    0.9998      2474
+      Risk 3     0.9995    0.9982    0.9989      2184
+      Risk 4     0.9972    0.9986    0.9979      1409
+      Risk 5     1.0000    1.0000    1.0000       339
+
+    accuracy                         0.9992      7500
+   macro avg     0.9993    0.9993    0.9993      7500
+weighted avg     0.9992    0.9992    0.9992      7500
+
+CONFUSION MATRIX:
+[[1094    0    0    0    0]
+ [   0 2474    0    0    0]
+ [   0    0 2180    4    0]
+ [   0    1    1 1407    0]
+ [   0    0    0    0  339]]
+
+TOP 10 FEATURES:
+   1. is_over_budget            : 21.16% #####################
+   2. is_split_amount_suspect   : 12.13% ############
+   3. is_template_matched       : 11.81% ###########
+   4. amount_millions           :  6.75% ######
+   5. past_rejection_rate       :  6.30% ######
+   6. request_type_enc          :  6.01% ######
+   7. is_off_hours              :  5.06% #####
+   8. high_rejection_rate       :  4.89% ####
+   9. has_receipt               :  4.85% ####
+  10. amount_log                :  4.36% ####

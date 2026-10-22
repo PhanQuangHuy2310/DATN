@@ -1,0 +1,243 @@
+{
+  "schema": "mock_facilities",
+  "department": "OPS",
+  "purpose": "Hệ thống đặt phòng họp & cơ sở vật chất — Phục vụ meeting_room, vehicle_booking. AI dùng room_available để quyết định auto-approve.",
+  "entities": {
+    "site": {
+      "table": "site",
+      "raw_count": 4,
+      "search_fields": [
+        "site_code",
+        "name"
+      ],
+      "data": [
+        {
+          "id": "40000000-0000-4000-8000-000000000001",
+          "code": "HCM-HQ",
+          "label": "Trụ sở chính TP.HCM — Quận 1",
+          "timezone": "Asia/Ho_Chi_Minh",
+          "is_active": true
+        },
+        {
+          "id": "40000000-0000-4000-8000-000000000002",
+          "code": "HN-BR",
+          "label": "Chi nhánh Hà Nội — Cầu Giấy",
+          "timezone": "Asia/Ho_Chi_Minh",
+          "is_active": true
+        },
+        {
+          "id": "40000000-0000-4000-8000-000000000003",
+          "code": "DN-BR",
+          "label": "Chi nhánh Đà Nẵng — Hải Châu",
+          "timezone": "Asia/Ho_Chi_Minh",
+          "is_active": true
+        },
+        {
+          "id": "40000000-0000-4000-8000-000000000004",
+          "code": "CTH-BR",
+          "label": "Văn phòng đại diện Cần Thơ — Ninh Kiều",
+          "timezone": "Asia/Ho_Chi_Minh",
+          "is_active": true
+        }
+      ]
+    },
+    "resource_catalog": {
+      "table": "resource_catalog",
+      "raw_count": 18,
+      "search_fields": [
+        "resource_code",
+        "name",
+        "resource_type"
+      ],
+      "data": [
+        {
+          "id": "41000000-0000-4000-8000-000000000001",
+          "code": "MR-HCM-01",
+          "label": "Phòng họp Hoa Sen (Lầu 3)",
+          "type": "MEETING_ROOM",
+          "site": "HCM-HQ",
+          "capacity": "12",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000002",
+          "code": "MR-HCM-02",
+          "label": "Phòng họp Phương Đông (Lầu 3)",
+          "type": "MEETING_ROOM",
+          "site": "HCM-HQ",
+          "capacity": "8",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000003",
+          "code": "MR-HCM-03",
+          "label": "Phòng họp VIP Ban Giám Đốc (Lầu 4)",
+          "type": "MEETING_ROOM",
+          "site": "HCM-HQ",
+          "capacity": "20",
+          "status": "RESERVED",
+          "is_available": false
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000004",
+          "code": "DESK-HCM-01",
+          "label": "Bàn linh hoạt Zone A-01",
+          "type": "DESK",
+          "site": "HCM-HQ",
+          "capacity": "1",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000005",
+          "code": "DESK-HCM-02",
+          "label": "Bàn linh hoạt Zone A-02",
+          "type": "DESK",
+          "site": "HCM-HQ",
+          "capacity": "1",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000006",
+          "code": "CAR-HCM-01",
+          "label": "Toyota Innova — 51A-12345",
+          "type": "VEHICLE",
+          "site": "HCM-HQ",
+          "capacity": "7",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000007",
+          "code": "CAR-HCM-02",
+          "label": "Toyota Vios — 51A-67890",
+          "type": "VEHICLE",
+          "site": "HCM-HQ",
+          "capacity": "4",
+          "status": "MAINTENANCE",
+          "is_available": false
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000008",
+          "code": "PKG-HCM-01",
+          "label": "Chỗ đậu xe ô tô B2-01",
+          "type": "PARKING",
+          "site": "HCM-HQ",
+          "capacity": "1",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000009",
+          "code": "MR-HN-01",
+          "label": "Phòng họp Hồ Gươm",
+          "type": "MEETING_ROOM",
+          "site": "HN-BR",
+          "capacity": "10",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000010",
+          "code": "MR-DN-01",
+          "label": "Phòng họp Sơn Trà",
+          "type": "MEETING_ROOM",
+          "site": "DN-BR",
+          "capacity": "6",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000011",
+          "code": "MR-HCM-04",
+          "label": "Phòng họp Sáng Tạo (Lầu 2)",
+          "type": "MEETING_ROOM",
+          "site": "HCM-HQ",
+          "capacity": "6",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000012",
+          "code": "MR-HCM-05",
+          "label": "Hội trường Đào Tạo (Lầu 5)",
+          "type": "MEETING_ROOM",
+          "site": "HCM-HQ",
+          "capacity": "50",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000013",
+          "code": "MR-HN-02",
+          "label": "Phòng họp Tràng Tiền",
+          "type": "MEETING_ROOM",
+          "site": "HN-BR",
+          "capacity": "6",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000014",
+          "code": "DESK-HN-01",
+          "label": "Bàn linh hoạt HN-01",
+          "type": "DESK",
+          "site": "HN-BR",
+          "capacity": "1",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000015",
+          "code": "DESK-DN-01",
+          "label": "Bàn linh hoạt DN-01",
+          "type": "DESK",
+          "site": "DN-BR",
+          "capacity": "1",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000016",
+          "code": "CAR-HCM-03",
+          "label": "Kia Carnival VIP — 51A-99999",
+          "type": "VEHICLE",
+          "site": "HCM-HQ",
+          "capacity": "7",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000017",
+          "code": "PKG-HCM-02",
+          "label": "Chỗ đậu xe ô tô B2-02",
+          "type": "PARKING",
+          "site": "HCM-HQ",
+          "capacity": "1",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "41000000-0000-4000-8000-000000000018",
+          "code": "PKG-HN-01",
+          "label": "Chỗ đậu xe ô tô B1-HN",
+          "type": "PARKING",
+          "site": "HN-BR",
+          "capacity": "1",
+          "status": "AVAILABLE",
+          "is_available": true
+        }
+      ]
+    }
+  },
+  "meta": {
+    "total_records": 22,
+    "entity_count": 2,
+    "error_count": 0,
+    "source": "sql:database/mock_enterprise_sql/01_mock_seed_DEV_ONLY.sql",
+    "normalizer_version": "2.1.0"
+  }
+}

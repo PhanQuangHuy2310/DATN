@@ -1,0 +1,483 @@
+{
+  "schema": "mock_it",
+  "department": "IT",
+  "purpose": "Hệ thống IAM/ITSM — Ứng dụng, quyền truy cập, service catalog. AI dùng risk_level, data_classification để tính risk cho đơn access_permission (lifecycle B).",
+  "entities": {
+    "application_catalog": {
+      "table": "application_catalog",
+      "raw_count": 12,
+      "search_fields": [
+        "app_code",
+        "name",
+        "data_classification"
+      ],
+      "data": [
+        {
+          "id": "70000000-0000-4000-8000-000000000001",
+          "code": "CRM",
+          "label": "Salesforce CRM",
+          "classification": "CONFIDENTIAL",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 3
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000002",
+          "code": "ERP",
+          "label": "SAP S/4HANA Finance & Operations",
+          "classification": "RESTRICTED",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000003",
+          "code": "HRMS",
+          "label": "Workday Human Capital Management",
+          "classification": "RESTRICTED",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000004",
+          "code": "WIKI",
+          "label": "Confluence — Internal Knowledge Base",
+          "classification": "INTERNAL",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 2
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000005",
+          "code": "JIRA",
+          "label": "Jira Software — Issue Tracking",
+          "classification": "INTERNAL",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 2
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000006",
+          "code": "VAULT",
+          "label": "HashiCorp Vault — Secret Management",
+          "classification": "RESTRICTED",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000007",
+          "code": "GITLAB",
+          "label": "GitLab Enterprise — Source Code Repo",
+          "classification": "CONFIDENTIAL",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 3
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000008",
+          "code": "M365",
+          "label": "Microsoft 365 & Exchange Online",
+          "classification": "CONFIDENTIAL",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 3
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000009",
+          "code": "SLACK",
+          "label": "Slack Enterprise Grid Workspace",
+          "classification": "INTERNAL",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 2
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000010",
+          "code": "AWS",
+          "label": "AWS Management Console",
+          "classification": "RESTRICTED",
+          "owner_id": "20000000-0000-4000-8000-000000000005",
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000011",
+          "code": "FAST_ACC",
+          "label": "Phần Mềm Kế Toán FAST Accounting Online",
+          "classification": "RESTRICTED",
+          "owner_id": "20000000-0000-4000-8000-000000000012",
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000012",
+          "code": "VPN",
+          "label": "Cisco AnyConnect Corporate VPN",
+          "classification": "CONFIDENTIAL",
+          "owner_id": "20000000-0000-4000-8000-000000000003",
+          "is_active": true,
+          "risk_weight": 3
+        }
+      ]
+    },
+    "access_role": {
+      "table": "access_role",
+      "raw_count": 22,
+      "search_fields": [
+        "role_code",
+        "name",
+        "risk_level"
+      ],
+      "data": [
+        {
+          "id": "71000000-0000-4000-8000-000000000001",
+          "app_id": "70000000-0000-4000-8000-000000000001",
+          "code": "CRM_VIEWER",
+          "label": "Xem dữ liệu CRM",
+          "risk_level": "MEDIUM",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 2
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000002",
+          "app_id": "70000000-0000-4000-8000-000000000002",
+          "code": "ERP_AP_ADMIN",
+          "label": "Quản trị công nợ phải trả",
+          "risk_level": "PRIVILEGED",
+          "needs_sod": true,
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000003",
+          "app_id": "70000000-0000-4000-8000-000000000001",
+          "code": "CRM_ADMIN",
+          "label": "Quản trị viên CRM",
+          "risk_level": "HIGH",
+          "needs_sod": true,
+          "is_active": true,
+          "risk_weight": 3
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000004",
+          "app_id": "70000000-0000-4000-8000-000000000004",
+          "code": "WIKI_EDITOR",
+          "label": "Biên tập Knowledge Base",
+          "risk_level": "LOW",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 1
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000005",
+          "app_id": "70000000-0000-4000-8000-000000000005",
+          "code": "JIRA_MEMBER",
+          "label": "Thành viên dự án Jira",
+          "risk_level": "LOW",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 1
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000006",
+          "app_id": "70000000-0000-4000-8000-000000000006",
+          "code": "VAULT_ADMIN",
+          "label": "Quản trị Vault secrets & keys",
+          "risk_level": "PRIVILEGED",
+          "needs_sod": true,
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000007",
+          "app_id": "70000000-0000-4000-8000-000000000007",
+          "code": "GITLAB_DEV",
+          "label": "Developer GitLab (Commit/MR)",
+          "risk_level": "MEDIUM",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 2
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000008",
+          "app_id": "70000000-0000-4000-8000-000000000003",
+          "code": "HRMS_PAYROLL",
+          "label": "Xem và xử lý bảng lương",
+          "risk_level": "PRIVILEGED",
+          "needs_sod": true,
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000009",
+          "app_id": "70000000-0000-4000-8000-000000000001",
+          "code": "CRM_SALES_REP",
+          "label": "Nhân viên bán hàng (Đọc/Ghi)",
+          "risk_level": "MEDIUM",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 2
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000010",
+          "app_id": "70000000-0000-4000-8000-000000000002",
+          "code": "ERP_GL_ACCOUNTANT",
+          "label": "Kế toán tổng hợp SAP",
+          "risk_level": "HIGH",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 3
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000011",
+          "app_id": "70000000-0000-4000-8000-000000000002",
+          "code": "ERP_PO_CREATOR",
+          "label": "Tạo đơn hàng mua sắm",
+          "risk_level": "MEDIUM",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 2
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000012",
+          "app_id": "70000000-0000-4000-8000-000000000003",
+          "code": "HRMS_EMPLOYEE",
+          "label": "Cổng thông tin tự phục vụ NV",
+          "risk_level": "LOW",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 1
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000013",
+          "app_id": "70000000-0000-4000-8000-000000000003",
+          "code": "HRMS_HR_ADMIN",
+          "label": "Quản trị hồ sơ nhân sự",
+          "risk_level": "HIGH",
+          "needs_sod": true,
+          "is_active": true,
+          "risk_weight": 3
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000014",
+          "app_id": "70000000-0000-4000-8000-000000000005",
+          "code": "JIRA_ADMIN",
+          "label": "Quản trị dự án Jira",
+          "risk_level": "HIGH",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 3
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000015",
+          "app_id": "70000000-0000-4000-8000-000000000007",
+          "code": "GITLAB_MAINTAIN",
+          "label": "Maintainer GitLab (Release/Deploy)",
+          "risk_level": "HIGH",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 3
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000016",
+          "app_id": "70000000-0000-4000-8000-000000000008",
+          "code": "M365_GLOBAL_ADM",
+          "label": "Quản trị Microsoft 365 Tenant",
+          "risk_level": "PRIVILEGED",
+          "needs_sod": true,
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000017",
+          "app_id": "70000000-0000-4000-8000-000000000009",
+          "code": "SLACK_USER",
+          "label": "Thành viên kênh Slack tiêu chuẩn",
+          "risk_level": "LOW",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 1
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000018",
+          "app_id": "70000000-0000-4000-8000-000000000010",
+          "code": "AWS_SYSADMIN",
+          "label": "AWS Full Administrative Access",
+          "risk_level": "PRIVILEGED",
+          "needs_sod": true,
+          "is_active": true,
+          "risk_weight": 4
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000019",
+          "app_id": "70000000-0000-4000-8000-000000000010",
+          "code": "AWS_READONLY",
+          "label": "AWS ReadOnly Auditor Access",
+          "risk_level": "MEDIUM",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 2
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000020",
+          "app_id": "70000000-0000-4000-8000-000000000011",
+          "code": "FAST_CHIEF_ACC",
+          "label": "FAST Quản Trị Kế Toán Trưởng",
+          "risk_level": "HIGH",
+          "needs_sod": true,
+          "is_active": true,
+          "risk_weight": 3
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000021",
+          "app_id": "70000000-0000-4000-8000-000000000011",
+          "code": "FAST_STAFF",
+          "label": "FAST Kế toán viên nhập liệu",
+          "risk_level": "MEDIUM",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 2
+        },
+        {
+          "id": "71000000-0000-4000-8000-000000000022",
+          "app_id": "70000000-0000-4000-8000-000000000012",
+          "code": "VPN_REMOTE",
+          "label": "Quyền truy cập VPN từ xa",
+          "risk_level": "MEDIUM",
+          "needs_sod": false,
+          "is_active": true,
+          "risk_weight": 2
+        }
+      ]
+    },
+    "service_catalog": {
+      "table": "service_catalog",
+      "raw_count": 12,
+      "search_fields": [
+        "service_code",
+        "name",
+        "category"
+      ],
+      "data": [
+        {
+          "id": "73000000-0000-4000-8000-000000000001",
+          "code": "IT-PASSWORD",
+          "label": "Khôi phục / Đặt lại mật khẩu",
+          "category": "ACCOUNT",
+          "priority": "HIGH",
+          "sla_hours": "4",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000002",
+          "code": "IT-SOFTWARE",
+          "label": "Cài đặt / Cấp license phần mềm",
+          "category": "SOFTWARE",
+          "priority": "MEDIUM",
+          "sla_hours": "16",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000003",
+          "code": "IT-SECURITY",
+          "label": "Xử lý sự cố an toàn thông tin",
+          "category": "SECURITY",
+          "priority": "CRITICAL",
+          "sla_hours": "1",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000004",
+          "code": "IT-HARDWARE",
+          "label": "Sửa chữa / Thay thế thiết bị phần cứng",
+          "category": "HARDWARE",
+          "priority": "MEDIUM",
+          "sla_hours": "24",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000005",
+          "code": "IT-NETWORK",
+          "label": "Cấu hình mạng / Cấp tài khoản VPN",
+          "category": "NETWORK",
+          "priority": "HIGH",
+          "sla_hours": "8",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000006",
+          "code": "IT-ONBOARD",
+          "label": "Chuẩn bị thiết bị cho nhân viên mới",
+          "category": "ACCOUNT",
+          "priority": "MEDIUM",
+          "sla_hours": "48",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000007",
+          "code": "IT-DATA",
+          "label": "Khôi phục dữ liệu / Backup bản sao",
+          "category": "DATA",
+          "priority": "HIGH",
+          "sla_hours": "12",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000008",
+          "code": "IT-ACCESS-ERP",
+          "label": "Yêu cầu cấp mới / Điều chỉnh quyền SAP",
+          "category": "ACCOUNT",
+          "priority": "HIGH",
+          "sla_hours": "24",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000009",
+          "code": "IT-ACCESS-CRM",
+          "label": "Yêu cầu cấp tài khoản Salesforce CRM",
+          "category": "ACCOUNT",
+          "priority": "MEDIUM",
+          "sla_hours": "16",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000010",
+          "code": "IT-CERT-SSL",
+          "label": "Gia hạn / Cấp phát chứng chỉ số SSL",
+          "category": "SECURITY",
+          "priority": "HIGH",
+          "sla_hours": "24",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000011",
+          "code": "IT-EMAIL-ALIAS",
+          "label": "Tạo Group Email / Hòm thư phòng ban",
+          "category": "ACCOUNT",
+          "priority": "LOW",
+          "sla_hours": "8",
+          "is_active": true
+        },
+        {
+          "id": "73000000-0000-4000-8000-000000000012",
+          "code": "IT-RELOCATE",
+          "label": "Hỗ trợ di chuyển chỗ ngồi & máy móc",
+          "category": "HARDWARE",
+          "priority": "LOW",
+          "sla_hours": "16",
+          "is_active": true
+        }
+      ]
+    }
+  },
+  "meta": {
+    "total_records": 46,
+    "entity_count": 3,
+    "error_count": 0,
+    "source": "sql:database/mock_enterprise_sql/01_mock_seed_DEV_ONLY.sql",
+    "normalizer_version": "2.1.0"
+  }
+}

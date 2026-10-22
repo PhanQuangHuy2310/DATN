@@ -1,0 +1,26 @@
+BÁO CÁO HUẤN LUYỆN DỮ LIỆU LỚN (1.000.000 MẪU)
+Thời gian: 2026-10-03 17:48:54
+Số lượng mẫu test: 100,000
+Accuracy: 92.90%
+Macro F1: 0.9396
+Weighted F1: 0.9287
+
+CLASSIFICATION REPORT:
+              precision    recall  f1-score   support
+
+      Risk 1     0.8617    0.9945    0.9234     12180
+      Risk 2     0.8905    0.9911    0.9381     26673
+      Risk 3     0.9383    0.8755    0.9058     32545
+      Risk 4     0.9987    0.8719    0.9310     21369
+      Risk 5     1.0000    0.9997    0.9999      7233
+
+    accuracy                         0.9290    100000
+   macro avg     0.9378    0.9465    0.9396    100000
+weighted avg     0.9336    0.9290    0.9287    100000
+
+CONFUSION MATRIX:
+[[12113     0    67     0     0]
+ [    0 26435   232     6     0]
+ [ 1944  2091 28493    17     0]
+ [    0  1161  1576 18632     0]
+ [    0     0     0     2  7231]]

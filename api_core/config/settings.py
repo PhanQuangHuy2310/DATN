@@ -139,6 +139,14 @@ EAS_ALLOW_ADMIN_DB = os.getenv("EAS_ALLOW_ADMIN_DB", "false").lower() == "true"
 if ENVIRONMENT == "production" and EAS_ALLOW_ADMIN_DB:
     raise RuntimeError("EAS_ALLOW_ADMIN_DB cannot be enabled in production")
 
+# ── AI Service Integration ──
+EAS_AI_SERVICE_URL = os.getenv("EAS_AI_SERVICE_URL", "http://ai-service:8001").rstrip("/")
+EAS_AI_INTERNAL_SECRET = os.getenv(
+    "EAS_AI_INTERNAL_SECRET",
+    os.getenv("INTERNAL_API_SECRET", "datn-internal-secret-change-in-prod"),
+)
+EAS_AI_TIMEOUT_SECONDS = float(os.getenv("EAS_AI_TIMEOUT_SECONDS", "5.0"))
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

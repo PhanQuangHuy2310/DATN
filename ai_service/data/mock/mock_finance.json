@@ -1,0 +1,212 @@
+{
+  "schema": "mock_finance",
+  "department": "FIN",
+  "purpose": "Hệ thống tài chính — Ngân sách cost center, loại chi phí. AI dùng budget remaining để đánh giá risk khi amount vượt ngân sách.",
+  "entities": {
+    "cost_center_budget": {
+      "table": "cost_center_budget",
+      "raw_count": 8,
+      "search_fields": [
+        "cost_center",
+        "currency"
+      ],
+      "data": [
+        {
+          "id": "80000000-0000-4000-8000-000000000001",
+          "cost_center": "CC-210",
+          "year": "2026",
+          "currency": "VND",
+          "approved_vnd": 1000000000,
+          "committed_vnd": 120000000,
+          "spent_vnd": 350000000,
+          "remaining_vnd": 530000000,
+          "utilization_pct": "47.0"
+        },
+        {
+          "id": "80000000-0000-4000-8000-000000000002",
+          "cost_center": "CC-310",
+          "year": "2026",
+          "currency": "VND",
+          "approved_vnd": 1600000000,
+          "committed_vnd": 250000000,
+          "spent_vnd": 520000000,
+          "remaining_vnd": 830000000,
+          "utilization_pct": "48.1"
+        },
+        {
+          "id": "80000000-0000-4000-8000-000000000003",
+          "cost_center": "CC-410",
+          "year": "2026",
+          "currency": "VND",
+          "approved_vnd": 800000000,
+          "committed_vnd": 100000000,
+          "spent_vnd": 280000000,
+          "remaining_vnd": 420000000,
+          "utilization_pct": "47.5"
+        },
+        {
+          "id": "80000000-0000-4000-8000-000000000004",
+          "cost_center": "CC-510",
+          "year": "2026",
+          "currency": "VND",
+          "approved_vnd": 500000000,
+          "committed_vnd": 50000000,
+          "spent_vnd": 200000000,
+          "remaining_vnd": 250000000,
+          "utilization_pct": "50.0"
+        },
+        {
+          "id": "80000000-0000-4000-8000-000000000005",
+          "cost_center": "CC-610",
+          "year": "2026",
+          "currency": "VND",
+          "approved_vnd": 400000000,
+          "committed_vnd": 30000000,
+          "spent_vnd": 150000000,
+          "remaining_vnd": 220000000,
+          "utilization_pct": "45.0"
+        },
+        {
+          "id": "80000000-0000-4000-8000-000000000006",
+          "cost_center": "CC-710",
+          "year": "2026",
+          "currency": "VND",
+          "approved_vnd": 1200000000,
+          "committed_vnd": 300000000,
+          "spent_vnd": 450000000,
+          "remaining_vnd": 450000000,
+          "utilization_pct": "62.5"
+        },
+        {
+          "id": "80000000-0000-4000-8000-000000000007",
+          "cost_center": "CC-810",
+          "year": "2026",
+          "currency": "VND",
+          "approved_vnd": 300000000,
+          "committed_vnd": 20000000,
+          "spent_vnd": 100000000,
+          "remaining_vnd": 180000000,
+          "utilization_pct": "40.0"
+        },
+        {
+          "id": "80000000-0000-4000-8000-000000000008",
+          "cost_center": "CC-100",
+          "year": "2026",
+          "currency": "VND",
+          "approved_vnd": 2000000000,
+          "committed_vnd": 150000000,
+          "spent_vnd": 700000000,
+          "remaining_vnd": 1150000000,
+          "utilization_pct": "42.5"
+        }
+      ]
+    },
+    "expense_category": {
+      "table": "expense_category",
+      "raw_count": 10,
+      "search_fields": [
+        "category_code",
+        "name"
+      ],
+      "data": [
+        {
+          "id": "81000000-0000-4000-8000-000000000001",
+          "code": "MEAL",
+          "label": "Chi phí ăn uống công tác",
+          "receipt_threshold_vnd": 200000,
+          "daily_limit_vnd": 500000,
+          "currency": "VND",
+          "is_active": true
+        },
+        {
+          "id": "81000000-0000-4000-8000-000000000002",
+          "code": "TAXI",
+          "label": "Di chuyển nội đô (Grab/taxi)",
+          "receipt_threshold_vnd": 0,
+          "daily_limit_vnd": 1000000,
+          "currency": "VND",
+          "is_active": true
+        },
+        {
+          "id": "81000000-0000-4000-8000-000000000003",
+          "code": "OFFICE",
+          "label": "Văn phòng phẩm & In ấn",
+          "receipt_threshold_vnd": 0,
+          "daily_limit_vnd": null,
+          "currency": "VND",
+          "is_active": true
+        },
+        {
+          "id": "81000000-0000-4000-8000-000000000004",
+          "code": "CLIENT",
+          "label": "Tiếp khách & Hội nghị đối tác",
+          "receipt_threshold_vnd": 500000,
+          "daily_limit_vnd": 2000000,
+          "currency": "VND",
+          "is_active": true
+        },
+        {
+          "id": "81000000-0000-4000-8000-000000000005",
+          "code": "TRAINING",
+          "label": "Đào tạo & Nâng cao năng lực",
+          "receipt_threshold_vnd": 1000000,
+          "daily_limit_vnd": null,
+          "currency": "VND",
+          "is_active": true
+        },
+        {
+          "id": "81000000-0000-4000-8000-000000000006",
+          "code": "SOFTWARE",
+          "label": "Mua license & Thuê bao SaaS",
+          "receipt_threshold_vnd": 0,
+          "daily_limit_vnd": null,
+          "currency": "VND",
+          "is_active": true
+        },
+        {
+          "id": "81000000-0000-4000-8000-000000000007",
+          "code": "TELECOM",
+          "label": "Viễn thông, Cáp quang & 4G",
+          "receipt_threshold_vnd": 0,
+          "daily_limit_vnd": null,
+          "currency": "VND",
+          "is_active": true
+        },
+        {
+          "id": "81000000-0000-4000-8000-000000000008",
+          "code": "LODGING",
+          "label": "Lưu trú khách sạn công tác",
+          "receipt_threshold_vnd": 500000,
+          "daily_limit_vnd": 2500000,
+          "currency": "VND",
+          "is_active": true
+        },
+        {
+          "id": "81000000-0000-4000-8000-000000000009",
+          "code": "MARKETING",
+          "label": "Chạy quảng cáo số & Event",
+          "receipt_threshold_vnd": 1000000,
+          "daily_limit_vnd": null,
+          "currency": "VND",
+          "is_active": true
+        },
+        {
+          "id": "81000000-0000-4000-8000-000000000010",
+          "code": "MAINTENANCE",
+          "label": "Bảo trì sửa chữa tài sản máy móc",
+          "receipt_threshold_vnd": 500000,
+          "daily_limit_vnd": null,
+          "currency": "VND",
+          "is_active": true
+        }
+      ]
+    }
+  },
+  "meta": {
+    "total_records": 18,
+    "entity_count": 2,
+    "error_count": 0,
+    "source": "sql:database/mock_enterprise_sql/01_mock_seed_DEV_ONLY.sql",
+    "normalizer_version": "2.1.0"
+  }
+}

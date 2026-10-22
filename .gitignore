@@ -44,3 +44,21 @@ supabase/.temp/
 
 # Generated validation/render output
 .mermaid-validation/
+
+# Non-software documentation, diagrams, reports & scratch scripts
+Thiết kế/
+SƠ ĐỒ/
+Sơ đồ bản mới nhất/
+Ảnh cần vẽ lại/
+Ảnh đã vẽ lại/
+diagram/
+baseline/
+build_full_51*.py
+extract_orig_images.py
+map_images.py
+plantuml.jar
+
+# AI Generated Training Big Data (>100MB, exceeds GitHub limit)
+ai_service/training/data/partitions/
+ai_service/training/data/enterprise_requests_dataset_large.csv
+

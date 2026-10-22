@@ -1,6 +1,7 @@
 name: eas
 
 services:
+  # ── Web Client (SPA) ──
   web:
     build:
       context: .
@@ -17,6 +18,30 @@ services:
       - ALL
     depends_on:
       api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── API Gateway (Nginx Reverse Proxy) ──
+  # Route: /api/* → api_core | /api/v1/mock/* → 8 mock schema | /ai/* → ai_service
+  # Port 8088 để không đụng web (8080). Chi tiết: api_gateway/README.md
+  gateway:
+    build:
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${EAS_GATEWAY_PORT:-8088}:8080"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=16m,noexec,nosuid,uid=101,gid=101,mode=0750
+      - /var/run:size=4m,noexec,nosuid,uid=101,gid=101,mode=0750
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      api:
+        condition: service_healthy
+      ai-service:
         condition: service_healthy
     restart: unless-stopped
 
@@ -50,6 +75,10 @@ services:
       EAS_HSTS_PRELOAD: ${EAS_HSTS_PRELOAD:-false}
       LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/0
+      # Kết nối nội bộ tới AI service (api_core/integrations/ai_service.py)
+      EAS_AI_SERVICE_URL: ${EAS_AI_SERVICE_URL:-http://ai-service:8001}
+      EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:-datn-internal-secret-change-in-prod}
+      EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5}
     ports:
       - "127.0.0.1:8000:8000"
     read_only: true
@@ -143,6 +172,46 @@ services:
       - SETGID
       - SETUID
     restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q 'green\\|yellow'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
+  ai-service:
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    ports:
+      # Chỉ bind localhost: client ngoài phải đi qua gateway (/ai/*)
+      - "127.0.0.1:8001:8001"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-datn-internal-secret-change-in-prod}
+      - OCR_USE_GPU=false
+    volumes:
+      - ./ai_service/models:/app/models        # Persist trained models
+      - ./ai_service/training/data:/app/training/data
+      # Snapshot dữ liệu mock đã chuẩn hóa (scripts/mock_data_normalizer.js) — chỉ đọc
+      - ./ai_service/data/mock:/app/data/mock:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   clamav-db:

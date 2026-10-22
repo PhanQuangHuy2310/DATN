@@ -1,0 +1,112 @@
+[
+  {
+    "invoice_number": "0012345",
+    "invoice_date": "2026-09-01",
+    "seller_name": "CÔNG TY TNHH VĂN PHÒNG PHẨM MẪU AN BÌNH",
+    "seller_tax_id": "0000000001",
+    "total_amount_pre_tax": 1000000,
+    "tax_amount": 80000,
+    "total_amount": 1080000,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012345\n01/09/2026\nĐơn vị bán hàng: CÔNG TY TNHH VĂN PHÒNG PHẨM MẪU AN BÌNH\nMã số thuế bên bán: 0000000001\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Tiền mặt\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | Giấy A4 | 10 | 75.000 | 750.000\n2 | Bút bi | 50 | 5.000 | 250.000\nCộng tiền hàng: 1.000.000\nThuế suất GTGT (giả định kiểm thử): 8%\nTiền thuế GTGT: 80.000\nTổng cộng tiền thanh toán: 1.080.000 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  },
+  {
+    "invoice_number": "0012346",
+    "invoice_date": "2026-09-03",
+    "seller_name": "CÔNG TY TNHH THIẾT BỊ MẪU MINH KHÔI",
+    "seller_tax_id": "0000000002",
+    "total_amount_pre_tax": 37000000,
+    "tax_amount": 3700000,
+    "total_amount": 40700000,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012346\nNgày 03 tháng 09 năm 2026\nĐơn vị bán hàng: CÔNG TY TNHH THIẾT BỊ MẪU MINH KHÔI\nMã số thuế bên bán: 0000000002\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Chuyển khoản\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | Máy tính xách tay | 2 | 18,500,000 | 37,000,000\nTổng tiền trước thuế: 37,000,000\nThuế suất GTGT (giả định kiểm thử): 10%\nTiền VAT: 3,700,000\nTổng thanh toán: 40,700,000 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  },
+  {
+    "invoice_number": "0012347",
+    "invoice_date": "2026-09-05",
+    "seller_name": "CÔNG TY TNHH SỬA CHỮA MẪU BẢO AN",
+    "seller_tax_id": "0000000003",
+    "total_amount_pre_tax": 1100000,
+    "tax_amount": 88000,
+    "total_amount": 1188000,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012347\n05-09-2026\nĐơn vị bán hàng: CÔNG TY TNHH SỬA CHỮA MẪU BẢO AN\nMã số thuế bên bán: 0000000003\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Tiền mặt\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | Thay bàn phím máy tính | 1 | 850 000 | 850 000\n2 | Công sửa chữa | 1 | 250 000 | 250 000\nThành tiền chưa thuế: 1 100 000\nThuế suất GTGT (giả định kiểm thử): 8%\nThuế GTGT: 88 000\nTổng tiền đã gồm thuế: 1 188 000 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  },
+  {
+    "invoice_number": "0012348",
+    "invoice_date": "2026-09-07",
+    "seller_name": "CÔNG TY TNHH VẬN TẢI MẪU HẢI ĐĂNG",
+    "seller_tax_id": "0000000004",
+    "total_amount_pre_tax": 3500000,
+    "tax_amount": 280000,
+    "total_amount": 3780000,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012348\n07/09/2026\nĐơn vị bán hàng: CÔNG TY TNHH VẬN TẢI MẪU HẢI ĐĂNG\nMã số thuế bên bán: 0000000004\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Chuyển khoản\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | Dịch vụ thuê xe theo chuyến | 2 | 1.750.000 | 3.500.000\nCộng tiền hàng: 3.500.000\nThuế suất GTGT (giả định kiểm thử): 8%\nTiền thuế GTGT: 280.000\nTổng cộng tiền thanh toán: 3.780.000 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  },
+  {
+    "invoice_number": "0012349",
+    "invoice_date": "2026-09-10",
+    "seller_name": "CÔNG TY TNHH LƯU TRÚ MẪU SEN VIỆT",
+    "seller_tax_id": "0000000005",
+    "total_amount_pre_tax": 2850000,
+    "tax_amount": 228000,
+    "total_amount": 3078000,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012349\nNgày 10 tháng 09 năm 2026\nĐơn vị bán hàng: CÔNG TY TNHH LƯU TRÚ MẪU SEN VIỆT\nMã số thuế bên bán: 0000000005\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Chuyển khoản\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | Phòng nghỉ phục vụ công tác | 3 | 950,000 | 2,850,000\nTổng tiền trước thuế: 2,850,000\nThuế suất GTGT (giả định kiểm thử): 8%\nTiền VAT: 228,000\nTổng thanh toán: 3,078,000 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  },
+  {
+    "invoice_number": "0012350",
+    "invoice_date": "2026-09-12",
+    "seller_name": "CÔNG TY TNHH IN ẤN MẪU THÀNH ĐẠT",
+    "seller_tax_id": "0000000006",
+    "total_amount_pre_tax": 1687500,
+    "tax_amount": 135000,
+    "total_amount": 1822500,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012350\n12-09-2026\nĐơn vị bán hàng: CÔNG TY TNHH IN ẤN MẪU THÀNH ĐẠT\nMã số thuế bên bán: 0000000006\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Tiền mặt\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | In tài liệu đào tạo | 125 | 13 500 | 1 687 500\nThành tiền chưa thuế: 1 687 500\nThuế suất GTGT (giả định kiểm thử): 8%\nThuế GTGT: 135 000\nTổng tiền đã gồm thuế: 1 822 500 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  },
+  {
+    "invoice_number": "0012351",
+    "invoice_date": "2026-09-15",
+    "seller_name": "CÔNG TY TNHH NỘI THẤT MẪU GIA HƯNG",
+    "seller_tax_id": "0000000007",
+    "total_amount_pre_tax": 20000000,
+    "tax_amount": 2000000,
+    "total_amount": 22000000,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012351\n15/09/2026\nĐơn vị bán hàng: CÔNG TY TNHH NỘI THẤT MẪU GIA HƯNG\nMã số thuế bên bán: 0000000007\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Chuyển khoản\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | Bàn làm việc | 5 | 2.400.000 | 12.000.000\n2 | Ghế văn phòng | 5 | 1.600.000 | 8.000.000\nCộng tiền hàng: 20.000.000\nThuế suất GTGT (giả định kiểm thử): 10%\nTiền thuế GTGT: 2.000.000\nTổng cộng tiền thanh toán: 22.000.000 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  },
+  {
+    "invoice_number": "0012352",
+    "invoice_date": "2026-09-18",
+    "seller_name": "CÔNG TY TNHH SỰ KIỆN MẪU ÁNH DƯƠNG",
+    "seller_tax_id": "0000000008",
+    "total_amount_pre_tax": 15500000,
+    "tax_amount": 1240000,
+    "total_amount": 16740000,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012352\nNgày 18 tháng 09 năm 2026\nĐơn vị bán hàng: CÔNG TY TNHH SỰ KIỆN MẪU ÁNH DƯƠNG\nMã số thuế bên bán: 0000000008\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Chuyển khoản\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | Thuê hội trường | 1 | 12,000,000 | 12,000,000\n2 | Thiết bị âm thanh | 1 | 3,500,000 | 3,500,000\nTổng tiền trước thuế: 15,500,000\nThuế suất GTGT (giả định kiểm thử): 8%\nTiền VAT: 1,240,000\nTổng thanh toán: 16,740,000 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  },
+  {
+    "invoice_number": "0012353",
+    "invoice_date": "2026-09-22",
+    "seller_name": "CÔNG TY TNHH DỊCH VỤ MẪU NAM VIỆT",
+    "seller_tax_id": "0000000009",
+    "total_amount_pre_tax": 125000000,
+    "tax_amount": 12500000,
+    "total_amount": 137500000,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012353\n22-09-2026\nĐơn vị bán hàng: CÔNG TY TNHH DỊCH VỤ MẪU NAM VIỆT\nMã số thuế bên bán: 0000000009\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Chuyển khoản\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | Bảo trì thiết bị văn phòng theo hợp đồng | 1 | 125 000 000 | 125 000 000\nThành tiền chưa thuế: 125 000 000\nThuế suất GTGT (giả định kiểm thử): 10%\nThuế GTGT: 12 500 000\nTổng tiền đã gồm thuế: 137 500 000 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  },
+  {
+    "invoice_number": "0012354",
+    "invoice_date": "2026-09-28",
+    "seller_name": "CHI NHÁNH CÔNG TY TNHH THƯƠNG MẠI MẪU PHÚC LỘC",
+    "seller_tax_id": "0000000010-001",
+    "total_amount_pre_tax": 2200000,
+    "tax_amount": 176000,
+    "total_amount": 2376000,
+    "currency": "VND",
+    "raw_text": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG\nDỮ LIỆU GIẢ LẬP KIỂM THỬ — KHÔNG CÓ GIÁ TRỊ THANH TOÁN\nKý hiệu: 1C26TAA | Số: 0012354\n28/09/2026\nĐơn vị bán hàng: CHI NHÁNH CÔNG TY TNHH THƯƠNG MẠI MẪU PHÚC LỘC\nMã số thuế bên bán: 0000000010-001\nĐơn vị mua hàng: CÔNG TY TNHH E-APPROVAL DEMO\nMã số thuế bên mua: 0000000099\nHình thức thanh toán: Tiền mặt\nĐơn vị tiền tệ: VND\nSTT | Tên hàng hóa, dịch vụ | Số lượng | Đơn giá | Thành tiền\n1 | Vật tư vệ sinh | 12 | 125.000 | 1.500.000\n2 | Túi đựng rác | 20 | 35.000 | 700.000\nCộng tiền hàng: 2.200.000\nThuế suất GTGT (giả định kiểm thử): 8%\nTiền thuế GTGT: 176.000\nTổng cộng tiền thanh toán: 2.376.000 VND\nNgười mua hàng                         Người bán hàng\n(Ký, ghi rõ họ tên)                    (Ký điện tử)"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "finance": {
+    "name": "finance",
+    "model_file": "risk_model_finance.pkl",
+    "features_file": "feature_cols_finance.json",
+    "accuracy": 0.9377,
+    "f1_weighted": 0.9372
+  },
+  "hr": {
+    "name": "hr",
+    "model_file": "risk_model_hr.pkl",
+    "features_file": "feature_cols_hr.json",
+    "accuracy": 0.9162,
+    "f1_weighted": 0.9136
+  },
+  "it": {
+    "name": "it",
+    "model_file": "risk_model_it.pkl",
+    "features_file": "feature_cols_it.json",
+    "accuracy": 0.9535,
+    "f1_weighted": 0.9516
+  }
+}

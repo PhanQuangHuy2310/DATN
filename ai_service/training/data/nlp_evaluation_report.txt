@@ -1,0 +1,59 @@
+BÁO CÁO ĐÁNH GIÁ MÔ HÌNH NLP PHÂN LOẠI YÊU CẦU
+Thời gian: 2026-10-03 17:08:25
+Tổng số mẫu: 50,000 | Test: 10,000
+
+============================================================
+1. REQUEST TYPE CLASSIFICATION REPORT
+Accuracy: 100.00% | Weighted F1: 1.0000
+                       precision    recall  f1-score   support
+
+    access_permission     1.0000    1.0000    1.0000       625
+      advance_payment     1.0000    1.0000    1.0000       625
+      budget_approval     1.0000    1.0000    1.0000       625
+     contract_payment     1.0000    1.0000    1.0000       625
+        equipment_new     1.0000    1.0000    1.0000       625
+     equipment_repair     1.0000    1.0000    1.0000       625
+expense_reimbursement     1.0000    1.0000    1.0000       625
+         leave_annual     1.0000    1.0000    1.0000       625
+         leave_unpaid     1.0000    1.0000    1.0000       625
+         meeting_room     1.0000    1.0000    1.0000       625
+             overtime     1.0000    1.0000    1.0000       625
+          remote_work     1.0000    1.0000    1.0000       625
+           stationery     1.0000    1.0000    1.0000       625
+               travel     1.0000    1.0000    1.0000       625
+      vehicle_booking     1.0000    1.0000    1.0000       625
+           vpn_access     1.0000    1.0000    1.0000       625
+
+             accuracy                         1.0000     10000
+            macro avg     1.0000    1.0000    1.0000     10000
+         weighted avg     1.0000    1.0000    1.0000     10000
+
+============================================================
+2. DEPARTMENT CLASSIFICATION REPORT
+Accuracy: 99.99% | Weighted F1: 0.9999
+              precision    recall  f1-score   support
+
+     finance     1.0000    1.0000    1.0000      3598
+          hr     1.0000    1.0000    1.0000      1022
+          it     0.9991    1.0000    0.9995      1088
+       legal     1.0000    1.0000    1.0000      1095
+   marketing     1.0000    1.0000    1.0000      1073
+  operations     1.0000    1.0000    1.0000      1070
+       sales     1.0000    0.9991    0.9995      1054
+
+    accuracy                         0.9999     10000
+   macro avg     0.9999    0.9999    0.9999     10000
+weighted avg     0.9999    0.9999    0.9999     10000
+
+============================================================
+3. LIFECYCLE TEMPLATE CLASSIFICATION REPORT
+Accuracy: 98.36% | Weighted F1: 0.9835
+              precision    recall  f1-score   support
+
+           A     0.9792    1.0000    0.9895      3670
+           B     0.9828    0.9844    0.9836      4994
+           C     1.0000    0.9356    0.9667      1336
+
+    accuracy                         0.9836     10000
+   macro avg     0.9873    0.9733    0.9799     10000
+weighted avg     0.9838    0.9836    0.9835     10000

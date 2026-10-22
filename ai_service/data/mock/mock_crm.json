@@ -1,0 +1,449 @@
+{
+  "schema": "mock_crm",
+  "department": "SALES",
+  "purpose": "Hệ thống CRM — Khách hàng, hợp đồng, support case. AI risk scoring dùng contract value_minor để đánh giá amount_vs_limit.",
+  "entities": {
+    "customer_directory": {
+      "table": "customer_directory",
+      "raw_count": 20,
+      "search_fields": [
+        "customer_code",
+        "legal_name",
+        "segment"
+      ],
+      "data": [
+        {
+          "id": "50000000-0000-4000-8000-000000000001",
+          "code": "CUS-0001",
+          "label": "Công ty CP Công Nghệ Sao Việt",
+          "segment": "ENTERPRISE",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000006",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000002",
+          "code": "CUS-0002",
+          "label": "DNTN Ánh Dương Digital",
+          "segment": "SMB",
+          "status": "PROSPECT",
+          "owner_id": "20000000-0000-4000-8000-000000000007",
+          "is_active": false
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000003",
+          "code": "CUS-0003",
+          "label": "Tập Đoàn Thép Hòa Phát",
+          "segment": "ENTERPRISE",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000006",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000004",
+          "code": "CUS-0004",
+          "label": "Ngân Hàng TMCP Á Châu (ACB)",
+          "segment": "ENTERPRISE",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000006",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000005",
+          "code": "CUS-0005",
+          "label": "Công ty TNHH Thương Mại Minh Phát",
+          "segment": "MID_MARKET",
+          "status": "SUSPENDED",
+          "owner_id": "20000000-0000-4000-8000-000000000007",
+          "is_active": false
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000006",
+          "code": "CUS-0006",
+          "label": "Sở Kế Hoạch & Đầu Tư TP.HCM",
+          "segment": "PUBLIC_SECTOR",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000006",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000007",
+          "code": "CUS-0007",
+          "label": "Tổng Công Ty Viễn Thông MobiFone",
+          "segment": "ENTERPRISE",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000006",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000008",
+          "code": "CUS-0008",
+          "label": "Công ty CP Bán Lẻ Kỹ Thuật Số FPT",
+          "segment": "ENTERPRISE",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000007",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000009",
+          "code": "CUS-0009",
+          "label": "Công ty TNHH Phần Mềm Lạc Việt",
+          "segment": "MID_MARKET",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000008",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000010",
+          "code": "CUS-0010",
+          "label": "Công ty CP Tập Đoàn Vingroup",
+          "segment": "ENTERPRISE",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000006",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000011",
+          "code": "CUS-0011",
+          "label": "Trung Tâm Y Tế Quận 1",
+          "segment": "PUBLIC_SECTOR",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000033",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000012",
+          "code": "CUS-0012",
+          "label": "Công ty TNHH May Mặc An Phước",
+          "segment": "MID_MARKET",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000034",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000013",
+          "code": "CUS-0013",
+          "label": "Công ty CP Chuỗi Cung Ứng Giao Hàng Tiết Kiệm",
+          "segment": "ENTERPRISE",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000007",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000014",
+          "code": "CUS-0014",
+          "label": "Công ty TNHH Dịch Vụ Du Lịch Lửa Việt",
+          "segment": "SMB",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000008",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000015",
+          "code": "CUS-0015",
+          "label": "Trường Đại Học Bách Khoa TP.HCM",
+          "segment": "PUBLIC_SECTOR",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000033",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000016",
+          "code": "CUS-0016",
+          "label": "Công ty CP Bánh Kẹo Á Châu (ABC Bakery)",
+          "segment": "MID_MARKET",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000034",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000017",
+          "code": "CUS-0017",
+          "label": "Công ty CP Sữa Việt Nam (Vinamilk)",
+          "segment": "ENTERPRISE",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000006",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000018",
+          "code": "CUS-0018",
+          "label": "Văn Phòng Luật Sư Trí Tuệ",
+          "segment": "SMB",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000035",
+          "is_active": true
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000019",
+          "code": "CUS-0019",
+          "label": "Cửa Hàng Thiết Bị Âm Thanh Hoàng Phát",
+          "segment": "SMB",
+          "status": "CLOSED",
+          "owner_id": "20000000-0000-4000-8000-000000000008",
+          "is_active": false
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000020",
+          "code": "CUS-0020",
+          "label": "Công ty CP Dược Phẩm Cửu Long",
+          "segment": "MID_MARKET",
+          "status": "ACTIVE",
+          "owner_id": "20000000-0000-4000-8000-000000000007",
+          "is_active": true
+        }
+      ]
+    },
+    "contract": {
+      "table": "contract",
+      "raw_count": 18,
+      "search_fields": [
+        "contract_code",
+        "status"
+      ],
+      "data": [
+        {
+          "id": "51000000-0000-4000-8000-000000000001",
+          "code": "CTR-2026-001",
+          "customer_id": "50000000-0000-4000-8000-000000000001",
+          "period": {
+            "from": "2026-01-01",
+            "to": "2026-12-31"
+          },
+          "currency": "VND",
+          "value_vnd": 1500000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000002",
+          "code": "CTR-2026-002",
+          "customer_id": "50000000-0000-4000-8000-000000000003",
+          "period": {
+            "from": "2026-03-01",
+            "to": "2027-02-28"
+          },
+          "currency": "VND",
+          "value_vnd": 5000000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000003",
+          "code": "CTR-2026-003",
+          "customer_id": "50000000-0000-4000-8000-000000000004",
+          "period": {
+            "from": "2026-06-01",
+            "to": "2027-05-31"
+          },
+          "currency": "VND",
+          "value_vnd": 3200000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000004",
+          "code": "CTR-2025-010",
+          "customer_id": "50000000-0000-4000-8000-000000000005",
+          "period": {
+            "from": "2025-01-01",
+            "to": "2025-12-31"
+          },
+          "currency": "VND",
+          "value_vnd": 450000000,
+          "status": "EXPIRED",
+          "is_active": false
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000005",
+          "code": "CTR-2026-005",
+          "customer_id": "50000000-0000-4000-8000-000000000006",
+          "period": {
+            "from": "2026-01-01",
+            "to": "2026-12-31"
+          },
+          "currency": "VND",
+          "value_vnd": 800000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000006",
+          "code": "CTR-2026-006",
+          "customer_id": "50000000-0000-4000-8000-000000000007",
+          "period": {
+            "from": "2026-02-15",
+            "to": "2027-02-14"
+          },
+          "currency": "VND",
+          "value_vnd": 2100000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000007",
+          "code": "CTR-2026-007",
+          "customer_id": "50000000-0000-4000-8000-000000000008",
+          "period": {
+            "from": "2026-04-01",
+            "to": "2027-03-31"
+          },
+          "currency": "VND",
+          "value_vnd": 1800000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000008",
+          "code": "CTR-2026-008",
+          "customer_id": "50000000-0000-4000-8000-000000000009",
+          "period": {
+            "from": "2026-05-01",
+            "to": "2027-04-30"
+          },
+          "currency": "VND",
+          "value_vnd": 650000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000009",
+          "code": "CTR-2026-009",
+          "customer_id": "50000000-0000-4000-8000-000000000010",
+          "period": {
+            "from": "2026-07-01",
+            "to": "2028-06-30"
+          },
+          "currency": "VND",
+          "value_vnd": 9500000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000010",
+          "code": "CTR-2026-010",
+          "customer_id": "50000000-0000-4000-8000-000000000011",
+          "period": {
+            "from": "2026-01-01",
+            "to": "2026-12-31"
+          },
+          "currency": "VND",
+          "value_vnd": 350000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000011",
+          "code": "CTR-2026-011",
+          "customer_id": "50000000-0000-4000-8000-000000000012",
+          "period": {
+            "from": "2026-03-15",
+            "to": "2027-03-14"
+          },
+          "currency": "VND",
+          "value_vnd": 900000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000012",
+          "code": "CTR-2026-012",
+          "customer_id": "50000000-0000-4000-8000-000000000013",
+          "period": {
+            "from": "2026-06-15",
+            "to": "2027-06-14"
+          },
+          "currency": "VND",
+          "value_vnd": 2400000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000013",
+          "code": "CTR-2026-013",
+          "customer_id": "50000000-0000-4000-8000-000000000014",
+          "period": {
+            "from": "2026-02-01",
+            "to": "2026-08-31"
+          },
+          "currency": "VND",
+          "value_vnd": 250000000,
+          "status": "EXPIRED",
+          "is_active": false
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000014",
+          "code": "CTR-2026-014",
+          "customer_id": "50000000-0000-4000-8000-000000000015",
+          "period": {
+            "from": "2026-08-01",
+            "to": "2027-07-31"
+          },
+          "currency": "VND",
+          "value_vnd": 500000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000015",
+          "code": "CTR-2026-015",
+          "customer_id": "50000000-0000-4000-8000-000000000016",
+          "period": {
+            "from": "2026-09-01",
+            "to": "2027-08-31"
+          },
+          "currency": "VND",
+          "value_vnd": 700000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000016",
+          "code": "CTR-2026-016",
+          "customer_id": "50000000-0000-4000-8000-000000000017",
+          "period": {
+            "from": "2026-01-01",
+            "to": "2027-12-31"
+          },
+          "currency": "VND",
+          "value_vnd": 6000000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000017",
+          "code": "CTR-2026-017",
+          "customer_id": "50000000-0000-4000-8000-000000000018",
+          "period": {
+            "from": "2026-10-01",
+            "to": "2027-09-30"
+          },
+          "currency": "VND",
+          "value_vnd": 180000000,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "51000000-0000-4000-8000-000000000018",
+          "code": "CTR-2026-018",
+          "customer_id": "50000000-0000-4000-8000-000000000020",
+          "period": {
+            "from": "2026-11-01",
+            "to": "2027-10-31"
+          },
+          "currency": "VND",
+          "value_vnd": 1200000000,
+          "status": "DRAFT",
+          "is_active": false
+        }
+      ]
+    }
+  },
+  "meta": {
+    "total_records": 38,
+    "entity_count": 2,
+    "error_count": 0,
+    "source": "sql:database/mock_enterprise_sql/01_mock_seed_DEV_ONLY.sql",
+    "normalizer_version": "2.1.0"
+  }
+}

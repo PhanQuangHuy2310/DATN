@@ -1,0 +1,35 @@
+{
+  "feature_cols": [
+    "request_type_enc",
+    "department_enc",
+    "user_role_enc",
+    "priority_level_enc",
+    "amount_log",
+    "amount_millions",
+    "budget_log",
+    "amount_to_budget_ratio",
+    "is_over_budget",
+    "is_split_amount_suspect",
+    "has_receipt",
+    "num_attachments",
+    "no_receipt_has_amount",
+    "user_tenure_months",
+    "past_requests_count",
+    "past_rejection_rate",
+    "high_rejection_rate",
+    "is_off_hours",
+    "is_template_matched"
+  ],
+  "label_remap": {
+    "1": 0,
+    "2": 1,
+    "3": 2,
+    "4": 3
+  },
+  "reverse_remap": {
+    "0": 2,
+    "1": 3,
+    "2": 4,
+    "3": 5
+  }
+}

@@ -1,0 +1,745 @@
+{
+  "schema": "mock_assets",
+  "department": "OPS",
+  "purpose": "Hệ thống quản lý tài sản — Phục vụ yêu cầu EQUIPMENT (lifecycle C). AI dùng availability_status và purchase_value để đánh giá risk.",
+  "entities": {
+    "asset_category": {
+      "table": "asset_category",
+      "raw_count": 8,
+      "search_fields": [
+        "code",
+        "name"
+      ],
+      "data": [
+        {
+          "id": "30000000-0000-4000-8000-000000000001",
+          "code": "LAPTOP",
+          "label": "Máy tính xách tay",
+          "requires_approval": true,
+          "max_loan_days": "30"
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000002",
+          "code": "AV",
+          "label": "Thiết bị trình chiếu",
+          "requires_approval": true,
+          "max_loan_days": "7"
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000003",
+          "code": "PERIPHERAL",
+          "label": "Thiết bị ngoại vi",
+          "requires_approval": false,
+          "max_loan_days": "90"
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000004",
+          "code": "MOBILE",
+          "label": "Thiết bị di động & Tablet",
+          "requires_approval": true,
+          "max_loan_days": "60"
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000005",
+          "code": "NETWORK",
+          "label": "Thiết bị mạng & Viễn thông",
+          "requires_approval": true,
+          "max_loan_days": "14"
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000006",
+          "code": "FURNITURE",
+          "label": "Nội thất văn phòng",
+          "requires_approval": false,
+          "max_loan_days": "365"
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000007",
+          "code": "MONITOR",
+          "label": "Màn hình hiển thị",
+          "requires_approval": false,
+          "max_loan_days": "180"
+        },
+        {
+          "id": "30000000-0000-4000-8000-000000000008",
+          "code": "VEHICLE",
+          "label": "Phương tiện công tác",
+          "requires_approval": true,
+          "max_loan_days": "30"
+        }
+      ]
+    },
+    "asset_catalog": {
+      "table": "asset_catalog",
+      "raw_count": 45,
+      "search_fields": [
+        "asset_code",
+        "name",
+        "category_code"
+      ],
+      "data": [
+        {
+          "id": "31000000-0000-4000-8000-000000000001",
+          "code": "LT-0001",
+          "label": "MacBook Pro 16\" M3 Pro",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000002",
+          "code": "LT-0002",
+          "label": "Dell XPS 15 9530",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0002",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000003",
+          "code": "LT-0003",
+          "label": "ThinkPad X1 Carbon Gen 11",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0003",
+          "site": "HN-BR",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000004",
+          "code": "PJ-0001",
+          "label": "Máy chiếu Epson EB-X51",
+          "category": "AV",
+          "serial": "SYN-PJ-0001",
+          "site": "HCM-HQ",
+          "condition": "FAIR",
+          "status": "MAINTENANCE",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000005",
+          "code": "PJ-0002",
+          "label": "ViewSonic PX701-4K",
+          "category": "AV",
+          "serial": "SYN-PJ-0002",
+          "site": "HN-BR",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000006",
+          "code": "MB-0001",
+          "label": "iPad Pro 12.9\" M2 256GB",
+          "category": "MOBILE",
+          "serial": "SYN-MB-0001",
+          "site": "HCM-HQ",
+          "condition": "NEW",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000007",
+          "code": "KB-0001",
+          "label": "Bàn phím cơ Keychron K8 Pro",
+          "category": "PERIPHERAL",
+          "serial": "SYN-KB-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000008",
+          "code": "SW-0001",
+          "label": "Switch Cisco Catalyst 2960-L",
+          "category": "NETWORK",
+          "serial": "SYN-SW-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "RESERVED",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000009",
+          "code": "LT-0004",
+          "label": "HP EliteBook 840 G10",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0004",
+          "site": "HCM-HQ",
+          "condition": "RETIRED",
+          "status": "RETIRED",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000010",
+          "code": "LT-0005",
+          "label": "MacBook Air 15\" M2",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0005",
+          "site": "HCM-HQ",
+          "condition": "NEW",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000011",
+          "code": "LT-0006",
+          "label": "MacBook Pro 14\" M3",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0006",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000012",
+          "code": "LT-0007",
+          "label": "Dell Latitude 7440",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0007",
+          "site": "DN-BR",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000013",
+          "code": "LT-0008",
+          "label": "Dell Latitude 7440",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0008",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000014",
+          "code": "LT-0009",
+          "label": "ThinkPad T14 Gen 4",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0009",
+          "site": "HN-BR",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000015",
+          "code": "LT-0010",
+          "label": "ThinkPad T14 Gen 4",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0010",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000016",
+          "code": "LT-0011",
+          "label": "ASUS ZenBook 14 OLED",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0011",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000017",
+          "code": "LT-0012",
+          "label": "ASUS ZenBook 14 OLED",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0012",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000018",
+          "code": "LT-0013",
+          "label": "Lenovo Legion Slim 5",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0013",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000019",
+          "code": "LT-0014",
+          "label": "HP Pavilion 15",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0014",
+          "site": "CTH-BR",
+          "condition": "FAIR",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000020",
+          "code": "LT-0015",
+          "label": "Dell Inspiron 14",
+          "category": "LAPTOP",
+          "serial": "SYN-LT-0015",
+          "site": "HCM-HQ",
+          "condition": "FAIR",
+          "status": "MAINTENANCE",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000021",
+          "code": "PJ-0003",
+          "label": "Sony VPL-EX570",
+          "category": "AV",
+          "serial": "SYN-PJ-0003",
+          "site": "DN-BR",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000022",
+          "code": "AV-0001",
+          "label": "Hệ thống Loa Hội Nghị Jabra 710",
+          "category": "AV",
+          "serial": "SYN-AV-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000023",
+          "code": "AV-0002",
+          "label": "Camera Hội Nghị Poly Studio",
+          "category": "AV",
+          "serial": "SYN-AV-0002",
+          "site": "HCM-HQ",
+          "condition": "NEW",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000024",
+          "code": "MB-0002",
+          "label": "iPad Air 10.9\" M1",
+          "category": "MOBILE",
+          "serial": "SYN-MB-0002",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000025",
+          "code": "MB-0003",
+          "label": "Samsung Galaxy Tab S9",
+          "category": "MOBILE",
+          "serial": "SYN-MB-0003",
+          "site": "HN-BR",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000026",
+          "code": "MB-0004",
+          "label": "iPhone 15 Pro 128GB (Test)",
+          "category": "MOBILE",
+          "serial": "SYN-MB-0004",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000027",
+          "code": "MB-0005",
+          "label": "Google Pixel 8 (Test Device)",
+          "category": "MOBILE",
+          "serial": "SYN-MB-0005",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000028",
+          "code": "MN-0001",
+          "label": "Dell UltraSharp 27\" U2723QE 4K",
+          "category": "MONITOR",
+          "serial": "SYN-MN-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000029",
+          "code": "MN-0002",
+          "label": "Dell UltraSharp 27\" U2723QE 4K",
+          "category": "MONITOR",
+          "serial": "SYN-MN-0002",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000030",
+          "code": "MN-0003",
+          "label": "LG 27UP850N-W 4K HDR",
+          "category": "MONITOR",
+          "serial": "SYN-MN-0003",
+          "site": "HN-BR",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000031",
+          "code": "MN-0004",
+          "label": "LG 27UP850N-W 4K HDR",
+          "category": "MONITOR",
+          "serial": "SYN-MN-0004",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000032",
+          "code": "MN-0005",
+          "label": "Asus ProArt 27\" PA278CV",
+          "category": "MONITOR",
+          "serial": "SYN-MN-0005",
+          "site": "HCM-HQ",
+          "condition": "NEW",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000033",
+          "code": "MN-0006",
+          "label": "ViewSonic 24\" VA2432-h",
+          "category": "MONITOR",
+          "serial": "SYN-MN-0006",
+          "site": "DN-BR",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000034",
+          "code": "KB-0002",
+          "label": "Bàn phím Logitech MX Keys S",
+          "category": "PERIPHERAL",
+          "serial": "SYN-KB-0002",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000035",
+          "code": "MS-0001",
+          "label": "Chuột công thái học MX Master 3S",
+          "category": "PERIPHERAL",
+          "serial": "SYN-MS-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000036",
+          "code": "DK-0001",
+          "label": "Docking Station CalDigit TS4",
+          "category": "PERIPHERAL",
+          "serial": "SYN-DK-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000037",
+          "code": "HS-0001",
+          "label": "Tai nghe Sony WH-1000XM5",
+          "category": "PERIPHERAL",
+          "serial": "SYN-HS-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "ON_LOAN",
+          "is_available": false
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000038",
+          "code": "SW-0002",
+          "label": "Switch UniFi 24 PoE Gen2",
+          "category": "NETWORK",
+          "serial": "SYN-SW-0002",
+          "site": "HN-BR",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000039",
+          "code": "RT-0001",
+          "label": "Router DrayTek Vigor 3910",
+          "category": "NETWORK",
+          "serial": "SYN-RT-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000040",
+          "code": "AP-0001",
+          "label": "Access Point UniFi U6-Pro",
+          "category": "NETWORK",
+          "serial": "SYN-AP-0001",
+          "site": "HCM-HQ",
+          "condition": "NEW",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000041",
+          "code": "FN-0001",
+          "label": "Ghế Ergonomic Herman Miller Aeron",
+          "category": "FURNITURE",
+          "serial": "SYN-FN-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000042",
+          "code": "FN-0002",
+          "label": "Bàn nâng hạ thông minh Epione",
+          "category": "FURNITURE",
+          "serial": "SYN-FN-0002",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000043",
+          "code": "FN-0003",
+          "label": "Tủ hồ sơ di động 3 ngăn",
+          "category": "FURNITURE",
+          "serial": "SYN-FN-0003",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000044",
+          "code": "VH-0001",
+          "label": "Toyota Innova 2.0E (51A-12345)",
+          "category": "VEHICLE",
+          "serial": "SYN-VH-0001",
+          "site": "HCM-HQ",
+          "condition": "GOOD",
+          "status": "AVAILABLE",
+          "is_available": true
+        },
+        {
+          "id": "31000000-0000-4000-8000-000000000045",
+          "code": "VH-0002",
+          "label": "Kia Carnival 2.2D (51A-99999)",
+          "category": "VEHICLE",
+          "serial": "SYN-VH-0002",
+          "site": "HCM-HQ",
+          "condition": "NEW",
+          "status": "AVAILABLE",
+          "is_available": true
+        }
+      ]
+    },
+    "asset_loan": {
+      "table": "asset_loan",
+      "raw_count": 15,
+      "search_fields": [
+        "status"
+      ],
+      "data": [
+        {
+          "id": "32000000-0000-4000-8000-000000000001",
+          "asset_id": "31000000-0000-4000-8000-000000000002",
+          "borrower_id": "20000000-0000-4000-8000-000000000006",
+          "starts_at": "2026-10-01T01:00:00Z",
+          "due_at": "2026-10-30T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000002",
+          "asset_id": "31000000-0000-4000-8000-000000000010",
+          "borrower_id": "20000000-0000-4000-8000-000000000007",
+          "starts_at": "2026-10-05T02:00:00Z",
+          "due_at": "2026-11-05T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000003",
+          "asset_id": "31000000-0000-4000-8000-000000000013",
+          "borrower_id": "20000000-0000-4000-8000-000000000016",
+          "starts_at": "2026-10-10T03:00:00Z",
+          "due_at": "2026-10-25T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000004",
+          "asset_id": "31000000-0000-4000-8000-000000000014",
+          "borrower_id": "20000000-0000-4000-8000-000000000028",
+          "starts_at": "2026-09-01T01:00:00Z",
+          "due_at": "2026-10-15T10:00:00Z",
+          "returned_at": "2026-10-15T09:30:00Z",
+          "status": "RETURNED",
+          "is_active": false
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000005",
+          "asset_id": "31000000-0000-4000-8000-000000000014",
+          "borrower_id": "20000000-0000-4000-8000-000000000027",
+          "starts_at": "2026-10-16T01:00:00Z",
+          "due_at": "2026-11-16T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000006",
+          "asset_id": "31000000-0000-4000-8000-000000000017",
+          "borrower_id": "20000000-0000-4000-8000-000000000019",
+          "starts_at": "2026-10-02T01:00:00Z",
+          "due_at": "2026-11-02T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000007",
+          "asset_id": "31000000-0000-4000-8000-000000000018",
+          "borrower_id": "20000000-0000-4000-8000-000000000031",
+          "starts_at": "2026-10-08T02:00:00Z",
+          "due_at": "2026-11-08T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000008",
+          "asset_id": "31000000-0000-4000-8000-000000000023",
+          "borrower_id": "20000000-0000-4000-8000-000000000026",
+          "starts_at": "2026-10-20T01:00:00Z",
+          "due_at": "2026-10-27T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000009",
+          "asset_id": "31000000-0000-4000-8000-000000000024",
+          "borrower_id": "20000000-0000-4000-8000-000000000048",
+          "starts_at": "2026-10-12T01:00:00Z",
+          "due_at": "2026-11-12T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000010",
+          "asset_id": "31000000-0000-4000-8000-000000000026",
+          "borrower_id": "20000000-0000-4000-8000-000000000004",
+          "starts_at": "2026-10-01T01:00:00Z",
+          "due_at": "2026-10-31T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000011",
+          "asset_id": "31000000-0000-4000-8000-000000000029",
+          "borrower_id": "20000000-0000-4000-8000-000000000004",
+          "starts_at": "2026-10-01T01:00:00Z",
+          "due_at": "2026-11-30T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000012",
+          "asset_id": "31000000-0000-4000-8000-000000000031",
+          "borrower_id": "20000000-0000-4000-8000-000000000005",
+          "starts_at": "2026-10-01T01:00:00Z",
+          "due_at": "2026-11-30T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000013",
+          "asset_id": "31000000-0000-4000-8000-000000000034",
+          "borrower_id": "20000000-0000-4000-8000-000000000027",
+          "starts_at": "2026-10-05T01:00:00Z",
+          "due_at": "2026-11-05T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000014",
+          "asset_id": "31000000-0000-4000-8000-000000000035",
+          "borrower_id": "20000000-0000-4000-8000-000000000028",
+          "starts_at": "2026-10-05T01:00:00Z",
+          "due_at": "2026-11-05T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        },
+        {
+          "id": "32000000-0000-4000-8000-000000000015",
+          "asset_id": "31000000-0000-4000-8000-000000000037",
+          "borrower_id": "20000000-0000-4000-8000-000000000020",
+          "starts_at": "2026-10-15T01:00:00Z",
+          "due_at": "2026-11-15T10:00:00Z",
+          "returned_at": null,
+          "status": "ACTIVE",
+          "is_active": true
+        }
+      ]
+    }
+  },
+  "meta": {
+    "total_records": 68,
+    "entity_count": 3,
+    "error_count": 0,
+    "source": "sql:database/mock_enterprise_sql/01_mock_seed_DEV_ONLY.sql",
+    "normalizer_version": "2.1.0"
+  }
+}

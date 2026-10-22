@@ -1,0 +1,92 @@
+{
+  "generator": "scripts/mock_data_normalizer.js v2.1.0",
+  "source": "sql:database/mock_enterprise_sql/01_mock_seed_DEV_ONLY.sql",
+  "generated_at": "2026-10-22T10:36:30.180Z",
+  "ai_department_map": {
+    "HQ": "operations",
+    "IT": "it",
+    "SALES": "sales",
+    "OPS": "operations",
+    "FIN": "finance",
+    "HR": "hr",
+    "MKT": "marketing",
+    "LEGAL": "legal"
+  },
+  "schemas": {
+    "mock_hr": {
+      "department": "HR",
+      "total_records": 171,
+      "entities": {
+        "department": 8,
+        "employee_directory": 55,
+        "leave_balance": 108
+      },
+      "purpose": "Hệ thống HRIS — Quản lý nhân sự, phòng ban, ngày phép. Schema nền tảng, tất cả schema khác tham chiếu employee_id từ đây."
+    },
+    "mock_assets": {
+      "department": "OPS",
+      "total_records": 68,
+      "entities": {
+        "asset_category": 8,
+        "asset_catalog": 45,
+        "asset_loan": 15
+      },
+      "purpose": "Hệ thống quản lý tài sản — Phục vụ yêu cầu EQUIPMENT (lifecycle C). AI dùng availability_status và purchase_value để đánh giá risk."
+    },
+    "mock_facilities": {
+      "department": "OPS",
+      "total_records": 22,
+      "entities": {
+        "site": 4,
+        "resource_catalog": 18
+      },
+      "purpose": "Hệ thống đặt phòng họp & cơ sở vật chất — Phục vụ meeting_room, vehicle_booking. AI dùng room_available để quyết định auto-approve."
+    },
+    "mock_crm": {
+      "department": "SALES",
+      "total_records": 38,
+      "entities": {
+        "customer_directory": 20,
+        "contract": 18
+      },
+      "purpose": "Hệ thống CRM — Khách hàng, hợp đồng, support case. AI risk scoring dùng contract value_minor để đánh giá amount_vs_limit."
+    },
+    "mock_procurement": {
+      "department": "OPS",
+      "total_records": 50,
+      "entities": {
+        "supplier_directory": 15,
+        "catalog_item": 35
+      },
+      "purpose": "Hệ thống mua sắm — Nhà cung cấp, catalog sản phẩm, đơn mua hàng. AI dùng unit_price_minor để đối chiếu amount trong risk scoring."
+    },
+    "mock_it": {
+      "department": "IT",
+      "total_records": 46,
+      "entities": {
+        "application_catalog": 12,
+        "access_role": 22,
+        "service_catalog": 12
+      },
+      "purpose": "Hệ thống IAM/ITSM — Ứng dụng, quyền truy cập, service catalog. AI dùng risk_level, data_classification để tính risk cho đơn access_permission (lifecycle B)."
+    },
+    "mock_finance": {
+      "department": "FIN",
+      "total_records": 18,
+      "entities": {
+        "cost_center_budget": 8,
+        "expense_category": 10
+      },
+      "purpose": "Hệ thống tài chính — Ngân sách cost center, loại chi phí. AI dùng budget remaining để đánh giá risk khi amount vượt ngân sách."
+    },
+    "mock_travel": {
+      "department": "HR",
+      "total_records": 28,
+      "entities": {
+        "travel_policy": 10,
+        "travel_option": 18
+      },
+      "purpose": "Hệ thống quản lý công tác — Chính sách đi lại, lựa chọn chuyến. AI dùng max_amount_minor để kiểm tra amount_vs_limit_ratio."
+    }
+  }
+}

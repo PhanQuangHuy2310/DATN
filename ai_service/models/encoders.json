@@ -1,0 +1,43 @@
+{
+  "request_type": {
+    "access_permission": 0,
+    "advance_payment": 1,
+    "budget_approval": 2,
+    "contract_payment": 3,
+    "equipment_new": 4,
+    "equipment_repair": 5,
+    "expense_reimbursement": 6,
+    "leave_annual": 7,
+    "leave_unpaid": 8,
+    "meeting_room": 9,
+    "overtime": 10,
+    "remote_work": 11,
+    "stationery": 12,
+    "travel": 13,
+    "vehicle_booking": 14,
+    "vpn_access": 15
+  },
+  "department": {
+    "finance": 0,
+    "hr": 1,
+    "it": 2,
+    "legal": 3,
+    "marketing": 4,
+    "operations": 5,
+    "sales": 6
+  },
+  "user_role": {
+    "director": 0,
+    "intern": 1,
+    "junior": 2,
+    "lead": 3,
+    "manager": 4,
+    "senior": 5
+  },
+  "priority_level": {
+    "high": 0,
+    "low": 1,
+    "medium": 2,
+    "urgent": 3
+  }
+}
