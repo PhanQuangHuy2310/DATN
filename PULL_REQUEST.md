@@ -1,7 +1,7 @@
 # 🚀 Pull Request: Chuẩn Hóa Mock Data 8 Phòng Ban, CSDL Core SME, Đóng Gói AI Service (Trained Models), Tích Hợp API Gateway & Kết Nối API Core
 
 > **Target Branch:** `main`  
-> **Source Branch:** `feat/ai-service-and-mock-data`  
+> **Source Branch:** `dat`  
 > **Automated Test Status:** ✅ **8/8 Tests Passed (100% Green)**  
 > **Database Status:** ✅ Đã nạp thành công 553 mock records + 654 core SME records lên live database  
 
@@ -219,7 +219,7 @@ OK
 
 1. **Truy cập Pull Request trên GitHub**:
    - Điều hướng tới tab **Pull requests** của repository.
-   - Nhấp vào Pull Request từ nhánh `feat/ai-service-and-mock-data` trỏ vào `main`.
+   - Nhấp vào Pull Request từ nhánh `dat` trỏ vào `main`.
 2. **Kiểm tra trạng thái tự động (Checks Status)**:
    - Đảm bảo tất cả các status checks đều hiển thị dấu tick xanh (Passed).
 3. **Thực hiện Merge**:
@@ -238,8 +238,8 @@ Nếu Reviewer muốn test kỹ tại máy local và thực hiện merge trực 
 git fetch origin
 
 # Bước 2: Checkout về nhánh feature để kiểm tra mã nguồn và chạy test
-git checkout feat/ai-service-and-mock-data
-git pull origin feat/ai-service-and-mock-data
+git checkout dat
+git pull origin dat
 
 # Bước 3: Chạy bộ kiểm thử tự động để xác nhận toàn bộ test đều xanh
 python tests/run_tests.py
@@ -248,8 +248,8 @@ python tests/run_tests.py
 git checkout main
 git pull origin main
 
-# Bước 5: Tiến hành merge nhánh feature vào main (sử dụng --no-ff để lưu vết merge commit)
-git merge --no-ff feat/ai-service-and-mock-data -m "Merge branch 'feat/ai-service-and-mock-data' into main"
+# Bước 5: Tiến hành merge nhánh dat vào main (sử dụng --no-ff để lưu vết merge commit)
+git merge --no-ff dat -m "Merge branch 'dat' into main"
 
 # Bước 6: Đẩy nhánh main đã merge lên remote repository
 git push origin main
@@ -284,7 +284,7 @@ git push origin main
 
 ## 📋 10. Reviewer Final Checklist
 
-- [x] **Branch Isolation**: Đã tách nhánh `feat/ai-service-and-mock-data` từ `main`, không push trực tiếp lên main.
+- [x] **Branch Isolation**: Đã tách nhánh `dat` từ `main`, không push trực tiếp lên main.
 - [x] **File Selection Integrity**: Chỉ commit mã nguồn phần mềm, API Gateway, AI Models, CSDL và Test Suite; **loại trừ 100% các thư mục thiết kế, diagram, sơ đồ, ảnh vẽ lại và script báo cáo**.
 - [x] **Database Isolation & Completeness**: Đã nạp thành công 553 bản ghi mock (8 schema) và 654 bản ghi core SME (`eas`) với RFC 8785 SHA256 audit chain.
 - [x] **AI Model Packaging**: 15 artifacts đã được kiểm thử, lazy loading hoạt động chính xác.
