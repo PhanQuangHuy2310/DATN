@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timezone
 from pathlib import PurePath
+from typing import Any
 from uuid import UUID, uuid4
 
 from django.db import connection, transaction
@@ -12,12 +13,15 @@ from api_core.authn.models import Actor
 from api_core.storage import (
     StorageError,
     delete_private_object,
+    get_private_object,
     put_private_object,
     scan_with_clamav,
     sniff_allowed_mime,
 )
 
 from .service import CommandError, _append_request_audit, _authorize
+
+_SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
 
 
 def register_attachment(
@@ -65,7 +69,7 @@ def register_attachment(
     try:
         now = datetime.now(timezone.utc)
         with transaction.atomic(), connection.cursor() as cursor:
-            cursor.execute("SELECT eas.lock_security(false)")
+            cursor.execute(_SQL_LOCK_SECURITY)
             cursor.execute(
                 """
                 SELECT r.type_id::text,u.department_id::text
@@ -278,3 +282,169 @@ def register_execution_evidence(
             "scan_state": "CLEAN",
         }
     }
+
+
+def get_attachment_metadata(
+    *,
+    actor: Actor,
+    attachment_id: str,
+) -> dict[str, Any]:
+    try:
+        att_uuid = str(UUID(attachment_id))
+    except (ValueError, TypeError, AttributeError):
+        raise CommandError("NOT_FOUND", status=404) from None
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT a.id::text, a.request_id::text, a.original_name, a.mime,
+                   a.size_bytes, a.scan_state, a.created_at, a.scanned_at
+            FROM eas.attachment a
+            JOIN eas.request r ON r.id = a.request_id
+            LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
+            LEFT JOIN eas.app_user u ON u.id = r.requester_id
+            WHERE a.id = %s AND a.deleted_at IS NULL
+              AND (
+                r.requester_id = %s
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.request_participant p
+                    WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+                  )
+                )
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.role_membership rm
+                    WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
+                      AND rm.revoked_at IS NULL
+                      AND rm.valid_from <= statement_timestamp()
+                      AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                      AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
+                      AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
+                  )
+                )
+              )
+            """,
+            [att_uuid, actor.id, actor.id, actor.id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise CommandError("NOT_FOUND", status=404)
+
+    return {
+        "attachment": {
+            "id": row[0],
+            "request_id": row[1],
+            "original_name": row[2],
+            "mime": row[3],
+            "size_bytes": row[4],
+            "scan_state": row[5],
+            "created_at": row[6].isoformat(),
+            "scanned_at": row[7].isoformat() if row[7] else None,
+        }
+    }
+
+
+def download_attachment(
+    *,
+    actor: Actor,
+    attachment_id: str,
+    correlation_id: str,
+) -> tuple[bytes, str, str]:
+    try:
+        att_uuid = str(UUID(attachment_id))
+    except (ValueError, TypeError, AttributeError):
+        raise CommandError("NOT_FOUND", status=404) from None
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT a.id::text, a.request_id::text, a.storage_key, a.original_name,
+                   a.mime, a.scan_state, r.status, r.requester_id::text,
+                   EXISTS (SELECT 1 FROM eas.revision_attachment ra WHERE ra.attachment_id = a.id) AS in_rev,
+                   EXISTS (SELECT 1 FROM eas.execution_attachment ea WHERE ea.attachment_id = a.id) AS in_exec,
+                   EXISTS (SELECT 1 FROM eas.draft_attachment da WHERE da.attachment_id = a.id) AS in_draft
+            FROM eas.attachment a
+            JOIN eas.request r ON r.id = a.request_id
+            LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
+            LEFT JOIN eas.app_user u ON u.id = r.requester_id
+            WHERE a.id = %s AND a.deleted_at IS NULL
+              AND (
+                r.requester_id = %s
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.request_participant p
+                    WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+                  )
+                )
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.role_membership rm
+                    WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
+                      AND rm.revoked_at IS NULL
+                      AND rm.valid_from <= statement_timestamp()
+                      AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                      AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
+                      AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
+                  )
+                )
+              )
+            """,
+            [att_uuid, actor.id, actor.id, actor.id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise CommandError("NOT_FOUND", status=404)
+
+        (
+            att_id,
+            req_id,
+            storage_key,
+            original_name,
+            mime,
+            scan_state,
+            _req_status,
+            requester_id,
+            in_rev,
+            in_exec,
+            in_draft,
+        ) = row
+
+        if scan_state != "CLEAN":
+            raise CommandError("FILE_NOT_READY", status=409)
+
+        if not in_rev and not in_exec and not in_draft:
+            raise CommandError("NOT_FOUND", status=404)
+
+        if not in_rev and not in_exec and in_draft and actor.id != requester_id:
+            raise CommandError("NOT_FOUND", status=404)
+
+    try:
+        data = get_private_object(storage_key)
+    except StorageError as exc:
+        raise CommandError("STORAGE_UNAVAILABLE", status=503) from exc
+
+    now = datetime.now(timezone.utc)
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute(_SQL_LOCK_SECURITY)
+        _append_request_audit(
+            cursor,
+            request_id=req_id,
+            actor_id=actor.id,
+            action="ATTACHMENT_DOWNLOADED",
+            target_type="attachment",
+            target_id=att_id,
+            details={
+                "original_name": original_name,
+                "mime": mime,
+                "size_bytes": len(data),
+            },
+            correlation_id=correlation_id,
+            occurred_at=now,
+        )
+
+    return data, original_name, mime

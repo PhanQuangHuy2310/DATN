@@ -7,3 +7,4 @@ Các log được phân chia thành các thư mục nhỏ theo cấp độ (Log 
 ## Release notes
 
 - [09/10/2026 — Executable P0 baseline và nội dung pull request](./2026-10-09_enterprise_baseline_release.md)
+- [22/10/2026 — Hoàn thiện Toàn diện Phân hệ api_core P0](./2026-10-22_api_core_complete_p0.md)

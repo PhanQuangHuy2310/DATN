@@ -133,13 +133,18 @@ def password(request: HttpRequest) -> JsonResponse:
         body = parse_json_object(request, max_bytes=8 * 1024)
     except JsonBodyError as exc:
         return api_error(request, str(exc), status=400)
-    if set(body) != {"current_password", "new_password"}:
+    old_pwd = body.get("current_password") or body.get("old_password")
+    new_pwd = body.get("new_password")
+    if not isinstance(old_pwd, str) or not isinstance(new_pwd, str):
+        return api_error(request, "INVALID_PASSWORD_CHANGE", status=400)
+    allowed_keys = {"current_password", "old_password", "new_password"}
+    if not set(body).issubset(allowed_keys):
         return api_error(request, "INVALID_PASSWORD_CHANGE", status=400)
     try:
         new_version = change_password(
             actor=actor,
-            current_password=body["current_password"],
-            new_password=body["new_password"],
+            current_password=old_pwd,
+            new_password=new_pwd,
             correlation_id=correlation_id(request),
         )
     except PasswordChangeError as exc:

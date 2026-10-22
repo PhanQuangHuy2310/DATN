@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import html
+import re
+import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -11,7 +14,14 @@ from psycopg.types.json import Jsonb
 
 from api_core.audit import canonical_sha256
 from api_core.authn.models import Actor
-from api_core.domain import PayloadValidationError, resolve_route, validate_payload
+from api_core.domain import (
+    PayloadValidationError,
+    resolve_route,
+    validate_draft_payload,
+    validate_payload,
+)
+
+HTML_TAG = re.compile(r"<[^>]+>")
 
 
 class CommandError(ValueError):
@@ -75,18 +85,47 @@ def _authorize(
         raise CommandError("FORBIDDEN", status=403)
 
 
+def _is_actor_valid_for_role(
+    cursor,
+    *,
+    actor_id: str,
+    role: str,
+    department_id: str,
+    type_id: str,
+) -> bool:
+    cursor.execute(
+        """
+        SELECT EXISTS (
+          SELECT 1 FROM eas.app_user u
+          JOIN eas.role_membership rm ON rm.user_id = u.id
+          WHERE u.id = %s AND u.is_active
+            AND rm.role = %s AND rm.revoked_at IS NULL
+            AND rm.valid_from <= statement_timestamp()
+            AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+            AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = %s)
+            AND (rm.type_scope = 'ALL' OR rm.type_id = %s)
+        )
+        """,
+        [actor_id, role, department_id, type_id],
+    )
+    return bool(cursor.fetchone()[0])
+
+
 def _append_request_audit(
     cursor,
     *,
     request_id: str,
-    actor_id: str,
+    actor_id: str | None,
+    actor_kind: str = "HUMAN",
     action: str,
     target_type: str,
     target_id: str,
     details: dict[str, Any],
     correlation_id: str,
-    occurred_at: datetime,
+    occurred_at: datetime | None = None,
 ) -> None:
+    if occurred_at is None:
+        occurred_at = datetime.now(timezone.utc)
     scope_key = f"REQ:{request_id}"
     cursor.execute("SELECT seq,last_hash FROM eas.lock_audit_head(%s)", [scope_key])
     head = cursor.fetchone()
@@ -98,7 +137,7 @@ def _append_request_audit(
     event = {
         "action": action,
         "actor_id": actor_id,
-        "actor_kind": "HUMAN",
+        "actor_kind": actor_kind,
         "correlation_id": correlation_id,
         "details": details,
         "hash_version": 1,
@@ -108,7 +147,7 @@ def _append_request_audit(
         "request_id": request_id,
         "scope_key": scope_key,
         "seq": str(sequence),
-        "target_id": target_id,
+        "target_id": str(target_id),
         "target_type": target_type,
     }
     digest = canonical_sha256(event)
@@ -117,16 +156,17 @@ def _append_request_audit(
         INSERT INTO eas.audit_event(
           id,request_id,seq,actor_id,actor_kind,action,target_type,target_id,
           details,correlation_id,occurred_at,hash_version,prev_hash,hash
-        ) VALUES (%s,%s,%s,%s,'HUMAN',%s,%s,%s,%s,%s,%s,1,%s,%s)
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,%s,%s)
         """,
         [
             event_id,
             request_id,
             sequence,
             actor_id,
+            actor_kind,
             action,
             target_type,
-            target_id,
+            str(target_id),
             Jsonb(details),
             correlation_id,
             occurred_at,
@@ -134,6 +174,83 @@ def _append_request_audit(
             digest,
         ],
     )
+
+
+def _append_admin_audit(
+    cursor,
+    *,
+    actor_id: str | None,
+    actor_kind: str = "HUMAN",
+    action: str,
+    target_type: str,
+    target_id: str,
+    department_id: str | None = None,
+    type_id: str | None = None,
+    details: dict[str, Any],
+    reason: str,
+    correlation_id: str,
+    occurred_at: datetime | None = None,
+) -> str:
+    if occurred_at is None:
+        occurred_at = datetime.now(timezone.utc)
+    scope_key = "ADMIN"
+    cursor.execute("SELECT seq, last_hash FROM eas.lock_audit_head(%s)", [scope_key])
+    head = cursor.fetchone()
+    if not head:
+        raise CommandError("AUDIT_HEAD_MISSING", status=500)
+    sequence = head[0] + 1
+    previous_hash = head[1]
+    event_id = str(uuid4())
+    event = {
+        "action": action,
+        "actor_id": actor_id,
+        "actor_kind": actor_kind,
+        "correlation_id": correlation_id,
+        "department_id": department_id,
+        "details": details,
+        "hash_version": 1,
+        "id": event_id,
+        "occurred_at": _utc_text(occurred_at),
+        "prev_hash": previous_hash,
+        "reason": reason,
+        "scope_key": scope_key,
+        "seq": str(sequence),
+        "target_id": str(target_id),
+        "target_type": target_type,
+        "type_id": type_id,
+    }
+    digest = canonical_sha256(event)
+    cursor.execute(
+        """
+        INSERT INTO eas.admin_event(
+          id, seq, actor_id, actor_kind, action, target_type, target_id,
+          department_id, type_id, details, reason, correlation_id, occurred_at,
+          hash_version, prev_hash, hash
+        ) VALUES (
+          %s, %s, %s, %s, %s, %s, %s,
+          %s, %s, %s, %s, %s, %s,
+          1, %s, %s
+        )
+        """,
+        [
+            event_id,
+            sequence,
+            actor_id,
+            actor_kind,
+            action,
+            target_type,
+            str(target_id),
+            department_id,
+            type_id,
+            Jsonb(details),
+            reason,
+            correlation_id,
+            occurred_at,
+            previous_hash,
+            digest,
+        ],
+    )
+    return event_id
 
 
 def _execute_idempotent(
@@ -147,26 +264,65 @@ def _execute_idempotent(
     key = _canonical_uuid(key, "INVALID_IDEMPOTENCY_KEY")
     request_hash = canonical_sha256(command_body)
     with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute("SELECT eas.lock_security(false)")
         cursor.execute(
             "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
             [f"{actor_id}:{scope}:{key}"],
         )
         cursor.execute(
             """
-            SELECT request_hash,http_status,response_body,expires_at > statement_timestamp()
+            SELECT request_hash, http_status, response_body,
+                   expires_at > statement_timestamp() AS not_expired,
+                   tombstone_until > statement_timestamp() AS in_tombstone,
+                   request_id::text
             FROM eas.idempotency_record
-            WHERE actor_id=%s AND command_scope=%s AND key=%s
+            WHERE actor_id = %s AND command_scope = %s AND key = %s
             FOR UPDATE
             """,
             [actor_id, scope, key],
         )
         existing = cursor.fetchone()
         if existing:
-            if existing[0] != request_hash:
+            (
+                saved_hash,
+                http_status,
+                response_body,
+                not_expired,
+                _in_tombstone,
+                existing_request_id,
+            ) = existing
+            if saved_hash != request_hash:
                 raise CommandError("IDEMPOTENCY_KEY_REUSED", status=409)
-            if not existing[3] or existing[2] is None:
+            if not not_expired or response_body is None:
                 raise CommandError("IDEMPOTENCY_RESULT_EXPIRED", status=410)
-            return CommandResult(existing[2], existing[1], replayed=True)
+            if existing_request_id is not None:
+                cursor.execute(
+                    """
+                    SELECT r.status, r.requester_id::text,
+                           EXISTS (
+                             SELECT 1 FROM eas.request_participant p
+                             WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+                           ),
+                           EXISTS (
+                             SELECT 1 FROM eas.app_user u WHERE u.id = %s AND u.is_active
+                           )
+                    FROM eas.request r
+                    WHERE r.id = %s
+                    """,
+                    [actor_id, actor_id, existing_request_id],
+                )
+                r_row = cursor.fetchone()
+                if not r_row:
+                    raise CommandError("REQUEST_NOT_FOUND", status=404)
+                r_status, r_requester_id, is_active_participant, is_user_active = r_row
+                if not is_user_active:
+                    raise CommandError("FORBIDDEN", status=403)
+                can_read = (r_requester_id == actor_id) or (
+                    is_active_participant and r_status != "DRAFT"
+                )
+                if not can_read:
+                    raise CommandError("FORBIDDEN", status=403)
+            return CommandResult(response_body, http_status, replayed=True)
 
         body, status, request_id = operation(cursor)
         cursor.execute(
@@ -187,12 +343,38 @@ def create_draft(
     idempotency_key: str,
     correlation_id: str,
 ) -> CommandResult:
-    if set(body) != {"type_code"} or not isinstance(body.get("type_code"), str):
+    allowed_fields = {"type_code", "title", "origin_request_id"}
+    if set(body) - allowed_fields or not isinstance(body.get("type_code"), str):
         raise CommandError("INVALID_DRAFT_REQUEST")
     type_code = body["type_code"]
 
+    origin_request_id = body.get("origin_request_id")
+    if origin_request_id is not None:
+        origin_request_id = _canonical_uuid(
+            origin_request_id, "ORIGIN_REQUEST_NOT_FOUND"
+        )
+
+    title = body.get("title")
+    clean_title = None
+    if title is not None:
+        if not isinstance(title, str):
+            raise CommandError("INVALID_DRAFT_REQUEST")
+        clean_title = unicodedata.normalize("NFC", title).strip()
+        if not (5 <= len(clean_title) <= 150) or HTML_TAG.search(
+            html.unescape(clean_title)
+        ):
+            raise CommandError("INVALID_DRAFT_REQUEST")
+
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
         cursor.execute("SELECT eas.lock_security(false)")
+        if origin_request_id:
+            cursor.execute(
+                "SELECT 1 FROM eas.request WHERE id = %s AND requester_id = %s",
+                [origin_request_id, actor.id],
+            )
+            if not cursor.fetchone():
+                raise CommandError("ORIGIN_REQUEST_NOT_FOUND", status=404)
+
         cursor.execute(
             """
             SELECT rt.id::text,cr.id::text
@@ -217,14 +399,30 @@ def create_draft(
         )
         request_id = str(uuid4())
         now = datetime.now(timezone.utc)
+        draft_payload = {"title": clean_title} if clean_title else None
         cursor.execute(
             """
-            INSERT INTO eas.request(id,requester_id,type_id,draft_release_id)
-            VALUES (%s,%s,%s,%s) RETURNING code
+            INSERT INTO eas.request(id,requester_id,type_id,draft_release_id,draft_payload,origin_request_id)
+            VALUES (%s,%s,%s,%s,%s,%s) RETURNING code
             """,
-            [request_id, actor.id, type_id, release_id],
+            [
+                request_id,
+                actor.id,
+                type_id,
+                release_id,
+                Jsonb(draft_payload) if draft_payload else None,
+                origin_request_id,
+            ],
         )
         code = cursor.fetchone()[0]
+        audit_details: dict[str, Any] = {
+            "type_code": type_code,
+            "release_id": release_id,
+        }
+        if clean_title:
+            audit_details["title"] = clean_title
+        if origin_request_id:
+            audit_details["origin_request_id"] = origin_request_id
         _append_request_audit(
             cursor,
             request_id=request_id,
@@ -232,7 +430,7 @@ def create_draft(
             action="DRAFT_CREATED",
             target_type="request",
             target_id=request_id,
-            details={"type_code": type_code, "release_id": release_id},
+            details=audit_details,
             correlation_id=correlation_id,
             occurred_at=now,
         )
@@ -258,6 +456,378 @@ def create_draft(
     )
 
 
+def update_draft(
+    *,
+    actor: Actor,
+    request_id: str,
+    body: dict[str, Any],
+    idempotency_key: str,
+    correlation_id: str,
+) -> CommandResult:
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    allowed_fields = {
+        "expected_version",
+        "payload",
+        "amount_vnd",
+        "viewed_release_id",
+        "attachment_ids",
+    }
+    forbidden_fields = {"owner_id", "requester_id", "status", "lock_version"}
+    if any(k in body for k in forbidden_fields):
+        raise CommandError("UNKNOWN_FIELD", status=422)
+    if set(body) - allowed_fields:
+        raise CommandError("UNKNOWN_FIELD", status=422)
+
+    expected_version = body.get("expected_version")
+    if (
+        isinstance(expected_version, bool)
+        or not isinstance(expected_version, int)
+        or expected_version < 0
+    ):
+        raise CommandError("EXPECTED_VERSION_REQUIRED")
+
+    payload = body.get("payload")
+    if payload is not None:
+        if not isinstance(payload, dict):
+            raise CommandError("INVALID_PAYLOAD", status=422)
+        if any(k in payload for k in forbidden_fields):
+            raise CommandError("UNKNOWN_FIELD", status=422)
+
+    amount_vnd = body.get("amount_vnd")
+    if amount_vnd is not None and (
+        isinstance(amount_vnd, bool)
+        or not isinstance(amount_vnd, int)
+        or amount_vnd <= 0
+    ):
+        raise CommandError("INVALID_AMOUNT", status=422)
+
+    viewed_release_id = body.get("viewed_release_id")
+    if viewed_release_id is not None:
+        viewed_release_id = _canonical_uuid(viewed_release_id, "INVALID_RELEASE_ID")
+
+    attachment_ids = body.get("attachment_ids")
+    if attachment_ids is not None:
+        if (
+            not isinstance(attachment_ids, list)
+            or len(attachment_ids) > 5
+            or len(set(map(str, attachment_ids))) != len(attachment_ids)
+        ):
+            raise CommandError("INVALID_ATTACHMENTS", status=422)
+        attachment_ids = [
+            _canonical_uuid(item, "INVALID_ATTACHMENT_ID") for item in attachment_ids
+        ]
+
+    def operation(cursor) -> tuple[dict[str, Any], int, str]:
+        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(
+            """
+            SELECT r.status, r.lock_version, r.type_id::text, rt.code,
+                   r.draft_payload, r.draft_amount_vnd, r.draft_release_id::text,
+                   rt.active_release_id::text, cr.form_schema
+            FROM eas.request r
+            JOIN eas.request_type rt ON rt.id = r.type_id
+            JOIN eas.config_release cr ON cr.id = rt.active_release_id
+            WHERE r.id = %s AND r.requester_id = %s
+            FOR UPDATE OF r
+            """,
+            [request_id, actor.id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise CommandError("REQUEST_NOT_FOUND", status=404)
+        (
+            status,
+            lock_version,
+            type_id,
+            type_code,
+            existing_draft_payload,
+            existing_amount_vnd,
+            _draft_release_id,
+            active_release_id,
+            form_schema,
+        ) = row
+
+        if status not in {"DRAFT", "NEEDS_INFO"}:
+            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+        if lock_version != expected_version:
+            raise CommandError("VERSION_CONFLICT", status=409)
+
+        _authorize(
+            cursor,
+            actor_id=actor.id,
+            role="REQUESTER",
+            department_id=actor.department_id,
+            type_id=type_id,
+        )
+
+        effective_release_id = viewed_release_id or active_release_id
+
+        merged_payload = dict(existing_draft_payload or {})
+        if payload is not None:
+            try:
+                validated_patch = validate_draft_payload(
+                    type_code=type_code,
+                    payload=payload,
+                    form_schema=form_schema,
+                    requester_id=actor.id,
+                )
+            except PayloadValidationError as exc:
+                raise CommandError(
+                    "VALIDATION_FAILED", status=422, fields=exc.errors
+                ) from exc
+            merged_payload.update(validated_patch)
+
+        final_amount_vnd = amount_vnd if amount_vnd is not None else existing_amount_vnd
+        if type_code in {"LEAVE", "ACCESS"} and final_amount_vnd is not None:
+            raise CommandError("AMOUNT_NOT_ALLOWED", status=422)
+
+        if attachment_ids is not None:
+            for att_id in attachment_ids:
+                cursor.execute(
+                    """
+                    SELECT 1 FROM eas.attachment
+                    WHERE id = %s AND request_id = %s AND uploader_id = %s
+                      AND scan_state = 'CLEAN' AND deleted_at IS NULL
+                    """,
+                    [att_id, request_id, actor.id],
+                )
+                if not cursor.fetchone():
+                    raise CommandError("ATTACHMENT_INVALID", status=422)
+            cursor.execute(
+                "DELETE FROM eas.draft_attachment WHERE request_id = %s",
+                [request_id],
+            )
+            for att_id in attachment_ids:
+                cursor.execute(
+                    """
+                    INSERT INTO eas.draft_attachment(request_id, attachment_id, added_by)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (request_id, attachment_id) DO NOTHING
+                    """,
+                    [request_id, att_id, actor.id],
+                )
+
+        now = datetime.now(timezone.utc)
+        cursor.execute(
+            """
+            UPDATE eas.request
+            SET draft_payload = %s, draft_amount_vnd = %s, draft_release_id = %s,
+                lock_version = lock_version + 1, updated_at = %s
+            WHERE id = %s
+            """,
+            [
+                Jsonb(merged_payload),
+                final_amount_vnd,
+                effective_release_id,
+                now,
+                request_id,
+            ],
+        )
+
+        _append_request_audit(
+            cursor,
+            request_id=request_id,
+            actor_id=actor.id,
+            action="DRAFT_UPDATED",
+            target_type="request",
+            target_id=request_id,
+            details={"lock_version": lock_version + 1},
+            correlation_id=correlation_id,
+            occurred_at=now,
+        )
+
+        return (
+            {
+                "request": {
+                    "id": request_id,
+                    "status": status,
+                    "lock_version": lock_version + 1,
+                }
+            },
+            200,
+            request_id,
+        )
+
+    return _execute_idempotent(
+        actor_id=actor.id,
+        scope=f"request:{request_id}:draft:update",
+        key=idempotency_key,
+        command_body=body,
+        operation=operation,
+    )
+
+
+def report_execution_issue(
+    *,
+    actor: Actor,
+    request_id: str,
+    body: dict[str, Any],
+    idempotency_key: str,
+    correlation_id: str,
+) -> CommandResult:
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    allowed_fields = {"expected_version", "kind", "reason", "attempt_id"}
+    if set(body) - allowed_fields:
+        raise CommandError("UNKNOWN_FIELD", status=422)
+
+    expected_version = body.get("expected_version")
+    if isinstance(expected_version, bool) or not isinstance(expected_version, int):
+        raise CommandError("EXPECTED_VERSION_REQUIRED")
+
+    kind = body.get("kind")
+    if kind not in {"UNABLE_TO_CLAIM", "BLOCKED"}:
+        raise CommandError("INVALID_ISSUE_KIND", status=422)
+
+    reason = body.get("reason")
+    if not isinstance(reason, str):
+        raise CommandError("ISSUE_REASON_INVALID", status=422)
+    clean_reason = unicodedata.normalize("NFC", reason).strip()
+    if not (10 <= len(clean_reason) <= 2000) or HTML_TAG.search(
+        html.unescape(clean_reason)
+    ):
+        raise CommandError("ISSUE_REASON_INVALID", status=422)
+
+    attempt_id = body.get("attempt_id")
+    if attempt_id is not None:
+        attempt_id = _canonical_uuid(attempt_id, "INVALID_ATTEMPT_ID")
+
+    def operation(cursor) -> tuple[dict[str, Any], int, str]:
+        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(
+            """
+            SELECT r.status, r.lock_version, r.type_id::text, v.department_id::text,
+                   i.id::text, a.id::text, a.executor_id::text, a.state
+            FROM eas.request r
+            JOIN eas.request_revision v ON v.id = r.current_revision_id
+            JOIN eas.workflow_instance i ON i.revision_id = v.id AND i.state = 'ACTIVE'
+            JOIN eas.execution_attempt a ON a.instance_id = i.id
+              AND (%s IS NULL AND a.state IN ('READY', 'RUNNING') OR a.id = %s)
+            WHERE r.id = %s
+            ORDER BY a.attempt_no DESC LIMIT 1
+            FOR UPDATE OF r, i, a
+            """,
+            [attempt_id, attempt_id, request_id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise CommandError("REQUEST_NOT_FOUND", status=404)
+        (
+            status,
+            lock_version,
+            type_id,
+            department_id,
+            _instance_id,
+            matched_attempt_id,
+            executor_id,
+            attempt_state,
+        ) = row
+
+        if lock_version != expected_version:
+            raise CommandError("VERSION_CONFLICT", status=409)
+
+        if executor_id != actor.id:
+            raise CommandError("FORBIDDEN", status=403)
+
+        _authorize(
+            cursor,
+            actor_id=actor.id,
+            role="EXECUTOR",
+            department_id=department_id,
+            type_id=type_id,
+        )
+
+        if kind == "UNABLE_TO_CLAIM":
+            if status != "READY_FOR_EXECUTION" or attempt_state != "READY":
+                raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+        elif kind == "BLOCKED" and (
+            status != "IN_PROGRESS" or attempt_state != "RUNNING"
+        ):
+            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+
+        issue_id = str(uuid4())
+        now = datetime.now(timezone.utc)
+        cursor.execute(
+            """
+            INSERT INTO eas.execution_issue(id, request_id, attempt_id, actor_id, kind, reason, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            [
+                issue_id,
+                request_id,
+                matched_attempt_id,
+                actor.id,
+                kind,
+                clean_reason,
+                now,
+            ],
+        )
+
+        cursor.execute(
+            """
+            UPDATE eas.request
+            SET lock_version = lock_version + 1, updated_at = %s
+            WHERE id = %s
+            """,
+            [now, request_id],
+        )
+
+        _append_request_audit(
+            cursor,
+            request_id=request_id,
+            actor_id=actor.id,
+            action=f"EXECUTION_ISSUE_{kind}",
+            target_type="execution_attempt",
+            target_id=matched_attempt_id,
+            details={"issue_id": issue_id, "kind": kind, "reason": clean_reason},
+            correlation_id=correlation_id,
+            occurred_at=now,
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO eas.outbox_event(request_id, event_type, payload, dedupe_key)
+            VALUES (%s, %s, %s, %s)
+            """,
+            [
+                request_id,
+                f"EXECUTION_{kind}",
+                Jsonb(
+                    {
+                        "request_id": request_id,
+                        "issue_id": issue_id,
+                        "attempt_id": matched_attempt_id,
+                    }
+                ),
+                f"issue:{issue_id}",
+            ],
+        )
+
+        return (
+            {
+                "issue": {
+                    "id": issue_id,
+                    "kind": kind,
+                    "attempt_id": matched_attempt_id,
+                },
+                "request": {
+                    "id": request_id,
+                    "status": status,
+                    "lock_version": lock_version + 1,
+                },
+            },
+            201,
+            request_id,
+        )
+
+    return _execute_idempotent(
+        actor_id=actor.id,
+        scope=f"request:{request_id}:issue:{kind.lower()}",
+        key=idempotency_key,
+        command_body=body,
+        operation=operation,
+    )
+
+
 def submit_request(
     *,
     actor: Actor,
@@ -265,30 +835,42 @@ def submit_request(
     idempotency_key: str,
     correlation_id: str,
 ) -> CommandResult:
-    if set(body) - {
+    allowed_fields = {
         "type_code",
         "payload",
         "attachment_ids",
         "request_id",
         "expected_version",
-    }:
+        "viewed_release_id",
+    }
+    if set(body) - allowed_fields:
         raise CommandError("UNKNOWN_FIELD")
     type_code = body.get("type_code")
     payload = body.get("payload")
-    attachment_ids = body.get("attachment_ids", [])
     existing_request_id = body.get("request_id")
     expected_version = body.get("expected_version", 0)
+    viewed_release_id = body.get("viewed_release_id")
     if not isinstance(type_code, str) or not isinstance(payload, dict):
         raise CommandError("INVALID_SUBMISSION")
-    if (
-        not isinstance(attachment_ids, list)
-        or len(attachment_ids) > 5
-        or len(set(map(str, attachment_ids))) != len(attachment_ids)
-    ):
-        raise CommandError("INVALID_ATTACHMENTS")
-    attachment_ids = [
-        _canonical_uuid(item, "INVALID_ATTACHMENT_ID") for item in attachment_ids
-    ]
+
+    if "attachment_ids" in body:
+        attachment_ids_input = body["attachment_ids"]
+        if (
+            not isinstance(attachment_ids_input, list)
+            or len(attachment_ids_input) > 5
+            or len(set(map(str, attachment_ids_input))) != len(attachment_ids_input)
+        ):
+            raise CommandError("INVALID_ATTACHMENTS")
+        attachment_ids = [
+            _canonical_uuid(item, "INVALID_ATTACHMENT_ID")
+            for item in attachment_ids_input
+        ]
+    else:
+        attachment_ids = None
+
+    if viewed_release_id is not None:
+        viewed_release_id = _canonical_uuid(viewed_release_id, "INVALID_RELEASE_ID")
+
     if existing_request_id is not None:
         existing_request_id = _canonical_uuid(existing_request_id, "INVALID_REQUEST_ID")
     if isinstance(expected_version, bool) or not isinstance(expected_version, int):
@@ -312,6 +894,10 @@ def submit_request(
         if not config:
             raise CommandError("REQUEST_TYPE_NOT_CONFIGURED", status=409)
         type_id, lifecycle, release_id, form, rules, bindings, sla = config
+
+        if viewed_release_id is not None and viewed_release_id != release_id:
+            raise CommandError("CONFIG_CHANGED", status=409)
+
         cursor.execute(
             """
             SELECT manager_id::text FROM eas.app_user
@@ -383,7 +969,24 @@ def submit_request(
                 department_id=actor.department_id,
                 type_id=type_id,
             )
-        if lifecycle == "C" and not attachment_ids:
+
+        resolved_attachments = attachment_ids
+        if resolved_attachments is None:
+            if existing_request_id:
+                cursor.execute(
+                    """
+                    SELECT a.id::text FROM eas.draft_attachment da
+                    JOIN eas.attachment a ON a.id = da.attachment_id AND a.request_id = da.request_id
+                    WHERE da.request_id = %s AND a.scan_state = 'CLEAN' AND a.deleted_at IS NULL
+                    ORDER BY a.created_at
+                    """,
+                    [existing_request_id],
+                )
+                resolved_attachments = [row[0] for row in cursor.fetchall()]
+            else:
+                resolved_attachments = []
+
+        if lifecycle == "C" and not resolved_attachments:
             raise CommandError("EQUIPMENT_QUOTE_REQUIRED")
 
         now = datetime.now(timezone.utc)
@@ -446,7 +1049,7 @@ def submit_request(
                 now,
             ],
         )
-        for attachment_id in attachment_ids:
+        for attachment_id in resolved_attachments:
             cursor.execute(
                 """
                 INSERT INTO eas.revision_attachment(revision_id,attachment_id,request_id)
@@ -480,15 +1083,24 @@ def submit_request(
                 decision.acceptor_id,
             ],
         )
-        participants = [(actor.id, "REQUESTER")]
+        participants: list[tuple[str, str]] = [(actor.id, "REQUESTER")]
         participants.extend((item, "APPROVER") for item in decision.approver_ids)
         if decision.executor_id:
             participants.append((decision.executor_id, "EXECUTOR"))
-        for user_id, joined_as in dict(participants).items():
+        if decision.acceptor_id:
+            participants.append((decision.acceptor_id, "ACCEPTOR"))
+        seen_users: set[str] = set()
+        unique_participants: list[tuple[str, str]] = []
+        for user_id, joined_as in participants:
+            if user_id not in seen_users:
+                seen_users.add(user_id)
+                unique_participants.append((user_id, joined_as))
+        for user_id, joined_as in unique_participants:
             cursor.execute(
                 """
                 INSERT INTO eas.request_participant(request_id,user_id,joined_as)
                 VALUES (%s,%s,%s)
+                ON CONFLICT (request_id, user_id) DO NOTHING
                 """,
                 [request_id, user_id, joined_as],
             )
@@ -615,7 +1227,7 @@ def decide_approval(
         cursor.execute(
             """
             SELECT r.status,r.lock_version,r.type_id::text,v.department_id::text,
-                   i.id::text,i.lifecycle,i.planned_executor_id::text,
+                   i.id::text,i.lifecycle,i.planned_executor_id::text,i.acceptor_id::text,
                    cr.sla_profile
             FROM eas.request r
             JOIN eas.request_revision v ON v.id=r.current_revision_id
@@ -637,6 +1249,7 @@ def decide_approval(
             instance_id,
             lifecycle,
             executor_id,
+            acceptor_id,
             sla,
         ) = current
         if status != "PENDING_APPROVAL":
@@ -699,7 +1312,7 @@ def decide_approval(
         if outcome == "APPROVE":
             cursor.execute(
                 """
-                SELECT id::text FROM eas.approval_step
+                SELECT id::text, assignee_id::text FROM eas.approval_step
                 WHERE instance_id=%s AND state='WAITING'
                 ORDER BY step_no LIMIT 1 FOR UPDATE
                 """,
@@ -707,7 +1320,15 @@ def decide_approval(
             )
             next_step = cursor.fetchone()
             if next_step:
-                next_step_id = next_step[0]
+                next_step_id, next_assignee_id = next_step
+                if not _is_actor_valid_for_role(
+                    cursor,
+                    actor_id=next_assignee_id,
+                    role="APPROVER",
+                    department_id=department_id,
+                    type_id=type_id,
+                ):
+                    raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
                 cursor.execute(
                     "UPDATE eas.approval_step SET state='ACTIVE',activated_at=%s WHERE id=%s",
                     [now, next_step_id],
@@ -720,6 +1341,26 @@ def decide_approval(
                     [request_id, next_step_id, now, now, sla["approval_hours"]],
                 )
             else:
+                if lifecycle in {"B", "C"}:
+                    if not _is_actor_valid_for_role(
+                        cursor,
+                        actor_id=executor_id,
+                        role="EXECUTOR",
+                        department_id=department_id,
+                        type_id=type_id,
+                    ):
+                        raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
+                    if lifecycle == "C" and (
+                        not _is_actor_valid_for_role(
+                            cursor,
+                            actor_id=acceptor_id,
+                            role="ACCEPTOR",
+                            department_id=department_id,
+                            type_id=type_id,
+                        )
+                        or acceptor_id == executor_id
+                    ):
+                        raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
                 approved_at = now
                 if lifecycle == "A":
                     cursor.execute(
@@ -755,6 +1396,19 @@ def decide_approval(
                         [request_id, attempt_id, now, now, execution_hours],
                     )
         else:
+            if outcome == "NEEDS_INFO":
+                cursor.execute(
+                    """
+                    INSERT INTO eas.draft_attachment(request_id, attachment_id, added_by)
+                    SELECT r.id, ra.attachment_id, r.requester_id
+                    FROM eas.request r
+                    JOIN eas.revision_attachment ra ON ra.revision_id = r.current_revision_id AND ra.request_id = r.id
+                    JOIN eas.attachment a ON a.id = ra.attachment_id AND a.request_id = r.id
+                    WHERE r.id = %s AND a.scan_state = 'CLEAN' AND a.deleted_at IS NULL
+                    ON CONFLICT (request_id, attachment_id) DO NOTHING
+                    """,
+                    [request_id],
+                )
             next_status = "REJECTED" if outcome == "REJECT" else "NEEDS_INFO"
             instance_state = "REJECTED" if outcome == "REJECT" else "SUPERSEDED"
             cursor.execute(
@@ -970,12 +1624,11 @@ def submit_execution(
     external_reference = external_reference.strip()
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
         cursor.execute(
             """
             SELECT r.status,r.lock_version,r.type_id::text,v.department_id::text,
                    i.id::text,i.lifecycle,a.id::text,a.executor_id::text,a.state,
-                   cr.sla_profile
+                   cr.sla_profile,i.acceptor_id::text
             FROM eas.request r
             JOIN eas.request_revision v ON v.id=r.current_revision_id
             JOIN eas.config_release cr ON cr.id=v.release_id
@@ -1000,6 +1653,7 @@ def submit_execution(
             executor_id,
             attempt_state,
             sla,
+            acceptor_id,
         ) = row
         if status != "IN_PROGRESS" or attempt_state != "RUNNING":
             raise CommandError("REQUEST_STATE_CONFLICT", status=409)
@@ -1014,6 +1668,17 @@ def submit_execution(
             department_id=department_id,
             type_id=type_id,
         )
+        if lifecycle == "C" and (
+            not _is_actor_valid_for_role(
+                cursor,
+                actor_id=acceptor_id,
+                role="ACCEPTOR",
+                department_id=department_id,
+                type_id=type_id,
+            )
+            or acceptor_id == actor.id
+        ):
+            raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
         cursor.execute(
             "SELECT count(*) FROM eas.execution_attachment WHERE attempt_id=%s",
             [attempt_id],
@@ -1150,7 +1815,7 @@ def decide_acceptance(
             """
             SELECT r.status,r.lock_version,r.type_id::text,v.department_id::text,
                    i.id::text,i.acceptor_id::text,a.id::text,a.executor_id::text,
-                   a.attempt_no,cr.sla_profile
+                   a.attempt_no,cr.sla_profile,i.planned_executor_id::text
             FROM eas.request r
             JOIN eas.request_revision v ON v.id=r.current_revision_id
             JOIN eas.config_release cr ON cr.id=v.release_id
@@ -1174,6 +1839,7 @@ def decide_acceptance(
             executor_id,
             attempt_no,
             sla,
+            planned_executor_id,
         ) = row
         if status != "WAITING_FOR_ACCEPTANCE":
             raise CommandError("REQUEST_STATE_CONFLICT", status=409)
@@ -1216,6 +1882,14 @@ def decide_acceptance(
             )
             next_attempt_id = None
         else:
+            if not _is_actor_valid_for_role(
+                cursor,
+                actor_id=planned_executor_id,
+                role="EXECUTOR",
+                department_id=department_id,
+                type_id=type_id,
+            ):
+                raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
             next_status = "READY_FOR_EXECUTION"
             completed_at = None
             next_attempt_id = str(uuid4())
@@ -1225,7 +1899,13 @@ def decide_acceptance(
                   id,request_id,instance_id,attempt_no,executor_id
                 ) VALUES (%s,%s,%s,%s,%s)
                 """,
-                [next_attempt_id, request_id, instance_id, attempt_no + 1, executor_id],
+                [
+                    next_attempt_id,
+                    request_id,
+                    instance_id,
+                    attempt_no + 1,
+                    planned_executor_id,
+                ],
             )
             execution_hours = sla.get("execution_hours")
             if (
