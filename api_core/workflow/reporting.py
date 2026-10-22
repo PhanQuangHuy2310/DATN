@@ -20,33 +20,6 @@ def _uuid_str(val: Any, field_name: str) -> str:
         raise CommandError(f"INVALID_{field_name.upper()}", status=422)
 
 
-def _can_read_request_sql() -> str:
-    return """
-        (
-          r.requester_id = %s
-          OR (
-            r.status != 'DRAFT'
-            AND EXISTS (
-              SELECT 1 FROM eas.request_participant p
-              WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
-            )
-          )
-          OR (
-            r.status != 'DRAFT'
-            AND EXISTS (
-              SELECT 1 FROM eas.role_membership rm
-              WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
-                AND rm.revoked_at IS NULL
-                AND rm.valid_from <= statement_timestamp()
-                AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
-                AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
-                AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
-            )
-          )
-        )
-    """
-
-
 def list_notifications(actor: Actor, query_params: dict[str, str]) -> dict[str, Any]:
     try:
         limit = int(query_params.get("limit", "20"))
@@ -65,22 +38,16 @@ def list_notifications(actor: Actor, query_params: dict[str, str]) -> dict[str, 
         )
         unread_count = cursor.fetchone()[0]
 
-        conditions = ["recipient_id = %s"]
-        params: list[Any] = [actor.id]
-
-        if unread_only:
-            conditions.append("read_at IS NULL")
-
-        where_clause = " AND ".join(conditions)
         cursor.execute(
-            f"""
+            """
             SELECT id::text, event_id::text, request_id::text, label, read_at, created_at
             FROM eas.notification
-            WHERE {where_clause}
+            WHERE recipient_id = %s
+              AND (%s IS FALSE OR read_at IS NULL)
             ORDER BY created_at DESC, id DESC
             LIMIT %s OFFSET %s
             """,
-            params + [limit + 1, offset],
+            [actor.id, unread_only, limit + 1, offset],
         )
         rows = cursor.fetchall()
 
@@ -167,39 +134,61 @@ def get_request_metrics_report(
     type_code_filter = query_params.get("type_code")
     dept_filter = query_params.get("department_id")
 
-    conditions = [
-        "r.status != 'DRAFT'",
-        "r.created_at >= %s",
-        "r.created_at <= %s",
-        _can_read_request_sql(),
-    ]
-    params: list[Any] = [dt_from, dt_to, actor.id, actor.id, actor.id]
-
-    if type_code_filter:
-        conditions.append("rt.code = %s")
-        params.append(type_code_filter)
+    dept_uuid = None
     if dept_filter:
         try:
             dept_uuid = str(UUID(dept_filter))
-            conditions.append("COALESCE(v.department_id, u.department_id) = %s")
-            params.append(dept_uuid)
         except (ValueError, TypeError):
             raise CommandError("INVALID_DEPARTMENT_ID", status=400)
 
-    where_clause = " AND ".join(conditions)
+    sql = """
+        SELECT r.id::text, r.status, r.current_revision_id, r.approved_at
+        FROM eas.request r
+        JOIN eas.request_type rt ON rt.id = r.type_id
+        JOIN eas.app_user u ON u.id = r.requester_id
+        LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
+        WHERE r.status != 'DRAFT'
+          AND r.created_at >= %s
+          AND r.created_at <= %s
+          AND (%s IS NULL OR rt.code = %s)
+          AND (%s IS NULL OR COALESCE(v.department_id, u.department_id) = %s)
+          AND (
+            (r.requester_id = %s)
+            OR (
+              r.status != 'DRAFT'
+              AND EXISTS (
+                SELECT 1 FROM eas.request_participant p
+                WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+              )
+            )
+            OR (
+              r.status != 'DRAFT'
+              AND EXISTS (
+                SELECT 1 FROM eas.role_membership rm
+                WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
+                  AND rm.revoked_at IS NULL
+                  AND rm.valid_from <= statement_timestamp()
+                  AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                  AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
+                  AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
+              )
+            )
+          )
+    """
+    params = [
+        dt_from,
+        dt_to,
+        type_code_filter,
+        type_code_filter,
+        dept_uuid,
+        dept_uuid,
+        actor.id,
+        actor.id,
+        actor.id,
+    ]
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""
-            SELECT r.id::text, r.status, r.current_revision_id, r.approved_at
-            FROM eas.request r
-            JOIN eas.request_type rt ON rt.id = r.type_id
-            JOIN eas.app_user u ON u.id = r.requester_id
-            LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
-            WHERE {where_clause}
-            """,
-            params,
-        )
+        cursor.execute(sql, params)
         rows = cursor.fetchall()
 
     submitted = sum(1 for row in rows if row[2] is not None)
@@ -229,17 +218,37 @@ def get_request_metrics_report(
 
 def get_request_audit_events(actor: Actor, request_id: str) -> dict[str, Any]:
     norm_id = _uuid_str(request_id, "request_id")
+    sql = """
+        SELECT r.id::text
+        FROM eas.request r
+        JOIN eas.app_user u ON u.id = r.requester_id
+        LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
+        WHERE r.id = %s
+          AND (
+            (r.requester_id = %s)
+            OR (
+              r.status != 'DRAFT'
+              AND EXISTS (
+                SELECT 1 FROM eas.request_participant p
+                WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+              )
+            )
+            OR (
+              r.status != 'DRAFT'
+              AND EXISTS (
+                SELECT 1 FROM eas.role_membership rm
+                WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
+                  AND rm.revoked_at IS NULL
+                  AND rm.valid_from <= statement_timestamp()
+                  AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                  AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
+                  AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
+              )
+            )
+          )
+    """
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""
-            SELECT r.id::text
-            FROM eas.request r
-            JOIN eas.app_user u ON u.id = r.requester_id
-            LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
-            WHERE r.id = %s AND {_can_read_request_sql()}
-            """,
-            [norm_id, actor.id, actor.id, actor.id],
-        )
+        cursor.execute(sql, [norm_id, actor.id, actor.id, actor.id])
         if not cursor.fetchone():
             raise CommandError("REQUEST_NOT_FOUND", status=404)
 

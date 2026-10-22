@@ -18,6 +18,7 @@ from api_core.workflow.service import (
 )
 
 _HTML_RE = re.compile(r"<[^>]+>")
+_SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
 
 
 def _clean_reason(value: Any, default: str = "Published configuration release.") -> str:
@@ -80,41 +81,28 @@ def list_config_releases(
     with connection.cursor() as cursor:
         _check_policy_admin(cursor, actor.id)
 
-        conditions = [
-            """
-            EXISTS (
-              SELECT 1 FROM eas.role_membership rm
-              WHERE rm.user_id = %s AND rm.role = 'POLICY_ADMIN' AND rm.revoked_at IS NULL
-                AND rm.valid_from <= statement_timestamp()
-                AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
-                AND (rm.type_scope = 'ALL' OR rm.type_id = cr.type_id)
-            )
-            """
-        ]
-        params: list[Any] = [actor.id]
-
-        if type_code_filter:
-            conditions.append("rt.code = %s")
-            params.append(type_code_filter)
-        if state_filter:
-            if state_filter not in ("DRAFT", "PUBLISHED"):
-                raise CommandError("INVALID_STATE_FILTER", status=400)
-            conditions.append("cr.state = %s")
-            params.append(state_filter)
-
-        where_clause = " AND ".join(conditions)
+        if state_filter and state_filter not in ("DRAFT", "PUBLISHED"):
+            raise CommandError("INVALID_STATE_FILTER", status=400)
 
         cursor.execute(
-            f"""
+            """
             SELECT cr.id::text, rt.code, cr.version, cr.state, cr.lifecycle,
                    cr.form_schema, cr.route_rules, cr.actor_bindings, cr.sla_profile,
                    cr.lock_version, cr.content_sha256, cr.created_at, cr.published_at
             FROM eas.config_release cr
             JOIN eas.request_type rt ON rt.id = cr.type_id
-            WHERE {where_clause}
+            WHERE (%s IS NULL OR rt.code = %s)
+              AND (%s IS NULL OR cr.state = %s)
+              AND EXISTS (
+                SELECT 1 FROM eas.role_membership rm
+                WHERE rm.user_id = %s AND rm.role = 'POLICY_ADMIN' AND rm.revoked_at IS NULL
+                  AND rm.valid_from <= statement_timestamp()
+                  AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                  AND (rm.type_scope = 'ALL' OR rm.type_id = cr.type_id)
+              )
             ORDER BY rt.code, cr.version DESC
             """,
-            params,
+            [type_code_filter, type_code_filter, state_filter, state_filter, actor.id],
         )
         rows = cursor.fetchall()
 
@@ -195,7 +183,7 @@ def create_or_clone_release(
         clone_from_id = _uuid_str(clone_from_id, "clone_from_release_id")
 
     def _op(cursor) -> tuple[dict[str, Any], int, str | None]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(_SQL_LOCK_SECURITY)
 
         cursor.execute(
             """
@@ -340,7 +328,7 @@ def update_draft_release(
         raise CommandError("INVALID_EXPECTED_VERSION", status=422)
 
     def _op(cursor) -> tuple[dict[str, Any], int, str | None]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(_SQL_LOCK_SECURITY)
 
         cursor.execute(
             """
@@ -461,7 +449,7 @@ def validate_release_candidate(*, actor: Actor, release_id: str) -> dict[str, An
 
         (
             _r_id,
-            type_code,
+            _type_code,
             type_id,
             lifecycle,
             form_schema,
@@ -474,7 +462,6 @@ def validate_release_candidate(*, actor: Actor, release_id: str) -> dict[str, An
         _check_policy_admin(cursor, actor.id, type_id=type_id)
 
     errors = validate_config_release_payload(
-        type_code=type_code,
         lifecycle=lifecycle,
         form_schema=form_schema,
         route_rules=route_rules,
@@ -520,7 +507,7 @@ def publish_config_release(
     )
 
     def _op(cursor) -> tuple[dict[str, Any], int, str | None]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(_SQL_LOCK_SECURITY)
 
         cursor.execute(
             """
@@ -561,7 +548,6 @@ def publish_config_release(
             raise CommandError("VERSION_CONFLICT", status=409)
 
         errors = validate_config_release_payload(
-            type_code=type_code,
             lifecycle=lifecycle,
             form_schema=form_schema,
             route_rules=route_rules,

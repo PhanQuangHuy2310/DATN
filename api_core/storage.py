@@ -101,5 +101,5 @@ def get_private_object(key: str) -> bytes:
             if response.status != 200:
                 raise StorageError("STORAGE_UNAVAILABLE")
             return response.read()
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except (URLError, TimeoutError) as exc:
         raise StorageError("STORAGE_UNAVAILABLE") from exc

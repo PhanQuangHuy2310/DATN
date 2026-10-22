@@ -442,7 +442,10 @@ def validate_config_release_payload(
     reminder_fraction = sla_profile.get("reminder_fraction")
     if clock != "CALENDAR_UTC":
         errs.append("sla_profile:clock must be CALENDAR_UTC")
-    if reminder_fraction != 0.5:
+    if (
+        not isinstance(reminder_fraction, (int, float))
+        or abs(float(reminder_fraction) - 0.5) > 1e-9
+    ):
         errs.append("sla_profile:reminder_fraction must be 0.5")
 
     app_hours = sla_profile.get("approval_hours")

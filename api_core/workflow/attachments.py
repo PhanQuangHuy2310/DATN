@@ -21,6 +21,8 @@ from api_core.storage import (
 
 from .service import CommandError, _append_request_audit, _authorize
 
+_SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
+
 
 def register_attachment(
     *,
@@ -67,7 +69,7 @@ def register_attachment(
     try:
         now = datetime.now(timezone.utc)
         with transaction.atomic(), connection.cursor() as cursor:
-            cursor.execute("SELECT eas.lock_security(false)")
+            cursor.execute(_SQL_LOCK_SECURITY)
             cursor.execute(
                 """
                 SELECT r.type_id::text,u.department_id::text
@@ -428,7 +430,7 @@ def download_attachment(
 
     now = datetime.now(timezone.utc)
     with transaction.atomic(), connection.cursor() as cursor:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(_SQL_LOCK_SECURITY)
         _append_request_audit(
             cursor,
             request_id=req_id,

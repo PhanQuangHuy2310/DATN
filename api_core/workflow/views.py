@@ -55,33 +55,6 @@ def _key(request: HttpRequest) -> str | None:
     return value.strip() if value else None
 
 
-def _can_read_request_sql() -> str:
-    return """
-        (
-          r.requester_id = %s
-          OR (
-            r.status != 'DRAFT'
-            AND EXISTS (
-              SELECT 1 FROM eas.request_participant p
-              WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
-            )
-          )
-          OR (
-            r.status != 'DRAFT'
-            AND EXISTS (
-              SELECT 1 FROM eas.role_membership rm
-              WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
-                AND rm.revoked_at IS NULL
-                AND rm.valid_from <= statement_timestamp()
-                AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
-                AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
-                AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
-            )
-          )
-        )
-    """
-
-
 def _command_response(
     request: HttpRequest, operation: Any, **kwargs: Any
 ) -> JsonResponse:
@@ -124,83 +97,91 @@ def request_list(request: HttpRequest) -> JsonResponse:
     from_filter = request.GET.get("created_from")
     to_filter = request.GET.get("created_to")
 
-    where_clauses: list[str] = []
-    params: list[Any] = []
-
-    if tab == "mine":
-        where_clauses.append("r.requester_id = %s")
-        params.append(request.actor.id)
-    elif tab == "approval":
-        where_clauses.append(
-            """
-            EXISTS (
+    sql = """
+        SELECT DISTINCT r.id::text, r.code, rt.code, r.status, r.lock_version,
+               r.updated_at, r.created_at
+        FROM eas.request r
+        JOIN eas.request_type rt ON rt.id = r.type_id
+        LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
+        LEFT JOIN eas.app_user u ON u.id = r.requester_id
+        WHERE (%s IS NULL OR r.status = %s)
+          AND (%s IS NULL OR rt.code = %s)
+          AND (%s IS NULL OR COALESCE(v.department_id, u.department_id) = %s)
+          AND (%s IS NULL OR r.created_at >= %s)
+          AND (%s IS NULL OR r.created_at <= %s)
+          AND (
+            (%s = 'mine' AND r.requester_id = %s)
+            OR (%s = 'approval' AND EXISTS (
               SELECT 1 FROM eas.approval_step ast
               WHERE ast.request_id = r.id AND ast.state = 'ACTIVE' AND ast.assignee_id = %s
-            )
-            """
-        )
-        params.append(request.actor.id)
-    elif tab == "execution":
-        where_clauses.append(
-            """
-            EXISTS (
+            ))
+            OR (%s = 'execution' AND EXISTS (
               SELECT 1 FROM eas.workflow_instance wi
               JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
               WHERE wi.request_id = r.id AND ea.state IN ('READY', 'RUNNING') AND ea.executor_id = %s
-            )
-            """
-        )
-        params.append(request.actor.id)
-    elif tab == "acceptance":
-        where_clauses.append(
-            """
-            EXISTS (
+            ))
+            OR (%s = 'acceptance' AND EXISTS (
               SELECT 1 FROM eas.workflow_instance wi
               JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
               WHERE wi.request_id = r.id AND wi.state = 'ACTIVE' AND wi.lifecycle = 'C'
                 AND wi.acceptor_id = %s AND ea.state = 'SUBMITTED'
-            )
-            """
-        )
-        params.append(request.actor.id)
-    else:
-        where_clauses.append(_can_read_request_sql())
-        params.extend([request.actor.id, request.actor.id, request.actor.id])
-
-    if status_filter:
-        where_clauses.append("r.status = %s")
-        params.append(status_filter)
-    if type_code_filter:
-        where_clauses.append("rt.code = %s")
-        params.append(type_code_filter)
-    if dept_filter:
-        where_clauses.append("COALESCE(v.department_id, u.department_id) = %s")
-        params.append(dept_filter)
-    if from_filter:
-        where_clauses.append("r.created_at >= %s")
-        params.append(from_filter)
-    if to_filter:
-        where_clauses.append("r.created_at <= %s")
-        params.append(to_filter)
-
-    where_sql = " AND ".join(where_clauses)
-    params.extend([limit + 1, offset])
+            ))
+            OR (%s IS NULL AND (
+                r.requester_id = %s
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.request_participant p
+                    WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+                  )
+                )
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.role_membership rm
+                    WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
+                      AND rm.revoked_at IS NULL
+                      AND rm.valid_from <= statement_timestamp()
+                      AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                      AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
+                      AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
+                  )
+                )
+            ))
+          )
+        ORDER BY r.updated_at DESC, r.id DESC
+        LIMIT %s OFFSET %s
+    """
+    valid_tab = tab if tab in ("mine", "approval", "execution", "acceptance") else None
+    params = [
+        status_filter,
+        status_filter,
+        type_code_filter,
+        type_code_filter,
+        dept_filter,
+        dept_filter,
+        from_filter,
+        from_filter,
+        to_filter,
+        to_filter,
+        valid_tab,
+        request.actor.id,
+        valid_tab,
+        request.actor.id,
+        valid_tab,
+        request.actor.id,
+        valid_tab,
+        request.actor.id,
+        valid_tab,
+        request.actor.id,
+        request.actor.id,
+        request.actor.id,
+        limit + 1,
+        offset,
+    ]
 
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"""
-            SELECT DISTINCT r.id::text, r.code, rt.code, r.status, r.lock_version,
-                   r.updated_at, r.created_at
-            FROM eas.request r
-            JOIN eas.request_type rt ON rt.id = r.type_id
-            LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
-            LEFT JOIN eas.app_user u ON u.id = r.requester_id
-            WHERE {where_sql}
-            ORDER BY r.updated_at DESC, r.id DESC
-            LIMIT %s OFFSET %s
-            """,
-            params,
-        )
+        cursor.execute(sql, params)
         rows = cursor.fetchall()
 
     items = [
@@ -242,7 +223,7 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
 
     with connection.cursor() as cursor:
         cursor.execute(
-            f"""
+            """
             SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                    r.requester_id::text, r.draft_payload, v.payload, v.revision_no,
                    r.created_at, r.updated_at
@@ -250,7 +231,29 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
             JOIN eas.request_type rt ON rt.id = r.type_id
             LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
             LEFT JOIN eas.app_user u ON u.id = r.requester_id
-            WHERE r.id = %s AND {_can_read_request_sql()}
+            WHERE r.id = %s
+              AND (
+                r.requester_id = %s
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.request_participant p
+                    WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+                  )
+                )
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.role_membership rm
+                    WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
+                      AND rm.revoked_at IS NULL
+                      AND rm.valid_from <= statement_timestamp()
+                      AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                      AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
+                      AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
+                  )
+                )
+              )
             """,
             [req_uuid, request.actor.id, request.actor.id, request.actor.id],
         )
@@ -526,11 +529,33 @@ def revisions_list(request: HttpRequest, request_id: str) -> JsonResponse:
 
     with connection.cursor() as cursor:
         cursor.execute(
-            f"""
+            """
             SELECT 1 FROM eas.request r
             LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
             LEFT JOIN eas.app_user u ON u.id = r.requester_id
-            WHERE r.id = %s AND {_can_read_request_sql()}
+            WHERE r.id = %s
+              AND (
+                r.requester_id = %s
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.request_participant p
+                    WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+                  )
+                )
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.role_membership rm
+                    WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
+                      AND rm.revoked_at IS NULL
+                      AND rm.valid_from <= statement_timestamp()
+                      AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                      AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
+                      AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
+                  )
+                )
+              )
             """,
             [req_uuid, request.actor.id, request.actor.id, request.actor.id],
         )
@@ -605,11 +630,33 @@ def revision_detail(
 
     with connection.cursor() as cursor:
         cursor.execute(
-            f"""
+            """
             SELECT 1 FROM eas.request r
             LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
             LEFT JOIN eas.app_user u ON u.id = r.requester_id
-            WHERE r.id = %s AND {_can_read_request_sql()}
+            WHERE r.id = %s
+              AND (
+                r.requester_id = %s
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.request_participant p
+                    WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+                  )
+                )
+                OR (
+                  r.status != 'DRAFT'
+                  AND EXISTS (
+                    SELECT 1 FROM eas.role_membership rm
+                    WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
+                      AND rm.revoked_at IS NULL
+                      AND rm.valid_from <= statement_timestamp()
+                      AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                      AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
+                      AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
+                  )
+                )
+              )
             """,
             [req_uuid, request.actor.id, request.actor.id, request.actor.id],
         )
