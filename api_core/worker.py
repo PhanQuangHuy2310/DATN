@@ -9,6 +9,8 @@ from django.db import connection, transaction
 from django.utils import timezone
 from psycopg.types.json import Jsonb
 
+from api_core.workflow.service import _append_admin_audit, _append_request_audit
+
 
 @dataclass(frozen=True)
 class OutboxItem:
@@ -131,11 +133,45 @@ def acknowledge_outbox(item: OutboxItem) -> None:
         for recipient_id, label in _recipients(cursor, item):
             cursor.execute(
                 """
+                SELECT u.is_active,
+                       CASE
+                         WHEN %s IS NULL THEN TRUE
+                         WHEN r.requester_id = u.id THEN TRUE
+                         WHEN p.id IS NOT NULL AND p.read_revoked_at IS NULL THEN TRUE
+                         ELSE FALSE
+                       END AS can_read
+                FROM eas.app_user u
+                LEFT JOIN eas.request r ON r.id = %s
+                LEFT JOIN eas.request_participant p ON p.request_id = %s AND p.user_id = u.id
+                WHERE u.id = %s
+                """,
+                [item.request_id, item.request_id, item.request_id, recipient_id],
+            )
+            recip_status = cursor.fetchone()
+            if not recip_status or not recip_status[0] or not recip_status[1]:
+                _append_admin_audit(
+                    cursor,
+                    actor_id=None,
+                    actor_kind="SYSTEM",
+                    action="NOTIFICATION_SKIPPED_INACTIVE_OR_REVOKED",
+                    target_type="outbox_event",
+                    target_id=item.id,
+                    reason="Recipient is inactive or read access was revoked.",
+                    details={
+                        "recipient_id": recipient_id,
+                        "request_id": item.request_id,
+                    },
+                    correlation_id=str(uuid4()),
+                )
+                continue
+            cursor.execute(
+                """
                 INSERT INTO eas.notification(event_id,recipient_id,request_id,label)
                 VALUES (%s,%s,%s,%s) ON CONFLICT (event_id,recipient_id) DO NOTHING
                 """,
                 [item.id, recipient_id, item.request_id, label],
             )
+
         cursor.execute(
             """
             UPDATE eas.outbox_event SET state='SENT',sent_at=statement_timestamp(),
@@ -238,5 +274,18 @@ def process_sla_batch(*, batch_size: int = 100) -> int:
                     f"sla:{stage_id}:{kind.lower()}",
                 ],
             )
+            _append_request_audit(
+                cursor,
+                request_id=request_id,
+                actor_id=None,
+                actor_kind="SYSTEM",
+                action=f"SLA_{kind}",
+                target_type="sla_stage",
+                target_id=stage_id,
+                details={"kind": kind, "stage_id": stage_id},
+                correlation_id=str(uuid4()),
+                occurred_at=now,
+            )
             created += 1
+
     return created

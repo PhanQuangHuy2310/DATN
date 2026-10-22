@@ -92,3 +92,14 @@ def delete_private_object(key: str) -> None:
             return
     except (HTTPError, URLError, TimeoutError) as exc:
         raise StorageError("STORAGE_COMPENSATION_FAILED") from exc
+
+
+def get_private_object(key: str) -> bytes:
+    request = Request(_object_url(key), headers=_headers(), method="GET")
+    try:
+        with urlopen(request, timeout=30) as response:
+            if response.status != 200:
+                raise StorageError("STORAGE_UNAVAILABLE")
+            return response.read()
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise StorageError("STORAGE_UNAVAILABLE") from exc
