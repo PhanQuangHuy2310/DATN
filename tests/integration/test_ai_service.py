@@ -8,13 +8,22 @@ Kiểm thử:
 4. Đánh giá quy tắc Auto-Approve & ngưỡng rủi ro
 5. Cơ chế fallback an toàn của AIServiceClient khi offline/chưa có HTTP
 """
+
 import json
 import os
 import sys
 import unittest
 
-import joblib
-import numpy as np
+try:
+    import joblib
+    import numpy as np
+    import xgboost  # noqa: F401
+
+    HAS_ML_DEPS = True
+except (ImportError, ModuleNotFoundError):
+    joblib = None
+    numpy = None
+    HAS_ML_DEPS = False
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 AI_SERVICE_DIR = os.path.join(REPO_ROOT, "ai_service")
@@ -53,13 +62,10 @@ class TestAIModelArtifacts(unittest.TestCase):
         for filename in required_files:
             file_path = os.path.join(self.models_dir, filename)
             self.assertTrue(
-                os.path.exists(file_path),
-                f"Thiếu file model bắt buộc: {filename}"
+                os.path.exists(file_path), f"Thiếu file model bắt buộc: {filename}"
             )
             self.assertGreater(
-                os.path.getsize(file_path),
-                0,
-                f"File model rỗng: {filename}"
+                os.path.getsize(file_path), 0, f"File model rỗng: {filename}"
             )
 
     def test_domain_model_registry_valid(self):
@@ -87,8 +93,14 @@ class TestMockDataSnapshots(unittest.TestCase):
             manifest = json.load(f)
 
         expected_schemas = [
-            "mock_hr", "mock_assets", "mock_facilities", "mock_crm",
-            "mock_procurement", "mock_it", "mock_finance", "mock_travel"
+            "mock_hr",
+            "mock_assets",
+            "mock_facilities",
+            "mock_crm",
+            "mock_procurement",
+            "mock_it",
+            "mock_finance",
+            "mock_travel",
         ]
         total_records = 0
         for schema in expected_schemas:
@@ -104,12 +116,18 @@ class TestMockDataSnapshots(unittest.TestCase):
         self.assertGreater(total_records, 100, "Tổng số bản ghi mock phải > 100")
 
 
+@unittest.skipUnless(
+    HAS_ML_DEPS,
+    "ML dependencies (joblib, numpy, xgboost) are required for XGBoost inference tests",
+)
 class TestMultiDomainXGBoostInference(unittest.TestCase):
     """Kiểm tra suy luận trực tiếp từ 4 mô hình XGBoost đã train."""
 
     def setUp(self):
         self.models_dir = os.path.join(AI_SERVICE_DIR, "models")
-        with open(os.path.join(self.models_dir, "encoders.json"), "r", encoding="utf-8") as f:
+        with open(
+            os.path.join(self.models_dir, "encoders.json"), "r", encoding="utf-8"
+        ) as f:
             self.encoders = json.load(f)
 
     def test_finance_model_high_risk(self):
@@ -119,14 +137,22 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
         with open(feat_path, "r", encoding="utf-8") as f:
             meta = json.load(f)
         feat_cols = meta["feature_cols"] if isinstance(meta, dict) else meta
-        rev_remap = {int(k): v for k, v in meta.get("reverse_remap", {}).items()} if isinstance(meta, dict) else {}
+        rev_remap = (
+            {int(k): v for k, v in meta.get("reverse_remap", {}).items()}
+            if isinstance(meta, dict)
+            else {}
+        )
 
         # Case: Tạm ứng 80 triệu vượt ngân sách 30 triệu, không hóa đơn -> Risk 5
         amount = 80_000_000
         budget = 30_000_000
         feat_map = {
-            "request_type_enc": float(self.encoders.get("request_type", {}).get("advance_payment", 0)),
-            "department_enc": float(self.encoders.get("department", {}).get("finance", 0)),
+            "request_type_enc": float(
+                self.encoders.get("request_type", {}).get("advance_payment", 0)
+            ),
+            "department_enc": float(
+                self.encoders.get("department", {}).get("finance", 0)
+            ),
             "user_role_enc": 2.0,
             "priority_level_enc": 2.0,
             "amount_log": float(np.log1p(amount)),
@@ -147,9 +173,13 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
         }
         X = np.array([[feat_map.get(c, 0.0) for c in feat_cols]], dtype=np.float32)
         pred_idx = int(model.predict(X)[0])
-        risk_score = rev_remap.get(pred_idx, pred_idx + 1) if rev_remap else pred_idx + 1
+        risk_score = (
+            rev_remap.get(pred_idx, pred_idx + 1) if rev_remap else pred_idx + 1
+        )
 
-        self.assertGreaterEqual(risk_score, 4, "Tạm ứng vượt budget không hóa đơn phải có risk >= 4")
+        self.assertGreaterEqual(
+            risk_score, 4, "Tạm ứng vượt budget không hóa đơn phải có risk >= 4"
+        )
 
     def test_hr_model_normal_risk(self):
         model_path = os.path.join(self.models_dir, "risk_model_hr.pkl")
@@ -158,12 +188,18 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
         with open(feat_path, "r", encoding="utf-8") as f:
             meta = json.load(f)
         feat_cols = meta["feature_cols"] if isinstance(meta, dict) else meta
-        rev_remap = {int(k): v for k, v in meta.get("reverse_remap", {}).items()} if isinstance(meta, dict) else {}
+        rev_remap = (
+            {int(k): v for k, v in meta.get("reverse_remap", {}).items()}
+            if isinstance(meta, dict)
+            else {}
+        )
 
         # Case: Nghỉ phép năm bình thường, không tốn tiền -> Risk thấp (1 hoặc 2)
         budget = 200_000_000
         feat_map = {
-            "request_type_enc": float(self.encoders.get("request_type", {}).get("leave_annual", 0)),
+            "request_type_enc": float(
+                self.encoders.get("request_type", {}).get("leave_annual", 0)
+            ),
             "department_enc": float(self.encoders.get("department", {}).get("hr", 0)),
             "user_role_enc": 2.0,
             "priority_level_enc": 2.0,
@@ -185,16 +221,28 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
         }
         X = np.array([[feat_map.get(c, 0.0) for c in feat_cols]], dtype=np.float32)
         pred_idx = int(model.predict(X)[0])
-        risk_score = rev_remap.get(pred_idx, pred_idx + 1) if rev_remap else pred_idx + 1
+        risk_score = (
+            rev_remap.get(pred_idx, pred_idx + 1) if rev_remap else pred_idx + 1
+        )
 
-        self.assertLessEqual(risk_score, 2, "Nghỉ phép năm bình thường phải có risk <= 2")
+        self.assertLessEqual(
+            risk_score, 2, "Nghỉ phép năm bình thường phải có risk <= 2"
+        )
 
 
 class TestAIServiceClientFallback(unittest.TestCase):
     """Kiểm tra khả năng chịu lỗi (fault-tolerance) của ai_client."""
 
+    @staticmethod
+    def _get_client():
+        try:
+            from api_core.ai_client import ai_client_sync
+        except ImportError:
+            from ai_client import ai_client_sync
+        return ai_client_sync
+
     def test_sync_client_score_risk_fallback(self):
-        from ai_client import ai_client_sync
+        ai_client_sync = self._get_client()
 
         res = ai_client_sync.score_risk(
             request_type="leave_annual",
@@ -206,7 +254,7 @@ class TestAIServiceClientFallback(unittest.TestCase):
         self.assertTrue(res.get("fallback_used", False))
 
     def test_sync_client_auto_approve_fallback(self):
-        from ai_client import ai_client_sync
+        ai_client_sync = self._get_client()
 
         res = ai_client_sync.evaluate_auto_approve(
             request_id="test-fallback",
@@ -220,11 +268,10 @@ class TestAIServiceClientFallback(unittest.TestCase):
         self.assertEqual(res["decision"], "escalate_to_human")
 
     def test_sync_client_classify_fallback(self):
-        from ai_client import ai_client_sync
+        ai_client_sync = self._get_client()
 
         res = ai_client_sync.classify_request(
-            title="Đề xuất mua màn hình mới",
-            description="Màn hình Dell 27 inch"
+            title="Đề xuất mua màn hình mới", description="Màn hình Dell 27 inch"
         )
         self.assertIn("predicted_request_type", res)
         self.assertIn("predicted_department", res)

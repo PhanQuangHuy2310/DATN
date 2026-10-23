@@ -4,6 +4,7 @@ Test Runner for Enterprise Approval System (EAS)
 Chạy tất cả test suites trong thư mục tests/:
   python tests/run_tests.py
 """
+
 import os
 import sys
 import unittest
@@ -36,7 +37,9 @@ def run_all_tests():
         print("TẤT CẢ CÁC BÀI TEST ĐỀU THÀNH CÔNG (PASS)!")
         return 0
     else:
-        print(f"THẤT BẠI: {len(result.failures)} lỗi fail, {len(result.errors)} lỗi runtime error.")
+        print(
+            f"THẤT BẠI: {len(result.failures)} lỗi fail, {len(result.errors)} lỗi runtime error."
+        )
         return 1
 
 
