@@ -8,10 +8,11 @@ Kiểm thử:
 4. Đánh giá quy tắc Auto-Approve & ngưỡng rủi ro
 5. Cơ chế fallback an toàn của AIServiceClient khi offline/chưa có HTTP
 """
-import unittest
+import json
 import os
 import sys
-import json
+import unittest
+
 import joblib
 import numpy as np
 
@@ -160,7 +161,6 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
         rev_remap = {int(k): v for k, v in meta.get("reverse_remap", {}).items()} if isinstance(meta, dict) else {}
 
         # Case: Nghỉ phép năm bình thường, không tốn tiền -> Risk thấp (1 hoặc 2)
-        amount = 0
         budget = 200_000_000
         feat_map = {
             "request_type_enc": float(self.encoders.get("request_type", {}).get("leave_annual", 0)),

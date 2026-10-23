@@ -56,10 +56,14 @@ const NORMALIZER_VERSION = "2.1.0";
 // ---------------------------------------------------------------------------
 // Cấu hình kết nối — đọc từ biến môi trường hoặc dùng default dev
 // ---------------------------------------------------------------------------
+const defaultDbUrl =
+  process.env.DATABASE_URL ||
+  (process.env.DB_PASSWORD
+    ? `postgresql://${process.env.DB_USER || "postgres"}:${process.env.DB_PASSWORD}@${process.env.DB_HOST || "localhost"}:${process.env.DB_PORT || "5432"}/${process.env.DB_NAME || "postgres"}`
+    : `postgresql://${process.env.DB_USER || "postgres"}@${process.env.DB_HOST || "localhost"}:${process.env.DB_PORT || "5432"}/${process.env.DB_NAME || "postgres"}`);
+
 const DB_CONFIG = {
-  connectionString:
-    process.env.DATABASE_URL ||
-    "postgresql://postgres:postgres@localhost:5432/postgres",
+  connectionString: defaultDbUrl,
   ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
 };
 
