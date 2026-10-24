@@ -83,7 +83,7 @@ PASSWORD_HASHERS = [
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 if ENVIRONMENT == "production" and not REDIS_URL:
     raise RuntimeError("REDIS_URL is required in production for shared security state")
-if REDIS_URL:
+if REDIS_URL and ENVIRONMENT != "test":
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.redis.RedisCache",
