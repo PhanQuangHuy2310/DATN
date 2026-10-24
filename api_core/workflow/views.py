@@ -928,12 +928,11 @@ def ai_classify_view(request: HttpRequest) -> JsonResponse:
 
     from api_core.integrations.ai_service import ai_client_sync
 
+    cid = correlation_id(request)
     result = ai_client_sync.classify_request(
-        title=title.strip(), description=description.strip()
+        title=title.strip(), description=description.strip(), correlation_id=cid
     )
-    return JsonResponse(
-        {"data": result, "correlation_id": correlation_id(request)}, status=200
-    )
+    return JsonResponse({"data": result, "correlation_id": cid}, status=200)
 
 
 @require_POST
@@ -957,19 +956,25 @@ def ai_risk_score_view(request: HttpRequest) -> JsonResponse:
 
     from api_core.integrations.ai_service import ai_client_sync
 
+    cid = correlation_id(request)
     result = ai_client_sync.score_risk(
         request_type=request_type,
         lifecycle_template=str(lifecycle_template),
         risk_weight=risk_weight,
+        correlation_id=cid,
         **{
             k: v
             for k, v in body.items()
-            if k not in ("request_type", "lifecycle_template", "risk_weight")
+            if k
+            not in (
+                "request_type",
+                "lifecycle_template",
+                "risk_weight",
+                "correlation_id",
+            )
         },
     )
-    return JsonResponse(
-        {"data": result, "correlation_id": correlation_id(request)}, status=200
-    )
+    return JsonResponse({"data": result, "correlation_id": cid}, status=200)
 
 
 @require_POST
@@ -995,6 +1000,7 @@ def ai_summarize_view(request: HttpRequest) -> JsonResponse:
 
     from api_core.integrations.ai_service import ai_client_sync
 
+    cid = correlation_id(request)
     result = ai_client_sync.summarize_request(
         title=title.strip(),
         request_type=str(request_type),
@@ -1003,7 +1009,6 @@ def ai_summarize_view(request: HttpRequest) -> JsonResponse:
         data=data if isinstance(data, dict) else None,
         risk_score=risk_score,
         amount=amount,
+        correlation_id=cid,
     )
-    return JsonResponse(
-        {"data": result, "correlation_id": correlation_id(request)}, status=200
-    )
+    return JsonResponse({"data": result, "correlation_id": cid}, status=200)

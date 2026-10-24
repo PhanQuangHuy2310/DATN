@@ -51,11 +51,14 @@ INTERNAL_SECRET = _SECRET or os.getenv(
 TIMEOUT = float(_TIMEOUT or os.getenv("EAS_AI_TIMEOUT_SECONDS", "30.0"))
 
 
-def _headers() -> dict:
-    return {
+def _headers(correlation_id: str | None = None) -> dict:
+    headers = {
         "X-Internal-Secret": INTERNAL_SECRET,
         "Content-Type": "application/json",
     }
+    if correlation_id:
+        headers["X-Correlation-ID"] = correlation_id
+    return headers
 
 
 # ---------------------------------------------------------------------------
@@ -67,6 +70,12 @@ class AIServiceClient:
     def __init__(self):
         self.base_url = AI_SERVICE_URL
         self.headers = _headers()
+
+    def _get_headers(self, correlation_id: str | None = None) -> dict:
+        headers = dict(self.headers)
+        if correlation_id:
+            headers["X-Correlation-ID"] = correlation_id
+        return headers
 
     async def health_check(self) -> bool:
         """Kiểm tra AI service còn sống không."""
@@ -105,6 +114,7 @@ class AIServiceClient:
         urgency: str = "medium",
         is_off_hours: int | None = None,
         description_length: int = 150,
+        correlation_id: str | None = None,
         **extra_kwargs,
     ) -> dict:
         """
@@ -190,7 +200,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/risk/score",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -219,6 +229,7 @@ class AIServiceClient:
         days_requested: int = 0,
         leave_balance_remaining: int = 0,
         room_available: bool | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         """
         Gọi AI /auto-approve/evaluate và trả về:
@@ -259,7 +270,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/auto-approve/evaluate",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -284,6 +295,7 @@ class AIServiceClient:
         data: dict | None = None,
         risk_score: int | None = None,
         amount: float | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         """
         Gọi AI /summarize/request và trả về:
@@ -318,7 +330,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/summarize/request",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -332,7 +344,10 @@ class AIServiceClient:
             }
 
     async def extract_ocr_from_url(
-        self, image_url: str, request_type: str | None = None
+        self,
+        image_url: str,
+        request_type: str | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         """
         Gọi AI /ocr/extract-url và trả về:
@@ -360,7 +375,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/ocr/extract-url",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -373,7 +388,12 @@ class AIServiceClient:
                 "engine": "error",
             }
 
-    async def classify_request(self, title: str, description: str = "") -> dict:
+    async def classify_request(
+        self,
+        title: str,
+        description: str = "",
+        correlation_id: str | None = None,
+    ) -> dict:
         """
         Gọi AI /classify/request và trả về:
         {
@@ -405,7 +425,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/classify/request",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -449,8 +469,17 @@ class SyncAIServiceClient:
         except RuntimeError:
             return asyncio.run(coro)
 
-    def classify_request(self, title: str, description: str = "") -> dict:
-        return self._run(self._async_client.classify_request(title, description))
+    def classify_request(
+        self,
+        title: str,
+        description: str = "",
+        correlation_id: str | None = None,
+    ) -> dict:
+        return self._run(
+            self._async_client.classify_request(
+                title, description, correlation_id=correlation_id
+            )
+        )
 
     def score_risk(self, **kwargs) -> dict:
         return self._run(self._async_client.score_risk(**kwargs))
@@ -462,10 +491,15 @@ class SyncAIServiceClient:
         return self._run(self._async_client.summarize_request(**kwargs))
 
     def extract_ocr_from_url(
-        self, image_url: str, request_type: str | None = None
+        self,
+        image_url: str,
+        request_type: str | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         return self._run(
-            self._async_client.extract_ocr_from_url(image_url, request_type)
+            self._async_client.extract_ocr_from_url(
+                image_url, request_type, correlation_id=correlation_id
+            )
         )
 
 

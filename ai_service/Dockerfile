@@ -20,8 +20,12 @@ RUN python -c "from paddleocr import PaddleOCR; PaddleOCR(use_angle_cls=True, la
 
 COPY . .
 
-# Tạo thư mục models và data nếu chưa có
-RUN mkdir -p models training/data
+# Tạo thư mục models và data, tạo non-root user aiuser và cấp quyền
+RUN addgroup --system aiuser && adduser --system --ingroup aiuser aiuser \
+    && mkdir -p models training/data /home/aiuser/.paddleocr \
+    && chown -R aiuser:aiuser /app /home/aiuser
+
+USER aiuser
 
 EXPOSE 8001
 

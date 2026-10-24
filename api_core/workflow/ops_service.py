@@ -157,6 +157,293 @@ def list_ops_metadata(
     }
 
 
+def _reassign_approval_step(
+    cursor,
+    *,
+    instance_id: str | None,
+    target_id: str,
+    new_user_id: str,
+    requester_id: str,
+    planned_executor_id: str | None,
+    department_id: str,
+    type_id: str,
+) -> tuple[str, str]:
+    if not instance_id:
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    cursor.execute(
+        """
+        SELECT id::text, assignee_id::text, state
+        FROM eas.approval_step
+        WHERE id = %s AND instance_id = %s
+        FOR UPDATE
+        """,
+        [target_id, instance_id],
+    )
+    step_row = cursor.fetchone()
+    if not step_row:
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    step_id, current_assignee, step_state = step_row
+    if step_state not in ("ACTIVE", "WAITING"):
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    cursor.execute(
+        "SELECT 1 FROM eas.approval_decision WHERE step_id = %s",
+        [step_id],
+    )
+    if cursor.fetchone():
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    if not _is_actor_valid_for_role(
+        cursor,
+        actor_id=new_user_id,
+        role="APPROVER",
+        department_id=department_id,
+        type_id=type_id,
+    ):
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    if new_user_id == requester_id or (
+        planned_executor_id and new_user_id == planned_executor_id
+    ):
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    cursor.execute(
+        """
+        SELECT 1 FROM eas.approval_step
+        WHERE instance_id = %s AND id <> %s AND assignee_id = %s
+        """,
+        [instance_id, step_id, new_user_id],
+    )
+    if cursor.fetchone():
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    cursor.execute(
+        """
+        SELECT 1 FROM eas.execution_attempt
+        WHERE instance_id = %s AND executor_id = %s
+        """,
+        [instance_id, new_user_id],
+    )
+    if cursor.fetchone():
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    cursor.execute(
+        "UPDATE eas.approval_step SET assignee_id = %s WHERE id = %s",
+        [new_user_id, step_id],
+    )
+    return current_assignee, "APPROVER"
+
+
+def _reassign_executor(
+    cursor,
+    *,
+    instance_id: str | None,
+    target_id: str,
+    new_user_id: str,
+    requester_id: str,
+    acceptor_id: str | None,
+    r_status: str,
+    normalized_request_id: str,
+    department_id: str,
+    type_id: str,
+) -> tuple[str, str, str]:
+    if not instance_id:
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    cursor.execute(
+        """
+        SELECT id::text, attempt_no, executor_id::text, state
+        FROM eas.execution_attempt
+        WHERE id = %s AND instance_id = %s
+        FOR UPDATE
+        """,
+        [target_id, instance_id],
+    )
+    attempt_row = cursor.fetchone()
+    if not attempt_row:
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    attempt_id, attempt_no, current_exec, attempt_state = attempt_row
+    if attempt_state not in ("READY", "RUNNING") or r_status not in (
+        "READY_FOR_EXECUTION",
+        "IN_PROGRESS",
+    ):
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    if not _is_actor_valid_for_role(
+        cursor,
+        actor_id=new_user_id,
+        role="EXECUTOR",
+        department_id=department_id,
+        type_id=type_id,
+    ):
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    if new_user_id == requester_id or (acceptor_id and new_user_id == acceptor_id):
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    cursor.execute(
+        "SELECT 1 FROM eas.approval_step WHERE instance_id = %s AND assignee_id = %s",
+        [instance_id, new_user_id],
+    )
+    if cursor.fetchone():
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    if attempt_state == "READY":
+        cursor.execute(
+            "UPDATE eas.execution_attempt SET executor_id = %s WHERE id = %s",
+            [new_user_id, attempt_id],
+        )
+        cursor.execute(
+            _UPDATE_PLANNED_EXECUTOR_SQL,
+            [new_user_id, instance_id],
+        )
+        next_status = r_status
+    else:  # RUNNING
+        cursor.execute(
+            """
+            UPDATE eas.execution_attempt
+            SET state = 'FINISHED', closure_kind = 'REASSIGNED', closed_at = statement_timestamp()
+            WHERE id = %s
+            """,
+            [attempt_id],
+        )
+        new_attempt_id = str(uuid4())
+        cursor.execute(
+            """
+            INSERT INTO eas.execution_attempt(id, request_id, instance_id, attempt_no, executor_id, state)
+            VALUES (%s, %s, %s, %s, %s, 'READY')
+            """,
+            [
+                new_attempt_id,
+                normalized_request_id,
+                instance_id,
+                attempt_no + 1,
+                new_user_id,
+            ],
+        )
+        cursor.execute(
+            _UPDATE_PLANNED_EXECUTOR_SQL,
+            [new_user_id, instance_id],
+        )
+        cursor.execute(
+            """
+            UPDATE eas.sla_stage
+            SET attempt_id = %s
+            WHERE request_id = %s AND closed_at IS NULL
+            """,
+            [new_attempt_id, normalized_request_id],
+        )
+        next_status = "READY_FOR_EXECUTION"
+
+    return current_exec, "EXECUTOR", next_status
+
+
+def _reassign_acceptor(
+    cursor,
+    *,
+    instance_id: str | None,
+    lifecycle: str,
+    r_status: str,
+    new_user_id: str,
+    planned_executor_id: str | None,
+    acceptor_id: str | None,
+    department_id: str,
+    type_id: str,
+) -> tuple[str | None, str]:
+    if not instance_id or lifecycle != "C":
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+    if r_status not in (
+        "PENDING_APPROVAL",
+        "READY_FOR_EXECUTION",
+        "IN_PROGRESS",
+        "WAITING_FOR_ACCEPTANCE",
+    ):
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    cursor.execute(
+        """
+        SELECT 1 FROM eas.acceptance_decision ad
+        JOIN eas.execution_attempt a ON a.id = ad.attempt_id
+        WHERE a.instance_id = %s AND a.state IN ('READY', 'RUNNING', 'SUBMITTED')
+        """,
+        [instance_id],
+    )
+    if cursor.fetchone():
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    if not _is_actor_valid_for_role(
+        cursor,
+        actor_id=new_user_id,
+        role="ACCEPTOR",
+        department_id=department_id,
+        type_id=type_id,
+    ):
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    cursor.execute(
+        """
+        SELECT executor_id::text FROM eas.execution_attempt
+        WHERE instance_id = %s AND state IN ('READY', 'RUNNING', 'SUBMITTED')
+        """,
+        [instance_id],
+    )
+    current_exec_rows = cursor.fetchall()
+    if new_user_id == planned_executor_id or any(
+        new_user_id == row[0] for row in current_exec_rows
+    ):
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    cursor.execute(
+        "UPDATE eas.workflow_instance SET acceptor_id = %s WHERE id = %s",
+        [new_user_id, instance_id],
+    )
+    return acceptor_id, "ACCEPTOR"
+
+
+def _reassign_planned_executor(
+    cursor,
+    *,
+    instance_id: str | None,
+    r_status: str,
+    new_user_id: str,
+    requester_id: str,
+    acceptor_id: str | None,
+    planned_executor_id: str | None,
+    department_id: str,
+    type_id: str,
+) -> tuple[str | None, str]:
+    if not instance_id or r_status != "WAITING_FOR_ACCEPTANCE":
+        raise CommandError("TARGET_IMMUTABLE", status=409)
+
+    if not _is_actor_valid_for_role(
+        cursor,
+        actor_id=new_user_id,
+        role="EXECUTOR",
+        department_id=department_id,
+        type_id=type_id,
+    ):
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    if new_user_id == requester_id or (acceptor_id and new_user_id == acceptor_id):
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    cursor.execute(
+        "SELECT 1 FROM eas.approval_step WHERE instance_id = %s AND assignee_id = %s",
+        [instance_id, new_user_id],
+    )
+    if cursor.fetchone():
+        raise CommandError("ASSIGNEE_INVALID", status=422)
+
+    cursor.execute(
+        _UPDATE_PLANNED_EXECUTOR_SQL,
+        [new_user_id, instance_id],
+    )
+    return planned_executor_id, "EXECUTOR"
+
+
 def reassign_actor(
     *,
     actor: Actor,
@@ -236,252 +523,52 @@ def reassign_actor(
         role_joined_as = "PARTICIPANT"
 
         if target_kind == "APPROVAL_STEP":
-            role_joined_as = "APPROVER"
-            if not instance_id:
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            cursor.execute(
-                """
-                SELECT id::text, assignee_id::text, state
-                FROM eas.approval_step
-                WHERE id = %s AND instance_id = %s
-                FOR UPDATE
-                """,
-                [target_id, instance_id],
-            )
-            step_row = cursor.fetchone()
-            if not step_row:
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            step_id, current_assignee, step_state = step_row
-            if step_state not in ("ACTIVE", "WAITING"):
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            cursor.execute(
-                "SELECT 1 FROM eas.approval_decision WHERE step_id = %s",
-                [step_id],
-            )
-            if cursor.fetchone():
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            if not _is_actor_valid_for_role(
+            old_user_id, role_joined_as = _reassign_approval_step(
                 cursor,
-                actor_id=new_user_id,
-                role="APPROVER",
+                instance_id=instance_id,
+                target_id=target_id,
+                new_user_id=new_user_id,
+                requester_id=requester_id,
+                planned_executor_id=planned_executor_id,
                 department_id=department_id,
                 type_id=type_id,
-            ):
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            # SoD checks
-            if new_user_id == requester_id:
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-            if planned_executor_id and new_user_id == planned_executor_id:
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            cursor.execute(
-                """
-                SELECT 1 FROM eas.approval_step
-                WHERE instance_id = %s AND id <> %s AND assignee_id = %s
-                """,
-                [instance_id, step_id, new_user_id],
             )
-            if cursor.fetchone():
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            cursor.execute(
-                """
-                SELECT 1 FROM eas.execution_attempt
-                WHERE instance_id = %s AND executor_id = %s
-                """,
-                [instance_id, new_user_id],
-            )
-            if cursor.fetchone():
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            old_user_id = current_assignee
-            cursor.execute(
-                "UPDATE eas.approval_step SET assignee_id = %s WHERE id = %s",
-                [new_user_id, step_id],
-            )
-
         elif target_kind == "EXECUTOR":
-            role_joined_as = "EXECUTOR"
-            if not instance_id:
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            cursor.execute(
-                """
-                SELECT id::text, attempt_no, executor_id::text, state
-                FROM eas.execution_attempt
-                WHERE id = %s AND instance_id = %s
-                FOR UPDATE
-                """,
-                [target_id, instance_id],
-            )
-            attempt_row = cursor.fetchone()
-            if not attempt_row:
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            attempt_id, attempt_no, current_exec, attempt_state = attempt_row
-            if attempt_state not in ("READY", "RUNNING") or r_status not in (
-                "READY_FOR_EXECUTION",
-                "IN_PROGRESS",
-            ):
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            if not _is_actor_valid_for_role(
+            old_user_id, role_joined_as, next_status = _reassign_executor(
                 cursor,
-                actor_id=new_user_id,
-                role="EXECUTOR",
+                instance_id=instance_id,
+                target_id=target_id,
+                new_user_id=new_user_id,
+                requester_id=requester_id,
+                acceptor_id=acceptor_id,
+                r_status=r_status,
+                normalized_request_id=normalized_request_id,
                 department_id=department_id,
                 type_id=type_id,
-            ):
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            # SoD checks
-            if new_user_id == requester_id:
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-            if acceptor_id and new_user_id == acceptor_id:
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            cursor.execute(
-                "SELECT 1 FROM eas.approval_step WHERE instance_id = %s AND assignee_id = %s",
-                [instance_id, new_user_id],
             )
-            if cursor.fetchone():
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            old_user_id = current_exec
-
-            if attempt_state == "READY":
-                cursor.execute(
-                    "UPDATE eas.execution_attempt SET executor_id = %s WHERE id = %s",
-                    [new_user_id, attempt_id],
-                )
-                cursor.execute(
-                    _UPDATE_PLANNED_EXECUTOR_SQL,
-                    [new_user_id, instance_id],
-                )
-                next_status = r_status
-            else:  # RUNNING
-                cursor.execute(
-                    """
-                    UPDATE eas.execution_attempt
-                    SET state = 'FINISHED', closure_kind = 'REASSIGNED', closed_at = statement_timestamp()
-                    WHERE id = %s
-                    """,
-                    [attempt_id],
-                )
-                new_attempt_id = str(uuid4())
-                cursor.execute(
-                    """
-                    INSERT INTO eas.execution_attempt(id, request_id, instance_id, attempt_no, executor_id, state)
-                    VALUES (%s, %s, %s, %s, %s, 'READY')
-                    """,
-                    [
-                        new_attempt_id,
-                        normalized_request_id,
-                        instance_id,
-                        attempt_no + 1,
-                        new_user_id,
-                    ],
-                )
-                cursor.execute(
-                    _UPDATE_PLANNED_EXECUTOR_SQL,
-                    [new_user_id, instance_id],
-                )
-                cursor.execute(
-                    """
-                    UPDATE eas.sla_stage
-                    SET attempt_id = %s
-                    WHERE request_id = %s AND closed_at IS NULL
-                    """,
-                    [new_attempt_id, normalized_request_id],
-                )
-                next_status = "READY_FOR_EXECUTION"
-
         elif target_kind == "ACCEPTOR":
-            role_joined_as = "ACCEPTOR"
-            if not instance_id or lifecycle != "C":
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-            if r_status not in (
-                "PENDING_APPROVAL",
-                "READY_FOR_EXECUTION",
-                "IN_PROGRESS",
-                "WAITING_FOR_ACCEPTANCE",
-            ):
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            cursor.execute(
-                """
-                SELECT 1 FROM eas.acceptance_decision ad
-                JOIN eas.execution_attempt a ON a.id = ad.attempt_id
-                WHERE a.instance_id = %s AND a.state IN ('READY', 'RUNNING', 'SUBMITTED')
-                """,
-                [instance_id],
-            )
-            if cursor.fetchone():
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            if not _is_actor_valid_for_role(
+            old_user_id, role_joined_as = _reassign_acceptor(
                 cursor,
-                actor_id=new_user_id,
-                role="ACCEPTOR",
+                instance_id=instance_id,
+                lifecycle=lifecycle,
+                r_status=r_status,
+                new_user_id=new_user_id,
+                planned_executor_id=planned_executor_id,
+                acceptor_id=acceptor_id,
                 department_id=department_id,
                 type_id=type_id,
-            ):
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            cursor.execute(
-                """
-                SELECT executor_id::text FROM eas.execution_attempt
-                WHERE instance_id = %s AND state IN ('READY', 'RUNNING', 'SUBMITTED')
-                """,
-                [instance_id],
             )
-            current_exec_rows = cursor.fetchall()
-            if new_user_id == planned_executor_id or any(
-                new_user_id == row[0] for row in current_exec_rows
-            ):
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            old_user_id = acceptor_id
-            cursor.execute(
-                "UPDATE eas.workflow_instance SET acceptor_id = %s WHERE id = %s",
-                [new_user_id, instance_id],
-            )
-
         elif target_kind == "PLANNED_EXECUTOR":
-            role_joined_as = "EXECUTOR"
-            if not instance_id or r_status != "WAITING_FOR_ACCEPTANCE":
-                raise CommandError("TARGET_IMMUTABLE", status=409)
-
-            if not _is_actor_valid_for_role(
+            old_user_id, role_joined_as = _reassign_planned_executor(
                 cursor,
-                actor_id=new_user_id,
-                role="EXECUTOR",
+                instance_id=instance_id,
+                r_status=r_status,
+                new_user_id=new_user_id,
+                requester_id=requester_id,
+                acceptor_id=acceptor_id,
+                planned_executor_id=planned_executor_id,
                 department_id=department_id,
                 type_id=type_id,
-            ):
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            if new_user_id == requester_id or (
-                acceptor_id and new_user_id == acceptor_id
-            ):
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            cursor.execute(
-                "SELECT 1 FROM eas.approval_step WHERE instance_id = %s AND assignee_id = %s",
-                [instance_id, new_user_id],
-            )
-            if cursor.fetchone():
-                raise CommandError("ASSIGNEE_INVALID", status=422)
-
-            old_user_id = planned_executor_id
-            cursor.execute(
-                _UPDATE_PLANNED_EXECUTOR_SQL,
-                [new_user_id, instance_id],
             )
 
         cursor.execute(
