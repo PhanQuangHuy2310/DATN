@@ -9,15 +9,14 @@ Dùng để:
 
 Chạy: python training/evaluate_model.py
 """
-import pandas as pd
-import numpy as np
 import json
-import joblib
-import time
 import os
+import time
 
-from sklearn.metrics import classification_report, accuracy_score, f1_score
-
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.metrics import accuracy_score, classification_report, f1_score
 
 MODEL_PATH = "models/risk_model.pkl"
 DATA_PATH = "training/data/synthetic_requests.csv"
@@ -45,11 +44,11 @@ def main():
 
     # --- Kiểm tra file tồn tại ---
     if not os.path.exists(MODEL_PATH):
-        print(f"❌ Model chưa train. Chạy: python training/train_risk_model.py")
+        print("❌ Model chưa train. Chạy: python training/train_risk_model.py")
         return
 
     if not os.path.exists(DATA_PATH):
-        print(f"❌ Chưa có data. Chạy: python training/generate_synthetic_data.py")
+        print("❌ Chưa có data. Chạy: python training/generate_synthetic_data.py")
         return
 
     # --- Load ---
@@ -64,7 +63,7 @@ def main():
 
     X = df[feature_cols].values.astype(np.float32)
     y_true = df["risk_score"].values.astype(int)
-    y_true_0 = y_true - 1
+    y_true - 1
 
     # --- XGBoost predict ---
     print("\n🤖 XGBoost predictions...")
@@ -116,7 +115,7 @@ def main():
             print(f"   {rtype:25s}: {count:3d}/{total:3d} ({count/total*100:.0f}% sai)")
 
     # --- Latency test ---
-    print(f"\n⚡ Latency Test (1000 requests đơn lẻ):")
+    print("\n⚡ Latency Test (1000 requests đơn lẻ):")
     single_x = X[0:1]
     times = []
     for _ in range(1000):
@@ -131,7 +130,7 @@ def main():
     print(f"   ADR-007 target: < 50ms — {'✅ ĐẠT' if p95 < 50 else '❌ CHƯA ĐẠT'}")
 
     # --- Feature Importance ---
-    print(f"\n🔍 Top 10 Feature Importance:")
+    print("\n🔍 Top 10 Feature Importance:")
     importance = dict(zip(feature_cols, model.feature_importances_))
     top10 = sorted(importance.items(), key=lambda x: -x[1])[:10]
     for feat, imp in top10:
@@ -139,7 +138,7 @@ def main():
         print(f"   {feat:35s}: {imp:.4f}  {bar}")
 
     # --- Auto-approve accuracy ---
-    print(f"\n🤖 Auto-Approve Accuracy:")
+    print("\n🤖 Auto-Approve Accuracy:")
     can_auto_approve_mask = (y_true <= 2) & (df["lifecycle_template"] == "A")
     should_not_mask = (y_true > 2) | (df["lifecycle_template"] != "A")
 

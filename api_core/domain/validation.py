@@ -157,7 +157,7 @@ def _validate_leave_rules(
     today: date | None,
     errors: dict[str, list[str]],
 ) -> None:
-    if all(k in normalized for k in ("start_date", "end_date")):
+    if "start_date" in normalized and "end_date" in normalized:
         try:
             start = date.fromisoformat(normalized["start_date"])
             end = date.fromisoformat(normalized["end_date"])
@@ -170,14 +170,35 @@ def _validate_leave_rules(
                 _add(errors, "end_date", "RANGE_EXCEEDS_30_DAYS")
         except ValueError:
             pass
+    if "handover_user_id" in normalized:
         try:
             normalized_requester_id = str(UUID(requester_id))
+            if normalized.get("handover_user_id") == normalized_requester_id:
+                _add(errors, "handover_user_id", "REQUESTER_CANNOT_BE_HANDOVER")
         except (ValueError, TypeError, AttributeError):
             raise PayloadValidationError(
                 {"requester_id": ["INVALID_INTERNAL_ACTOR_ID"]}
             ) from None
-        if normalized.get("handover_user_id") == normalized_requester_id:
-            _add(errors, "handover_user_id", "REQUESTER_CANNOT_BE_HANDOVER")
+
+
+def _normalize_payload(
+    payload: dict[str, Any],
+    properties: dict[str, Any],
+    errors: dict[str, list[str]],
+) -> dict[str, Any]:
+    unknown = sorted(set(payload) - set(properties))
+    for field in unknown:
+        _add(errors, field, "UNKNOWN_FIELD")
+
+    normalized: dict[str, Any] = {}
+    for field, value in payload.items():
+        spec = properties.get(field)
+        if not isinstance(spec, dict):
+            continue
+        clean_val, is_valid = _validate_field_value(field, value, spec, errors)
+        if is_valid and clean_val is not None:
+            normalized[field] = clean_val
+    return normalized
 
 
 def validate_payload(
@@ -194,7 +215,6 @@ def validate_payload(
     unsupported field types fail closed during config publication; this
     command validates only already-published schemas from that profile.
     """
-
     errors: dict[str, list[str]] = {}
     if not isinstance(payload, dict):
         raise PayloadValidationError({"$": ["OBJECT_REQUIRED"]})
@@ -203,21 +223,11 @@ def validate_payload(
 
     properties, required = _validate_schema_structure(form_schema)
 
-    unknown = sorted(set(payload) - set(properties))
-    for field in unknown:
-        _add(errors, field, "UNKNOWN_FIELD")
     for field in required:
         if field not in payload:
             _add(errors, str(field), "REQUIRED")
 
-    normalized: dict[str, Any] = {}
-    for field, value in payload.items():
-        spec = properties.get(field)
-        if not isinstance(spec, dict):
-            continue
-        clean_val, is_valid = _validate_field_value(field, value, spec, errors)
-        if is_valid and clean_val is not None:
-            normalized[field] = clean_val
+    normalized = _normalize_payload(payload, properties, errors)
 
     if type_code == "LEAVE":
         _validate_leave_rules(normalized, requester_id, today, errors)
@@ -255,44 +265,10 @@ def validate_draft_payload(
     ):
         raise PayloadValidationError({"$schema": ["UNSUPPORTED_SCHEMA"]})
 
-    unknown = sorted(set(payload) - set(properties))
-    for field in unknown:
-        _add(errors, field, "UNKNOWN_FIELD")
-
-    normalized: dict[str, Any] = {}
-    for field, value in payload.items():
-        spec = properties.get(field)
-        if not isinstance(spec, dict):
-            continue
-        clean_val, is_valid = _validate_field_value(field, value, spec, errors)
-        if is_valid and clean_val is not None:
-            normalized[field] = clean_val
+    normalized = _normalize_payload(payload, properties, errors)
 
     if type_code == "LEAVE":
-        if "start_date" in normalized and "end_date" in normalized:
-            try:
-                start = date.fromisoformat(normalized["start_date"])
-                end = date.fromisoformat(normalized["end_date"])
-                business_today = (
-                    today or datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
-                )
-                if start < business_today:
-                    _add(errors, "start_date", "DATE_IN_PAST")
-                if end < start:
-                    _add(errors, "end_date", "END_BEFORE_START")
-                if (end - start).days + 1 > 30:
-                    _add(errors, "end_date", "RANGE_EXCEEDS_30_DAYS")
-            except ValueError:
-                pass
-        if "handover_user_id" in normalized:
-            try:
-                normalized_requester_id = str(UUID(requester_id))
-                if normalized.get("handover_user_id") == normalized_requester_id:
-                    _add(errors, "handover_user_id", "REQUESTER_CANNOT_BE_HANDOVER")
-            except (ValueError, TypeError, AttributeError):
-                raise PayloadValidationError(
-                    {"requester_id": ["INVALID_INTERNAL_ACTOR_ID"]}
-                ) from None
+        _validate_leave_rules(normalized, requester_id, today, errors)
 
     if type_code in {"LEAVE", "ACCESS"} and "amount_vnd" in normalized:
         _add(errors, "amount_vnd", "AMOUNT_NOT_ALLOWED")
@@ -460,33 +436,18 @@ def _validate_sla_profile_config(
             )
 
 
-def validate_config_release_payload(
-    *,
-    lifecycle: str,
-    form_schema: dict[str, Any],
-    route_rules: dict[str, Any],
-    actor_bindings: dict[str, Any],
-    sla_profile: dict[str, Any],
-) -> list[str]:
-    """Validate 4 configuration release JSON documents against guard_release rules."""
+def _check_release_docs_version(jsons: dict[str, Any]) -> list[str]:
     errs: list[str] = []
-    jsons = {
-        "form_schema": form_schema,
-        "route_rules": route_rules,
-        "actor_bindings": actor_bindings,
-        "sla_profile": sla_profile,
-    }
     for name, doc in jsons.items():
         if not isinstance(doc, dict):
             errs.append(f"{name}:MUST_BE_OBJECT")
             continue
         if doc.get("schema_version") != 1:
             errs.append(f"{name}:SCHEMA_VERSION_MUST_BE_1")
+    return errs
 
-    if errs:
-        return errs
 
-    # form_schema validation
+def _check_form_schema_doc(form_schema: dict[str, Any], errs: list[str]) -> None:
     if form_schema.get("type") != "object":
         errs.append("form_schema:type must be object")
     if form_schema.get("additionalProperties") is not False:
@@ -502,15 +463,33 @@ def validate_config_release_payload(
             if not isinstance(req_field, str) or req_field not in properties:
                 errs.append(f"form_schema:required field {req_field} not in properties")
 
-    # actor_bindings validation
+
+def validate_config_release_payload(
+    *,
+    lifecycle: str,
+    form_schema: dict[str, Any],
+    route_rules: dict[str, Any],
+    actor_bindings: dict[str, Any],
+    sla_profile: dict[str, Any],
+) -> list[str]:
+    """Validate 4 configuration release JSON documents against guard_release rules."""
+    jsons = {
+        "form_schema": form_schema,
+        "route_rules": route_rules,
+        "actor_bindings": actor_bindings,
+        "sla_profile": sla_profile,
+    }
+    errs = _check_release_docs_version(jsons)
+    if errs:
+        return errs
+
+    _check_form_schema_doc(form_schema, errs)
+
     departments = actor_bindings.get("departments")
     if not isinstance(departments, dict):
         errs.append("actor_bindings:departments must be object")
 
-    # route_rules validation
     _validate_route_rules_config(route_rules, lifecycle, errs)
-
-    # sla_profile validation
     _validate_sla_profile_config(sla_profile, lifecycle, errs)
 
     return errs

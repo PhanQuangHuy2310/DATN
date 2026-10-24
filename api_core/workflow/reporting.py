@@ -8,6 +8,7 @@ from django.db import connection, transaction
 
 from api_core.audit import canonical_sha256
 from api_core.authn.service import Actor
+from api_core.workflow.constants import ERR_REQUEST_NOT_FOUND
 from api_core.workflow.service import CommandError, _utc_text
 
 
@@ -251,7 +252,7 @@ def get_request_audit_events(actor: Actor, request_id: str) -> dict[str, Any]:
     with connection.cursor() as cursor:
         cursor.execute(sql, [norm_id, actor.id, actor.id, actor.id])
         if not cursor.fetchone():
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
 
         cursor.execute(
             """
@@ -553,7 +554,7 @@ def get_request_audit_verify(actor: Actor, request_id: str) -> dict[str, Any]:
         )
         row = cursor.fetchone()
         if not row:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
 
         _r_id, dept_id, type_id = row
         cursor.execute(

@@ -20,6 +20,11 @@ from api_core.domain import (
     validate_draft_payload,
     validate_payload,
 )
+from api_core.workflow.constants import (
+    ERR_REQUEST_NOT_FOUND,
+    ERR_STATE_CONFLICT,
+    ERR_VERSION_CONFLICT,
+)
 
 HTML_TAG = re.compile(r"<[^>]+>")
 
@@ -313,7 +318,7 @@ def _execute_idempotent(
                 )
                 r_row = cursor.fetchone()
                 if not r_row:
-                    raise CommandError("REQUEST_NOT_FOUND", status=404)
+                    raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
                 r_status, r_requester_id, is_active_participant, is_user_active = r_row
                 if not is_user_active:
                     raise CommandError("FORBIDDEN", status=403)
@@ -610,7 +615,7 @@ def update_draft(
         )
         row = cursor.fetchone()
         if not row:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
         (
             status,
             lock_version,
@@ -624,9 +629,9 @@ def update_draft(
         ) = row
 
         if status not in {"DRAFT", "NEEDS_INFO"}:
-            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+            raise CommandError(ERR_STATE_CONFLICT, status=409)
         if lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
 
         _authorize(
             cursor,
@@ -732,9 +737,9 @@ def _validate_execution_issue_input(
 def _validate_execution_issue_state(kind: str, status: str, attempt_state: str) -> None:
     if kind == "UNABLE_TO_CLAIM":
         if status != "READY_FOR_EXECUTION" or attempt_state != "READY":
-            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+            raise CommandError(ERR_STATE_CONFLICT, status=409)
     elif kind == "BLOCKED" and (status != "IN_PROGRESS" or attempt_state != "RUNNING"):
-        raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+        raise CommandError(ERR_STATE_CONFLICT, status=409)
 
 
 def report_execution_issue(
@@ -772,7 +777,7 @@ def report_execution_issue(
         )
         row = cursor.fetchone()
         if not row:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
         (
             status,
             lock_version,
@@ -785,7 +790,7 @@ def report_execution_issue(
         ) = row
 
         if lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
 
         if executor_id != actor.id:
             raise CommandError("FORBIDDEN", status=403)
@@ -1071,18 +1076,18 @@ def _upsert_submission_request(
         )
         draft = cursor.fetchone()
         if not draft:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
         request_code, draft_status, draft_version, draft_type_id = draft
         if draft_status not in {"DRAFT", "NEEDS_INFO"}:
-            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+            raise CommandError(ERR_STATE_CONFLICT, status=409)
         if draft_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
         if draft_type_id != type_id:
             raise CommandError("REQUEST_TYPE_CONFLICT", status=409)
         return request_id, request_code, draft_version
 
     if expected_version != 0:
-        raise CommandError("VERSION_CONFLICT", status=409)
+        raise CommandError(ERR_VERSION_CONFLICT, status=409)
     request_id = str(uuid4())
     cursor.execute(
         """
@@ -1576,7 +1581,7 @@ def decide_approval(
         )
         current = cursor.fetchone()
         if not current:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
         (
             status,
             lock_version,
@@ -1589,9 +1594,9 @@ def decide_approval(
             sla,
         ) = current
         if status != "PENDING_APPROVAL":
-            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+            raise CommandError(ERR_STATE_CONFLICT, status=409)
         if lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
         cursor.execute(
             """
             SELECT id::text,step_no,assignee_id::text
@@ -1762,7 +1767,7 @@ def start_execution(
         )
         row = cursor.fetchone()
         if not row:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
         (
             status,
             lock_version,
@@ -1774,9 +1779,9 @@ def start_execution(
             attempt_state,
         ) = row
         if status != "READY_FOR_EXECUTION" or attempt_state != "READY":
-            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+            raise CommandError(ERR_STATE_CONFLICT, status=409)
         if lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
         if executor_id != actor.id:
             raise CommandError("FORBIDDEN", status=403)
         _authorize(
@@ -1951,7 +1956,7 @@ def submit_execution(
         )
         row = cursor.fetchone()
         if not row:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
         (
             status,
             lock_version,
@@ -1966,9 +1971,9 @@ def submit_execution(
             acceptor_id,
         ) = row
         if status != "IN_PROGRESS" or attempt_state != "RUNNING":
-            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+            raise CommandError(ERR_STATE_CONFLICT, status=409)
         if lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
         if executor_id != actor.id:
             raise CommandError("FORBIDDEN", status=403)
         _authorize(
@@ -2169,7 +2174,7 @@ def decide_acceptance(
         )
         row = cursor.fetchone()
         if not row:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
         (
             status,
             lock_version,
@@ -2184,9 +2189,9 @@ def decide_acceptance(
             planned_executor_id,
         ) = row
         if status != "WAITING_FOR_ACCEPTANCE":
-            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+            raise CommandError(ERR_STATE_CONFLICT, status=409)
         if lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
         if acceptor_id != actor.id or executor_id == actor.id:
             raise CommandError("FORBIDDEN", status=403)
         _authorize(
@@ -2314,14 +2319,14 @@ def cancel_request(
         )
         row = cursor.fetchone()
         if not row:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
         status, lock_version, requester_id, revision_id = row
         if requester_id != actor.id:
             raise CommandError("FORBIDDEN", status=403)
         if status not in {"DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"}:
-            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+            raise CommandError(ERR_STATE_CONFLICT, status=409)
         if lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
         now = datetime.now(timezone.utc)
         if revision_id:
             cursor.execute(

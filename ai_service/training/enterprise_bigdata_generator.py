@@ -59,15 +59,11 @@ import tempfile
 import time
 import unicodedata
 from collections import Counter
-from concurrent.futures import ProcessPoolExecutor, wait, FIRST_COMPLETED
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from pathlib import Path
 
 OUTPUT = 'ai_service/training/data/partitions'
-HEADER = ('request_id domain department request_type lifecycle_template title '
-          'description amount_vnd budget_remaining_vnd has_receipt num_attachments '
-          'user_role user_tenure_months past_requests_count past_rejection_rate '
-          'is_off_hours is_split_amount_suspect is_over_budget is_template_matched '
-          'priority_level risk_score').split()
+HEADER = ['request_id', 'domain', 'department', 'request_type', 'lifecycle_template', 'title', 'description', 'amount_vnd', 'budget_remaining_vnd', 'has_receipt', 'num_attachments', 'user_role', 'user_tenure_months', 'past_requests_count', 'past_rejection_rate', 'is_off_hours', 'is_split_amount_suspect', 'is_over_budget', 'is_template_matched', 'priority_level', 'risk_score']
 
 # type: domain, default lifecycle, min/normal max/extreme max (million VND).
 SPEC = {

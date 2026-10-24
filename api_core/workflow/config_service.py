@@ -10,6 +10,7 @@ from psycopg.types.json import Jsonb
 from api_core.audit import canonical_sha256
 from api_core.authn.service import Actor
 from api_core.domain.validation import validate_config_release_payload
+from api_core.workflow.constants import ERR_VERSION_CONFLICT
 from api_core.workflow.service import (
     CommandError,
     CommandResult,
@@ -361,7 +362,7 @@ def update_draft_release(
             raise CommandError("RELEASE_IMMUTABLE", status=409)
 
         if lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
 
         new_form = body.get("form_schema", form_schema)
         new_routes = body.get("route_rules", route_rules)
@@ -545,7 +546,7 @@ def publish_config_release(
             raise CommandError("RELEASE_IMMUTABLE", status=409)
 
         if lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
 
         errors = validate_config_release_payload(
             lifecycle=lifecycle,

@@ -14,20 +14,25 @@ Hai nhiệm vụ chính:
 Cách chạy:
   python training/train_bigdata_models.py
 """
-import os
 import json
+import os
 import time
+from datetime import datetime, timezone
+
 import joblib
 import numpy as np
 import pandas as pd
-from datetime import datetime
-
-from sklearn.model_selection import train_test_split
+import xgboost as xgb
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+)
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-import xgboost as xgb
 
 # ---------------------------------------------------------------------------
 # Cấu hình đường dẫn
@@ -51,7 +56,7 @@ def train_nlp_large():
     print(" 1/2. HUẤN LUYỆN NLP CLASSIFIER TRÊN TẬP VĂN BẢN TIẾNG VIỆT LỚN")
     print("=" * 65)
 
-    print(f"[*] Đang tải 150.000 mẫu văn bản từ master dataset...")
+    print("[*] Đang tải 150.000 mẫu văn bản từ master dataset...")
     # Đọc 150.000 dòng văn bản mẫu để huấn luyện TF-IDF siêu nhanh (<30s) mà bao phủ 100% từ vựng
     df = pd.read_csv(MASTER_CSV, nrows=150000)
     print(f"[+] Đã tải {len(df):,} mẫu.")
@@ -96,9 +101,9 @@ def train_nlp_large():
     joblib.dump(clf_tpl, os.path.join(MODELS_DIR, "nlp_template_model.pkl"))
 
     labels_meta = {
-        "request_types": sorted(list(set(y_req_type))),
-        "departments": sorted(list(set(y_dept))),
-        "templates": sorted(list(set(y_tpl))),
+        "request_types": sorted(set(y_req_type)),
+        "departments": sorted(set(y_dept)),
+        "templates": sorted(set(y_tpl)),
     }
     with open(os.path.join(MODELS_DIR, "nlp_labels.json"), "w", encoding="utf-8") as f:
         json.dump(labels_meta, f, indent=2, ensure_ascii=False)
@@ -236,8 +241,8 @@ def train_xgboost_master():
         json.dump(encoders, f, indent=2, ensure_ascii=False)
 
     with open(REPORT_PATH, "w", encoding="utf-8") as f:
-        f.write(f"BÁO CÁO HUẤN LUYỆN DỮ LIỆU LỚN (1.000.000 MẪU)\n")
-        f.write(f"Thời gian: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write("BÁO CÁO HUẤN LUYỆN DỮ LIỆU LỚN (1.000.000 MẪU)\n")
+        f.write(f"Thời gian: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Số lượng mẫu test: {len(y_test):,}\n")
         f.write(f"Accuracy: {acc*100:.2f}%\n")
         f.write(f"Macro F1: {f1_macro:.4f}\n")

@@ -18,17 +18,18 @@ Output (tất cả vào ai_service/models/):
 Cách chạy:
   python training/train_domain_models.py
 """
-import os
 import json
+import os
 import time
+from datetime import datetime, timezone
+
 import joblib
 import numpy as np
 import pandas as pd
-from datetime import datetime
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score, f1_score
-from sklearn.preprocessing import LabelEncoder
 import xgboost as xgb
+from sklearn.metrics import accuracy_score, classification_report, f1_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -126,7 +127,7 @@ def train_one_domain(name: str, cfg: dict, report_lines: list):
         return
 
     t0 = time.time()
-    df, encoders = load_and_engineer(csv_path)
+    df, _encoders = load_and_engineer(csv_path)
     print(f"[+] Đã tải và xử lý {len(df):,} mẫu trong {time.time()-t0:.2f}s")
 
     # Chọn features tối ưu theo domain
@@ -217,7 +218,7 @@ def main():
 
     report_lines = [
         "BÁO CÁO HUẤN LUYỆN MÔ HÌNH CHUYÊN BIỆT THEO DOMAIN",
-        f"Thời gian: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n",
+        f"Thời gian: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}\n",
     ]
 
     registry = {}

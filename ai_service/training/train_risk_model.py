@@ -21,17 +21,22 @@ Output:
 Cách chạy:
   python training/train_risk_model.py
 """
-import os
 import json
+import os
+from datetime import datetime, timezone
+
 import joblib
 import numpy as np
 import pandas as pd
-from datetime import datetime
-
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
-from sklearn.preprocessing import LabelEncoder
 import xgboost as xgb
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+)
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 # ---------------------------------------------------------------------------
 # Cấu hình đường dẫn
@@ -223,7 +228,7 @@ def evaluate_and_save(model, X_test, y_test, feature_cols, encoders):
 
     with open(REPORT_PATH, "w", encoding="utf-8") as f:
         f.write("BÁO CÁO HUẤN LUYỆN MÔ HÌNH XGBOOST RISK & FRAUD SCORING (50,000 MẪU)\n")
-        f.write(f"Thời gian: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Thời gian: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Số lượng mẫu test: {len(y_test):,}\n")
         f.write(f"Accuracy: {acc*100:.2f}%\n")
         f.write(f"Macro F1: {f1_macro:.4f}\n")

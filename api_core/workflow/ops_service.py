@@ -8,6 +8,12 @@ from django.db import connection
 from psycopg.types.json import Jsonb
 
 from api_core.authn.service import Actor
+from api_core.workflow.constants import (
+    ERR_ASSIGNEE_INVALID,
+    ERR_REQUEST_NOT_FOUND,
+    ERR_TARGET_IMMUTABLE,
+    ERR_VERSION_CONFLICT,
+)
 from api_core.workflow.service import (
     CommandError,
     CommandResult,
@@ -169,7 +175,7 @@ def _reassign_approval_step(
     type_id: str,
 ) -> tuple[str, str]:
     if not instance_id:
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     cursor.execute(
         """
@@ -182,18 +188,18 @@ def _reassign_approval_step(
     )
     step_row = cursor.fetchone()
     if not step_row:
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     step_id, current_assignee, step_state = step_row
     if step_state not in ("ACTIVE", "WAITING"):
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     cursor.execute(
         "SELECT 1 FROM eas.approval_decision WHERE step_id = %s",
         [step_id],
     )
     if cursor.fetchone():
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     if not _is_actor_valid_for_role(
         cursor,
@@ -202,12 +208,12 @@ def _reassign_approval_step(
         department_id=department_id,
         type_id=type_id,
     ):
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     if new_user_id == requester_id or (
         planned_executor_id and new_user_id == planned_executor_id
     ):
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     cursor.execute(
         """
@@ -217,7 +223,7 @@ def _reassign_approval_step(
         [instance_id, step_id, new_user_id],
     )
     if cursor.fetchone():
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     cursor.execute(
         """
@@ -227,7 +233,7 @@ def _reassign_approval_step(
         [instance_id, new_user_id],
     )
     if cursor.fetchone():
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     cursor.execute(
         "UPDATE eas.approval_step SET assignee_id = %s WHERE id = %s",
@@ -250,7 +256,7 @@ def _reassign_executor(
     type_id: str,
 ) -> tuple[str, str, str]:
     if not instance_id:
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     cursor.execute(
         """
@@ -263,14 +269,14 @@ def _reassign_executor(
     )
     attempt_row = cursor.fetchone()
     if not attempt_row:
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     attempt_id, attempt_no, current_exec, attempt_state = attempt_row
     if attempt_state not in ("READY", "RUNNING") or r_status not in (
         "READY_FOR_EXECUTION",
         "IN_PROGRESS",
     ):
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     if not _is_actor_valid_for_role(
         cursor,
@@ -279,17 +285,17 @@ def _reassign_executor(
         department_id=department_id,
         type_id=type_id,
     ):
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     if new_user_id == requester_id or (acceptor_id and new_user_id == acceptor_id):
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     cursor.execute(
         "SELECT 1 FROM eas.approval_step WHERE instance_id = %s AND assignee_id = %s",
         [instance_id, new_user_id],
     )
     if cursor.fetchone():
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     if attempt_state == "READY":
         cursor.execute(
@@ -354,14 +360,14 @@ def _reassign_acceptor(
     type_id: str,
 ) -> tuple[str | None, str]:
     if not instance_id or lifecycle != "C":
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
     if r_status not in (
         "PENDING_APPROVAL",
         "READY_FOR_EXECUTION",
         "IN_PROGRESS",
         "WAITING_FOR_ACCEPTANCE",
     ):
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     cursor.execute(
         """
@@ -372,7 +378,7 @@ def _reassign_acceptor(
         [instance_id],
     )
     if cursor.fetchone():
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     if not _is_actor_valid_for_role(
         cursor,
@@ -381,7 +387,7 @@ def _reassign_acceptor(
         department_id=department_id,
         type_id=type_id,
     ):
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     cursor.execute(
         """
@@ -394,7 +400,7 @@ def _reassign_acceptor(
     if new_user_id == planned_executor_id or any(
         new_user_id == row[0] for row in current_exec_rows
     ):
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     cursor.execute(
         "UPDATE eas.workflow_instance SET acceptor_id = %s WHERE id = %s",
@@ -416,7 +422,7 @@ def _reassign_planned_executor(
     type_id: str,
 ) -> tuple[str | None, str]:
     if not instance_id or r_status != "WAITING_FOR_ACCEPTANCE":
-        raise CommandError("TARGET_IMMUTABLE", status=409)
+        raise CommandError(ERR_TARGET_IMMUTABLE, status=409)
 
     if not _is_actor_valid_for_role(
         cursor,
@@ -425,17 +431,17 @@ def _reassign_planned_executor(
         department_id=department_id,
         type_id=type_id,
     ):
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     if new_user_id == requester_id or (acceptor_id and new_user_id == acceptor_id):
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     cursor.execute(
         "SELECT 1 FROM eas.approval_step WHERE instance_id = %s AND assignee_id = %s",
         [instance_id, new_user_id],
     )
     if cursor.fetchone():
-        raise CommandError("ASSIGNEE_INVALID", status=422)
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
     cursor.execute(
         _UPDATE_PLANNED_EXECUTOR_SQL,
@@ -484,7 +490,7 @@ def reassign_actor(
         )
         req_row = cursor.fetchone()
         if not req_row:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
 
         (
             _r_id,
@@ -508,7 +514,7 @@ def reassign_actor(
         )
 
         if r_lock_version != expected_version:
-            raise CommandError("VERSION_CONFLICT", status=409)
+            raise CommandError(ERR_VERSION_CONFLICT, status=409)
 
         cursor.execute(
             "SELECT is_active FROM eas.app_user WHERE id = %s",
@@ -516,7 +522,7 @@ def reassign_actor(
         )
         user_row = cursor.fetchone()
         if not user_row or not user_row[0]:
-            raise CommandError("ASSIGNEE_INVALID", status=422)
+            raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
 
         next_status = r_status
         old_user_id: str | None = None

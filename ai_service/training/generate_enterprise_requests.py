@@ -33,11 +33,7 @@ from pathlib import Path
 
 N_SAMPLES = 30000  # Change to 50000, or pass --n-samples 50000.
 OUTPUT = 'ai_service/training/data/enterprise_requests_dataset_large.csv'
-COLUMNS = ('request_id title description department request_type '
-           'lifecycle_template amount_vnd budget_remaining_vnd has_receipt '
-           'num_attachments user_role user_tenure_months past_requests_count '
-           'past_rejection_rate is_off_hours is_split_amount_suspect '
-           'is_over_budget is_template_matched priority_level risk_score').split()
+COLUMNS = ['request_id', 'title', 'description', 'department', 'request_type', 'lifecycle_template', 'amount_vnd', 'budget_remaining_vnd', 'has_receipt', 'num_attachments', 'user_role', 'user_tenure_months', 'past_requests_count', 'past_rejection_rate', 'is_off_hours', 'is_split_amount_suspect', 'is_over_budget', 'is_template_matched', 'priority_level', 'risk_score']
 
 # type: base lifecycle, min/typical max/extreme max in MILLION VND, phrases.
 SPECS = {
@@ -210,7 +206,7 @@ def make_row(t, rng):
     if split:
         threshold = rng.choice([20000000, 50000000, 100000000])
         amount = round(threshold * rng.uniform(.90, .995) / 10000) * 10000
-    dept_budget = dict(hr=120, it=500, finance=900, marketing=350, sales=300, operations=600, legal=150)[dept]
+    dept_budget = {'hr': 120, 'it': 500, 'finance': 900, 'marketing': 350, 'sales': 300, 'operations': 600, 'legal': 150}[dept]
     budget = min(3000000000, round(rng.lognormvariate(0, .8) * dept_budget * 100) * 10000)
     if rng.random() < .025:
         budget = 0
@@ -234,13 +230,13 @@ def make_row(t, rng):
         lifecycle = 'C'
     elif lifecycle == 'A' and amount > 5000000:
         lifecycle = 'B'
-    x = dict(request_id='', title='', description='', department=dept,
-      request_type=t, lifecycle_template=lifecycle, amount_vnd=amount,
-      budget_remaining_vnd=budget, has_receipt=receipt, num_attachments=attachments,
-      user_role=role, user_tenure_months=tenure, past_requests_count=count,
-      past_rejection_rate=rate, is_off_hours=off, is_split_amount_suspect=split,
-      is_over_budget=int(amount > budget), is_template_matched=int(rng.random() < .92),
-      priority_level=pressure, risk_score=0)
+    x = {'request_id': '', 'title': '', 'description': '', 'department': dept,
+      'request_type': t, 'lifecycle_template': lifecycle, 'amount_vnd': amount,
+      'budget_remaining_vnd': budget, 'has_receipt': receipt, 'num_attachments': attachments,
+      'user_role': role, 'user_tenure_months': tenure, 'past_requests_count': count,
+      'past_rejection_rate': rate, 'is_off_hours': off, 'is_split_amount_suspect': split,
+      'is_over_budget': int(amount > budget), 'is_template_matched': int(rng.random() < .92),
+      'priority_level': pressure, 'risk_score': 0}
     x['risk_score'] = score_risk(x)
     return x
 
@@ -309,7 +305,7 @@ def generate_dataset(n_samples=N_SAMPLES, seed=20261003, noise_rate=.06, output=
         print(f'\n{column:<26} | {"Số mẫu":>8} | {"Tỷ lệ":>7}')
         print('-'*49)
         for value, count in sorted(Counter(x[column] for x in rows).items()):
-            print(f'{str(value):<26} | {count:>8,} | {count/n_samples:>6.2%}')
+            print(f'{value!s:<26} | {count:>8,} | {count/n_samples:>6.2%}')
     print('\nKiểm tra ràng buộc: PASS; cặp title/description trùng: 0')
     for flag in ['is_split_amount_suspect','is_over_budget','is_off_hours']:
         print(f'{flag}: {sum(x[flag] for x in rows):,}')

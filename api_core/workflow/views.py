@@ -23,6 +23,7 @@ from api_core.workflow.config_service import (
     update_draft_release,
     validate_release_candidate,
 )
+from api_core.workflow.constants import ERR_REQUEST_NOT_FOUND
 from api_core.workflow.ops_service import (
     list_ops_metadata,
     reassign_actor,
@@ -219,7 +220,7 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
     try:
         req_uuid = str(UUID(request_id))
     except (ValueError, TypeError, AttributeError):
-        return api_error(request, "REQUEST_NOT_FOUND", status=404)
+        return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
     with connection.cursor() as cursor:
         cursor.execute(
@@ -259,7 +260,7 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
         )
         row = cursor.fetchone()
         if not row:
-            return api_error(request, "REQUEST_NOT_FOUND", status=404)
+            return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
         cursor.execute(
             """
@@ -525,7 +526,7 @@ def revisions_list(request: HttpRequest, request_id: str) -> JsonResponse:
     try:
         req_uuid = str(UUID(request_id))
     except (ValueError, TypeError, AttributeError):
-        return api_error(request, "REQUEST_NOT_FOUND", status=404)
+        return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
     with connection.cursor() as cursor:
         cursor.execute(
@@ -560,7 +561,7 @@ def revisions_list(request: HttpRequest, request_id: str) -> JsonResponse:
             [req_uuid, request.actor.id, request.actor.id, request.actor.id],
         )
         if not cursor.fetchone():
-            return api_error(request, "REQUEST_NOT_FOUND", status=404)
+            return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
         cursor.execute(
             """
@@ -661,7 +662,7 @@ def revision_detail(
             [req_uuid, request.actor.id, request.actor.id, request.actor.id],
         )
         if not cursor.fetchone():
-            return api_error(request, "REQUEST_NOT_FOUND", status=404)
+            return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
         cursor.execute(
             """

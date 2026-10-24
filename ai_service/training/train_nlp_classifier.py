@@ -24,17 +24,17 @@ Output files:
 Cách chạy:
   python training/train_nlp_classifier.py
 """
-import os
 import json
+import os
+from datetime import datetime, timezone
+
 import joblib
 import numpy as np
 import pandas as pd
-from datetime import datetime
-
-from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, classification_report, f1_score
+from sklearn.model_selection import train_test_split
 
 # ---------------------------------------------------------------------------
 # Cấu hình đường dẫn
@@ -90,8 +90,8 @@ def train_nlp_models():
     print(f"[+] Kích thước ma trận TF-IDF: {X_train_vec.shape}")
 
     reports = []
-    reports.append(f"BÁO CÁO ĐÁNH GIÁ MÔ HÌNH NLP PHÂN LOẠI YÊU CẦU")
-    reports.append(f"Thời gian: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    reports.append("BÁO CÁO ĐÁNH GIÁ MÔ HÌNH NLP PHÂN LOẠI YÊU CẦU")
+    reports.append(f"Thời gian: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}")
     reports.append(f"Tổng số mẫu: {len(df):,} | Test: {len(X_test_text):,}\n")
 
     # -----------------------------------------------------------------------
@@ -158,9 +158,9 @@ def train_nlp_models():
     joblib.dump(clf_template, os.path.join(MODELS_DIR, "nlp_template_model.pkl"))
 
     labels_meta = {
-        "request_types": sorted(list(set(y_req_type))),
-        "departments": sorted(list(set(y_dept))),
-        "templates": sorted(list(set(y_template))),
+        "request_types": sorted(set(y_req_type)),
+        "departments": sorted(set(y_dept)),
+        "templates": sorted(set(y_template)),
     }
     with open(os.path.join(MODELS_DIR, "nlp_labels.json"), "w", encoding="utf-8") as f:
         json.dump(labels_meta, f, indent=2, ensure_ascii=False)

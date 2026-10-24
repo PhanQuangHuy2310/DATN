@@ -8,11 +8,11 @@ Output: training/data/synthetic_requests.csv
 
 Chạy: python training/generate_synthetic_data.py
 """
-import pandas as pd
-import numpy as np
 import json
 import os
-from datetime import datetime, timedelta
+
+import numpy as np
+import pandas as pd
 
 # Seed để kết quả reproducible
 np.random.seed(42)
@@ -224,7 +224,7 @@ def generate_dataset(n_samples: int = 5000) -> pd.DataFrame:
         bar = "█" * (count // 50)
         print(f"  Score {score}: {count:4d} mẫu  {bar}")
 
-    print(f"\n📊 Phân phối loại yêu cầu:")
+    print("\n📊 Phân phối loại yêu cầu:")
     type_dist = df["request_type"].value_counts()
     for rtype, count in type_dist.items():
         print(f"  {rtype:25s}: {count:4d} mẫu")
@@ -234,7 +234,7 @@ def generate_dataset(n_samples: int = 5000) -> pd.DataFrame:
 
 if __name__ == "__main__":
     print("🚀 Đang sinh synthetic data cho Risk Scoring model...")
-    print(f"   Số mẫu: 5,000")
+    print("   Số mẫu: 5,000")
     print(f"   Số loại yêu cầu: {len(REQUEST_TYPES)}")
 
     os.makedirs("training/data", exist_ok=True)
@@ -259,7 +259,7 @@ if __name__ == "__main__":
         json.dump(feature_cols, f, indent=2)
 
     print(f"\n✅ Dataset đã lưu tại: {output_path}")
-    print(f"✅ Feature columns đã lưu tại: models/feature_columns.json")
+    print("✅ Feature columns đã lưu tại: models/feature_columns.json")
     print(f"   Tổng số mẫu: {len(df):,}")
     print(f"   Số features: {len(feature_cols)}")
-    print(f"\n➡️  Bước tiếp theo: python training/train_risk_model.py")
+    print("\n➡️  Bước tiếp theo: python training/train_risk_model.py")

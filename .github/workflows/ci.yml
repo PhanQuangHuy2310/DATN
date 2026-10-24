@@ -12,10 +12,10 @@ jobs:
   secret-gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
       - run: python scripts/check_repository_secrets.py
@@ -25,8 +25,8 @@ jobs:
     env:
       EAS_ENV: test
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
           cache: pip
@@ -45,8 +45,8 @@ jobs:
   database:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
@@ -59,8 +59,8 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
@@ -82,8 +82,8 @@ jobs:
       EAS_DJANGO_SECRET_KEY: ci-only-not-a-real-secret-000000000000000000000000000000
       EAS_SUPABASE_URL: https://ci-project.invalid
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
       - run: python scripts/validate_env.py --file .env.example --profile compose --allow-placeholders
@@ -97,8 +97,8 @@ jobs:
   documentation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
       - run: python scripts/validate_docs.py

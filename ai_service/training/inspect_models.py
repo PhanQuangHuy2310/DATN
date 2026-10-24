@@ -1,8 +1,8 @@
 import json
 import os
 from pathlib import Path
+
 import joblib
-import numpy as np
 
 ai_service_dir = Path(__file__).resolve().parents[1]
 models_dir = str(ai_service_dir / "models")
