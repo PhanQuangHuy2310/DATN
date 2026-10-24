@@ -129,16 +129,28 @@ def parse_invoice_fields(raw_text: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
+_ocr_engine = None
+
+
+def get_ocr_engine():
+    """Lazy Singleton Cache cho PaddleOCR chống rò rỉ bộ nhớ."""
+    global _ocr_engine
+    if _ocr_engine is None:
+        from paddleocr import PaddleOCR
+
+        _ocr_engine = PaddleOCR(
+            use_angle_cls=True, lang=settings.ocr_lang, use_gpu=settings.ocr_use_gpu
+        )
+    return _ocr_engine
+
+
 def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float]:
     """Chạy PaddleOCR và trả về (raw_text, confidence)."""
     try:
         import numpy as np
-        from paddleocr import PaddleOCR
         from PIL import Image
 
-        ocr_engine = PaddleOCR(
-            use_angle_cls=True, lang=settings.ocr_lang, use_gpu=settings.ocr_use_gpu
-        )
+        ocr_engine = get_ocr_engine()
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         img_array = np.array(img)
 

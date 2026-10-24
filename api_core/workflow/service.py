@@ -336,13 +336,9 @@ def _execute_idempotent(
         return CommandResult(body, status)
 
 
-def create_draft(
-    *,
-    actor: Actor,
+def _validate_create_draft_input(
     body: dict[str, Any],
-    idempotency_key: str,
-    correlation_id: str,
-) -> CommandResult:
+) -> tuple[str, str | None, str | None]:
     allowed_fields = {"type_code", "title", "origin_request_id"}
     if set(body) - allowed_fields or not isinstance(body.get("type_code"), str):
         raise CommandError("INVALID_DRAFT_REQUEST")
@@ -364,6 +360,18 @@ def create_draft(
             html.unescape(clean_title)
         ):
             raise CommandError("INVALID_DRAFT_REQUEST")
+
+    return type_code, origin_request_id, clean_title
+
+
+def create_draft(
+    *,
+    actor: Actor,
+    body: dict[str, Any],
+    idempotency_key: str,
+    correlation_id: str,
+) -> CommandResult:
+    type_code, origin_request_id, clean_title = _validate_create_draft_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
         cursor.execute("SELECT eas.lock_security(false)")
@@ -456,15 +464,9 @@ def create_draft(
     )
 
 
-def update_draft(
-    *,
-    actor: Actor,
-    request_id: str,
+def _validate_update_draft_input(
     body: dict[str, Any],
-    idempotency_key: str,
-    correlation_id: str,
-) -> CommandResult:
-    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+) -> tuple[int, dict[str, Any] | None, int | None, str | None, list[str] | None]:
     allowed_fields = {
         "expected_version",
         "payload",
@@ -473,9 +475,7 @@ def update_draft(
         "attachment_ids",
     }
     forbidden_fields = {"owner_id", "requester_id", "status", "lock_version"}
-    if any(k in body for k in forbidden_fields):
-        raise CommandError("UNKNOWN_FIELD", status=422)
-    if set(body) - allowed_fields:
+    if any(k in body for k in forbidden_fields) or (set(body) - allowed_fields):
         raise CommandError("UNKNOWN_FIELD", status=422)
 
     expected_version = body.get("expected_version")
@@ -516,6 +516,82 @@ def update_draft(
         attachment_ids = [
             _canonical_uuid(item, "INVALID_ATTACHMENT_ID") for item in attachment_ids
         ]
+
+    return expected_version, payload, amount_vnd, viewed_release_id, attachment_ids
+
+
+def _sync_draft_attachments(
+    cursor,
+    request_id: str,
+    actor_id: str,
+    attachment_ids: list[str],
+) -> None:
+    for att_id in attachment_ids:
+        cursor.execute(
+            """
+            SELECT 1 FROM eas.attachment
+            WHERE id = %s AND request_id = %s AND uploader_id = %s
+              AND scan_state = 'CLEAN' AND deleted_at IS NULL
+            """,
+            [att_id, request_id, actor_id],
+        )
+        if not cursor.fetchone():
+            raise CommandError("ATTACHMENT_INVALID", status=422)
+    cursor.execute(
+        "DELETE FROM eas.draft_attachment WHERE request_id = %s",
+        [request_id],
+    )
+    for att_id in attachment_ids:
+        cursor.execute(
+            """
+            INSERT INTO eas.draft_attachment(request_id, attachment_id, added_by)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (request_id, attachment_id) DO NOTHING
+            """,
+            [request_id, att_id, actor_id],
+        )
+
+
+def _merge_and_validate_draft_payload(
+    existing_draft_payload: dict[str, Any] | None,
+    payload: dict[str, Any] | None,
+    type_code: str,
+    form_schema: dict[str, Any],
+    requester_id: str,
+) -> dict[str, Any]:
+    merged_payload = dict(existing_draft_payload or {})
+    if payload is not None:
+        try:
+            validated_patch = validate_draft_payload(
+                type_code=type_code,
+                payload=payload,
+                form_schema=form_schema,
+                requester_id=requester_id,
+            )
+        except PayloadValidationError as exc:
+            raise CommandError(
+                "VALIDATION_FAILED", status=422, fields=exc.errors
+            ) from exc
+        merged_payload.update(validated_patch)
+    return merged_payload
+
+
+def update_draft(
+    *,
+    actor: Actor,
+    request_id: str,
+    body: dict[str, Any],
+    idempotency_key: str,
+    correlation_id: str,
+) -> CommandResult:
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    (
+        expected_version,
+        payload,
+        amount_vnd,
+        viewed_release_id,
+        attachment_ids,
+    ) = _validate_update_draft_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
         cursor.execute("SELECT eas.lock_security(false)")
@@ -561,51 +637,16 @@ def update_draft(
         )
 
         effective_release_id = viewed_release_id or active_release_id
-
-        merged_payload = dict(existing_draft_payload or {})
-        if payload is not None:
-            try:
-                validated_patch = validate_draft_payload(
-                    type_code=type_code,
-                    payload=payload,
-                    form_schema=form_schema,
-                    requester_id=actor.id,
-                )
-            except PayloadValidationError as exc:
-                raise CommandError(
-                    "VALIDATION_FAILED", status=422, fields=exc.errors
-                ) from exc
-            merged_payload.update(validated_patch)
+        merged_payload = _merge_and_validate_draft_payload(
+            existing_draft_payload, payload, type_code, form_schema, actor.id
+        )
 
         final_amount_vnd = amount_vnd if amount_vnd is not None else existing_amount_vnd
         if type_code in {"LEAVE", "ACCESS"} and final_amount_vnd is not None:
             raise CommandError("AMOUNT_NOT_ALLOWED", status=422)
 
         if attachment_ids is not None:
-            for att_id in attachment_ids:
-                cursor.execute(
-                    """
-                    SELECT 1 FROM eas.attachment
-                    WHERE id = %s AND request_id = %s AND uploader_id = %s
-                      AND scan_state = 'CLEAN' AND deleted_at IS NULL
-                    """,
-                    [att_id, request_id, actor.id],
-                )
-                if not cursor.fetchone():
-                    raise CommandError("ATTACHMENT_INVALID", status=422)
-            cursor.execute(
-                "DELETE FROM eas.draft_attachment WHERE request_id = %s",
-                [request_id],
-            )
-            for att_id in attachment_ids:
-                cursor.execute(
-                    """
-                    INSERT INTO eas.draft_attachment(request_id, attachment_id, added_by)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (request_id, attachment_id) DO NOTHING
-                    """,
-                    [request_id, att_id, actor.id],
-                )
+            _sync_draft_attachments(cursor, request_id, actor.id, attachment_ids)
 
         now = datetime.now(timezone.utc)
         cursor.execute(
@@ -657,15 +698,9 @@ def update_draft(
     )
 
 
-def report_execution_issue(
-    *,
-    actor: Actor,
-    request_id: str,
+def _validate_execution_issue_input(
     body: dict[str, Any],
-    idempotency_key: str,
-    correlation_id: str,
-) -> CommandResult:
-    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+) -> tuple[int, str, str, str | None]:
     allowed_fields = {"expected_version", "kind", "reason", "attempt_id"}
     if set(body) - allowed_fields:
         raise CommandError("UNKNOWN_FIELD", status=422)
@@ -690,6 +725,33 @@ def report_execution_issue(
     attempt_id = body.get("attempt_id")
     if attempt_id is not None:
         attempt_id = _canonical_uuid(attempt_id, "INVALID_ATTEMPT_ID")
+
+    return expected_version, kind, clean_reason, attempt_id
+
+
+def _validate_execution_issue_state(kind: str, status: str, attempt_state: str) -> None:
+    if kind == "UNABLE_TO_CLAIM":
+        if status != "READY_FOR_EXECUTION" or attempt_state != "READY":
+            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+    elif kind == "BLOCKED" and (status != "IN_PROGRESS" or attempt_state != "RUNNING"):
+        raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+
+
+def report_execution_issue(
+    *,
+    actor: Actor,
+    request_id: str,
+    body: dict[str, Any],
+    idempotency_key: str,
+    correlation_id: str,
+) -> CommandResult:
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    (
+        expected_version,
+        kind,
+        clean_reason,
+        attempt_id,
+    ) = _validate_execution_issue_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
         cursor.execute("SELECT eas.lock_security(false)")
@@ -736,13 +798,7 @@ def report_execution_issue(
             type_id=type_id,
         )
 
-        if kind == "UNABLE_TO_CLAIM":
-            if status != "READY_FOR_EXECUTION" or attempt_state != "READY":
-                raise CommandError("REQUEST_STATE_CONFLICT", status=409)
-        elif kind == "BLOCKED" and (
-            status != "IN_PROGRESS" or attempt_state != "RUNNING"
-        ):
-            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+        _validate_execution_issue_state(kind, status, attempt_state)
 
         issue_id = str(uuid4())
         now = datetime.now(timezone.utc)
@@ -828,13 +884,9 @@ def report_execution_issue(
     )
 
 
-def submit_request(
-    *,
-    actor: Actor,
+def _validate_submit_input(
     body: dict[str, Any],
-    idempotency_key: str,
-    correlation_id: str,
-) -> CommandResult:
+) -> tuple[str, dict[str, Any], str | None, int, str | None, list[str] | None]:
     allowed_fields = {
         "type_code",
         "payload",
@@ -876,27 +928,315 @@ def submit_request(
     if isinstance(expected_version, bool) or not isinstance(expected_version, int):
         raise CommandError("EXPECTED_VERSION_REQUIRED")
 
-    def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
+    return (
+        type_code,
+        payload,
+        existing_request_id,
+        expected_version,
+        viewed_release_id,
+        attachment_ids,
+    )
+
+
+def _fetch_submit_config(
+    cursor, type_code: str, viewed_release_id: str | None
+) -> tuple[
+    str, str, str, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]
+]:
+    cursor.execute(
+        """
+        SELECT rt.id::text,rt.lifecycle,cr.id::text,cr.form_schema,
+               cr.route_rules,cr.actor_bindings,cr.sla_profile
+        FROM eas.request_type rt
+        JOIN eas.config_release cr ON cr.id=rt.active_release_id
+        WHERE rt.code=%s AND rt.is_active AND cr.state='PUBLISHED'
+          AND cr.type_id=rt.id AND cr.lifecycle=rt.lifecycle
+        FOR SHARE OF rt,cr
+        """,
+        [type_code],
+    )
+    config = cursor.fetchone()
+    if not config:
+        raise CommandError("REQUEST_TYPE_NOT_CONFIGURED", status=409)
+    type_id, lifecycle, release_id, form, rules, bindings, sla = config
+
+    if viewed_release_id is not None and viewed_release_id != release_id:
+        raise CommandError("CONFIG_CHANGED", status=409)
+
+    return type_id, lifecycle, release_id, form, rules, bindings, sla
+
+
+def _resolve_and_verify_route_actors(
+    cursor,
+    rules: dict[str, Any],
+    bindings: dict[str, Any],
+    actor: Actor,
+    manager_id: str | None,
+    type_id: str,
+    normalized: dict[str, Any],
+    amount: int | None,
+):
+    decision = resolve_route(
+        route_rules=rules,
+        actor_bindings=bindings,
+        department_id=actor.department_id,
+        requester_id=actor.id,
+        manager_id=manager_id,
+        amount_vnd=amount,
+        payload=normalized,
+    )
+    routed_actors = set(decision.approver_ids)
+    if decision.executor_id:
+        routed_actors.add(decision.executor_id)
+    if decision.acceptor_id:
+        routed_actors.add(decision.acceptor_id)
+    cursor.execute(
+        "SELECT count(*) FROM eas.app_user WHERE is_active AND id=ANY(%s::uuid[])",
+        [list(routed_actors)],
+    )
+    if cursor.fetchone()[0] != len(routed_actors):
+        raise CommandError("ROUTE_ACTOR_INACTIVE", status=409)
+    for approver_id in decision.approver_ids:
+        _authorize(
+            cursor,
+            actor_id=approver_id,
+            role="APPROVER",
+            department_id=actor.department_id,
+            type_id=type_id,
+        )
+    if decision.executor_id:
+        _authorize(
+            cursor,
+            actor_id=decision.executor_id,
+            role="EXECUTOR",
+            department_id=actor.department_id,
+            type_id=type_id,
+        )
+    if decision.acceptor_id:
+        _authorize(
+            cursor,
+            actor_id=decision.acceptor_id,
+            role="ACCEPTOR",
+            department_id=actor.department_id,
+            type_id=type_id,
+        )
+    return decision
+
+
+def _resolve_submit_attachments(
+    cursor,
+    existing_request_id: str | None,
+    attachment_ids: list[str] | None,
+    lifecycle: str,
+) -> list[str]:
+    resolved = attachment_ids
+    if resolved is None:
+        if existing_request_id:
+            cursor.execute(
+                """
+                SELECT a.id::text FROM eas.draft_attachment da
+                JOIN eas.attachment a ON a.id = da.attachment_id AND a.request_id = da.request_id
+                WHERE da.request_id = %s AND a.scan_state = 'CLEAN' AND a.deleted_at IS NULL
+                ORDER BY a.created_at
+                """,
+                [existing_request_id],
+            )
+            resolved = [row[0] for row in cursor.fetchall()]
+        else:
+            resolved = []
+
+    if lifecycle == "C" and not resolved:
+        raise CommandError("EQUIPMENT_QUOTE_REQUIRED")
+    return resolved
+
+
+def _upsert_submission_request(
+    cursor,
+    actor: Actor,
+    existing_request_id: str | None,
+    expected_version: int,
+    type_id: str,
+    normalized: dict[str, Any],
+    amount: int | None,
+    release_id: str,
+) -> tuple[str, str, int]:
+    if existing_request_id:
+        request_id = existing_request_id
         cursor.execute(
             """
-            SELECT rt.id::text,rt.lifecycle,cr.id::text,cr.form_schema,
-                   cr.route_rules,cr.actor_bindings,cr.sla_profile
-            FROM eas.request_type rt
-            JOIN eas.config_release cr ON cr.id=rt.active_release_id
-            WHERE rt.code=%s AND rt.is_active AND cr.state='PUBLISHED'
-              AND cr.type_id=rt.id AND cr.lifecycle=rt.lifecycle
-            FOR SHARE OF rt,cr
+            SELECT code,status,lock_version,type_id::text
+            FROM eas.request WHERE id=%s AND requester_id=%s FOR UPDATE
             """,
-            [type_code],
+            [request_id, actor.id],
         )
-        config = cursor.fetchone()
-        if not config:
-            raise CommandError("REQUEST_TYPE_NOT_CONFIGURED", status=409)
-        type_id, lifecycle, release_id, form, rules, bindings, sla = config
+        draft = cursor.fetchone()
+        if not draft:
+            raise CommandError("REQUEST_NOT_FOUND", status=404)
+        request_code, draft_status, draft_version, draft_type_id = draft
+        if draft_status not in {"DRAFT", "NEEDS_INFO"}:
+            raise CommandError("REQUEST_STATE_CONFLICT", status=409)
+        if draft_version != expected_version:
+            raise CommandError("VERSION_CONFLICT", status=409)
+        if draft_type_id != type_id:
+            raise CommandError("REQUEST_TYPE_CONFLICT", status=409)
+        return request_id, request_code, draft_version
 
-        if viewed_release_id is not None and viewed_release_id != release_id:
-            raise CommandError("CONFIG_CHANGED", status=409)
+    if expected_version != 0:
+        raise CommandError("VERSION_CONFLICT", status=409)
+    request_id = str(uuid4())
+    cursor.execute(
+        """
+        INSERT INTO eas.request(
+          id,requester_id,type_id,draft_payload,draft_amount_vnd,draft_release_id
+        ) VALUES (%s,%s,%s,%s,%s,%s) RETURNING code
+        """,
+        [request_id, actor.id, type_id, Jsonb(normalized), amount, release_id],
+    )
+    request_code = cursor.fetchone()[0]
+    return request_id, request_code, 0
+
+
+def _link_revision_attachments(
+    cursor,
+    revision_id: str,
+    request_id: str,
+    actor_id: str,
+    resolved_attachments: list[str],
+) -> None:
+    for attachment_id in resolved_attachments:
+        cursor.execute(
+            """
+            INSERT INTO eas.revision_attachment(revision_id,attachment_id,request_id)
+            SELECT %s,a.id,%s FROM eas.attachment a
+            WHERE a.id=%s AND a.request_id=%s AND a.uploader_id=%s
+              AND a.scan_state='CLEAN' AND a.deleted_at IS NULL
+            """,
+            [revision_id, request_id, attachment_id, request_id, actor_id],
+        )
+        if cursor.rowcount != 1:
+            raise CommandError("ATTACHMENT_NOT_READY", status=409)
+        cursor.execute(
+            "DELETE FROM eas.draft_attachment WHERE request_id=%s AND attachment_id=%s",
+            [request_id, attachment_id],
+        )
+
+
+def _create_submission_workflow(
+    cursor,
+    request_id: str,
+    revision_id: str,
+    decision,
+    lifecycle: str,
+    actor_id: str,
+    sla: dict[str, Any],
+    now: datetime,
+) -> str:
+    instance_id = str(uuid4())
+    cursor.execute(
+        """
+        INSERT INTO eas.workflow_instance(
+          id,request_id,revision_id,matched_rule_id,resolved_route,lifecycle,
+          planned_executor_id,acceptor_id
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        """,
+        [
+            instance_id,
+            request_id,
+            revision_id,
+            decision.matched_rule_id,
+            Jsonb(decision.resolved_route),
+            lifecycle,
+            decision.executor_id,
+            decision.acceptor_id,
+        ],
+    )
+    participants: list[tuple[str, str]] = [(actor_id, "REQUESTER")]
+    participants.extend((item, "APPROVER") for item in decision.approver_ids)
+    if decision.executor_id:
+        participants.append((decision.executor_id, "EXECUTOR"))
+    if decision.acceptor_id:
+        participants.append((decision.acceptor_id, "ACCEPTOR"))
+    seen_users: set[str] = set()
+    unique_participants: list[tuple[str, str]] = []
+    for user_id, joined_as in participants:
+        if user_id not in seen_users:
+            seen_users.add(user_id)
+            unique_participants.append((user_id, joined_as))
+    for user_id, joined_as in unique_participants:
+        cursor.execute(
+            """
+            INSERT INTO eas.request_participant(request_id,user_id,joined_as)
+            VALUES (%s,%s,%s)
+            ON CONFLICT (request_id, user_id) DO NOTHING
+            """,
+            [request_id, user_id, joined_as],
+        )
+    first_step_id = None
+    for index, assignee_id in enumerate(decision.approver_ids, start=1):
+        step_id = str(uuid4())
+        if index == 1:
+            first_step_id = step_id
+        cursor.execute(
+            """
+            INSERT INTO eas.approval_step(
+              id,request_id,instance_id,step_no,assignee_id,state,activated_at
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s)
+            """,
+            [
+                step_id,
+                request_id,
+                instance_id,
+                index,
+                assignee_id,
+                "ACTIVE" if index == 1 else "WAITING",
+                now if index == 1 else None,
+            ],
+        )
+    approval_hours = sla.get("approval_hours")
+    if (
+        isinstance(approval_hours, bool)
+        or not isinstance(approval_hours, int)
+        or approval_hours <= 0
+    ):
+        raise CommandError("INVALID_SLA_CONFIGURATION", status=409)
+    cursor.execute(
+        """
+        INSERT INTO eas.sla_stage(
+          request_id,kind,approval_step_id,started_at,due_at
+        ) VALUES (%s,'APPROVAL',%s,%s,%s + make_interval(hours => %s))
+        """,
+        [request_id, first_step_id, now, now, approval_hours],
+    )
+    return first_step_id
+
+
+def submit_request(
+    *,
+    actor: Actor,
+    body: dict[str, Any],
+    idempotency_key: str,
+    correlation_id: str,
+) -> CommandResult:
+    (
+        type_code,
+        payload,
+        existing_request_id,
+        expected_version,
+        viewed_release_id,
+        attachment_ids,
+    ) = _validate_submit_input(body)
+
+    def operation(cursor) -> tuple[dict[str, Any], int, str]:
+        cursor.execute("SELECT eas.lock_security(false)")
+        (
+            type_id,
+            lifecycle,
+            release_id,
+            form,
+            rules,
+            bindings,
+            sla,
+        ) = _fetch_submit_config(cursor, type_code, viewed_release_id)
 
         cursor.execute(
             """
@@ -926,110 +1266,39 @@ def submit_request(
         except PayloadValidationError as exc:
             raise CommandError("VALIDATION_FAILED", fields=exc.errors) from exc
         amount = normalized.get("amount_vnd")
-        decision = resolve_route(
-            route_rules=rules,
-            actor_bindings=bindings,
-            department_id=actor.department_id,
-            requester_id=actor.id,
+        decision = _resolve_and_verify_route_actors(
+            cursor=cursor,
+            rules=rules,
+            bindings=bindings,
+            actor=actor,
             manager_id=user[0],
-            amount_vnd=amount,
-            payload=normalized,
+            type_id=type_id,
+            normalized=normalized,
+            amount=amount,
         )
-        routed_actors = set(decision.approver_ids)
-        if decision.executor_id:
-            routed_actors.add(decision.executor_id)
-        if decision.acceptor_id:
-            routed_actors.add(decision.acceptor_id)
-        cursor.execute(
-            "SELECT count(*) FROM eas.app_user WHERE is_active AND id=ANY(%s::uuid[])",
-            [list(routed_actors)],
+
+        resolved_attachments = _resolve_submit_attachments(
+            cursor, existing_request_id, attachment_ids, lifecycle
         )
-        if cursor.fetchone()[0] != len(routed_actors):
-            raise CommandError("ROUTE_ACTOR_INACTIVE", status=409)
-        for approver_id in decision.approver_ids:
-            _authorize(
-                cursor,
-                actor_id=approver_id,
-                role="APPROVER",
-                department_id=actor.department_id,
-                type_id=type_id,
-            )
-        if decision.executor_id:
-            _authorize(
-                cursor,
-                actor_id=decision.executor_id,
-                role="EXECUTOR",
-                department_id=actor.department_id,
-                type_id=type_id,
-            )
-        if decision.acceptor_id:
-            _authorize(
-                cursor,
-                actor_id=decision.acceptor_id,
-                role="ACCEPTOR",
-                department_id=actor.department_id,
-                type_id=type_id,
-            )
-
-        resolved_attachments = attachment_ids
-        if resolved_attachments is None:
-            if existing_request_id:
-                cursor.execute(
-                    """
-                    SELECT a.id::text FROM eas.draft_attachment da
-                    JOIN eas.attachment a ON a.id = da.attachment_id AND a.request_id = da.request_id
-                    WHERE da.request_id = %s AND a.scan_state = 'CLEAN' AND a.deleted_at IS NULL
-                    ORDER BY a.created_at
-                    """,
-                    [existing_request_id],
-                )
-                resolved_attachments = [row[0] for row in cursor.fetchall()]
-            else:
-                resolved_attachments = []
-
-        if lifecycle == "C" and not resolved_attachments:
-            raise CommandError("EQUIPMENT_QUOTE_REQUIRED")
 
         now = datetime.now(timezone.utc)
-        request_id = existing_request_id or str(uuid4())
-        revision_id = str(uuid4())
-        instance_id = str(uuid4())
-        if existing_request_id:
-            cursor.execute(
-                """
-                SELECT code,status,lock_version,type_id::text
-                FROM eas.request WHERE id=%s AND requester_id=%s FOR UPDATE
-                """,
-                [request_id, actor.id],
-            )
-            draft = cursor.fetchone()
-            if not draft:
-                raise CommandError("REQUEST_NOT_FOUND", status=404)
-            request_code, draft_status, draft_version, draft_type_id = draft
-            if draft_status not in {"DRAFT", "NEEDS_INFO"}:
-                raise CommandError("REQUEST_STATE_CONFLICT", status=409)
-            if draft_version != expected_version:
-                raise CommandError("VERSION_CONFLICT", status=409)
-            if draft_type_id != type_id:
-                raise CommandError("REQUEST_TYPE_CONFLICT", status=409)
-        else:
-            if expected_version != 0:
-                raise CommandError("VERSION_CONFLICT", status=409)
-            cursor.execute(
-                """
-                INSERT INTO eas.request(
-                  id,requester_id,type_id,draft_payload,draft_amount_vnd,draft_release_id
-                ) VALUES (%s,%s,%s,%s,%s,%s) RETURNING code
-                """,
-                [request_id, actor.id, type_id, Jsonb(normalized), amount, release_id],
-            )
-            request_code = cursor.fetchone()[0]
-            draft_version = 0
+        request_id, request_code, draft_version = _upsert_submission_request(
+            cursor=cursor,
+            actor=actor,
+            existing_request_id=existing_request_id,
+            expected_version=expected_version,
+            type_id=type_id,
+            normalized=normalized,
+            amount=amount,
+            release_id=release_id,
+        )
+
         cursor.execute(
             "SELECT coalesce(max(revision_no),0)+1 FROM eas.request_revision WHERE request_id=%s",
             [request_id],
         )
         revision_no = cursor.fetchone()[0]
+        revision_id = str(uuid4())
         cursor.execute(
             """
             INSERT INTO eas.request_revision(
@@ -1050,97 +1319,20 @@ def submit_request(
                 now,
             ],
         )
-        for attachment_id in resolved_attachments:
-            cursor.execute(
-                """
-                INSERT INTO eas.revision_attachment(revision_id,attachment_id,request_id)
-                SELECT %s,a.id,%s FROM eas.attachment a
-                WHERE a.id=%s AND a.request_id=%s AND a.uploader_id=%s
-                  AND a.scan_state='CLEAN' AND a.deleted_at IS NULL
-                """,
-                [revision_id, request_id, attachment_id, request_id, actor.id],
-            )
-            if cursor.rowcount != 1:
-                raise CommandError("ATTACHMENT_NOT_READY", status=409)
-            cursor.execute(
-                "DELETE FROM eas.draft_attachment WHERE request_id=%s AND attachment_id=%s",
-                [request_id, attachment_id],
-            )
-        cursor.execute(
-            """
-            INSERT INTO eas.workflow_instance(
-              id,request_id,revision_id,matched_rule_id,resolved_route,lifecycle,
-              planned_executor_id,acceptor_id
-            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-            """,
-            [
-                instance_id,
-                request_id,
-                revision_id,
-                decision.matched_rule_id,
-                Jsonb(decision.resolved_route),
-                lifecycle,
-                decision.executor_id,
-                decision.acceptor_id,
-            ],
+        _link_revision_attachments(
+            cursor, revision_id, request_id, actor.id, resolved_attachments
         )
-        participants: list[tuple[str, str]] = [(actor.id, "REQUESTER")]
-        participants.extend((item, "APPROVER") for item in decision.approver_ids)
-        if decision.executor_id:
-            participants.append((decision.executor_id, "EXECUTOR"))
-        if decision.acceptor_id:
-            participants.append((decision.acceptor_id, "ACCEPTOR"))
-        seen_users: set[str] = set()
-        unique_participants: list[tuple[str, str]] = []
-        for user_id, joined_as in participants:
-            if user_id not in seen_users:
-                seen_users.add(user_id)
-                unique_participants.append((user_id, joined_as))
-        for user_id, joined_as in unique_participants:
-            cursor.execute(
-                """
-                INSERT INTO eas.request_participant(request_id,user_id,joined_as)
-                VALUES (%s,%s,%s)
-                ON CONFLICT (request_id, user_id) DO NOTHING
-                """,
-                [request_id, user_id, joined_as],
-            )
-        first_step_id = None
-        for index, assignee_id in enumerate(decision.approver_ids, start=1):
-            step_id = str(uuid4())
-            if index == 1:
-                first_step_id = step_id
-            cursor.execute(
-                """
-                INSERT INTO eas.approval_step(
-                  id,request_id,instance_id,step_no,assignee_id,state,activated_at
-                ) VALUES (%s,%s,%s,%s,%s,%s,%s)
-                """,
-                [
-                    step_id,
-                    request_id,
-                    instance_id,
-                    index,
-                    assignee_id,
-                    "ACTIVE" if index == 1 else "WAITING",
-                    now if index == 1 else None,
-                ],
-            )
-        approval_hours = sla.get("approval_hours")
-        if (
-            isinstance(approval_hours, bool)
-            or not isinstance(approval_hours, int)
-            or approval_hours <= 0
-        ):
-            raise CommandError("INVALID_SLA_CONFIGURATION", status=409)
-        cursor.execute(
-            """
-            INSERT INTO eas.sla_stage(
-              request_id,kind,approval_step_id,started_at,due_at
-            ) VALUES (%s,'APPROVAL',%s,%s,%s + make_interval(hours => %s))
-            """,
-            [request_id, first_step_id, now, now, approval_hours],
+        first_step_id = _create_submission_workflow(
+            cursor=cursor,
+            request_id=request_id,
+            revision_id=revision_id,
+            decision=decision,
+            lifecycle=lifecycle,
+            actor_id=actor.id,
+            sla=sla,
+            now=now,
         )
+
         cursor.execute(
             """
             UPDATE eas.request SET status='PENDING_APPROVAL',current_revision_id=%s,
@@ -1198,15 +1390,9 @@ def submit_request(
     )
 
 
-def decide_approval(
-    *,
-    actor: Actor,
-    request_id: str,
+def _validate_approval_decision_input(
     body: dict[str, Any],
-    idempotency_key: str,
-    correlation_id: str,
-) -> CommandResult:
-    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+) -> tuple[str, str | None, int]:
     if set(body) != {"outcome", "reason", "expected_version"}:
         raise CommandError("INVALID_DECISION")
     outcome = body.get("outcome")
@@ -1222,6 +1408,155 @@ def decide_approval(
         raise CommandError("DECISION_REASON_REQUIRED")
     if outcome == "APPROVE":
         reason = None
+    return outcome, reason, expected_version
+
+
+def _handle_approval_approved(
+    cursor,
+    request_id: str,
+    instance_id: str,
+    department_id: str,
+    type_id: str,
+    lifecycle: str,
+    executor_id: str | None,
+    acceptor_id: str | None,
+    sla: dict[str, Any],
+    now: datetime,
+) -> tuple[str, datetime | None, datetime | None, str | None]:
+    cursor.execute(
+        """
+        SELECT id::text, assignee_id::text FROM eas.approval_step
+        WHERE instance_id=%s AND state='WAITING'
+        ORDER BY step_no LIMIT 1 FOR UPDATE
+        """,
+        [instance_id],
+    )
+    next_step = cursor.fetchone()
+    if next_step:
+        next_step_id, next_assignee_id = next_step
+        if not _is_actor_valid_for_role(
+            cursor,
+            actor_id=next_assignee_id,
+            role="APPROVER",
+            department_id=department_id,
+            type_id=type_id,
+        ):
+            raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
+        cursor.execute(
+            "UPDATE eas.approval_step SET state='ACTIVE',activated_at=%s WHERE id=%s",
+            [now, next_step_id],
+        )
+        cursor.execute(
+            """
+            INSERT INTO eas.sla_stage(request_id,kind,approval_step_id,started_at,due_at)
+            VALUES (%s,'APPROVAL',%s,%s,%s + make_interval(hours => %s))
+            """,
+            [request_id, next_step_id, now, now, sla["approval_hours"]],
+        )
+        return "PENDING_APPROVAL", None, None, next_step_id
+
+    if lifecycle in {"B", "C"}:
+        if not _is_actor_valid_for_role(
+            cursor,
+            actor_id=executor_id,
+            role="EXECUTOR",
+            department_id=department_id,
+            type_id=type_id,
+        ):
+            raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
+        if lifecycle == "C" and (
+            not _is_actor_valid_for_role(
+                cursor,
+                actor_id=acceptor_id,
+                role="ACCEPTOR",
+                department_id=department_id,
+                type_id=type_id,
+            )
+            or acceptor_id == executor_id
+        ):
+            raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
+
+    approved_at = now
+    if lifecycle == "A":
+        cursor.execute(
+            "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s",
+            [now, instance_id],
+        )
+        return "COMPLETED", approved_at, now, None
+
+    attempt_id = str(uuid4())
+    cursor.execute(
+        """
+        INSERT INTO eas.execution_attempt(
+          id,request_id,instance_id,attempt_no,executor_id
+        ) VALUES (%s,%s,%s,1,%s)
+        """,
+        [attempt_id, request_id, instance_id, executor_id],
+    )
+    execution_hours = sla.get("execution_hours")
+    if (
+        isinstance(execution_hours, bool)
+        or not isinstance(execution_hours, int)
+        or execution_hours <= 0
+    ):
+        raise CommandError("INVALID_SLA_CONFIGURATION", status=409)
+    cursor.execute(
+        """
+        INSERT INTO eas.sla_stage(
+          request_id,kind,attempt_id,started_at,due_at
+        ) VALUES (%s,'EXECUTION',%s,%s,%s + make_interval(hours => %s))
+        """,
+        [request_id, attempt_id, now, now, execution_hours],
+    )
+    return "READY_FOR_EXECUTION", approved_at, None, None
+
+
+def _handle_approval_rejected_or_needs_info(
+    cursor,
+    request_id: str,
+    instance_id: str,
+    outcome: str,
+    now: datetime,
+) -> str:
+    if outcome == "NEEDS_INFO":
+        cursor.execute(
+            """
+            INSERT INTO eas.draft_attachment(request_id, attachment_id, added_by)
+            SELECT r.id, ra.attachment_id, r.requester_id
+            FROM eas.request r
+            JOIN eas.revision_attachment ra ON ra.revision_id = r.current_revision_id AND ra.request_id = r.id
+            JOIN eas.attachment a ON a.id = ra.attachment_id AND a.request_id = r.id
+            WHERE r.id = %s AND a.scan_state = 'CLEAN' AND a.deleted_at IS NULL
+            ON CONFLICT (request_id, attachment_id) DO NOTHING
+            """,
+            [request_id],
+        )
+    next_status = "REJECTED" if outcome == "REJECT" else "NEEDS_INFO"
+    instance_state = "REJECTED" if outcome == "REJECT" else "SUPERSEDED"
+    cursor.execute(
+        "UPDATE eas.workflow_instance SET state=%s,closed_at=%s WHERE id=%s",
+        [instance_state, now, instance_id],
+    )
+    cursor.execute(
+        """
+        UPDATE eas.approval_step SET state='SKIPPED',closed_at=%s
+        WHERE instance_id=%s AND state='WAITING'
+        """,
+        [now, instance_id],
+    )
+    return next_status
+
+
+def decide_approval(
+    *,
+    actor: Actor,
+    request_id: str,
+    body: dict[str, Any],
+    idempotency_key: str,
+    correlation_id: str,
+) -> CommandResult:
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    outcome, reason, expected_version = _validate_approval_decision_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
         cursor.execute("SELECT eas.lock_security(false)")
@@ -1306,123 +1641,32 @@ def decide_approval(
             [now, request_id],
         )
 
-        next_status = status
-        approved_at = None
-        completed_at = None
-        next_step_id = None
         if outcome == "APPROVE":
-            cursor.execute(
-                """
-                SELECT id::text, assignee_id::text FROM eas.approval_step
-                WHERE instance_id=%s AND state='WAITING'
-                ORDER BY step_no LIMIT 1 FOR UPDATE
-                """,
-                [instance_id],
+            (
+                next_status,
+                approved_at,
+                completed_at,
+                next_step_id,
+            ) = _handle_approval_approved(
+                cursor=cursor,
+                request_id=request_id,
+                instance_id=instance_id,
+                department_id=department_id,
+                type_id=type_id,
+                lifecycle=lifecycle,
+                executor_id=executor_id,
+                acceptor_id=acceptor_id,
+                sla=sla,
+                now=now,
             )
-            next_step = cursor.fetchone()
-            if next_step:
-                next_step_id, next_assignee_id = next_step
-                if not _is_actor_valid_for_role(
-                    cursor,
-                    actor_id=next_assignee_id,
-                    role="APPROVER",
-                    department_id=department_id,
-                    type_id=type_id,
-                ):
-                    raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
-                cursor.execute(
-                    "UPDATE eas.approval_step SET state='ACTIVE',activated_at=%s WHERE id=%s",
-                    [now, next_step_id],
-                )
-                cursor.execute(
-                    """
-                    INSERT INTO eas.sla_stage(request_id,kind,approval_step_id,started_at,due_at)
-                    VALUES (%s,'APPROVAL',%s,%s,%s + make_interval(hours => %s))
-                    """,
-                    [request_id, next_step_id, now, now, sla["approval_hours"]],
-                )
-            else:
-                if lifecycle in {"B", "C"}:
-                    if not _is_actor_valid_for_role(
-                        cursor,
-                        actor_id=executor_id,
-                        role="EXECUTOR",
-                        department_id=department_id,
-                        type_id=type_id,
-                    ):
-                        raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
-                    if lifecycle == "C" and (
-                        not _is_actor_valid_for_role(
-                            cursor,
-                            actor_id=acceptor_id,
-                            role="ACCEPTOR",
-                            department_id=department_id,
-                            type_id=type_id,
-                        )
-                        or acceptor_id == executor_id
-                    ):
-                        raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
-                approved_at = now
-                if lifecycle == "A":
-                    cursor.execute(
-                        "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s",
-                        [now, instance_id],
-                    )
-                    next_status = "COMPLETED"
-                    completed_at = now
-                else:
-                    next_status = "READY_FOR_EXECUTION"
-                    attempt_id = str(uuid4())
-                    cursor.execute(
-                        """
-                        INSERT INTO eas.execution_attempt(
-                          id,request_id,instance_id,attempt_no,executor_id
-                        ) VALUES (%s,%s,%s,1,%s)
-                        """,
-                        [attempt_id, request_id, instance_id, executor_id],
-                    )
-                    execution_hours = sla.get("execution_hours")
-                    if (
-                        isinstance(execution_hours, bool)
-                        or not isinstance(execution_hours, int)
-                        or execution_hours <= 0
-                    ):
-                        raise CommandError("INVALID_SLA_CONFIGURATION", status=409)
-                    cursor.execute(
-                        """
-                        INSERT INTO eas.sla_stage(
-                          request_id,kind,attempt_id,started_at,due_at
-                        ) VALUES (%s,'EXECUTION',%s,%s,%s + make_interval(hours => %s))
-                        """,
-                        [request_id, attempt_id, now, now, execution_hours],
-                    )
         else:
-            if outcome == "NEEDS_INFO":
-                cursor.execute(
-                    """
-                    INSERT INTO eas.draft_attachment(request_id, attachment_id, added_by)
-                    SELECT r.id, ra.attachment_id, r.requester_id
-                    FROM eas.request r
-                    JOIN eas.revision_attachment ra ON ra.revision_id = r.current_revision_id AND ra.request_id = r.id
-                    JOIN eas.attachment a ON a.id = ra.attachment_id AND a.request_id = r.id
-                    WHERE r.id = %s AND a.scan_state = 'CLEAN' AND a.deleted_at IS NULL
-                    ON CONFLICT (request_id, attachment_id) DO NOTHING
-                    """,
-                    [request_id],
-                )
-            next_status = "REJECTED" if outcome == "REJECT" else "NEEDS_INFO"
-            instance_state = "REJECTED" if outcome == "REJECT" else "SUPERSEDED"
-            cursor.execute(
-                "UPDATE eas.workflow_instance SET state=%s,closed_at=%s WHERE id=%s",
-                [instance_state, now, instance_id],
+            next_status = _handle_approval_rejected_or_needs_info(
+                cursor, request_id, instance_id, outcome, now
             )
-            cursor.execute(
-                """
-                UPDATE eas.approval_step SET state='SKIPPED',closed_at=%s
-                WHERE instance_id=%s AND state='WAITING'
-                """,
-                [now, instance_id],
-            )
+            approved_at = None
+            completed_at = None
+            next_step_id = None
+
         cursor.execute(
             """
             UPDATE eas.request SET status=%s,lock_version=lock_version+1,
@@ -1598,15 +1842,9 @@ def start_execution(
     )
 
 
-def submit_execution(
-    *,
-    actor: Actor,
-    request_id: str,
+def _validate_execution_submission_input(
     body: dict[str, Any],
-    idempotency_key: str,
-    correlation_id: str,
-) -> CommandResult:
-    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+) -> tuple[int, str, str]:
     if set(body) != {"expected_version", "result_note", "external_reference"}:
         raise CommandError("INVALID_EXECUTION_RESULT")
     expected_version = body.get("expected_version")
@@ -1621,8 +1859,79 @@ def submit_execution(
         or not 1 <= len(external_reference.strip()) <= 200
     ):
         raise CommandError("EXTERNAL_REFERENCE_INVALID")
-    result_note = result_note.strip()
-    external_reference = external_reference.strip()
+    return expected_version, result_note.strip(), external_reference.strip()
+
+
+def _apply_execution_submission(
+    cursor,
+    lifecycle: str,
+    attempt_id: str,
+    instance_id: str,
+    request_id: str,
+    result_note: str,
+    external_reference: str,
+    sla: dict[str, Any],
+    now: datetime,
+) -> tuple[str, datetime | None]:
+    if lifecycle == "B":
+        cursor.execute(
+            """
+            UPDATE eas.execution_attempt SET state='FINISHED',closure_kind='SUCCESS',
+              result_note=%s,external_reference=%s,submitted_at=%s,closed_at=%s
+            WHERE id=%s
+            """,
+            [result_note, external_reference, now, now, attempt_id],
+        )
+        cursor.execute(
+            "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s",
+            [now, instance_id],
+        )
+        return "COMPLETED", now
+    elif lifecycle == "C":
+        cursor.execute(
+            """
+            UPDATE eas.execution_attempt SET state='SUBMITTED',result_note=%s,
+              external_reference=%s,submitted_at=%s WHERE id=%s
+            """,
+            [result_note, external_reference, now, attempt_id],
+        )
+        cursor.execute(
+            "UPDATE eas.sla_stage SET closed_at=%s WHERE request_id=%s AND closed_at IS NULL",
+            [now, request_id],
+        )
+        acceptance_hours = sla.get("acceptance_hours")
+        if (
+            isinstance(acceptance_hours, bool)
+            or not isinstance(acceptance_hours, int)
+            or acceptance_hours <= 0
+        ):
+            raise CommandError("INVALID_SLA_CONFIGURATION", status=409)
+        cursor.execute(
+            """
+            INSERT INTO eas.sla_stage(request_id,kind,attempt_id,started_at,due_at)
+            VALUES (%s,'ACCEPTANCE',%s,%s,%s + make_interval(hours => %s))
+            """,
+            [request_id, attempt_id, now, now, acceptance_hours],
+        )
+        return "WAITING_FOR_ACCEPTANCE", None
+    else:
+        raise CommandError("LIFECYCLE_CONFLICT", status=409)
+
+
+def submit_execution(
+    *,
+    actor: Actor,
+    request_id: str,
+    body: dict[str, Any],
+    idempotency_key: str,
+    correlation_id: str,
+) -> CommandResult:
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    (
+        expected_version,
+        result_note,
+        external_reference,
+    ) = _validate_execution_submission_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
         cursor.execute(
@@ -1687,52 +1996,17 @@ def submit_execution(
         if not 1 <= cursor.fetchone()[0] <= 5:
             raise CommandError("EXECUTION_EVIDENCE_REQUIRED", status=409)
         now = datetime.now(timezone.utc)
-        if lifecycle == "B":
-            cursor.execute(
-                """
-                UPDATE eas.execution_attempt SET state='FINISHED',closure_kind='SUCCESS',
-                  result_note=%s,external_reference=%s,submitted_at=%s,closed_at=%s
-                WHERE id=%s
-                """,
-                [result_note, external_reference, now, now, attempt_id],
-            )
-            cursor.execute(
-                "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s",
-                [now, instance_id],
-            )
-            next_status = "COMPLETED"
-            completed_at = now
-        elif lifecycle == "C":
-            cursor.execute(
-                """
-                UPDATE eas.execution_attempt SET state='SUBMITTED',result_note=%s,
-                  external_reference=%s,submitted_at=%s WHERE id=%s
-                """,
-                [result_note, external_reference, now, attempt_id],
-            )
-            next_status = "WAITING_FOR_ACCEPTANCE"
-            completed_at = None
-        else:
-            raise CommandError("LIFECYCLE_CONFLICT", status=409)
-        cursor.execute(
-            "UPDATE eas.sla_stage SET closed_at=%s WHERE request_id=%s AND closed_at IS NULL",
-            [now, request_id],
+        next_status, completed_at = _apply_execution_submission(
+            cursor=cursor,
+            lifecycle=lifecycle,
+            attempt_id=attempt_id,
+            instance_id=instance_id,
+            request_id=request_id,
+            result_note=result_note,
+            external_reference=external_reference,
+            sla=sla,
+            now=now,
         )
-        if lifecycle == "C":
-            acceptance_hours = sla.get("acceptance_hours")
-            if (
-                isinstance(acceptance_hours, bool)
-                or not isinstance(acceptance_hours, int)
-                or acceptance_hours <= 0
-            ):
-                raise CommandError("INVALID_SLA_CONFIGURATION", status=409)
-            cursor.execute(
-                """
-                INSERT INTO eas.sla_stage(request_id,kind,attempt_id,started_at,due_at)
-                VALUES (%s,'ACCEPTANCE',%s,%s,%s + make_interval(hours => %s))
-                """,
-                [request_id, attempt_id, now, now, acceptance_hours],
-            )
         cursor.execute(
             """
             UPDATE eas.request SET status=%s,lock_version=lock_version+1,
@@ -1785,15 +2059,9 @@ def submit_execution(
     )
 
 
-def decide_acceptance(
-    *,
-    actor: Actor,
-    request_id: str,
+def _validate_acceptance_input(
     body: dict[str, Any],
-    idempotency_key: str,
-    correlation_id: str,
-) -> CommandResult:
-    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+) -> tuple[str, str | None, int]:
     if set(body) != {"outcome", "reason", "expected_version"}:
         raise CommandError("INVALID_ACCEPTANCE")
     outcome = body.get("outcome")
@@ -1809,6 +2077,79 @@ def decide_acceptance(
         raise CommandError("ACCEPTANCE_REASON_REQUIRED")
     if outcome == "ACCEPT":
         reason = None
+    return outcome, reason, expected_version
+
+
+def _apply_acceptance_decision(
+    cursor,
+    outcome: str,
+    instance_id: str,
+    request_id: str,
+    attempt_no: int,
+    planned_executor_id: str,
+    department_id: str,
+    type_id: str,
+    sla: dict[str, Any],
+    now: datetime,
+) -> tuple[str, datetime | None, str | None]:
+    if outcome == "ACCEPT":
+        cursor.execute(
+            "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s",
+            [now, instance_id],
+        )
+        return "COMPLETED", now, None
+
+    if not _is_actor_valid_for_role(
+        cursor,
+        actor_id=planned_executor_id,
+        role="EXECUTOR",
+        department_id=department_id,
+        type_id=type_id,
+    ):
+        raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
+
+    next_attempt_id = str(uuid4())
+    cursor.execute(
+        """
+        INSERT INTO eas.execution_attempt(
+          id,request_id,instance_id,attempt_no,executor_id
+        ) VALUES (%s,%s,%s,%s,%s)
+        """,
+        [
+            next_attempt_id,
+            request_id,
+            instance_id,
+            attempt_no + 1,
+            planned_executor_id,
+        ],
+    )
+    execution_hours = sla.get("execution_hours")
+    if (
+        isinstance(execution_hours, bool)
+        or not isinstance(execution_hours, int)
+        or execution_hours <= 0
+    ):
+        raise CommandError("INVALID_SLA_CONFIGURATION", status=409)
+    cursor.execute(
+        """
+        INSERT INTO eas.sla_stage(request_id,kind,attempt_id,started_at,due_at)
+        VALUES (%s,'EXECUTION',%s,%s,%s + make_interval(hours => %s))
+        """,
+        [request_id, next_attempt_id, now, now, execution_hours],
+    )
+    return "READY_FOR_EXECUTION", None, next_attempt_id
+
+
+def decide_acceptance(
+    *,
+    actor: Actor,
+    request_id: str,
+    body: dict[str, Any],
+    idempotency_key: str,
+    correlation_id: str,
+) -> CommandResult:
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    outcome, reason, expected_version = _validate_acceptance_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
         cursor.execute("SELECT eas.lock_security(false)")
@@ -1874,54 +2215,18 @@ def decide_acceptance(
             "UPDATE eas.sla_stage SET closed_at=%s WHERE request_id=%s AND closed_at IS NULL",
             [now, request_id],
         )
-        if outcome == "ACCEPT":
-            next_status = "COMPLETED"
-            completed_at = now
-            cursor.execute(
-                "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s",
-                [now, instance_id],
-            )
-            next_attempt_id = None
-        else:
-            if not _is_actor_valid_for_role(
-                cursor,
-                actor_id=planned_executor_id,
-                role="EXECUTOR",
-                department_id=department_id,
-                type_id=type_id,
-            ):
-                raise CommandError("ASSIGNEE_UNAVAILABLE", status=409)
-            next_status = "READY_FOR_EXECUTION"
-            completed_at = None
-            next_attempt_id = str(uuid4())
-            cursor.execute(
-                """
-                INSERT INTO eas.execution_attempt(
-                  id,request_id,instance_id,attempt_no,executor_id
-                ) VALUES (%s,%s,%s,%s,%s)
-                """,
-                [
-                    next_attempt_id,
-                    request_id,
-                    instance_id,
-                    attempt_no + 1,
-                    planned_executor_id,
-                ],
-            )
-            execution_hours = sla.get("execution_hours")
-            if (
-                isinstance(execution_hours, bool)
-                or not isinstance(execution_hours, int)
-                or execution_hours <= 0
-            ):
-                raise CommandError("INVALID_SLA_CONFIGURATION", status=409)
-            cursor.execute(
-                """
-                INSERT INTO eas.sla_stage(request_id,kind,attempt_id,started_at,due_at)
-                VALUES (%s,'EXECUTION',%s,%s,%s + make_interval(hours => %s))
-                """,
-                [request_id, next_attempt_id, now, now, execution_hours],
-            )
+        next_status, completed_at, next_attempt_id = _apply_acceptance_decision(
+            cursor=cursor,
+            outcome=outcome,
+            instance_id=instance_id,
+            request_id=request_id,
+            attempt_no=attempt_no,
+            planned_executor_id=planned_executor_id,
+            department_id=department_id,
+            type_id=type_id,
+            sla=sla,
+            now=now,
+        )
         cursor.execute(
             """
             UPDATE eas.request SET status=%s,lock_version=lock_version+1,

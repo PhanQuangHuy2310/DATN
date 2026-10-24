@@ -43,5 +43,10 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f6f8fb; paddi
 .badge-medium { background: #fef9c3; color: #854d0e; }
 .badge-high { background: #fee2e2; color: #b91c1c; }
 .badge-critical { background: #7f1d1d; color: #ffffff; }
+.tab-bar { display: flex; flex-wrap: wrap; gap: .5rem; max-width: 1200px; margin: 1rem auto 0; padding: 0 1rem; }
+.tab-btn { background: #e2e8f0; color: #1e293b; padding: .5rem 1rem; border-radius: .5rem; font-weight: 700; font-size: .85rem; }
+.tab-btn:hover { background: #cbd5e1; }
+.tab-btn.active { background: #1746a2; color: #ffffff; }
 @media (max-width: 760px) { .layout, .form-grid { grid-template-columns: 1fr; } .form-grid .wide { grid-column: auto; } header { align-items: flex-start; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+

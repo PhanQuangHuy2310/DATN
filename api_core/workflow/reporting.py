@@ -174,6 +174,7 @@ def get_request_metrics_report(
               )
             )
           )
+        LIMIT 100000
     """
     params = [
         dt_from,

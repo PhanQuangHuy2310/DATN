@@ -10,3 +10,4 @@ Các log được phân chia thành các thư mục nhỏ theo cấp độ (Log 
 - [22/10/2026 — Hoàn thiện Toàn diện Phân hệ api_core P0](./2026-10-22_api_core_complete_p0.md)
 - [24/10/2026 — Chuẩn Hóa Toàn Diện Hệ Thống Theo Chu Trình Autonomous IT Department](./2026-10-24_autonomous_it_refinement.md)
 - [24/10/2026 — Hoàn Thiện Toàn Diện Hệ Thống EAS (Routing, AI, Security, RBAC)](./2026-10-24_eas_full_remediation.md)
+- [24/10/2026 — Nâng Cấp Chuẩn Production-Ready & SonarQube (docs/2.md)](./2026-10-24_production_readiness_sonarqube.md)

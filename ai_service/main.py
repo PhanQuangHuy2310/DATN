@@ -58,18 +58,26 @@ app.add_middleware(
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    corr_id = (
+        request.headers.get("X-Correlation-ID")
+        or request.headers.get("x-correlation-id")
+        or ""
+    )
     start = time.time()
     response = await call_next(request)
     duration = round((time.time() - start) * 1000, 2)
+    if corr_id:
+        response.headers["X-Correlation-ID"] = corr_id
+    cid_str = f" [cid={corr_id}]" if corr_id else ""
     logger.info(
-        f"{request.method} {request.url.path} -> {response.status_code} ({duration}ms)"
+        f"{request.method} {request.url.path} -> {response.status_code} ({duration}ms){cid_str}"
     )
     return response
 
 
 @app.middleware("http")
 async def verify_internal_secret(request: Request, call_next):
-    public_paths = {"/docs", "/redoc", "/openapi.json", "/health", "/"}
+    public_paths = {"/docs", "/redoc", "/openapi.json", "/health", "/metrics", "/"}
     if request.url.path in public_paths:
         return await call_next(request)
 
@@ -80,6 +88,14 @@ async def verify_internal_secret(request: Request, call_next):
         )
 
     return await call_next(request)
+
+
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+
+    Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+except ImportError:
+    pass
 
 
 # ---------------------------------------------------------------------------

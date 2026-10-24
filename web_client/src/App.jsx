@@ -253,6 +253,18 @@ function RequestForm({ onCreated }) {
             type="button"
             className="secondary ai-btn"
             style={{ color: "white" }}
+            onClick={async () => {
+              await handleAiClassify();
+              await handleAiRisk();
+            }}
+            disabled={aiBusy}
+          >
+            {aiBusy ? "AI đang xử lý…" : "🤖 Gợi ý & Đánh giá rủi ro AI"}
+          </button>
+          <button
+            type="button"
+            className="secondary ai-btn"
+            style={{ color: "white" }}
             onClick={handleAiClassify}
             disabled={aiBusy}
           >
@@ -342,6 +354,31 @@ function Dashboard({ user, onLogout }) {
   const [aiBusy, setAiBusy] = useState(false);
   const [opsMsg, setOpsMsg] = useState("");
   const [releases, setReleases] = useState([]);
+  const [activeTab, setActiveTab] = useState("my_requests");
+
+  const availableTabs = [
+    { id: "my_requests", label: "Yêu cầu của tôi" },
+    ...(user.roles.some((r) =>
+      ["APPROVER", "EXECUTOR", "ACCEPTOR"].includes(r)
+    )
+      ? [
+          {
+            id: "pending_action",
+            label: "Cần tôi xử lý / Kiểm duyệt / Thực hiện / Nghiệm thu",
+          },
+        ]
+      : []),
+    { id: "notifications", label: "Thông báo" },
+    ...(user.roles.includes("OPS_ADMIN")
+      ? [{ id: "ops", label: "Điều phối OPS" }]
+      : []),
+    ...(user.roles.includes("POLICY_ADMIN")
+      ? [{ id: "policy", label: "Cấu hình Quy trình" }]
+      : []),
+    ...(user.roles.includes("AUDITOR")
+      ? [{ id: "audit", label: "Báo cáo & Kiểm toán" }]
+      : []),
+  ];
 
   async function refresh() {
     setStatus("Đang tải danh sách…");
@@ -560,49 +597,127 @@ function Dashboard({ user, onLogout }) {
         </button>
       </header>
 
+      <nav className="tab-bar" aria-label="Chuyển đổi góc nhìn vai trò">
+        {availableTabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`tab-btn ${activeTab === t.id ? "active" : ""}`}
+            onClick={() => setActiveTab(t.id)}
+            aria-current={activeTab === t.id ? "page" : undefined}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
       <main id="main" className="layout">
-        {user.roles.includes("REQUESTER") && <RequestForm onCreated={refresh} />}
+        {activeTab === "my_requests" && (
+          <>
+            {user.roles.includes("REQUESTER") && <RequestForm onCreated={refresh} />}
 
-        <section className="panel" aria-labelledby="request-list-title">
-          <div className="section-head">
-            <h2 id="request-list-title">Danh sách yêu cầu</h2>
-            <button className="secondary" onClick={refresh}>
-              Làm mới
-            </button>
-          </div>
-          <p aria-live="polite">{status}</p>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Mã</th>
-                  <th>Loại</th>
-                  <th>Trạng thái</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.code}</td>
-                    <td>{item.type_code}</td>
-                    <td>
-                      <span className="status">{item.status}</span>
-                    </td>
-                    <td>
-                      <button className="link" onClick={() => open(item.id)}>
-                        Chi tiết
-                      </button>
-                    </td>
+            <section className="panel" aria-labelledby="request-list-title">
+              <div className="section-head">
+                <h2 id="request-list-title">Danh sách yêu cầu</h2>
+                <button className="secondary" onClick={refresh}>
+                  Làm mới
+                </button>
+              </div>
+              <p aria-live="polite">{status}</p>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Mã</th>
+                      <th>Loại</th>
+                      <th>Trạng thái</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.code}</td>
+                        <td>{item.type_code}</td>
+                        <td>
+                          <span className="status">{item.status}</span>
+                        </td>
+                        <td>
+                          <button className="link" onClick={() => open(item.id)}>
+                            Chi tiết
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
+
+        {activeTab === "pending_action" && (
+          <section className="panel wide-panel" aria-labelledby="pending-action-title">
+            <div className="section-head">
+              <h2 id="pending-action-title">Cần tôi xử lý / Kiểm duyệt / Thực hiện / Nghiệm thu</h2>
+              <button className="secondary" onClick={refresh}>
+                Làm mới
+              </button>
+            </div>
+            <p>Danh sách các hồ sơ đang chờ thao tác duyệt, thực hiện hoặc nghiệm thu từ bạn.</p>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã</th>
+                    <th>Loại</th>
+                    <th>Trạng thái</th>
+                    <th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                </thead>
+                <tbody>
+                  {items
+                    .filter((item) =>
+                      [
+                        "PENDING_APPROVAL",
+                        "READY_FOR_EXECUTION",
+                        "IN_PROGRESS",
+                        "WAITING_FOR_ACCEPTANCE",
+                      ].includes(item.status)
+                    )
+                    .map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.code}</td>
+                        <td>{item.type_code}</td>
+                        <td>
+                          <span className="status">{item.status}</span>
+                        </td>
+                        <td>
+                          <button className="link" onClick={() => open(item.id)}>
+                            Xử lý hồ sơ
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
-        {user.roles.includes("OPS_ADMIN") && (
-          <section className="panel" aria-labelledby="ops-admin-title">
+        {activeTab === "notifications" && (
+          <section className="panel wide-panel" aria-labelledby="notifications-title">
+            <h2 id="notifications-title">Thông báo hệ thống</h2>
+            <p>Cập nhật trạng thái sự kiện Outbox và tiến trình thực thi thời gian thực.</p>
+            <div className="ai-panel">
+              <h4>Hàng đợi sự kiện & Tích hợp</h4>
+              <p>Mọi thay đổi trạng thái hồ sơ được đồng bộ bảo đảm At-Least-Once Delivery qua Outbox Table.</p>
+            </div>
+          </section>
+        )}
+
+        {activeTab === "ops" && user.roles.includes("OPS_ADMIN") && (
+          <section className="panel wide-panel" aria-labelledby="ops-admin-title">
             <h2 id="ops-admin-title">Quản trị vận hành (Ops Admin)</h2>
             <p>Hỗ trợ kiểm soát luồng outbox và điều phối phân bổ người duyệt.</p>
             <div className="actions">
@@ -620,8 +735,8 @@ function Dashboard({ user, onLogout }) {
           </section>
         )}
 
-        {user.roles.includes("POLICY_ADMIN") && (
-          <section className="panel" aria-labelledby="policy-admin-title">
+        {activeTab === "policy" && user.roles.includes("POLICY_ADMIN") && (
+          <section className="panel wide-panel" aria-labelledby="policy-admin-title">
             <div className="section-head">
               <h2 id="policy-admin-title">Quản lý phiên bản chính sách</h2>
               <button className="secondary" onClick={handleLoadReleases}>
@@ -658,6 +773,29 @@ function Dashboard({ user, onLogout }) {
           </section>
         )}
 
+        {activeTab === "audit" && user.roles.includes("AUDITOR") && (
+          <section className="panel wide-panel" aria-labelledby="audit-title">
+            <h2 id="audit-title">Báo cáo & Kiểm toán hệ thống</h2>
+            <p>Kiểm tra chuỗi bất biến Audit Trail (SHA-256 Hash Chain) và báo cáo SLA các phòng ban.</p>
+            <div className="actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={async () => {
+                  try {
+                    const res = await api("/api/v1/ops/reports/request-metrics");
+                    alert(`Tổng số request: ${res.total_requests || 0}`);
+                  } catch (e) {
+                    alert(`Lỗi tải báo cáo: ${e.message}`);
+                  }
+                }}
+              >
+                Tải báo cáo số liệu SLA & Metrics
+              </button>
+            </div>
+          </section>
+        )}
+
         {selected && (
           <section className="panel wide-panel" aria-labelledby="detail-title">
             <div className="section-head">
@@ -674,7 +812,7 @@ function Dashboard({ user, onLogout }) {
                 onClick={handleAiSummarize}
                 disabled={aiBusy}
               >
-                {aiBusy ? "Đang xử lý…" : "AI Tóm tắt yêu cầu"}
+                {aiBusy ? "Đang xử lý…" : "🤖 Gợi ý & Đánh giá rủi ro AI"}
               </button>
               {user.roles.includes("AUDITOR") && (
                 <button
