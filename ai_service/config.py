@@ -2,9 +2,10 @@
 AI Service — Cấu hình chung (config.py)
 Đọc biến môi trường từ .env và expose qua Settings singleton.
 """
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from functools import lru_cache
-import os
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -44,6 +45,6 @@ class Settings(BaseSettings):
     )
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings()

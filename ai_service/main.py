@@ -3,14 +3,15 @@ AI Service — FastAPI Application Entry Point (main.py)
 
 Khởi động: uvicorn main:app --reload --host 0.0.0.0 --port 8001
 """
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from loguru import logger
+
 import time
 
 from config import get_settings
-from routers import ocr, summarize, risk, auto_approve, classify, mock_context
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from loguru import logger
+from routers import auto_approve, classify, mock_context, ocr, risk, summarize
 
 settings = get_settings()
 
@@ -49,7 +50,9 @@ async def log_requests(request: Request, call_next):
     start = time.time()
     response = await call_next(request)
     duration = round((time.time() - start) * 1000, 2)
-    logger.info(f"{request.method} {request.url.path} -> {response.status_code} ({duration}ms)")
+    logger.info(
+        f"{request.method} {request.url.path} -> {response.status_code} ({duration}ms)"
+    )
     return response
 
 
@@ -61,7 +64,9 @@ async def verify_internal_secret(request: Request, call_next):
 
     secret = request.headers.get("X-Internal-Secret")
     if secret != settings.internal_api_secret:
-        return JSONResponse(status_code=401, content={"detail": "Unauthorized: invalid internal secret"})
+        return JSONResponse(
+            status_code=401, content={"detail": "Unauthorized: invalid internal secret"}
+        )
 
     return await call_next(request)
 
@@ -69,12 +74,16 @@ async def verify_internal_secret(request: Request, call_next):
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
-app.include_router(classify.router,     prefix="/ai/classify",     tags=["Smart Classification"])
-app.include_router(risk.router,         prefix="/ai/risk",         tags=["Risk & Fraud Scoring"])
-app.include_router(auto_approve.router, prefix="/ai/auto-approve", tags=["Auto Approve"])
-app.include_router(ocr.router,          prefix="/ai/ocr",          tags=["OCR"])
-app.include_router(summarize.router,    prefix="/ai/summarize",    tags=["Summarize"])
-app.include_router(mock_context.router, prefix="/ai/mock",         tags=["Mock Data Context"])
+app.include_router(
+    classify.router, prefix="/ai/classify", tags=["Smart Classification"]
+)
+app.include_router(risk.router, prefix="/ai/risk", tags=["Risk & Fraud Scoring"])
+app.include_router(
+    auto_approve.router, prefix="/ai/auto-approve", tags=["Auto Approve"]
+)
+app.include_router(ocr.router, prefix="/ai/ocr", tags=["OCR"])
+app.include_router(summarize.router, prefix="/ai/summarize", tags=["Summarize"])
+app.include_router(mock_context.router, prefix="/ai/mock", tags=["Mock Data Context"])
 
 
 # ---------------------------------------------------------------------------
@@ -87,4 +96,6 @@ async def health_check():
 
 @app.get("/", tags=["Health"])
 async def root():
-    return {"message": "Enterprise AI Service đang hoạt động. Truy cập /docs để xem chi tiết API."}
+    return {
+        "message": "Enterprise AI Service đang hoạt động. Truy cập /docs để xem chi tiết API."
+    }

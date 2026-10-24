@@ -8,16 +8,15 @@ POST /ai/ocr/extract
 Dùng PaddleOCR (pre-trained tiếng Việt) — không cần train thêm.
 Fallback: nếu PaddleOCR chưa cài được thì trả về raw text từ Gemini Vision.
 """
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, HttpUrl
-from typing import Optional
+
+import base64
 import io
 import re
-import base64
-from loguru import logger
 
 from config import get_settings
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from loguru import logger
+from pydantic import BaseModel
 
 settings = get_settings()
 router = APIRouter()
@@ -25,6 +24,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # Pydantic schemas
 # ---------------------------------------------------------------------------
+
 
 class OCRResult(BaseModel):
     raw_text: str
@@ -35,12 +35,13 @@ class OCRResult(BaseModel):
 
 class OCRUrlRequest(BaseModel):
     image_url: str
-    request_type: Optional[str] = None  # Gợi ý cho engine biết loại chứng từ
+    request_type: str | None = None  # Gợi ý cho engine biết loại chứng từ
 
 
 # ---------------------------------------------------------------------------
 # Helper: post-process raw text → structured fields
 # ---------------------------------------------------------------------------
+
 
 def parse_invoice_fields(raw_text: str) -> dict:
     """
@@ -79,7 +80,9 @@ def parse_invoice_fields(raw_text: str) -> dict:
         if match:
             groups = match.groups()
             if len(groups) == 3:
-                fields["invoice_date"] = f"{groups[2]}-{groups[1].zfill(2)}-{groups[0].zfill(2)}"
+                fields["invoice_date"] = (
+                    f"{groups[2]}-{groups[1].zfill(2)}-{groups[0].zfill(2)}"
+                )
                 break
 
     # --- Số hóa đơn ---
@@ -118,14 +121,17 @@ def parse_invoice_fields(raw_text: str) -> dict:
 # OCR Engine wrappers
 # ---------------------------------------------------------------------------
 
+
 def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float]:
     """Chạy PaddleOCR và trả về (raw_text, confidence)."""
     try:
-        from paddleocr import PaddleOCR
         import numpy as np
+        from paddleocr import PaddleOCR
         from PIL import Image
 
-        ocr_engine = PaddleOCR(use_angle_cls=True, lang=settings.ocr_lang, use_gpu=settings.ocr_use_gpu)
+        ocr_engine = PaddleOCR(
+            use_angle_cls=True, lang=settings.ocr_lang, use_gpu=settings.ocr_use_gpu
+        )
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         img_array = np.array(img)
 
@@ -150,7 +156,9 @@ def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float]:
         raise
 
 
-async def ocr_with_gemini_vision(image_bytes: bytes, mime_type: str = "image/jpeg") -> tuple[str, float]:
+async def ocr_with_gemini_vision(
+    image_bytes: bytes, mime_type: str = "image/jpeg"
+) -> tuple[str, float]:
     """Dùng Gemini Vision làm fallback khi PaddleOCR chưa khả dụng."""
     try:
         import google.generativeai as genai
@@ -164,28 +172,35 @@ async def ocr_with_gemini_vision(image_bytes: bytes, mime_type: str = "image/jpe
             "trả về text thuần (không format markdown). "
             "Giữ nguyên số tiền, ngày tháng và các mã số."
         )
-        response = model.generate_content([
-            {"mime_type": mime_type, "data": b64},
-            prompt,
-        ])
+        response = model.generate_content(
+            [
+                {"mime_type": mime_type, "data": b64},
+                prompt,
+            ]
+        )
         return response.text, 0.75  # Gemini không trả confidence nên hardcode 0.75
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Gemini Vision error: {e}")
-        raise HTTPException(status_code=500, detail=f"Cả PaddleOCR và Gemini Vision đều lỗi: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Cả PaddleOCR và Gemini Vision đều lỗi: {e}"
+        )
 
 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/extract", response_model=OCRResult, summary="Bóc tách từ file upload")
 async def extract_from_upload(
-    file: UploadFile = File(..., description="Ảnh hóa đơn/chứng từ (JPEG, PNG)"),
-    request_type: Optional[str] = Form(None, description="Loại yêu cầu để gợi ý trường bóc tách"),
+    file: UploadFile = File(..., description="Ảnh hóa đơn/chứng từ (JPEG, PNG)"),  # noqa: B008
+    request_type: str | None = Form(
+        None, description="Loại yêu cầu để gợi ý trường bóc tách"
+    ),
 ):
     """
     Upload ảnh hóa đơn → trả về JSON gồm raw text và các trường đã bóc tách.
-    
+
     - **file**: ảnh JPEG hoặc PNG
     - **request_type**: ví dụ `"purchase"`, `"expense_claim"` (tùy chọn)
     """
@@ -204,12 +219,16 @@ async def extract_from_upload(
     engine = "paddleocr"
     try:
         raw_text, confidence = ocr_with_paddle(image_bytes)
-    except Exception:
+    except Exception:  # noqa: BLE001
         engine = "gemini-vision"
-        raw_text, confidence = await ocr_with_gemini_vision(image_bytes, file.content_type)
+        raw_text, confidence = await ocr_with_gemini_vision(
+            image_bytes, file.content_type
+        )
 
     extracted = parse_invoice_fields(raw_text)
-    logger.info(f"OCR [{engine}] → {len(raw_text)} chars, conf={confidence}, fields={list(extracted.keys())}")
+    logger.info(
+        f"OCR [{engine}] → {len(raw_text)} chars, conf={confidence}, fields={list(extracted.keys())}"
+    )
 
     return OCRResult(
         raw_text=raw_text,
@@ -233,13 +252,13 @@ async def extract_from_url(body: OCRUrlRequest):
             resp.raise_for_status()
             image_bytes = resp.content
             content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0]
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=f"Không tải được ảnh từ URL: {e}")
 
     engine = "paddleocr"
     try:
         raw_text, confidence = ocr_with_paddle(image_bytes)
-    except Exception:
+    except Exception:  # noqa: BLE001
         engine = "gemini-vision"
         raw_text, confidence = await ocr_with_gemini_vision(image_bytes, content_type)
 

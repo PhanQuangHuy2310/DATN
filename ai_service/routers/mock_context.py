@@ -13,11 +13,12 @@ TẠI SAO ĐẶT TẠI AI SERVICE:
   - Toàn bộ dữ liệu được nạp từ volume snapshot JSON read-only (/app/data/mock)
   - Cho phép AI tra cứu nhanh chóng (<1ms) từ bộ nhớ RAM thay vì truy vấn DB
 """
-import os
+
 import json
-from typing import Optional, Dict, Any, List
+import os
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
 from loguru import logger
 
 router = APIRouter()
@@ -26,13 +27,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MOCK_DATA_DIR = os.path.join(BASE_DIR, "data", "mock")
 
 # In-memory cache cho 8 snapshot JSON
-_mock_cache: Dict[str, Any] = {}
-_manifest_cache: Optional[Dict[str, Any]] = None
+_mock_cache: dict[str, Any] = {}
+_manifest_cache: dict[str, Any] | None = None
 
 
-def get_mock_data(schema_name: str) -> Optional[Dict[str, Any]]:
+def get_mock_data(schema_name: str) -> dict[str, Any] | None:
     """Tải và cache snapshot JSON của một schema mock."""
-    global _mock_cache
     if schema_name in _mock_cache:
         return _mock_cache[schema_name]
 
@@ -41,16 +41,16 @@ def get_mock_data(schema_name: str) -> Optional[Dict[str, Any]]:
         return None
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
             _mock_cache[schema_name] = data
             return data
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Lỗi khi đọc snapshot {file_path}: {e}")
         return None
 
 
-def get_manifest() -> Optional[Dict[str, Any]]:
+def get_manifest() -> dict[str, Any] | None:
     """Tải và cache _manifest.json tổng hợp."""
     global _manifest_cache
     if _manifest_cache is not None:
@@ -61,10 +61,10 @@ def get_manifest() -> Optional[Dict[str, Any]]:
         return None
 
     try:
-        with open(manifest_path, "r", encoding="utf-8") as f:
+        with open(manifest_path, encoding="utf-8") as f:
             _manifest_cache = json.load(f)
             return _manifest_cache
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Lỗi khi đọc manifest {manifest_path}: {e}")
         return None
 
@@ -73,19 +73,26 @@ def get_manifest() -> Optional[Dict[str, Any]]:
 # Helper functions phục vụ logic nghiệp vụ của AI
 # ---------------------------------------------------------------------------
 
-def lookup_leave_balance(employee_code_or_name: str, leave_type: str = "ANNUAL") -> Optional[int]:
+
+def lookup_leave_balance(
+    employee_code_or_name: str, leave_type: str = "ANNUAL"
+) -> int | None:
     """Tra cứu số ngày phép còn lại từ mock_hr snapshot."""
     hr_data = get_mock_data("mock_hr")
     if not hr_data:
         return None
 
-    employees = hr_data.get("entities", {}).get("employee_directory", {}).get("data", [])
+    employees = (
+        hr_data.get("entities", {}).get("employee_directory", {}).get("data", [])
+    )
     emp_id = None
     target = employee_code_or_name.lower().strip()
 
     for emp in employees:
-        if (emp.get("employee_code", "").lower() == target or
-            target in emp.get("display_name", "").lower()):
+        if (
+            emp.get("employee_code", "").lower() == target
+            or target in emp.get("display_name", "").lower()
+        ):
             emp_id = emp.get("id")
             break
 
@@ -94,7 +101,10 @@ def lookup_leave_balance(employee_code_or_name: str, leave_type: str = "ANNUAL")
 
     balances = hr_data.get("entities", {}).get("leave_balance", {}).get("data", [])
     for b in balances:
-        if str(b.get("employee_id")) == str(emp_id) and b.get("leave_type") == leave_type:
+        if (
+            str(b.get("employee_id")) == str(emp_id)
+            and b.get("leave_type") == leave_type
+        ):
             entitled = int(b.get("entitled_days", 0) or 0)
             used = int(b.get("used_days", 0) or 0)
             return max(0, entitled - used)
@@ -102,7 +112,7 @@ def lookup_leave_balance(employee_code_or_name: str, leave_type: str = "ANNUAL")
     return None
 
 
-def lookup_facility_available(resource_code_or_name: str) -> Optional[bool]:
+def lookup_facility_available(resource_code_or_name: str) -> bool | None:
     """Kiểm tra tình trạng khả dụng của phòng họp / xe từ mock_facilities snapshot."""
     fac_data = get_mock_data("mock_facilities")
     if not fac_data:
@@ -112,15 +122,17 @@ def lookup_facility_available(resource_code_or_name: str) -> Optional[bool]:
     target = resource_code_or_name.lower().strip()
 
     for r in resources:
-        if (r.get("resource_code", "").lower() == target or
-            target in r.get("label", "").lower() or
-            target in r.get("name", "").lower()):
+        if (
+            r.get("resource_code", "").lower() == target
+            or target in r.get("label", "").lower()
+            or target in r.get("name", "").lower()
+        ):
             return r.get("availability_status") == "AVAILABLE"
 
     return None
 
 
-def lookup_department_budget(dept_code: str) -> Optional[Dict[str, Any]]:
+def lookup_department_budget(dept_code: str) -> dict[str, Any] | None:
     """Tra cứu hạn mức ngân sách từ mock_finance snapshot."""
     fin_data = get_mock_data("mock_finance")
     if not fin_data:
@@ -145,6 +157,7 @@ def lookup_department_budget(dept_code: str) -> Optional[Dict[str, Any]]:
 # API Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/manifest", summary="Lấy metadata tổng hợp của 8 mock schema")
 async def get_mock_manifest():
     manifest = get_manifest()
@@ -167,21 +180,31 @@ async def list_mock_schemas():
     }
 
 
-@router.get("/schema/{schema_name}", summary="Lấy toàn bộ snapshot JSON của 1 schema mock")
+@router.get(
+    "/schema/{schema_name}", summary="Lấy toàn bộ snapshot JSON của 1 schema mock"
+)
 async def get_schema_snapshot(schema_name: str):
     valid_schemas = [
-        "mock_hr", "mock_assets", "mock_facilities", "mock_crm",
-        "mock_procurement", "mock_it", "mock_finance", "mock_travel"
+        "mock_hr",
+        "mock_assets",
+        "mock_facilities",
+        "mock_crm",
+        "mock_procurement",
+        "mock_it",
+        "mock_finance",
+        "mock_travel",
     ]
     if schema_name not in valid_schemas:
         raise HTTPException(
             status_code=400,
-            detail=f"Schema '{schema_name}' không hợp lệ. Cho phép: {', '.join(valid_schemas)}"
+            detail=f"Schema '{schema_name}' không hợp lệ. Cho phép: {', '.join(valid_schemas)}",
         )
 
     data = get_mock_data(schema_name)
     if not data:
-        raise HTTPException(status_code=404, detail=f"Chưa có snapshot cho {schema_name}")
+        raise HTTPException(
+            status_code=404, detail=f"Chưa có snapshot cho {schema_name}"
+        )
     return data
 
 
@@ -189,21 +212,34 @@ async def get_schema_snapshot(schema_name: str):
 async def query_leave_balance(employee: str = Query(..., description="Mã NV hoặc tên")):
     balance = lookup_leave_balance(employee)
     if balance is None:
-        raise HTTPException(status_code=404, detail=f"Không tìm thấy số phép cho: {employee}")
+        raise HTTPException(
+            status_code=404, detail=f"Không tìm thấy số phép cho: {employee}"
+        )
     return {"employee": employee, "remaining_leave_days": balance}
 
 
-@router.get("/context/facility-status", summary="Kiểm tra trạng thái phòng họp/xe từ mock Facilities")
-async def query_facility_status(resource: str = Query(..., description="Mã phòng hoặc tên")):
+@router.get(
+    "/context/facility-status",
+    summary="Kiểm tra trạng thái phòng họp/xe từ mock Facilities",
+)
+async def query_facility_status(
+    resource: str = Query(..., description="Mã phòng hoặc tên"),
+):
     is_available = lookup_facility_available(resource)
     if is_available is None:
-        raise HTTPException(status_code=404, detail=f"Không tìm thấy tài nguyên: {resource}")
+        raise HTTPException(
+            status_code=404, detail=f"Không tìm thấy tài nguyên: {resource}"
+        )
     return {"resource": resource, "is_available": is_available}
 
 
 @router.get("/context/department-budget", summary="Tra cứu ngân sách từ mock Finance")
-async def query_department_budget(department: str = Query(..., description="Mã phòng ban (IT, HR, FIN, ...)")):
+async def query_department_budget(
+    department: str = Query(..., description="Mã phòng ban (IT, HR, FIN, ...)"),
+):
     budget = lookup_department_budget(department)
     if budget is None:
-        raise HTTPException(status_code=404, detail=f"Không tìm thấy ngân sách cho phòng: {department}")
+        raise HTTPException(
+            status_code=404, detail=f"Không tìm thấy ngân sách cho phòng: {department}"
+        )
     return {"department": department, "budget": budget}

@@ -9,14 +9,15 @@ Nguyên tắc (plan.md 2.3):
   ✅ Auto-approve khi: Template A + risk_score ≤ 2 + các rule nghiệp vụ hợp lệ
   ❌ KHÔNG auto-approve khi: Template B/C hoặc risk > 2
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import Optional
-from loguru import logger
-from datetime import datetime
+
+from datetime import datetime, timezone
 
 from config import get_settings
-from .mock_context import lookup_leave_balance, lookup_facility_available
+from fastapi import APIRouter
+from loguru import logger
+from pydantic import BaseModel, Field
+
+from .mock_context import lookup_facility_available, lookup_leave_balance
 
 settings = get_settings()
 router = APIRouter()
@@ -26,6 +27,7 @@ router = APIRouter()
 # Schemas
 # ---------------------------------------------------------------------------
 
+
 class AutoApproveInput(BaseModel):
     request_id: str = Field(..., description="UUID của yêu cầu")
     request_type: str
@@ -34,7 +36,9 @@ class AutoApproveInput(BaseModel):
     amount: float = Field(0.0, ge=0)
     days_requested: int = Field(0, ge=0)
     leave_balance_remaining: int = Field(0, ge=0)
-    room_available: Optional[bool] = Field(None, description="Phòng họp còn trống không (cho room_booking)")
+    room_available: bool | None = Field(
+        None, description="Phòng họp còn trống không (cho room_booking)"
+    )
     requester_name: str
     requester_dept: str
 
@@ -43,13 +47,16 @@ class AutoApproveDecision(BaseModel):
     decision: str = Field(..., description="'auto_approve' | 'escalate_to_human'")
     reason: str = Field(..., description="Lý do ngắn gọn")
     detail_reasons: list[str] = Field(default_factory=list)
-    auto_approve_note: Optional[str] = Field(None, description="Ghi chú hiển thị với badge 🤖")
+    auto_approve_note: str | None = Field(
+        None, description="Ghi chú hiển thị với badge 🤖"
+    )
     evaluated_at: str
 
 
 # ---------------------------------------------------------------------------
 # Business rules cho từng loại yêu cầu
 # ---------------------------------------------------------------------------
+
 
 class AutoApproveChecker:
     """
@@ -71,7 +78,9 @@ class AutoApproveChecker:
             looked_up = lookup_leave_balance(inp.requester_name)
             if looked_up is not None:
                 effective_balance = looked_up
-                reasons.append(f"ℹ️ Đã tự động đối chiếu số phép từ mock HR: {looked_up} ngày")
+                reasons.append(
+                    f"ℹ️ Đã tự động đối chiếu số phép từ mock HR: {looked_up} ngày"
+                )
 
         if inp.days_requested > effective_balance:
             reasons.append(
@@ -82,7 +91,9 @@ class AutoApproveChecker:
             reasons.append(f"✅ Đủ số ngày phép ({effective_balance} ngày còn lại)")
 
         if inp.days_requested < 3:
-            reasons.append(f"✅ Thời gian nghỉ ({inp.days_requested} ngày) đủ điều kiện auto-approve")
+            reasons.append(
+                f"✅ Thời gian nghỉ ({inp.days_requested} ngày) đủ điều kiện auto-approve"
+            )
         else:
             reasons.append("❌ Nghỉ ≥ 3 ngày cần duyệt thủ công")
             ok = False
@@ -99,10 +110,14 @@ class AutoApproveChecker:
             # Tra cứu thử từ mock facilities snapshot
             room_available = lookup_facility_available("PH-01")
             if room_available is not None:
-                reasons.append(f"ℹ️ Đã tự động đối chiếu lịch phòng từ mock Facilities (khả dụng: {room_available})")
+                reasons.append(
+                    f"ℹ️ Đã tự động đối chiếu lịch phòng từ mock Facilities (khả dụng: {room_available})"
+                )
 
         if room_available is None:
-            reasons.append("⚠️ Chưa kiểm tra lịch phòng. Chuyển duyệt thủ công để an toàn.")
+            reasons.append(
+                "⚠️ Chưa kiểm tra lịch phòng. Chuyển duyệt thủ công để an toàn."
+            )
             ok = False
         elif room_available:
             reasons.append("✅ Phòng họp còn trống trong khung giờ đó")
@@ -125,7 +140,9 @@ class AutoApproveChecker:
         ok = True
 
         if inp.amount > 2_000_000:
-            reasons.append(f"❌ Số tiền hoàn ({inp.amount:,.0f} VNĐ) > 2 triệu, cần duyệt thủ công")
+            reasons.append(
+                f"❌ Số tiền hoàn ({inp.amount:,.0f} VNĐ) > 2 triệu, cần duyệt thủ công"
+            )
             ok = False
         else:
             reasons.append(f"✅ Số tiền hoàn ({inp.amount:,.0f} VNĐ) ≤ 2 triệu")
@@ -134,7 +151,9 @@ class AutoApproveChecker:
 
     def check_generic(self, inp: AutoApproveInput) -> tuple[bool, list[str]]:
         """Fallback cho các loại không có rule riêng"""
-        return True, [f"✅ Loại '{inp.request_type}' không có rule đặc biệt, chấp thuận dựa trên risk score"]
+        return True, [
+            f"✅ Loại '{inp.request_type}' không có rule đặc biệt, chấp thuận dựa trên risk score"
+        ]
 
     def evaluate(self, inp: AutoApproveInput) -> tuple[bool, list[str]]:
         handlers = {
@@ -154,7 +173,12 @@ checker = AutoApproveChecker()
 # Endpoint
 # ---------------------------------------------------------------------------
 
-@router.post("/evaluate", response_model=AutoApproveDecision, summary="Đánh giá điều kiện auto-approve")
+
+@router.post(
+    "/evaluate",
+    response_model=AutoApproveDecision,
+    summary="Đánh giá điều kiện auto-approve",
+)
 async def evaluate_auto_approve(body: AutoApproveInput):
     """
     Kiểm tra toàn bộ điều kiện để quyết định tự động duyệt hay chuyển người.
@@ -185,7 +209,9 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         )
         can_auto_approve = False
     else:
-        detail_reasons.append(f"✅ Risk score {body.risk_score}/5 ≤ {settings.auto_approve_max_risk}")
+        detail_reasons.append(
+            f"✅ Risk score {body.risk_score}/5 ≤ {settings.auto_approve_max_risk}"
+        )
 
     # --- Gate 3: Business rules theo loại ---
     if can_auto_approve:
@@ -199,20 +225,24 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         decision = "auto_approve"
         reason = f"Yêu cầu '{body.request_type}' của {body.requester_name} đủ điều kiện tự động duyệt"
         note = (
-            f"🤖 AI đã tự động duyệt lúc {datetime.now().strftime('%H:%M %d/%m/%Y')}. "
+            f"🤖 AI đã tự động duyệt lúc {datetime.now(timezone.utc).strftime('%H:%M %d/%m/%Y')}. "
             f"Bạn có thể Từ chối trong vòng 24h."
         )
-        logger.info(f"AUTO-APPROVE | request_id={body.request_id} | type={body.request_type}")
+        logger.info(
+            f"AUTO-APPROVE | request_id={body.request_id} | type={body.request_type}"
+        )
     else:
         decision = "escalate_to_human"
         reason = "Yêu cầu cần người phê duyệt thủ công do không đáp ứng đủ điều kiện"
         note = None
-        logger.info(f"ESCALATE | request_id={body.request_id} | type={body.request_type} | reasons: {len([r for r in detail_reasons if '❌' in r])}")
+        logger.info(
+            f"ESCALATE | request_id={body.request_id} | type={body.request_type} | reasons: {len([r for r in detail_reasons if '❌' in r])}"
+        )
 
     return AutoApproveDecision(
         decision=decision,
         reason=reason,
         detail_reasons=detail_reasons,
         auto_approve_note=note,
-        evaluated_at=datetime.now().isoformat(),
+        evaluated_at=datetime.now(timezone.utc).isoformat(),
     )

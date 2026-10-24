@@ -16,31 +16,38 @@ Usage trong Django views/services:
     # OCR
     ocr_result = await ai_client.extract_from_url(image_url)
 """
+
 try:
     import httpx
 except ImportError:
     httpx = None
 
-import os
 import asyncio
-from typing import Optional, Any
+import os
 
 try:
     from loguru import logger
 except ImportError:
     import logging
+
     logger = logging.getLogger("ai_client")
 
 try:
     from django.conf import settings as django_settings
+
     _URL = getattr(django_settings, "EAS_AI_SERVICE_URL", None)
     _SECRET = getattr(django_settings, "EAS_AI_INTERNAL_SECRET", None)
     _TIMEOUT = getattr(django_settings, "EAS_AI_TIMEOUT_SECONDS", None)
-except Exception:
+except Exception:  # noqa: BLE001
     _URL, _SECRET, _TIMEOUT = None, None, None
 
-AI_SERVICE_URL = _URL or os.getenv("EAS_AI_SERVICE_URL", os.getenv("AI_SERVICE_URL", "http://localhost:8001")).rstrip("/")
-INTERNAL_SECRET = _SECRET or os.getenv("EAS_AI_INTERNAL_SECRET", os.getenv("INTERNAL_API_SECRET", "datn-internal-secret-change-in-prod"))
+AI_SERVICE_URL = _URL or os.getenv(
+    "EAS_AI_SERVICE_URL", os.getenv("AI_SERVICE_URL", "http://localhost:8001")
+).rstrip("/")
+INTERNAL_SECRET = _SECRET or os.getenv(
+    "EAS_AI_INTERNAL_SECRET",
+    os.getenv("INTERNAL_API_SECRET", "datn-internal-secret-change-in-prod"),
+)
 TIMEOUT = float(_TIMEOUT or os.getenv("EAS_AI_TIMEOUT_SECONDS", "30.0"))
 
 
@@ -55,6 +62,7 @@ def _headers() -> dict:
 # Async client (dùng trong async Django views hoặc Celery async task)
 # ---------------------------------------------------------------------------
 
+
 class AIServiceClient:
     def __init__(self):
         self.base_url = AI_SERVICE_URL
@@ -68,7 +76,7 @@ class AIServiceClient:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 resp = await client.get(f"{self.base_url}/health")
                 return resp.status_code == 200
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
     async def score_risk(
@@ -123,7 +131,10 @@ class AIServiceClient:
                 "risk_label": "unknown",
                 "confidence": 0.5,
                 "auto_approve_eligible": risk_weight <= 2 and lifecycle_template == "A",
-                "explanation": {"error": "httpx_not_installed", "method": "fallback_risk_weight"},
+                "explanation": {
+                    "error": "httpx_not_installed",
+                    "method": "fallback_risk_weight",
+                },
                 "fallback_used": True,
             }
 
@@ -136,8 +147,10 @@ class AIServiceClient:
                 )
                 resp.raise_for_status()
                 return resp.json()
-        except Exception as e:
-            logger.warning(f"AI risk/score lỗi, dùng fallback risk_weight={risk_weight}: {e}")
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"AI risk/score lỗi, dùng fallback risk_weight={risk_weight}: {e}"
+            )
             return {
                 "risk_score": risk_weight,
                 "risk_label": "unknown",
@@ -158,7 +171,7 @@ class AIServiceClient:
         amount: float = 0.0,
         days_requested: int = 0,
         leave_balance_remaining: int = 0,
-        room_available: Optional[bool] = None,
+        room_available: bool | None = None,
     ) -> dict:
         """
         Gọi AI /auto-approve/evaluate và trả về:
@@ -174,7 +187,9 @@ class AIServiceClient:
             return {
                 "decision": "escalate_to_human",
                 "reason": "AI Client chưa cài đặt httpx",
-                "detail_reasons": ["❌ Thư viện HTTP chưa sẵn sàng — chuyển người duyệt thủ công"],
+                "detail_reasons": [
+                    "❌ Thư viện HTTP chưa sẵn sàng — chuyển người duyệt thủ công"
+                ],
                 "auto_approve_note": None,
                 "evaluated_at": "",
             }
@@ -201,12 +216,14 @@ class AIServiceClient:
                 )
                 resp.raise_for_status()
                 return resp.json()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"AI auto-approve lỗi, escalate thủ công: {e}")
             return {
                 "decision": "escalate_to_human",
                 "reason": f"AI Service không khả dụng: {e}",
-                "detail_reasons": ["❌ AI Service không phản hồi — chuyển người duyệt thủ công"],
+                "detail_reasons": [
+                    "❌ AI Service không phản hồi — chuyển người duyệt thủ công"
+                ],
                 "auto_approve_note": None,
                 "evaluated_at": "",
             }
@@ -216,10 +233,10 @@ class AIServiceClient:
         title: str,
         request_type: str,
         requester_name: str,
-        description: Optional[str] = None,
-        data: Optional[dict] = None,
-        risk_score: Optional[int] = None,
-        amount: Optional[float] = None,
+        description: str | None = None,
+        data: dict | None = None,
+        risk_score: int | None = None,
+        amount: float | None = None,
     ) -> dict:
         """
         Gọi AI /summarize/request và trả về:
@@ -258,7 +275,7 @@ class AIServiceClient:
                 )
                 resp.raise_for_status()
                 return resp.json()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"AI summarize lỗi: {e}")
             return {
                 "summary": title,
@@ -267,7 +284,9 @@ class AIServiceClient:
                 "tokens_used": 0,
             }
 
-    async def extract_ocr_from_url(self, image_url: str, request_type: Optional[str] = None) -> dict:
+    async def extract_ocr_from_url(
+        self, image_url: str, request_type: str | None = None
+    ) -> dict:
         """
         Gọi AI /ocr/extract-url và trả về:
         {
@@ -288,7 +307,9 @@ class AIServiceClient:
         payload = {"image_url": image_url, "request_type": request_type}
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:  # OCR cần thêm thời gian
+            async with httpx.AsyncClient(
+                timeout=60.0
+            ) as client:  # OCR cần thêm thời gian
                 resp = await client.post(
                     f"{self.base_url}/ai/ocr/extract-url",
                     json=payload,
@@ -296,7 +317,7 @@ class AIServiceClient:
                 )
                 resp.raise_for_status()
                 return resp.json()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"AI OCR lỗi: {e}")
             return {
                 "raw_text": "",
@@ -341,7 +362,7 @@ class AIServiceClient:
                 )
                 resp.raise_for_status()
                 return resp.json()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"AI classify lỗi: {e}")
             return {
                 "predicted_request_type": "leave_annual",
@@ -359,6 +380,7 @@ class AIServiceClient:
 # Sync wrapper (dùng trong Django sync views nếu cần)
 # ---------------------------------------------------------------------------
 
+
 class SyncAIServiceClient:
     """Wrapper đồng bộ cho AIServiceClient, dùng trong Django sync contexts."""
 
@@ -371,6 +393,7 @@ class SyncAIServiceClient:
             if loop.is_running():
                 # Trong context async (Celery, ASGI) — dùng asyncio.ensure_future
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     future = pool.submit(asyncio.run, coro)
                     return future.result(timeout=35)
@@ -391,8 +414,12 @@ class SyncAIServiceClient:
     def summarize_request(self, **kwargs) -> dict:
         return self._run(self._async_client.summarize_request(**kwargs))
 
-    def extract_ocr_from_url(self, image_url: str, request_type: Optional[str] = None) -> dict:
-        return self._run(self._async_client.extract_ocr_from_url(image_url, request_type))
+    def extract_ocr_from_url(
+        self, image_url: str, request_type: str | None = None
+    ) -> dict:
+        return self._run(
+            self._async_client.extract_ocr_from_url(image_url, request_type)
+        )
 
 
 # Singleton instances để import

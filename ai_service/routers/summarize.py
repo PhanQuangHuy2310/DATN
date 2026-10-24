@@ -7,13 +7,14 @@ POST /ai/summarize/request
 
 Không train model — dùng Gemini 1.5 Flash với prompt engineering.
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Any
-from loguru import logger
+
 import json
+from typing import Any
 
 from config import get_settings
+from fastapi import APIRouter, HTTPException
+from loguru import logger
+from pydantic import BaseModel
 
 settings = get_settings()
 router = APIRouter()
@@ -23,20 +24,21 @@ router = APIRouter()
 # Schemas
 # ---------------------------------------------------------------------------
 
+
 class SummarizeRequest(BaseModel):
     title: str
-    description: Optional[str] = None
-    request_type: str                    # "purchase", "leave", "expense_claim"...
+    description: str | None = None
+    request_type: str  # "purchase", "leave", "expense_claim"...
     requester_name: str
-    data: Optional[dict[str, Any]] = None  # JSONB data từ requests.data
-    risk_score: Optional[int] = None
-    amount: Optional[float] = None       # Rút ra từ data để dễ đưa vào prompt
+    data: dict[str, Any] | None = None  # JSONB data từ requests.data
+    risk_score: int | None = None
+    amount: float | None = None  # Rút ra từ data để dễ đưa vào prompt
 
 
 class SummarizeResult(BaseModel):
-    summary: str          # 2-3 câu tóm tắt
-    key_points: list[str] # Bullet points quan trọng
-    sentiment: str        # "normal" | "urgent" | "high_risk"
+    summary: str  # 2-3 câu tóm tắt
+    key_points: list[str]  # Bullet points quan trọng
+    sentiment: str  # "normal" | "urgent" | "high_risk"
     tokens_used: int
 
 
@@ -103,11 +105,14 @@ Lưu ý: "urgent" nếu có từ khẩn cấp/gấp/ngay. "high_risk" nếu risk
 # Endpoint
 # ---------------------------------------------------------------------------
 
-@router.post("/request", response_model=SummarizeResult, summary="Tóm tắt nội dung yêu cầu")
+
+@router.post(
+    "/request", response_model=SummarizeResult, summary="Tóm tắt nội dung yêu cầu"
+)
 async def summarize_request(body: SummarizeRequest):
     """
     Tóm tắt yêu cầu bằng Gemini 1.5 Flash.
-    
+
     Trả về:
     - **summary**: 2-3 câu tóm tắt
     - **key_points**: bullet points quan trọng
@@ -130,7 +135,7 @@ async def summarize_request(body: SummarizeRequest):
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
-                temperature=0.3,    # Thấp để output ổn định, không sáng tạo quá
+                temperature=0.3,  # Thấp để output ổn định, không sáng tạo quá
                 max_output_tokens=512,
             ),
         )
@@ -139,12 +144,13 @@ async def summarize_request(body: SummarizeRequest):
         # Strip markdown code block nếu Gemini trả về ```json ... ```
         if raw.startswith("```"):
             raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
+            raw = raw.removeprefix("json")
         raw = raw.strip()
 
         parsed = json.loads(raw)
-        tokens = response.usage_metadata.total_token_count if response.usage_metadata else 0
+        tokens = (
+            response.usage_metadata.total_token_count if response.usage_metadata else 0
+        )
 
         logger.info(f"Summarize OK | type={body.request_type} | tokens={tokens}")
 
@@ -164,6 +170,6 @@ async def summarize_request(body: SummarizeRequest):
             sentiment="normal",
             tokens_used=0,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Summarize error: {e}")
         raise HTTPException(status_code=500, detail=f"Lỗi LLM: {e}")
