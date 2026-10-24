@@ -95,6 +95,17 @@ class AIServiceClient:
         is_near_deadline: bool = False,
         is_weekend_or_holiday: bool = False,
         amount_vs_limit_ratio: float = 0.0,
+        amount_vnd: float | None = None,
+        num_attachments: int | None = None,
+        past_requests_count: int | None = None,
+        department: str | None = None,
+        has_receipt: int | None = None,
+        user_role: str = "junior",
+        user_tenure_months: int = 12,
+        urgency: str = "medium",
+        is_off_hours: int | None = None,
+        description_length: int = 150,
+        **extra_kwargs,
     ) -> dict:
         """
         Gọi AI /risk/score và trả về:
@@ -108,21 +119,57 @@ class AIServiceClient:
         }
         Fallback về risk_weight nếu AI service lỗi.
         """
+        actual_amount = amount_vnd if amount_vnd is not None else amount
+        actual_attachments = (
+            num_attachments if num_attachments is not None else attachment_count
+        )
+        actual_past_requests = (
+            past_requests_count
+            if past_requests_count is not None
+            else request_count_30d
+        )
+        actual_dept = department if department is not None else requester_dept_category
+        actual_receipt = (
+            has_receipt
+            if has_receipt is not None
+            else (1 if actual_attachments > 0 or actual_amount == 0 else 0)
+        )
+        actual_off_hours = (
+            is_off_hours
+            if is_off_hours is not None
+            else (1 if is_weekend_or_holiday else 0)
+        )
+        past_rej_rate = min(
+            1.0, max(0.0, float(reject_count_30d) / max(1, actual_past_requests))
+        )
+
         payload = {
             "request_type": request_type,
             "lifecycle_template": lifecycle_template,
             "risk_weight": risk_weight,
-            "amount": amount,
+            "amount_vnd": actual_amount,
+            "amount": actual_amount,
+            "num_attachments": actual_attachments,
+            "attachment_count": actual_attachments,
+            "department": actual_dept,
+            "requester_dept_category": actual_dept,
+            "has_receipt": actual_receipt,
+            "past_requests_count": actual_past_requests,
+            "request_count_30d": actual_past_requests,
+            "past_rejection_rate": past_rej_rate,
+            "reject_count_30d": reject_count_30d,
+            "is_off_hours": actual_off_hours,
+            "is_weekend_or_holiday": bool(actual_off_hours),
             "days_requested": days_requested,
             "requester_level": requester_level,
-            "requester_dept_category": requester_dept_category,
             "leave_balance_remaining": leave_balance_remaining,
-            "request_count_30d": request_count_30d,
-            "reject_count_30d": reject_count_30d,
-            "attachment_count": attachment_count,
             "is_near_deadline": is_near_deadline,
-            "is_weekend_or_holiday": is_weekend_or_holiday,
             "amount_vs_limit_ratio": amount_vs_limit_ratio,
+            "user_role": user_role,
+            "user_tenure_months": user_tenure_months,
+            "urgency": urgency,
+            "description_length": description_length,
+            **extra_kwargs,
         }
 
         if httpx is None:

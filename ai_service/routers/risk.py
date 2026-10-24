@@ -23,10 +23,15 @@ import os
 from typing import Any
 
 import numpy as np
-from config import get_settings
+
+try:
+    from config import get_settings
+except (ImportError, AttributeError):
+    from ai_service.config import get_settings
+
 from fastapi import APIRouter
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 settings = get_settings()
 router = APIRouter()
@@ -175,6 +180,38 @@ class RiskInput(BaseModel):
     )
     is_template_matched: int = Field(1, description="1 nếu điền đúng biểu mẫu chuẩn")
     description_length: int = Field(150, ge=0, description="Độ dài nội dung mô tả")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _remap_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Map amount -> amount_vnd
+            if "amount_vnd" not in data and "amount" in data:
+                data["amount_vnd"] = data["amount"]
+            # Map attachment_count -> num_attachments
+            if "num_attachments" not in data and "attachment_count" in data:
+                data["num_attachments"] = data["attachment_count"]
+            # Map request_count_30d -> past_requests_count
+            if "past_requests_count" not in data and "request_count_30d" in data:
+                data["past_requests_count"] = data["request_count_30d"]
+            # Map reject_count_30d / request_count_30d -> past_rejection_rate
+            if "past_rejection_rate" not in data and "reject_count_30d" in data:
+                req_cnt = (
+                    data.get("request_count_30d")
+                    or data.get("past_requests_count")
+                    or 1
+                )
+                rej_cnt = data.get("reject_count_30d") or 0
+                data["past_rejection_rate"] = min(
+                    1.0, max(0.0, float(rej_cnt) / max(1, req_cnt))
+                )
+            # Map requester_dept_category -> department
+            if "department" not in data and "requester_dept_category" in data:
+                data["department"] = data["requester_dept_category"]
+            # Map is_weekend_or_holiday -> is_off_hours
+            if "is_off_hours" not in data and "is_weekend_or_holiday" in data:
+                data["is_off_hours"] = 1 if data["is_weekend_or_holiday"] else 0
+        return data
 
 
 class RiskResult(BaseModel):

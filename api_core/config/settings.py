@@ -147,6 +147,13 @@ EAS_AI_INTERNAL_SECRET = os.getenv(
     "EAS_AI_INTERNAL_SECRET",
     os.getenv("INTERNAL_API_SECRET", "datn-internal-secret-change-in-prod"),
 )
+if (
+    ENVIRONMENT == "production"
+    and EAS_AI_INTERNAL_SECRET == "datn-internal-secret-change-in-prod"
+):
+    raise RuntimeError(
+        "EAS_AI_INTERNAL_SECRET must be explicitly configured and cannot use default value in production"
+    )
 EAS_AI_TIMEOUT_SECONDS = float(os.getenv("EAS_AI_TIMEOUT_SECONDS", "5.0"))
 
 LOGGING = {

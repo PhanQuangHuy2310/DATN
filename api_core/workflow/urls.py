@@ -170,4 +170,8 @@ urlpatterns = [
         name="request-audit-verify",
     ),
     path("admin-events", views.admin_events_view, name="admin-events"),
+    # AI Assistance Proxy
+    path("ai/classify", views.ai_classify_view, name="ai-classify"),
+    path("ai/risk-score", views.ai_risk_score_view, name="ai-risk-score"),
+    path("ai/summarize", views.ai_summarize_view, name="ai-summarize"),
 ]

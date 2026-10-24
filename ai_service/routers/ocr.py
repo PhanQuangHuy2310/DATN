@@ -11,9 +11,16 @@ Fallback: nếu PaddleOCR chưa cài được thì trả về raw text từ Gemi
 
 import base64
 import io
+import ipaddress
 import re
+import socket
+from urllib.parse import urlparse
 
-from config import get_settings
+try:
+    from config import get_settings
+except (ImportError, AttributeError):
+    from ai_service.config import get_settings
+
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from loguru import logger
 from pydantic import BaseModel
@@ -238,12 +245,61 @@ async def extract_from_upload(
     )
 
 
+def validate_safe_image_url(url: str) -> None:
+    """Kiểm tra URL chống SSRF: chỉ cho phép http/https, chặn private/loopback/metadata IP."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Scheme '{parsed.scheme}' không được hỗ trợ. Chỉ cho phép http và https.",
+        )
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(status_code=400, detail="URL không hợp lệ: thiếu hostname.")
+
+    lowered_host = hostname.lower()
+    if lowered_host in ("metadata.google.internal", "metadata", "instance-data"):
+        raise HTTPException(
+            status_code=400,
+            detail="Truy cập hostname nội bộ bị cấm (SSRF protection).",
+        )
+
+    try:
+        addr_info = socket.getaddrinfo(hostname, None)
+    except socket.gaierror as exc:
+        raise HTTPException(
+            status_code=400, detail=f"Không thể phân giải tên miền {hostname}: {exc}"
+        ) from exc
+
+    for entry in addr_info:
+        ip_str = entry[4][0]
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            continue
+
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or (ip.version == 4 and ip_str.startswith("169.254."))
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Địa chỉ IP mục tiêu {ip_str} thuộc dải mạng bị cấm (SSRF protection).",
+            )
+
+
 @router.post("/extract-url", response_model=OCRResult, summary="Bóc tách từ URL ảnh")
 async def extract_from_url(body: OCRUrlRequest):
     """
     Nhận URL ảnh → download → chạy OCR → trả kết quả.
     Dùng khi ảnh đã được upload lên Supabase Storage.
     """
+    validate_safe_image_url(body.image_url)
+
     import httpx
 
     try:

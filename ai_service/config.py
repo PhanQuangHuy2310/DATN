@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # --- Security ---
     internal_api_secret: str = "datn-internal-secret-change-in-prod"
+    cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000"
 
     # --- OCR ---
     ocr_lang: str = "vi"
@@ -43,6 +44,22 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    def model_post_init(self, context: object, /) -> None:
+        import os
+
+        env = (
+            os.getenv("EAS_ENV", os.getenv("ENVIRONMENT", "development"))
+            .lower()
+            .strip()
+        )
+        if (
+            env == "production"
+            and self.internal_api_secret == "datn-internal-secret-change-in-prod"
+        ):
+            raise ValueError(
+                "INTERNAL_API_SECRET must be configured with a secure secret in production"
+            )
 
 
 @lru_cache

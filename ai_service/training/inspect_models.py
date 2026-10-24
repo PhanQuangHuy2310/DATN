@@ -1,7 +1,11 @@
-import joblib, json, os
+import json
+import os
+from pathlib import Path
+import joblib
 import numpy as np
 
-models_dir = 'D:/GitHub/DATN/ai_service/models'
+ai_service_dir = Path(__file__).resolve().parents[1]
+models_dir = str(ai_service_dir / "models")
 configs = {
     'finance': ('risk_model_finance.pkl', 'feature_cols_finance.json'),
     'hr':      ('risk_model_hr.pkl',      'feature_cols_hr.json'),

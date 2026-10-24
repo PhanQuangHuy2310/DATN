@@ -242,3 +242,81 @@ class RoutingTests(SimpleTestCase):
         self.rules["rules"][2]["approvers"] = ["CEO_FROM_FREE_TEXT"]
         with self.assertRaisesRegex(RoutingError, "allowed slots"):
             self.resolve(1)
+
+    def test_days_gt_routing(self):
+        rules = {
+            "schema_version": 1,
+            "rules": [
+                {
+                    "id": "LONG_LEAVE",
+                    "priority": 1,
+                    "when": {"days_gt": 2},
+                    "approvers": ["DIRECT_MANAGER", "DIRECTOR"],
+                },
+                {
+                    "id": "SHORT_LEAVE",
+                    "default": True,
+                    "approvers": ["DIRECT_MANAGER"],
+                },
+            ],
+            "executor": "EXECUTOR_ASSET",
+            "acceptor": "REQUESTER",
+        }
+        res_short = resolve_route(
+            route_rules=rules,
+            actor_bindings=self.bindings,
+            department_id=self.department,
+            requester_id=self.requester,
+            manager_id=self.manager,
+            payload={"duration_days": 2},
+        )
+        self.assertEqual(res_short.matched_rule_id, "SHORT_LEAVE")
+
+        res_long = resolve_route(
+            route_rules=rules,
+            actor_bindings=self.bindings,
+            department_id=self.department,
+            requester_id=self.requester,
+            manager_id=self.manager,
+            payload={"duration_days": 5},
+        )
+        self.assertEqual(res_long.matched_rule_id, "LONG_LEAVE")
+
+    def test_app_code_in_routing(self):
+        rules = {
+            "schema_version": 1,
+            "rules": [
+                {
+                    "id": "CORE_APP",
+                    "priority": 1,
+                    "when": {"app_code_in": ["SAP", "SALESFORCE"]},
+                    "approvers": ["DIRECT_MANAGER", "DIRECTOR"],
+                },
+                {
+                    "id": "OTHER_APP",
+                    "default": True,
+                    "approvers": ["DIRECT_MANAGER"],
+                },
+            ],
+            "executor": "EXECUTOR_ASSET",
+            "acceptor": "REQUESTER",
+        }
+        res_other = resolve_route(
+            route_rules=rules,
+            actor_bindings=self.bindings,
+            department_id=self.department,
+            requester_id=self.requester,
+            manager_id=self.manager,
+            payload={"app_code": "JIRA"},
+        )
+        self.assertEqual(res_other.matched_rule_id, "OTHER_APP")
+
+        res_core = resolve_route(
+            route_rules=rules,
+            actor_bindings=self.bindings,
+            department_id=self.department,
+            requester_id=self.requester,
+            manager_id=self.manager,
+            payload={"app_code": "SAP"},
+        )
+        self.assertEqual(res_core.matched_rule_id, "CORE_APP")

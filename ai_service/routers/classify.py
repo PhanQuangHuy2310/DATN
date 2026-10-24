@@ -18,7 +18,12 @@ import os
 
 import joblib
 import numpy as np
-from config import get_settings
+
+try:
+    from config import get_settings
+except (ImportError, AttributeError):
+    from ai_service.config import get_settings
+
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field

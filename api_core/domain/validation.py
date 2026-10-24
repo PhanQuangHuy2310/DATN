@@ -407,15 +407,34 @@ def validate_config_release_payload(
                     )
                 else:
                     for k, v in when.items():
-                        if k not in {"amount_gt", "amount_gte"}:
+                        if k not in {
+                            "amount_gt",
+                            "amount_gte",
+                            "days_gt",
+                            "app_code_in",
+                        }:
                             errs.append(f"route_rules:unknown condition operator {k}")
-                        elif (
-                            isinstance(v, bool)
-                            or not isinstance(v, int)
-                            or not (0 <= v <= 1_000_000_000_000)
+                        elif k in {"amount_gt", "amount_gte"}:
+                            if (
+                                isinstance(v, bool)
+                                or not isinstance(v, int)
+                                or not (0 <= v <= 1_000_000_000_000)
+                            ):
+                                errs.append(
+                                    f"route_rules:invalid amount condition value {v}"
+                                )
+                        elif k == "days_gt":
+                            if isinstance(v, bool) or not isinstance(v, int) or v < 0:
+                                errs.append(
+                                    f"route_rules:invalid days_gt condition value {v}"
+                                )
+                        elif k == "app_code_in" and (
+                            not isinstance(v, list)
+                            or len(v) == 0
+                            or not all(isinstance(x, str) and x.strip() for x in v)
                         ):
                             errs.append(
-                                f"route_rules:invalid amount condition value {v}"
+                                f"route_rules:invalid app_code_in condition value {v}"
                             )
 
         if default_count != 1 or rules[-1].get("default") is not True:

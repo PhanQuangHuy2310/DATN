@@ -12,7 +12,7 @@ class RoutingError(ValueError):
 APPROVER_SLOTS = {"DIRECT_MANAGER", "DIRECTOR", "FINANCE"}
 EXECUTOR_SLOTS = {None, "EXECUTOR_ASSET", "EXECUTOR_IT"}
 ACCEPTOR_SLOTS = {None, "REQUESTER"}
-SUPPORTED_OPERATORS = {"amount_gt", "amount_gte"}
+SUPPORTED_OPERATORS = {"amount_gt", "amount_gte", "days_gt", "app_code_in"}
 
 
 @dataclass(frozen=True)
@@ -40,30 +40,95 @@ def _uuid(value: object, label: str) -> str:
         raise RoutingError(f"{label} must resolve to one UUID") from None
 
 
-def _matches(when: dict[str, Any], amount_vnd: int | None) -> bool:
+def _extract_days(payload: dict[str, Any]) -> int | None:
+    for field in ("duration_days", "days", "number_of_days", "leave_days"):
+        val = payload.get(field)
+        if val is not None and not isinstance(val, bool):
+            try:
+                days_int = int(val)
+                if days_int >= 0:
+                    return days_int
+            except (ValueError, TypeError):
+                pass
+
+    start = payload.get("start_date")
+    end = payload.get("end_date")
+    if isinstance(start, str) and isinstance(end, str):
+        try:
+            from datetime import date
+
+            d_start = date.fromisoformat(start)
+            d_end = date.fromisoformat(end)
+            diff = (d_end - d_start).days + 1
+            if diff >= 0:
+                return diff
+        except (ValueError, TypeError):
+            pass
+
+    return None
+
+
+def _matches(
+    when: dict[str, Any],
+    amount_vnd: int | None,
+    payload: dict[str, Any] | None = None,
+) -> bool:
     if set(when) - SUPPORTED_OPERATORS:
         raise RoutingError("Unsupported route operator")
     if not when:
         return True
-    if (
-        amount_vnd is None
-        or isinstance(amount_vnd, bool)
-        or not isinstance(amount_vnd, int)
-    ):
-        return False
-    checks = {
-        "amount_gt": lambda threshold: amount_vnd > threshold,
-        "amount_gte": lambda threshold: amount_vnd >= threshold,
-    }
+
+    payload = payload or {}
+
     for key, value in when.items():
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, int)
-            or not 0 <= value <= 1_000_000_000_000
-        ):
-            raise RoutingError("Route threshold must be an integer VND value")
-        if not checks[key](value):
-            return False
+        if key in ("amount_gt", "amount_gte"):
+            if (
+                amount_vnd is None
+                or isinstance(amount_vnd, bool)
+                or not isinstance(amount_vnd, int)
+            ):
+                return False
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or not 0 <= value <= 1_000_000_000_000
+            ):
+                raise RoutingError("Route threshold must be an integer VND value")
+            if key == "amount_gt" and not (amount_vnd > value):
+                return False
+            if key == "amount_gte" and not (amount_vnd >= value):
+                return False
+
+        elif key == "days_gt":
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise RoutingError(
+                    "Route days_gt threshold must be a non-negative integer"
+                )
+            days = _extract_days(payload)
+            if days is None or not (days > value):
+                return False
+
+        elif key == "app_code_in":
+            if (
+                not isinstance(value, list)
+                or not value
+                or not all(isinstance(x, str) and x.strip() for x in value)
+            ):
+                raise RoutingError(
+                    "Route app_code_in must be a non-empty list of strings"
+                )
+            app_code = (
+                payload.get("app_code")
+                or payload.get("application")
+                or payload.get("system")
+            )
+            if (
+                not isinstance(app_code, str)
+                or not app_code.strip()
+                or app_code not in value
+            ):
+                return False
+
     return True
 
 
@@ -74,7 +139,8 @@ def resolve_route(
     department_id: str,
     requester_id: str,
     manager_id: str | None,
-    amount_vnd: int | None,
+    amount_vnd: int | None = None,
+    payload: dict[str, Any] | None = None,
 ) -> RouteDecision:
     if (
         route_rules.get("schema_version") != 1
@@ -119,7 +185,7 @@ def resolve_route(
         (
             rule
             for rule in sorted(conditional, key=lambda item: item["priority"])
-            if _matches(rule.get("when", {}), amount_vnd)
+            if _matches(rule.get("when", {}), amount_vnd, payload)
         ),
         defaults[0],
     )

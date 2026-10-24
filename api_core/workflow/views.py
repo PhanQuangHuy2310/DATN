@@ -908,3 +908,102 @@ def admin_events_view(request: HttpRequest) -> JsonResponse:
         return JsonResponse(res)
     except CommandError as exc:
         return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+
+
+@require_POST
+@require_actor()
+def ai_classify_view(request: HttpRequest) -> JsonResponse:
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+
+    title = body.get("title")
+    if not isinstance(title, str) or not title.strip():
+        return api_error(request, "TITLE_REQUIRED", status=400)
+
+    description = body.get("description", "")
+    if not isinstance(description, str):
+        description = str(description)
+
+    from api_core.integrations.ai_service import ai_client_sync
+
+    result = ai_client_sync.classify_request(
+        title=title.strip(), description=description.strip()
+    )
+    return JsonResponse(
+        {"data": result, "correlation_id": correlation_id(request)}, status=200
+    )
+
+
+@require_POST
+@require_actor()
+def ai_risk_score_view(request: HttpRequest) -> JsonResponse:
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+
+    request_type = body.get("request_type")
+    if not isinstance(request_type, str) or not request_type.strip():
+        return api_error(request, "REQUEST_TYPE_REQUIRED", status=400)
+
+    lifecycle_template = body.get("lifecycle_template", "A")
+    risk_weight = body.get("risk_weight", 2)
+    try:
+        risk_weight = int(risk_weight)
+    except (ValueError, TypeError):
+        risk_weight = 2
+
+    from api_core.integrations.ai_service import ai_client_sync
+
+    result = ai_client_sync.score_risk(
+        request_type=request_type,
+        lifecycle_template=str(lifecycle_template),
+        risk_weight=risk_weight,
+        **{
+            k: v
+            for k, v in body.items()
+            if k not in ("request_type", "lifecycle_template", "risk_weight")
+        },
+    )
+    return JsonResponse(
+        {"data": result, "correlation_id": correlation_id(request)}, status=200
+    )
+
+
+@require_POST
+@require_actor()
+def ai_summarize_view(request: HttpRequest) -> JsonResponse:
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+
+    title = body.get("title")
+    if not isinstance(title, str) or not title.strip():
+        return api_error(request, "TITLE_REQUIRED", status=400)
+
+    request_type = body.get("request_type", "general")
+    requester_name = body.get("requester_name") or getattr(
+        request.actor, "display_name", ""
+    )
+    description = body.get("description")
+    data = body.get("data")
+    risk_score = body.get("risk_score")
+    amount = body.get("amount")
+
+    from api_core.integrations.ai_service import ai_client_sync
+
+    result = ai_client_sync.summarize_request(
+        title=title.strip(),
+        request_type=str(request_type),
+        requester_name=str(requester_name),
+        description=description,
+        data=data if isinstance(data, dict) else None,
+        risk_score=risk_score,
+        amount=amount,
+    )
+    return JsonResponse(
+        {"data": result, "correlation_id": correlation_id(request)}, status=200
+    )

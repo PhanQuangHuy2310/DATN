@@ -16,13 +16,11 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE SCHEMA IF NOT EXISTS eas;
 SET search_path TO eas, public;
 
--- Cấp quyền truy cập schema cho các role mặc định của Supabase
-GRANT USAGE ON SCHEMA eas TO postgres, anon, authenticated, service_role;
+-- Cấp quyền truy cập schema tối thiểu (Least Privilege: không cấp cho anon/authenticated)
+GRANT USAGE ON SCHEMA eas TO postgres, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA eas GRANT ALL ON TABLES TO postgres, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA eas GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA eas GRANT SELECT ON TABLES TO anon;
 ALTER DEFAULT PRIVILEGES IN SCHEMA eas GRANT ALL ON SEQUENCES TO postgres, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA eas GRANT USAGE, SELECT ON SEQUENCES TO authenticated;
+REVOKE ALL ON SCHEMA eas FROM PUBLIC;
 
 -- ========================================================================================
 -- 2. HÀM DÙNG CHUNG (TRIGGER FUNCTIONS)

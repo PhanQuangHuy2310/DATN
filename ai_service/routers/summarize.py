@@ -11,7 +11,11 @@ Không train model — dùng Gemini 1.5 Flash với prompt engineering.
 import json
 from typing import Any
 
-from config import get_settings
+try:
+    from config import get_settings
+except (ImportError, AttributeError):
+    from ai_service.config import get_settings
+
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 from pydantic import BaseModel

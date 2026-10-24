@@ -933,6 +933,7 @@ def submit_request(
             requester_id=actor.id,
             manager_id=user[0],
             amount_vnd=amount,
+            payload=normalized,
         )
         routed_actors = set(decision.approver_ids)
         if decision.executor_id:

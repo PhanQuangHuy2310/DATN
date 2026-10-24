@@ -1,10 +1,15 @@
-import sys, os
-sys.path.insert(0, 'D:/GitHub/DATN/ai_service')
-os.chdir('D:/GitHub/DATN/ai_service')
-import joblib, json
+import json
+import os
+from pathlib import Path
+import sys
+import joblib
 import numpy as np
 
-MODELS_DIR = 'models'
+ai_service_dir = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ai_service_dir))
+os.chdir(str(ai_service_dir))
+
+MODELS_DIR = str(ai_service_dir / 'models')
 FINANCE_TYPES = {'advance_payment','expense_reimbursement','budget_approval','contract_payment'}
 HR_TYPES = {'leave_annual','leave_unpaid','overtime','remote_work','travel','stationery','vehicle_booking','meeting_room'}
 IT_TYPES = {'equipment_new','equipment_repair','access_permission','vpn_access'}

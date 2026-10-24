@@ -18,8 +18,17 @@ import json
 import os
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
-from loguru import logger
+try:
+    from fastapi import APIRouter, HTTPException, Query
+except ImportError:
+    APIRouter, HTTPException, Query = object, Exception, lambda *args, **kwargs: None
+
+try:
+    from loguru import logger
+except ImportError:
+    import logging
+
+    logger = logging.getLogger("mock_context")
 
 router = APIRouter()
 
@@ -76,7 +85,7 @@ def get_manifest() -> dict[str, Any] | None:
 
 def lookup_leave_balance(
     employee_code_or_name: str, leave_type: str = "ANNUAL"
-) -> int | None:
+) -> float | int | None:
     """Tra cứu số ngày phép còn lại từ mock_hr snapshot."""
     hr_data = get_mock_data("mock_hr")
     if not hr_data:
@@ -89,10 +98,11 @@ def lookup_leave_balance(
     target = employee_code_or_name.lower().strip()
 
     for emp in employees:
-        if (
-            emp.get("employee_code", "").lower() == target
-            or target in emp.get("display_name", "").lower()
-        ):
+        code_val = (emp.get("code") or emp.get("employee_code") or "").lower()
+        name_val = (
+            emp.get("label") or emp.get("display_name") or emp.get("name") or ""
+        ).lower()
+        if code_val == target or (target and target in name_val):
             emp_id = emp.get("id")
             break
 
@@ -100,14 +110,17 @@ def lookup_leave_balance(
         return None
 
     balances = hr_data.get("entities", {}).get("leave_balance", {}).get("data", [])
+    target_type = leave_type.upper().strip()
     for b in balances:
-        if (
-            str(b.get("employee_id")) == str(emp_id)
-            and b.get("leave_type") == leave_type
-        ):
-            entitled = int(b.get("entitled_days", 0) or 0)
-            used = int(b.get("used_days", 0) or 0)
-            return max(0, entitled - used)
+        b_type = (b.get("type") or b.get("leave_type") or "").upper().strip()
+        if str(b.get("employee_id")) == str(emp_id) and b_type == target_type:
+            if "remaining" in b and b["remaining"] is not None:
+                val = float(b["remaining"])
+                return int(val) if val.is_integer() else val
+            entitled = float(b.get("entitled", b.get("entitled_days", 0)) or 0)
+            used = float(b.get("used", b.get("used_days", 0)) or 0)
+            diff = max(0.0, entitled - used)
+            return int(diff) if diff.is_integer() else diff
 
     return None
 
@@ -122,12 +135,13 @@ def lookup_facility_available(resource_code_or_name: str) -> bool | None:
     target = resource_code_or_name.lower().strip()
 
     for r in resources:
-        if (
-            r.get("resource_code", "").lower() == target
-            or target in r.get("label", "").lower()
-            or target in r.get("name", "").lower()
-        ):
-            return r.get("availability_status") == "AVAILABLE"
+        code_val = (r.get("code") or r.get("resource_code") or "").lower()
+        name_val = (r.get("label") or r.get("name") or "").lower()
+        if code_val == target or (target and target in name_val):
+            if "is_available" in r and r["is_available"] is not None:
+                return bool(r["is_available"])
+            status = (r.get("status") or r.get("availability_status") or "").upper()
+            return status == "AVAILABLE"
 
     return None
 
@@ -138,15 +152,34 @@ def lookup_department_budget(dept_code: str) -> dict[str, Any] | None:
     if not fin_data:
         return None
 
-    budgets = fin_data.get("entities", {}).get("cost_center_budget", {}).get("data", [])
     target = dept_code.upper().strip()
+    cost_center_target = target
 
+    # Nếu dept_code là mã phòng ban (ví dụ 'IT', 'FIN', 'OPS', 'HQ'), tìm cost_center tương ứng từ mock_hr
+    hr_data = get_mock_data("mock_hr")
+    if hr_data:
+        depts = hr_data.get("entities", {}).get("department", {}).get("data", [])
+        for d in depts:
+            if (d.get("code") or "").upper() == target:
+                cc = d.get("cost_center")
+                if cc:
+                    cost_center_target = cc.upper()
+                break
+
+    budgets = fin_data.get("entities", {}).get("cost_center_budget", {}).get("data", [])
     for b in budgets:
-        if b.get("cost_center_code", "").upper() == target:
+        b_cc = (b.get("cost_center") or b.get("cost_center_code") or "").upper()
+        if b_cc in (target, cost_center_target):
+            allocated = b.get("approved_vnd") or b.get("allocated_amount_vnd")
+            committed = b.get("committed_vnd") or b.get("committed_amount_vnd")
+            remaining = b.get("remaining_vnd")
+            if remaining is None and allocated is not None and committed is not None:
+                remaining = max(0, float(allocated) - float(committed))
             return {
-                "fiscal_year": b.get("fiscal_year"),
-                "allocated_amount": b.get("allocated_amount_vnd"),
-                "committed_amount": b.get("committed_amount_vnd"),
+                "fiscal_year": b.get("year") or b.get("fiscal_year"),
+                "allocated_amount": allocated,
+                "committed_amount": committed,
+                "remaining_amount": remaining,
                 "currency": b.get("currency", "VND"),
             }
 
