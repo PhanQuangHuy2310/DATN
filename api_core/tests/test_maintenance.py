@@ -93,9 +93,7 @@ class MaintenanceModeTests(SimpleTestCase):
         # Cố đăng nhập khi hệ thống đang bảo trì
         response = self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps(
-                {"username": "requester1", "password": "UserPass-2026!"}
-            ),
+            data=json.dumps({"username": "requester1", "password": "UserPass-2026!"}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 503)
@@ -199,7 +197,9 @@ class MaintenanceModeTests(SimpleTestCase):
         # Admin hoàn tất cập nhật
         response = self.client.post(
             "/api/v1/system/maintenance/complete",
-            data=json.dumps({"admin_message": "Hệ thống đã cập nhật xong quy định mới."}),
+            data=json.dumps(
+                {"admin_message": "Hệ thống đã cập nhật xong quy định mới."}
+            ),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
@@ -211,7 +211,9 @@ class MaintenanceModeTests(SimpleTestCase):
 
     @patch("api_core.authn.views.find_user")
     @patch("api_core.maintenance.is_admin_user_id", return_value=False)
-    def test_non_admin_can_login_after_maintenance_completed(self, _is_admin, find_user):
+    def test_non_admin_can_login_after_maintenance_completed(
+        self, _is_admin, find_user
+    ):
         find_user.return_value = self.non_admin_user
         # Bảo trì đã hoàn tất
         start_maintenance(actor_id="admin-1")
@@ -221,9 +223,7 @@ class MaintenanceModeTests(SimpleTestCase):
         # User thường đăng nhập lại bình thường
         response = self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps(
-                {"username": "requester1", "password": "UserPass-2026!"}
-            ),
+            data=json.dumps({"username": "requester1", "password": "UserPass-2026!"}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)

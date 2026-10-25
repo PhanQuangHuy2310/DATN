@@ -9,7 +9,9 @@ from django.db import connection
 CACHE_KEY_MAINTENANCE = "eas:system:maintenance"
 ADMIN_ROLES = frozenset({"POLICY_ADMIN", "OPS_ADMIN"})
 
-MAINTENANCE_MSG_USER = "Hệ thống đang bảo trì để cập nhật quy định mới, vui lòng quay lại sau."
+MAINTENANCE_MSG_USER = (
+    "Hệ thống đang bảo trì để cập nhật quy định mới, vui lòng quay lại sau."
+)
 MAINTENANCE_MSG_ADMIN_ACTIVE = "Hệ thống đang trong quá trình cập nhật quy định mới. Chỉ quản trị viên mới có thể truy cập web-admin."
 MAINTENANCE_MSG_ADMIN_COMPLETED = "Hệ thống đã cập nhật xong quy định mới. Các tài khoản người dùng đã có thể sử dụng bình thường với phiên bản mới nhất."
 
