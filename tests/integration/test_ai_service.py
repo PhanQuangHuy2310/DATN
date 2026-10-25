@@ -25,6 +25,15 @@ except (ImportError, ModuleNotFoundError):
     numpy = None
     HAS_ML_DEPS = False
 
+try:
+    import fastapi  # noqa: F401
+    import loguru  # noqa: F401
+    import pydantic  # noqa: F401
+
+    HAS_ROUTER_DEPS = True
+except (ImportError, ModuleNotFoundError):
+    HAS_ROUTER_DEPS = False
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 AI_SERVICE_DIR = os.path.join(REPO_ROOT, "ai_service")
 
@@ -145,6 +154,10 @@ class TestMockDataSnapshots(unittest.TestCase):
         self.assertIsNotNone(budget_cc)
         self.assertEqual(budget_cc["allocated_amount"], 1_000_000_000)
 
+    @unittest.skipUnless(
+        HAS_ROUTER_DEPS,
+        "Router dependencies (fastapi, pydantic, loguru) are required for RiskInput schema test",
+    )
     def test_risk_input_schema_remap(self):
         try:
             from routers.risk import RiskInput
@@ -170,6 +183,10 @@ class TestMockDataSnapshots(unittest.TestCase):
         self.assertEqual(item.is_off_hours, 1)
         self.assertAlmostEqual(item.past_rejection_rate, 1 / 8)
 
+    @unittest.skipUnless(
+        HAS_ROUTER_DEPS,
+        "Router dependencies (fastapi, pydantic, loguru) are required for Anti-SSRF test",
+    )
     def test_anti_ssrf_validation(self):
         try:
             from routers.ocr import validate_safe_image_url
