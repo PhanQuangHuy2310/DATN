@@ -123,6 +123,10 @@ class TestMockDataSnapshots(unittest.TestCase):
 
         self.assertGreater(total_records, 100, "Tổng số bản ghi mock phải > 100")
 
+    @unittest.skipUnless(
+        HAS_ROUTER_DEPS,
+        "Router dependencies (fastapi, pydantic, loguru) are required for mock_context lookup test",
+    )
     def test_mock_context_lookups(self):
         try:
             from routers.mock_context import (
