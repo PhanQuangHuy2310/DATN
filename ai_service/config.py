@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     risk_feature_columns_path: str = "models/feature_columns.json"
 
     # --- Security ---
-    internal_api_secret: str = "datn-internal-secret-change-in-prod"
+    internal_api_secret: str = ""
 
     # --- OCR ---
     ocr_lang: str = "vi"

@@ -4,6 +4,7 @@ from api_core.authn import views as authn_views
 from api_core.catalog import views as catalog_views
 
 urlpatterns = [
+    path("api/v1/admin/", include("api_core.administration.urls")),
     path("health/", include("api_core.health.urls")),
     path("api/v1/auth/", include("api_core.authn.urls")),
     path("api/v1/me", authn_views.me, name="me-alias"),

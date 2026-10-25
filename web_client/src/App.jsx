@@ -1,256 +1,587 @@
-import { useEffect, useRef, useState } from "react";
-import { api, idempotencyKey, initializeCsrf } from "./api.js";
-
-const fields = {
-  LEAVE: [
-    ["title", "Tiêu đề", "text"],
-    ["reason", "Lý do", "textarea"],
-    ["start_date", "Ngày bắt đầu", "date"],
-    ["end_date", "Ngày kết thúc", "date"],
-    ["handover_user_id", "ID người bàn giao", "text"],
-  ],
-  ACCESS: [
-    ["title", "Tiêu đề", "text"],
-    ["reason", "Lý do", "textarea"],
-    ["app_code", "Mã ứng dụng", "text"],
-    ["requested_role", "Quyền yêu cầu", "text"],
-    ["duration_days", "Số ngày", "number"],
-    ["purpose", "Mục đích", "textarea"],
-  ],
-  EQUIPMENT: [
-    ["title", "Tiêu đề", "text"],
-    ["reason", "Lý do", "textarea"],
-    ["item_name", "Thiết bị", "text"],
-    ["quantity", "Số lượng", "number"],
-    ["amount_vnd", "Giá trị VND", "number"],
-    ["specs", "Cấu hình", "textarea"],
-    ["location", "Nơi sử dụng", "text"],
-  ],
-};
-
+import { useEffect, useState } from "react";
+import { api, initializeCsrf } from "./api.js";
+import { date, errorText, roles, statuses, types } from "./domain.js";
+import {
+  ActionForm,
+  Badge,
+  ResourceState,
+  useResource,
+} from "./components/ui.jsx";
+import RequestEditor from "./components/RequestEditor.jsx";
+import RequestDetail from "./components/RequestDetail.jsx";
+import IdentityAdmin from "./components/IdentityAdmin.jsx";
+import {
+  AdminEvents,
+  Notifications,
+  Operations,
+  Policy,
+  Profile,
+} from "./components/Admin.jsx";
 function Login({ onLogin }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  async function submit(event) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    const form = new FormData(event.currentTarget);
-    try {
-      await initializeCsrf();
-      await api("/api/v1/auth/login", {
-        method: "POST",
-        body: JSON.stringify(Object.fromEntries(form)),
-      });
-      onLogin();
-    } catch (reason) {
-      setError(reason.message === "INVALID_CREDENTIALS" ? "Thông tin đăng nhập không hợp lệ." : "Không thể đăng nhập lúc này.");
-    } finally {
-      setBusy(false);
-    }
-  }
-  return <main id="main" className="auth-shell">
-    <form className="panel auth-card" onSubmit={submit}>
-      <p className="eyebrow">Enterprise Approval System</p>
-      <h1>Đăng nhập</h1>
-      <label htmlFor="username">Tên đăng nhập</label>
-      <input id="username" name="username" autoComplete="username" required />
-      <label htmlFor="password">Mật khẩu</label>
-      <input id="password" name="password" type="password" autoComplete="current-password" required />
-      {error && <p className="error" role="alert">{error}</p>}
-      <button disabled={busy}>{busy ? "Đang xác thực…" : "Đăng nhập"}</button>
-    </form>
-  </main>;
+  return (
+    <main id="main" className="auth-shell">
+      <section className="auth-intro">
+        <div className="brand-mark">E</div>
+        <p className="eyebrow">ENTERPRISE APPROVAL SYSTEM</p>
+        <h1>
+          Mọi yêu cầu.
+          <br />
+          Một quy trình rõ ràng.
+        </h1>
+        <p>
+          Kết nối đề xuất, phê duyệt và thực hiện trong một không gian làm việc.
+        </p>
+        <div className="login-steps">
+          01 · Đề xuất　　02 · Phê duyệt　　03 · Hoàn thành
+        </div>
+      </section>
+      <section className="panel auth-card">
+        <p className="eyebrow">CHÀO MỪNG TRỞ LẠI</p>
+        <h2>Đăng nhập EAS Portal</h2>
+        <p className="muted">Sử dụng tài khoản doanh nghiệp của bạn.</p>
+        <ActionForm
+          submitLabel="Đăng nhập"
+          onSubmit={async (values) => {
+            await initializeCsrf();
+            const result = await api("/api/v1/auth/login", {
+              method: "POST",
+              body: JSON.stringify(values),
+            });
+            await onLogin(result.user);
+          }}
+        >
+          <label>
+            Tên đăng nhập
+            <input name="username" autoComplete="username" required />
+          </label>
+          <label>
+            Mật khẩu
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
+          </label>
+        </ActionForm>
+      </section>
+    </main>
+  );
 }
-
-function RequestForm({ onCreated }) {
-  const [type, setType] = useState("LEAVE");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const errorRef = useRef(null);
-
-  async function submit(event) {
-    event.preventDefault();
-    setBusy(true);
-    setMessage("");
-    const values = Object.fromEntries(new FormData(event.currentTarget));
-    delete values.type_code;
-    for (const [name, , kind] of fields[type]) {
-      if (kind === "number") {
-        values[name] = Number(values[name]);
-      }
-    }
-    try {
-      const draft = await api("/api/v1/request-drafts", {
-        method: "POST",
-        headers: { "Idempotency-Key": idempotencyKey() },
-        body: JSON.stringify({ type_code: type }),
-      });
-      const request = draft.request;
-      const file = event.currentTarget.elements.attachment?.files?.[0];
-      const attachmentIds = [];
-      if (file) {
-        const upload = new FormData();
-        upload.append("file", file);
-        const uploaded = await api(`/api/v1/request-drafts/${request.id}/attachments`, { method: "POST", body: upload });
-        attachmentIds.push(uploaded.attachment.id);
-      }
-      if (type === "EQUIPMENT" && attachmentIds.length === 0) throw new Error("EQUIPMENT_QUOTE_REQUIRED");
-      await api("/api/v1/requests/submit", {
-        method: "POST",
-        headers: { "Idempotency-Key": idempotencyKey() },
-        body: JSON.stringify({ request_id: request.id, expected_version: 0, type_code: type, payload: values, attachment_ids: attachmentIds }),
-      });
-      event.currentTarget.reset();
-      setMessage("Đã gửi yêu cầu thành công.");
-      onCreated();
-    } catch (reason) {
-      setMessage(reason.message === "EQUIPMENT_QUOTE_REQUIRED" ? "Yêu cầu thiết bị bắt buộc có báo giá PDF/JPG/PNG sạch." : `Không thể gửi: ${reason.message}`);
-      requestAnimationFrame(() => errorRef.current?.focus());
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return <section className="panel" aria-labelledby="new-request-title">
-    <h2 id="new-request-title">Tạo yêu cầu</h2>
-    <form onSubmit={submit}>
-      <label htmlFor="type_code">Loại yêu cầu</label>
-      <select id="type_code" name="type_code" value={type} onChange={(event) => setType(event.target.value)}>
-        <option value="LEAVE">Nghỉ phép</option>
-        <option value="ACCESS">Cấp quyền</option>
-        <option value="EQUIPMENT">Thiết bị</option>
-      </select>
-      <div className="form-grid">
-        {fields[type].map(([name, label, kind]) => <div key={name} className={kind === "textarea" ? "wide" : ""}>
-          <label htmlFor={name}>{label}</label>
-          {kind === "textarea" ? <textarea id={name} name={name} required rows="3" /> : <input id={name} name={name} type={kind} required />}
-        </div>)}
+const menu = [
+  ["home", "Tổng quan", "◫"],
+  ["mine", "Yêu cầu của tôi", "▤", "REQUESTER"],
+  ["approval", "Chờ tôi phê duyệt", "✓", "APPROVER"],
+  ["execution", "Công việc thực hiện", "▣", "EXECUTOR"],
+  ["acceptance", "Chờ nghiệm thu", "◇", "ACCEPTOR"],
+  ["history", "Hồ sơ liên quan", "◷"],
+  ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
+  ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
+  ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
+  ["audit", "Tra cứu kiểm tra", "⌕", "AUDITOR"],
+  ["events", "Nhật ký quản trị", "≡", "AUDITOR"],
+  ["notifications", "Thông báo", "○"],
+  ["profile", "Tài khoản cá nhân", "◎"],
+];
+function RequestList({ page, user, onOpen, onNew, revision }) {
+  const [status, setStatus] = useState(""),
+    [type, setType] = useState(""),
+    [offset, setOffset] = useState(0),
+    [query, setQuery] = useState(""),
+    [from, setFrom] = useState(""),
+    [to, setTo] = useState("");
+  const params = new URLSearchParams({ limit: "20", offset: String(offset) });
+  if (["mine", "approval", "execution", "acceptance"].includes(page))
+    params.set("tab", page);
+  if (status) params.set("status", status);
+  if (type) params.set("type_code", type);
+  if (from) params.set("created_from", from + "T00:00:00+07:00");
+  if (to) params.set("created_to", to + "T23:59:59.999999+07:00");
+  const r = useResource(
+    `/api/v1/${page === "ops" ? "ops/requests" : "requests"}?${params}&_revision=${revision}`,
+  );
+  const items = r.data?.items || [],
+    filtered = items.filter(
+      (i) => !query || i.code.toLowerCase().includes(query.toLowerCase()),
+    );
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">CỔNG DỊCH VỤ EAS / QUẢN LÝ HỒ SƠ</p>
+          <h1>{menu.find((m) => m[0] === page)?.[1]}</h1>
+          <p className="muted">
+            Theo dõi tiến độ, xử lý công việc và tra cứu lịch sử.
+          </p>
+        </div>
+        {user.roles.includes("REQUESTER") && (
+          <button onClick={onNew}>+ Tạo yêu cầu mới</button>
+        )}
       </div>
-      {type === "EQUIPMENT" && <><label htmlFor="attachment">Báo giá</label><input id="attachment" name="attachment" type="file" accept="application/pdf,image/jpeg,image/png" required /></>}
-      {message && <p ref={errorRef} tabIndex="-1" aria-live="assertive">{message}</p>}
-      <button disabled={busy}>{busy ? "Đang xử lý…" : "Gửi phê duyệt"}</button>
-    </form>
-  </section>;
+      <section className="panel filter-panel">
+        <div className="filters">
+          <label>
+            Mã trên trang hiện tại
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Tìm mã REQ…"
+            />
+          </label>
+          <label>
+            Loại yêu cầu
+            <select
+              value={type}
+              onChange={(e) => {
+                setType(e.target.value);
+                setOffset(0);
+              }}
+            >
+              <option value="">Tất cả loại</option>
+              {Object.entries(types).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Trạng thái
+            <select
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setOffset(0);
+              }}
+            >
+              <option value="">Tất cả trạng thái</option>
+              {Object.entries(statuses).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+          {page !== "ops" && (
+            <>
+              <label>
+                Từ ngày
+                <input
+                  type="date"
+                  value={from}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
+                    setOffset(0);
+                  }}
+                />
+              </label>
+              <label>
+                Đến ngày
+                <input
+                  type="date"
+                  value={to}
+                  min={from}
+                  onChange={(e) => {
+                    setTo(e.target.value);
+                    setOffset(0);
+                  }}
+                />
+              </label>
+            </>
+          )}
+        </div>
+        <div className="section-head">
+          <small className="muted">
+            Dữ liệu hiển thị theo phạm vi được cấp quyền
+          </small>
+          <div className="actions">
+            <button
+              className="link"
+              onClick={() => {
+                setStatus("");
+                setType("");
+                setOffset(0);
+                setQuery("");
+                setFrom("");
+                setTo("");
+              }}
+            >
+              Đặt lại bộ lọc
+            </button>
+            <button className="secondary" onClick={r.reload}>
+              Làm mới
+            </button>
+          </div>
+        </div>
+      </section>
+      <ResourceState resource={r}>
+        {page === "ops" ? (
+          <Operations items={filtered} onRefresh={r.reload} />
+        ) : (
+          <section className="panel table-panel">
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã yêu cầu</th>
+                    <th>Nghiệp vụ</th>
+                    <th>Trạng thái</th>
+                    <th>Cập nhật</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((i) => (
+                    <tr key={i.id}>
+                      <td className="request-code">{i.code}</td>
+                      <td>
+                        <span className="type-icon">
+                          {i.type_code === "LEAVE"
+                            ? "◷"
+                            : i.type_code === "ACCESS"
+                              ? "◇"
+                              : "▣"}
+                        </span>
+                        {types[i.type_code] || i.type_code}
+                      </td>
+                      <td>
+                        <Badge value={i.status} />
+                      </td>
+                      <td>{date(i.updated_at)}</td>
+                      <td>
+                        <button className="link" onClick={() => onOpen(i.id)}>
+                          Xem chi tiết →
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!filtered.length && (
+              <div className="empty">
+                <h3>Không có hồ sơ phù hợp</h3>
+                <p>Thử thay đổi bộ lọc hoặc quay lại sau.</p>
+              </div>
+            )}
+          </section>
+        )}
+        <div className="pagination">
+          <span>
+            Trang {Math.floor(offset / 20) + 1} · {filtered.length} hồ sơ hiển
+            thị
+          </span>
+          <button
+            className="secondary"
+            disabled={!offset}
+            onClick={() => setOffset(offset - 20)}
+          >
+            ← Trước
+          </button>
+          <button
+            className="secondary"
+            disabled={r.data?.next_offset == null || offset >= 10000}
+            onClick={() => setOffset(r.data.next_offset)}
+          >
+            Sau →
+          </button>
+        </div>
+      </ResourceState>
+    </>
+  );
 }
-
-function Dashboard({ user, onLogout }) {
-  const [items, setItems] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [status, setStatus] = useState("");
-  async function refresh() {
-    setStatus("Đang tải danh sách…");
+function Overview({ navigate }) {
+  const [period] = useState(() => {
+    const end = new Date();
+    return new URLSearchParams({
+      created_from: new Date(end.getTime() - 30 * 86400000).toISOString(),
+      created_to: end.toISOString(),
+    }).toString();
+  });
+  const r = useResource("/api/v1/reports/requests?" + period);
+  const report = r.data?.report;
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p>
+          <h1>Tổng quan xử lý yêu cầu</h1>
+          <p className="muted">
+            Thống kê theo phạm vi dữ liệu bạn được phép xem.
+          </p>
+        </div>
+      </div>
+      <ResourceState resource={r}>
+        {report && (
+          <>
+            <p className="muted">
+              Kỳ báo cáo: {date(report.period?.from)} —{" "}
+              {date(report.period?.to)}
+            </p>
+            <div className="stats-grid">
+              {[
+                ["Đã gửi", report.submitted],
+                ["Đã phê duyệt", report.approved],
+                ["Đã hoàn thành", report.completed],
+                [
+                  "Tỷ lệ hoàn thành",
+                  report.completed_rate == null
+                    ? "—"
+                    : Math.round(report.completed_rate * 100) + "%",
+                ],
+              ].map(([label, value]) => (
+                <article className="stat" key={label}>
+                  <span>{label}</span>
+                  <strong>{value ?? 0}</strong>
+                  <small>Trong kỳ báo cáo</small>
+                </article>
+              ))}
+            </div>
+            <section className="panel">
+              <h2>Phân bố trạng thái</h2>
+              <p className="muted">
+                Báo cáo không tính bản nháp; xem bản nháp trong Yêu cầu của tôi.
+              </p>
+              <div className="status-grid">
+                {Object.entries(statuses).map(([key, label]) => (
+                  <div key={key}>
+                    <Badge value={key} />
+                    <strong aria-label={label}>
+                      {key === "DRAFT" ? "—" : report.by_status?.[key] || 0}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+      </ResourceState>
+      <section className="welcome-banner">
+        <div>
+          <h2>Công việc rõ ràng. Tiến độ minh bạch.</h2>
+          <p>Mỗi quyết định được lưu lại xuyên suốt vòng đời yêu cầu.</p>
+        </div>
+        <button onClick={() => navigate("history")}>
+          Xem hồ sơ liên quan →
+        </button>
+      </section>
+    </>
+  );
+}
+function Workspace({ user, onLogout }) {
+  const [page, setPage] = useState("home"),
+    [selected, setSelected] = useState(null),
+    [editor, setEditor] = useState(null),
+    [revision, setRevision] = useState(0),
+    [menuOpen, setMenuOpen] = useState(false);
+  function navigate(next) {
+    setPage(next);
+    setSelected(null);
+    setEditor(null);
+    setMenuOpen(false);
+  }
+  return (
+    <div className="app-shell">
+      <aside className={"sidebar " + (menuOpen ? "open" : "")}>
+        <a className="brand" href="#main" onClick={() => navigate("home")}>
+          <span className="brand-mark">E</span>
+          <span>
+            EAS Portal<small>ENTERPRISE APPROVAL</small>
+          </span>
+        </a>
+        {user.roles.includes("REQUESTER") && (
+          <button
+            className="create-button"
+            onClick={() => {
+              setSelected(null);
+              setEditor({});
+              setMenuOpen(false);
+            }}
+          >
+            + Tạo yêu cầu mới
+          </button>
+        )}
+        <p className="nav-caption">KHÔNG GIAN LÀM VIỆC</p>
+        <nav aria-label="Điều hướng chính">
+          {menu
+            .filter((m) => !m[3] || user.roles.includes(m[3]))
+            .map(([key, title, icon]) => (
+              <button
+                key={key}
+                className={
+                  page === key && !selected && !editor
+                    ? "nav-item active"
+                    : "nav-item"
+                }
+                onClick={() => navigate(key)}
+              >
+                <span aria-hidden="true">{icon}</span>
+                {title}
+              </button>
+            ))}
+        </nav>
+        <div className="sidebar-footer">
+          <strong>Quy trình có kiểm soát</strong>
+          <small>Phê duyệt · Thực hiện · Nghiệm thu</small>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <button
+            className="secondary menu-toggle"
+            aria-label="Mở điều hướng"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            ☰
+          </button>
+          <span className="muted">
+            Cổng dịch vụ / {menu.find((m) => m[0] === page)?.[1]}
+          </span>
+          <div className="topbar-right">
+            <button
+              className="secondary"
+              onClick={() => navigate("notifications")}
+            >
+              Thông báo
+            </button>
+            <button
+              className="avatar"
+              onClick={() => navigate("profile")}
+              aria-label="Hồ sơ cá nhân"
+            >
+              {user.display_name?.slice(0, 1) || "U"}
+            </button>
+            <div>
+              <strong>{user.display_name}</strong>
+              <small>{user.roles.map((r) => roles[r] || r).join(" · ")}</small>
+            </div>
+            <ActionForm onSubmit={onLogout} submitLabel="Đăng xuất" />
+          </div>
+        </header>
+        <main id="main" className="content">
+          {editor ? (
+            <RequestEditor
+              key={editor.id || "new"}
+              initial={editor.id ? editor : undefined}
+              onCancel={() => setEditor(null)}
+              onDone={(id) => {
+                setEditor(null);
+                setSelected(id);
+                setRevision((v) => v + 1);
+              }}
+            />
+          ) : selected ? (
+            <RequestDetail
+              key={selected}
+              id={selected}
+              user={user}
+              onBack={() => setSelected(null)}
+              onEdit={setEditor}
+              onChanged={() => setRevision((v) => v + 1)}
+            />
+          ) : page === "home" ? (
+            <Overview navigate={navigate} />
+          ) : page === "identity" ? (
+            <IdentityAdmin />
+          ) : page === "policy" ? (
+            <Policy />
+          ) : page === "notifications" ? (
+            <Notifications onOpen={setSelected} />
+          ) : page === "profile" ? (
+            <Profile user={user} />
+          ) : page === "events" ? (
+            <AdminEvents />
+          ) : (
+            <RequestList
+              key={page}
+              page={page}
+              user={user}
+              revision={revision}
+              onOpen={setSelected}
+              onNew={() => setEditor({})}
+            />
+          )}
+        </main>
+        <footer className="page-footer">
+          EAS · Hệ thống phê duyệt yêu cầu doanh nghiệp
+        </footer>
+      </div>
+    </div>
+  );
+}
+export default function App() {
+  const [user, setUser] = useState(undefined),
+    [error, setError] = useState("");
+  async function load(loginUser) {
+    if (loginUser?.must_change_password) {
+      setUser({ ...loginUser, roles: [] });
+      return;
+    }
     try {
-      const result = await api("/api/v1/requests?limit=50");
-      setItems(result.items);
-      setStatus(result.items.length ? "" : "Chưa có yêu cầu nào.");
-    } catch (reason) { setStatus(`Không thể tải danh sách: ${reason.message}`); }
+      setUser((await api("/api/v1/auth/me")).user);
+    } catch (e) {
+      if (e.message === "PASSWORD_CHANGE_REQUIRED")
+        setUser({ roles: [], must_change_password: true });
+      else if (e.status === 401 || e.status === 403) setUser(null);
+      else setError(errorText(e));
+    }
   }
   useEffect(() => {
     let active = true;
-    api("/api/v1/requests?limit=50")
-      .then((result) => {
-        if (!active) return;
-        setItems(result.items);
-        setStatus(result.items.length ? "" : "Chưa có yêu cầu nào.");
+    initializeCsrf()
+      .then(() => api("/api/v1/auth/me"))
+      .then((r) => {
+        if (active) setUser(r.user);
       })
-      .catch((reason) => {
-        if (active) setStatus(`Không thể tải danh sách: ${reason.message}`);
+      .catch((e) => {
+        if (active) {
+          if (e.message === "PASSWORD_CHANGE_REQUIRED")
+            setUser({ roles: [], must_change_password: true });
+          else if (e.status === 401 || e.status === 403) setUser(null);
+          else setError(errorText(e));
+        }
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
-  async function open(id) {
-    try { setSelected((await api(`/api/v1/requests/${id}`)).request); }
-    catch (reason) { setStatus(`Không thể mở yêu cầu: ${reason.message}`); }
+  async function logout() {
+    await api("/api/v1/auth/logout", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    setUser(null);
   }
-  async function decide(outcome) {
-    const reason = outcome === "APPROVE" ? null : window.prompt("Nhập lý do (10–2000 ký tự):");
-    if (outcome !== "APPROVE" && (!reason || reason.trim().length < 10)) return;
-    try {
-      await api(`/api/v1/requests/${selected.id}/approval-decisions`, {
-        method: "POST", headers: { "Idempotency-Key": idempotencyKey() },
-        body: JSON.stringify({ outcome, reason, expected_version: selected.lock_version }),
-      });
-      setSelected(null); await refresh();
-    } catch (error) { setStatus(`Không thể quyết định: ${error.message}`); }
-  }
-  async function startExecution() {
-    try {
-      await api(`/api/v1/requests/${selected.id}/execution/start`, {
-        method: "POST", headers: { "Idempotency-Key": idempotencyKey() },
-        body: JSON.stringify({ expected_version: selected.lock_version }),
-      });
-      await open(selected.id); await refresh();
-    } catch (error) { setStatus(`Không thể bắt đầu thực hiện: ${error.message}`); }
-  }
-  async function submitExecution(event) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const file = form.get("evidence");
-    try {
-      const upload = new FormData(); upload.append("file", file);
-      await api(`/api/v1/requests/${selected.id}/execution/attachments`, { method: "POST", body: upload });
-      await api(`/api/v1/requests/${selected.id}/execution/submit`, {
-        method: "POST", headers: { "Idempotency-Key": idempotencyKey() },
-        body: JSON.stringify({ expected_version: selected.lock_version, result_note: form.get("result_note"), external_reference: form.get("external_reference") }),
-      });
-      await open(selected.id); await refresh();
-    } catch (error) { setStatus(`Không thể nộp kết quả: ${error.message}`); }
-  }
-  async function decideAcceptance(outcome) {
-    const reason = outcome === "ACCEPT" ? null : window.prompt("Nêu lý do yêu cầu làm lại (10–2000 ký tự):");
-    if (outcome === "REWORK" && (!reason || reason.trim().length < 10)) return;
-    try {
-      await api(`/api/v1/requests/${selected.id}/acceptance-decisions`, {
-        method: "POST", headers: { "Idempotency-Key": idempotencyKey() },
-        body: JSON.stringify({ outcome, reason, expected_version: selected.lock_version }),
-      });
-      await open(selected.id); await refresh();
-    } catch (error) { setStatus(`Không thể nghiệm thu: ${error.message}`); }
-  }
-  async function cancelRequest() {
-    const reason = window.prompt("Nêu lý do hủy yêu cầu (10–2000 ký tự):");
-    if (!reason || reason.trim().length < 10) return;
-    try {
-      await api(`/api/v1/requests/${selected.id}/cancel`, {
-        method: "POST", headers: { "Idempotency-Key": idempotencyKey() },
-        body: JSON.stringify({ reason, expected_version: selected.lock_version }),
-      });
-      setSelected(null); await refresh();
-    } catch (error) { setStatus(`Không thể hủy yêu cầu: ${error.message}`); }
-  }
-  return <>
-    <header><div><p className="eyebrow">Enterprise Approval System</p><strong>{user.display_name}</strong></div><button className="secondary" onClick={onLogout}>Đăng xuất</button></header>
-    <main id="main" className="layout">
-      {user.roles.includes("REQUESTER") && <RequestForm onCreated={refresh} />}
-      <section className="panel" aria-labelledby="request-list-title">
-        <div className="section-head"><h2 id="request-list-title">Yêu cầu của tôi</h2><button className="secondary" onClick={refresh}>Làm mới</button></div>
-        <p aria-live="polite">{status}</p>
-        <div className="table-wrap"><table><thead><tr><th>Mã</th><th>Loại</th><th>Trạng thái</th><th></th></tr></thead><tbody>
-          {items.map((item) => <tr key={item.id}><td>{item.code}</td><td>{item.type_code}</td><td><span className="status">{item.status}</span></td><td><button className="link" onClick={() => open(item.id)}>Chi tiết</button></td></tr>)}
-        </tbody></table></div>
-      </section>
-      {selected && <section className="panel wide-panel" aria-labelledby="detail-title"><div className="section-head"><h2 id="detail-title">{selected.code}</h2><button className="secondary" onClick={() => setSelected(null)}>Đóng</button></div>
-        <pre>{JSON.stringify(selected.payload, null, 2)}</pre>
-        <ol>{selected.approval_steps.map((step) => <li key={step.step_no}>Cấp {step.step_no}: {step.state}</li>)}</ol>
-        {user.roles.includes("APPROVER") && selected.status === "PENDING_APPROVAL" && selected.approval_steps.some((step) => step.state === "ACTIVE" && step.assignee_id === user.id) && <div className="actions"><button onClick={() => decide("APPROVE")}>Duyệt</button><button className="danger" onClick={() => decide("REJECT")}>Từ chối</button><button className="secondary" onClick={() => decide("NEEDS_INFO")}>Yêu cầu bổ sung</button></div>}
-        {user.roles.includes("EXECUTOR") && selected.status === "READY_FOR_EXECUTION" && selected.workflow?.attempt?.executor_id === user.id && <button onClick={startExecution}>Bắt đầu thực hiện</button>}
-        {user.roles.includes("EXECUTOR") && selected.status === "IN_PROGRESS" && selected.workflow?.attempt?.executor_id === user.id && <form onSubmit={submitExecution} className="execution-form"><h3>Nộp kết quả thực hiện</h3><label htmlFor="result_note">Mô tả kết quả</label><textarea id="result_note" name="result_note" minLength="10" maxLength="4000" required /><label htmlFor="external_reference">Mã tham chiếu</label><input id="external_reference" name="external_reference" maxLength="200" required /><label htmlFor="evidence">Bằng chứng</label><input id="evidence" name="evidence" type="file" accept="application/pdf,image/jpeg,image/png" required /><button>Nộp kết quả</button></form>}
-        {user.roles.includes("ACCEPTOR") && selected.status === "WAITING_FOR_ACCEPTANCE" && selected.workflow?.acceptor_id === user.id && <div className="actions"><button onClick={() => decideAcceptance("ACCEPT")}>Nghiệm thu</button><button className="danger" onClick={() => decideAcceptance("REWORK")}>Yêu cầu làm lại</button></div>}
-        {selected.requester_id === user.id && ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(selected.status) && <button className="danger" onClick={cancelRequest}>Hủy yêu cầu</button>}
-      </section>}
-    </main>
-  </>;
-}
-
-export default function App() {
-  const [user, setUser] = useState(undefined);
-  async function load() {
-    try { setUser((await api("/api/v1/auth/me")).user); }
-    catch { setUser(null); }
-  }
-  useEffect(() => { initializeCsrf().then(load).catch(() => setUser(null)); }, []);
-  async function logout() { await api("/api/v1/auth/logout", { method: "POST", body: JSON.stringify({}) }); setUser(null); }
-  if (user === undefined) return <main id="main" className="loading" aria-live="polite">Đang khởi tạo…</main>;
-  return user ? <Dashboard user={user} onLogout={logout} /> : <Login onLogin={load} />;
+  if (error)
+    return (
+      <main id="main" className="auth-shell">
+        <section className="panel">
+          <h1>Không thể kết nối hệ thống</h1>
+          <p className="error" role="alert">
+            {error}
+          </p>
+          <button onClick={() => window.location.reload()}>Thử lại</button>
+        </section>
+      </main>
+    );
+  if (user === undefined)
+    return (
+      <main id="main" className="empty" role="status">
+        Đang khởi tạo EAS Portal…
+      </main>
+    );
+  if (user?.must_change_password)
+    return (
+      <main id="main" className="content">
+        <h1>Đổi mật khẩu để tiếp tục</h1>
+        <p>Tài khoản đang sử dụng mật khẩu tạm.</p>
+        <Profile user={user} onChanged={() => load()} />
+        <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
+      </main>
+    );
+  return user ? (
+    <Workspace user={user} onLogout={logout} />
+  ) : (
+    <Login onLogin={load} />
+  );
 }

@@ -40,7 +40,7 @@ except Exception:
     _URL, _SECRET, _TIMEOUT = None, None, None
 
 AI_SERVICE_URL = _URL or os.getenv("EAS_AI_SERVICE_URL", os.getenv("AI_SERVICE_URL", "http://localhost:8001")).rstrip("/")
-INTERNAL_SECRET = _SECRET or os.getenv("EAS_AI_INTERNAL_SECRET", os.getenv("INTERNAL_API_SECRET", "datn-internal-secret-change-in-prod"))
+INTERNAL_SECRET = _SECRET or os.getenv("EAS_AI_INTERNAL_SECRET", os.getenv("INTERNAL_API_SECRET", ""))
 TIMEOUT = float(_TIMEOUT or os.getenv("EAS_AI_TIMEOUT_SECONDS", "30.0"))
 
 
@@ -100,21 +100,26 @@ class AIServiceClient:
         }
         Fallback về risk_weight nếu AI service lỗi.
         """
+        # FastAPI RiskInput accepts these canonical names. Never send obsolete
+        # amount/attachment_count fields: Pydantic silently ignores them and
+        # would score using zero/default values instead of the request data.
+        # Unknown business facts (receipt, budget, tenure) are deliberately not
+        # invented here; use the AI input defaults until real data is mapped.
+        rejection_rate = min(1.0, max(0.0, reject_count_30d / max(request_count_30d, 1)))
+        dept = requester_dept_category.lower().strip()
         payload = {
             "request_type": request_type,
             "lifecycle_template": lifecycle_template,
             "risk_weight": risk_weight,
-            "amount": amount,
-            "days_requested": days_requested,
-            "requester_level": requester_level,
-            "requester_dept_category": requester_dept_category,
-            "leave_balance_remaining": leave_balance_remaining,
-            "request_count_30d": request_count_30d,
-            "reject_count_30d": reject_count_30d,
-            "attachment_count": attachment_count,
-            "is_near_deadline": is_near_deadline,
-            "is_weekend_or_holiday": is_weekend_or_holiday,
-            "amount_vs_limit_ratio": amount_vs_limit_ratio,
+            "amount_vnd": max(0.0, float(amount)),
+            "num_attachments": max(0, int(attachment_count)),
+            "past_requests_count": max(0, int(request_count_30d)),
+            "past_rejection_rate": rejection_rate,
+            "is_off_hours": int(bool(is_weekend_or_holiday)),
+            "urgency": "high" if is_near_deadline else "medium",
+            "department": dept if dept in {
+                "it", "hr", "finance", "marketing", "sales", "operations", "legal"
+            } else "operations",
         }
 
         if httpx is None:

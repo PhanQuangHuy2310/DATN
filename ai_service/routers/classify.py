@@ -113,7 +113,8 @@ def heuristic_classify(text: str) -> dict:
 # Endpoint
 # ---------------------------------------------------------------------------
 
-@router.post("/classify", response_model=ClassifyRequestResult, summary="Phân loại yêu cầu tự động (NLP)")
+@router.post("/classify", include_in_schema=False)  # Backward-compatible old endpoint
+@router.post("/request", response_model=ClassifyRequestResult, summary="Phân loại yêu cầu tự động (NLP)")
 async def classify_request(body: ClassifyRequestInput):
     """
     Tự động nhận diện loại yêu cầu, phòng ban và quy trình phê duyệt dựa trên tiêu đề và nội dung tiếng Việt.

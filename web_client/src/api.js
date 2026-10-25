@@ -1,4 +1,7 @@
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(
+  /\/$/,
+  "",
+);
 
 function cookie(name) {
   return document.cookie
@@ -16,7 +19,7 @@ export async function api(path, options = {}) {
   if (!(options.body instanceof FormData) && options.body !== undefined) {
     headers.set("Content-Type", "application/json");
   }
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
     const token = cookie("csrftoken");
     if (token) headers.set("X-CSRFToken", decodeURIComponent(token));
   }
@@ -26,7 +29,9 @@ export async function api(path, options = {}) {
     headers,
     credentials: "same-origin",
   });
-  const body = await response.json().catch(() => ({ error: { code: "INVALID_RESPONSE" } }));
+  const body = await response
+    .json()
+    .catch(() => ({ error: { code: "INVALID_RESPONSE" } }));
   if (!response.ok) {
     const error = new Error(body.error?.code || `HTTP_${response.status}`);
     error.status = response.status;

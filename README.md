@@ -1,3 +1,5 @@
+> **Bản tích hợp 24/10/2026:** bắt đầu tại [START_HERE.md](START_HERE.md). Kết quả kiểm tra tại [VALIDATION_24_10.md](VALIDATION_24_10.md).
+
 # Enterprise Approval System (EAS)
 
 EAS là hệ thống quản lý phê duyệt nội bộ cho một doanh nghiệp. Baseline P0 gồm ba loại hồ sơ:

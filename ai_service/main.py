@@ -59,6 +59,8 @@ async def verify_internal_secret(request: Request, call_next):
     if request.url.path in public_paths:
         return await call_next(request)
 
+    if not settings.internal_api_secret:
+        return JSONResponse(status_code=503, content={"detail": "AI internal authentication is not configured"})
     secret = request.headers.get("X-Internal-Secret")
     if secret != settings.internal_api_secret:
         return JSONResponse(status_code=401, content={"detail": "Unauthorized: invalid internal secret"})
@@ -82,7 +84,7 @@ app.include_router(mock_context.router, prefix="/ai/mock",         tags=["Mock D
 # ---------------------------------------------------------------------------
 @app.get("/health", tags=["Health"])
 async def health_check():
-    return {"status": "ok", "service": "ai-service", "version": "1.1.0"}
+    return {"status": "ok", "service": "ai-service", "version": app.version}
 
 
 @app.get("/", tags=["Health"])
