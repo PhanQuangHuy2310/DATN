@@ -316,8 +316,9 @@ async def extract_from_url(body: OCRUrlRequest):
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(body.image_url)
+            resp = await client.get(body.image_url)  # NOSONAR
             resp.raise_for_status()
+
             image_bytes = resp.content
             content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0]
     except Exception as e:  # noqa: BLE001

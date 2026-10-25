@@ -75,9 +75,10 @@ function Login({ onLogin }) {
             {error}
           </p>
         )}
-        <button disabled={busy}>
+        <button type="submit" disabled={busy}>
           {busy ? "Đang xác thực…" : "Đăng nhập"}
         </button>
+
       </form>
     </main>
   );
@@ -337,9 +338,10 @@ function RequestForm({ onCreated }) {
             {message}
           </p>
         )}
-        <button disabled={busy} style={{ marginTop: "1rem" }}>
+        <button type="submit" disabled={busy} style={{ marginTop: "1rem" }}>
           {busy ? "Đang xử lý…" : "Gửi phê duyệt"}
         </button>
+
       </form>
     </section>
   );
@@ -592,7 +594,7 @@ function Dashboard({ user, onLogout }) {
             ))}
           </div>
         </div>
-        <button className="secondary" onClick={onLogout}>
+        <button type="button" className="secondary" onClick={onLogout}>
           Đăng xuất
         </button>
       </header>
@@ -619,7 +621,7 @@ function Dashboard({ user, onLogout }) {
             <section className="panel" aria-labelledby="request-list-title">
               <div className="section-head">
                 <h2 id="request-list-title">Danh sách yêu cầu</h2>
-                <button className="secondary" onClick={refresh}>
+                <button type="button" className="secondary" onClick={refresh}>
                   Làm mới
                 </button>
               </div>
@@ -643,7 +645,7 @@ function Dashboard({ user, onLogout }) {
                           <span className="status">{item.status}</span>
                         </td>
                         <td>
-                          <button className="link" onClick={() => open(item.id)}>
+                          <button type="button" className="link" onClick={() => open(item.id)}>
                             Chi tiết
                           </button>
                         </td>
@@ -660,7 +662,7 @@ function Dashboard({ user, onLogout }) {
           <section className="panel wide-panel" aria-labelledby="pending-action-title">
             <div className="section-head">
               <h2 id="pending-action-title">Cần tôi xử lý / Kiểm duyệt / Thực hiện / Nghiệm thu</h2>
-              <button className="secondary" onClick={refresh}>
+              <button type="button" className="secondary" onClick={refresh}>
                 Làm mới
               </button>
             </div>
@@ -693,7 +695,7 @@ function Dashboard({ user, onLogout }) {
                           <span className="status">{item.status}</span>
                         </td>
                         <td>
-                          <button className="link" onClick={() => open(item.id)}>
+                          <button type="button" className="link" onClick={() => open(item.id)}>
                             Xử lý hồ sơ
                           </button>
                         </td>
@@ -701,6 +703,7 @@ function Dashboard({ user, onLogout }) {
                     ))}
                 </tbody>
               </table>
+
             </div>
           </section>
         )}
@@ -722,10 +725,11 @@ function Dashboard({ user, onLogout }) {
             <p>Hỗ trợ kiểm soát luồng outbox và điều phối phân bổ người duyệt.</p>
             <div className="actions">
               <button
+                type="button"
                 className="secondary"
                 onClick={() => {
                   const evId = window.prompt("Nhập UUID sự kiện Outbox cần replay:");
-                  if (evId) handleReplayOutbox(evId.trim());
+                  if (evId) void handleReplayOutbox(evId.trim());
                 }}
               >
                 Phát lại sự kiện Outbox chết
@@ -739,10 +743,11 @@ function Dashboard({ user, onLogout }) {
           <section className="panel wide-panel" aria-labelledby="policy-admin-title">
             <div className="section-head">
               <h2 id="policy-admin-title">Quản lý phiên bản chính sách</h2>
-              <button className="secondary" onClick={handleLoadReleases}>
+              <button type="button" className="secondary" onClick={handleLoadReleases}>
                 Tải danh sách Release
               </button>
             </div>
+
             <p>Kiểm soát quy tắc định tuyến đa bước và cấu hình nghiệp vụ.</p>
             {releases.length > 0 && (
               <div className="table-wrap">
@@ -800,10 +805,11 @@ function Dashboard({ user, onLogout }) {
           <section className="panel wide-panel" aria-labelledby="detail-title">
             <div className="section-head">
               <h2 id="detail-title">{selected.code}</h2>
-              <button className="secondary" onClick={() => setSelected(null)}>
+              <button type="button" className="secondary" onClick={() => setSelected(null)}>
                 Đóng
               </button>
             </div>
+
 
             <div className="actions" style={{ marginBottom: "1rem" }}>
               <button
@@ -886,11 +892,12 @@ function Dashboard({ user, onLogout }) {
                 (step) => step.state === "ACTIVE" && step.assignee_id === user.id
               ) && (
                 <div className="actions">
-                  <button onClick={() => decide("APPROVE")}>Duyệt</button>
-                  <button className="danger" onClick={() => decide("REJECT")}>
+                  <button type="button" onClick={() => decide("APPROVE")}>Duyệt</button>
+                  <button type="button" className="danger" onClick={() => decide("REJECT")}>
                     Từ chối
                   </button>
                   <button
+                    type="button"
                     className="secondary"
                     onClick={() => decide("NEEDS_INFO")}
                   >
@@ -902,7 +909,7 @@ function Dashboard({ user, onLogout }) {
             {user.roles.includes("EXECUTOR") &&
               selected.status === "READY_FOR_EXECUTION" &&
               selected.workflow?.attempt?.executor_id === user.id && (
-                <button onClick={startExecution}>Bắt đầu thực hiện</button>
+                <button type="button" onClick={startExecution}>Bắt đầu thực hiện</button>
               )}
 
             {user.roles.includes("EXECUTOR") &&
@@ -933,7 +940,7 @@ function Dashboard({ user, onLogout }) {
                     accept="application/pdf,image/jpeg,image/png"
                     required
                   />
-                  <button>Nộp kết quả</button>
+                  <button type="submit">Nộp kết quả</button>
                 </form>
               )}
 
@@ -941,10 +948,11 @@ function Dashboard({ user, onLogout }) {
               selected.status === "WAITING_FOR_ACCEPTANCE" &&
               selected.workflow?.acceptor_id === user.id && (
                 <div className="actions">
-                  <button onClick={() => decideAcceptance("ACCEPT")}>
+                  <button type="button" onClick={() => decideAcceptance("ACCEPT")}>
                     Nghiệm thu
                   </button>
                   <button
+                    type="button"
                     className="danger"
                     onClick={() => decideAcceptance("REWORK")}
                   >
@@ -957,10 +965,11 @@ function Dashboard({ user, onLogout }) {
               ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(
                 selected.status
               ) && (
-                <button className="danger" onClick={cancelRequest}>
+                <button type="button" className="danger" onClick={cancelRequest}>
                   Hủy yêu cầu
                 </button>
               )}
+
           </section>
         )}
       </main>

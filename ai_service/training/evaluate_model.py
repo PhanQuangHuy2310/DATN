@@ -63,9 +63,9 @@ def main():
 
     X = df[feature_cols].values.astype(np.float32)
     y_true = df["risk_score"].values.astype(int)
-    y_true - 1
 
     # --- XGBoost predict ---
+
     print("\n🤖 XGBoost predictions...")
     t0 = time.time()
     y_pred_0 = model.predict(X)

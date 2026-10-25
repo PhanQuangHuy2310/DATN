@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from typing import Any
 from uuid import uuid4
 
 from django.conf import settings
@@ -33,8 +34,7 @@ def csrf(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"status": "ok", "correlation_id": correlation_id(request)})
 
 
-@require_POST
-def login(request: HttpRequest) -> JsonResponse:
+def _parse_credentials(request: HttpRequest) -> tuple[str, str] | JsonResponse:
     try:
         body = parse_json_object(request, max_bytes=8 * 1024)
     except JsonBodyError as exc:
@@ -45,28 +45,20 @@ def login(request: HttpRequest) -> JsonResponse:
     password = body.get("password")
     if not isinstance(username, str) or not isinstance(password, str):
         return api_error(request, "INVALID_CREDENTIALS", status=401)
-    username = username.strip().lower()
-    key = _rate_key(request, username)
-    attempts = cache.get(key, 0)
-    if attempts >= settings.EAS_LOGIN_MAX_ATTEMPTS:
-        return api_error(
-            request,
-            "LOGIN_RATE_LIMITED",
-            status=429,
-            headers={"Retry-After": str(settings.EAS_LOGIN_WINDOW_SECONDS)},
-        )
-    user = find_user(username)
-    valid = bool(
-        user and user.is_active and check_password(password, user.password_hash)
-    )
-    if not valid:
-        if not cache.add(key, 1, settings.EAS_LOGIN_WINDOW_SECONDS):
-            try:
-                cache.incr(key)
-            except ValueError:
-                cache.set(key, 1, settings.EAS_LOGIN_WINDOW_SECONDS)
-        return api_error(request, "INVALID_CREDENTIALS", status=401)
+    return username.strip().lower(), password
 
+
+def _record_failed_login(key: str) -> None:
+    if not cache.add(key, 1, settings.EAS_LOGIN_WINDOW_SECONDS):
+        try:
+            cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, settings.EAS_LOGIN_WINDOW_SECONDS)
+
+
+def _check_maintenance_login(
+    request: HttpRequest, user_id: str
+) -> tuple[JsonResponse | None, dict[str, Any] | None]:
     from api_core.maintenance import (
         MAINTENANCE_MSG_ADMIN_ACTIVE,
         MAINTENANCE_MSG_USER,
@@ -77,17 +69,34 @@ def login(request: HttpRequest) -> JsonResponse:
     m_info = get_maintenance_info()
     is_admin = False
     if m_info.get("active") or m_info.get("status") == "COMPLETED":
-        is_admin = is_admin_user_id(user.id)
+        is_admin = is_admin_user_id(user_id)
 
     if m_info.get("active") and not is_admin:
-        return api_error(
+        err = api_error(
             request,
             "SYSTEM_UNDER_MAINTENANCE",
             status=503,
             fields={"message": [m_info.get("message") or MAINTENANCE_MSG_USER]},
         )
+        return err, None
 
-    cache.delete(key)
+    m_payload = None
+    if m_info.get("active"):
+        m_payload = {
+            "active": True,
+            "status": m_info.get("status", "UPDATING"),
+            "message": m_info.get("admin_message") or MAINTENANCE_MSG_ADMIN_ACTIVE,
+        }
+    elif m_info.get("status") == "COMPLETED" and is_admin:
+        m_payload = {
+            "active": False,
+            "status": "COMPLETED",
+            "message": m_info.get("admin_message"),
+        }
+    return None, m_payload
+
+
+def _establish_user_session(request: HttpRequest, user) -> None:
     request.session.flush()
     request.session.cycle_key()
     request.session["user_id"] = user.id
@@ -100,6 +109,40 @@ def login(request: HttpRequest) -> JsonResponse:
         f"{user.id}:{user.auth_version}",
         timeout=settings.SESSION_COOKIE_AGE,
     )
+
+
+@require_POST
+def login(request: HttpRequest) -> JsonResponse:
+    parsed = _parse_credentials(request)
+    if isinstance(parsed, JsonResponse):
+        return parsed
+    username, password = parsed
+
+    key = _rate_key(request, username)
+    attempts = cache.get(key, 0)
+    if attempts >= settings.EAS_LOGIN_MAX_ATTEMPTS:
+        return api_error(
+            request,
+            "LOGIN_RATE_LIMITED",
+            status=429,
+            headers={"Retry-After": str(settings.EAS_LOGIN_WINDOW_SECONDS)},
+        )
+
+    user = find_user(username)
+    valid = bool(
+        user and user.is_active and check_password(password, user.password_hash)
+    )
+    if not valid:
+        _record_failed_login(key)
+        return api_error(request, "INVALID_CREDENTIALS", status=401)
+
+    m_err, m_payload = _check_maintenance_login(request, user.id)
+    if m_err:
+        return m_err
+
+    cache.delete(key)
+    _establish_user_session(request, user)
+
     payload = {
         "user": {
             "id": user.id,
@@ -109,18 +152,8 @@ def login(request: HttpRequest) -> JsonResponse:
         },
         "correlation_id": correlation_id(request),
     }
-    if m_info.get("active"):
-        payload["maintenance"] = {
-            "active": True,
-            "status": m_info.get("status", "UPDATING"),
-            "message": m_info.get("admin_message") or MAINTENANCE_MSG_ADMIN_ACTIVE,
-        }
-    elif m_info.get("status") == "COMPLETED" and is_admin:
-        payload["maintenance"] = {
-            "active": False,
-            "status": "COMPLETED",
-            "message": m_info.get("admin_message"),
-        }
+    if m_payload:
+        payload["maintenance"] = m_payload
     return JsonResponse(payload)
 
 
