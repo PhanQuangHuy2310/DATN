@@ -1013,3 +1013,80 @@ def ai_summarize_view(request: HttpRequest) -> JsonResponse:
         correlation_id=cid,
     )
     return JsonResponse({"data": result, "correlation_id": cid}, status=200)
+
+
+@require_GET
+def system_maintenance_view(request: HttpRequest) -> JsonResponse:
+    from api_core.maintenance import get_maintenance_info
+
+    cid = correlation_id(request)
+    return JsonResponse(
+        {"status": "ok", "maintenance": get_maintenance_info(), "correlation_id": cid},
+        status=200,
+    )
+
+
+@require_POST
+@require_actor("POLICY_ADMIN", "OPS_ADMIN")
+def system_maintenance_start_view(request: HttpRequest) -> JsonResponse:
+    from api_core.maintenance import start_maintenance
+
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError:
+        body = {}
+
+    message = body.get("message")
+    admin_message = body.get("admin_message")
+    release_id = body.get("release_id")
+
+    info = start_maintenance(
+        actor_id=request.actor.id,
+        release_id=release_id,
+        message=message,
+        admin_message=admin_message,
+    )
+    cid = correlation_id(request)
+    return JsonResponse(
+        {"status": "ok", "maintenance": info, "correlation_id": cid},
+        status=200,
+    )
+
+
+@require_POST
+@require_actor("POLICY_ADMIN", "OPS_ADMIN")
+def system_maintenance_complete_view(request: HttpRequest) -> JsonResponse:
+    from django.db import transaction
+
+    from api_core.maintenance import complete_maintenance
+    from api_core.workflow.service import _append_admin_audit
+
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError:
+        body = {}
+
+    admin_message = body.get("admin_message")
+    cid = correlation_id(request)
+
+    with transaction.atomic(), connection.cursor() as cursor:
+        _append_admin_audit(
+            cursor,
+            actor_id=request.actor.id,
+            action="MAINTENANCE_COMPLETED",
+            target_type="system",
+            target_id="00000000-0000-0000-0000-000000000000",
+            details={"status": "COMPLETED"},
+            reason="Admin confirmed policy update and AI retraining completion.",
+            correlation_id=cid,
+        )
+
+    info = complete_maintenance(
+        actor_id=request.actor.id,
+        admin_message=admin_message,
+    )
+
+    return JsonResponse(
+        {"status": "ok", "maintenance": info, "correlation_id": cid},
+        status=200,
+    )

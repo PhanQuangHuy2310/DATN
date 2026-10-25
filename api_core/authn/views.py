@@ -67,6 +67,26 @@ def login(request: HttpRequest) -> JsonResponse:
                 cache.set(key, 1, settings.EAS_LOGIN_WINDOW_SECONDS)
         return api_error(request, "INVALID_CREDENTIALS", status=401)
 
+    from api_core.maintenance import (
+        MAINTENANCE_MSG_ADMIN_ACTIVE,
+        MAINTENANCE_MSG_USER,
+        get_maintenance_info,
+        is_admin_user_id,
+    )
+
+    m_info = get_maintenance_info()
+    is_admin = False
+    if m_info.get("active") or m_info.get("status") == "COMPLETED":
+        is_admin = is_admin_user_id(user.id)
+
+    if m_info.get("active") and not is_admin:
+        return api_error(
+            request,
+            "SYSTEM_UNDER_MAINTENANCE",
+            status=503,
+            fields={"message": [m_info.get("message") or MAINTENANCE_MSG_USER]},
+        )
+
     cache.delete(key)
     request.session.flush()
     request.session.cycle_key()
@@ -80,17 +100,28 @@ def login(request: HttpRequest) -> JsonResponse:
         f"{user.id}:{user.auth_version}",
         timeout=settings.SESSION_COOKIE_AGE,
     )
-    return JsonResponse(
-        {
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "display_name": user.display_name,
-                "must_change_password": user.must_change_password,
-            },
-            "correlation_id": correlation_id(request),
+    payload = {
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "display_name": user.display_name,
+            "must_change_password": user.must_change_password,
+        },
+        "correlation_id": correlation_id(request),
+    }
+    if m_info.get("active"):
+        payload["maintenance"] = {
+            "active": True,
+            "status": m_info.get("status", "UPDATING"),
+            "message": m_info.get("admin_message") or MAINTENANCE_MSG_ADMIN_ACTIVE,
         }
-    )
+    elif m_info.get("status") == "COMPLETED" and is_admin:
+        payload["maintenance"] = {
+            "active": False,
+            "status": "COMPLETED",
+            "message": m_info.get("admin_message"),
+        }
+    return JsonResponse(payload)
 
 
 @require_POST
@@ -107,20 +138,45 @@ def logout(request: HttpRequest) -> JsonResponse:
 @require_GET
 @require_actor()
 def me(request: HttpRequest) -> JsonResponse:
-    actor = request.actor
-    return JsonResponse(
-        {
-            "user": {
-                "id": actor.id,
-                "username": actor.username,
-                "display_name": actor.display_name,
-                "department_id": actor.department_id,
-                "roles": sorted(actor.roles),
-                "must_change_password": actor.must_change_password,
-            },
-            "correlation_id": correlation_id(request),
-        }
+    from api_core.maintenance import (
+        MAINTENANCE_MSG_ADMIN_ACTIVE,
+        MAINTENANCE_MSG_USER,
+        get_maintenance_info,
+        is_admin_actor,
     )
+
+    actor = request.actor
+    m_info = get_maintenance_info()
+    is_admin = is_admin_actor(actor)
+
+    payload = {
+        "user": {
+            "id": actor.id,
+            "username": actor.username,
+            "display_name": actor.display_name,
+            "department_id": actor.department_id,
+            "roles": sorted(actor.roles),
+            "must_change_password": actor.must_change_password,
+        },
+        "correlation_id": correlation_id(request),
+    }
+    if m_info.get("active"):
+        payload["maintenance"] = {
+            "active": True,
+            "status": m_info.get("status", "UPDATING"),
+            "message": (
+                m_info.get("admin_message") or MAINTENANCE_MSG_ADMIN_ACTIVE
+                if is_admin
+                else m_info.get("message") or MAINTENANCE_MSG_USER
+            ),
+        }
+    elif m_info.get("status") == "COMPLETED" and is_admin:
+        payload["maintenance"] = {
+            "active": False,
+            "status": "COMPLETED",
+            "message": m_info.get("admin_message"),
+        }
+    return JsonResponse(payload)
 
 
 @require_POST

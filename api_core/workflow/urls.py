@@ -170,6 +170,22 @@ urlpatterns = [
         name="request-audit-verify",
     ),
     path("admin-events", views.admin_events_view, name="admin-events"),
+    # System Maintenance
+    path(
+        "system/maintenance",
+        views.system_maintenance_view,
+        name="system-maintenance",
+    ),
+    path(
+        "system/maintenance/start",
+        views.system_maintenance_start_view,
+        name="system-maintenance-start",
+    ),
+    path(
+        "system/maintenance/complete",
+        views.system_maintenance_complete_view,
+        name="system-maintenance-complete",
+    ),
     # AI Assistance Proxy
     path("ai/classify", views.ai_classify_view, name="ai-classify"),
     path("ai/risk-score", views.ai_risk_score_view, name="ai-risk-score"),

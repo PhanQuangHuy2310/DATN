@@ -614,6 +614,15 @@ def publish_config_release(
             occurred_at=published_at,
         )
 
+        from api_core.maintenance import start_maintenance
+
+        m_info = start_maintenance(
+            actor_id=actor.id,
+            release_id=norm_id,
+            message="Hệ thống đang bảo trì để cập nhật quy định mới và huấn luyện AI, vui lòng quay lại sau.",
+            admin_message=f"Hệ thống đang trong quá trình cập nhật quy định mới ({type_code} v{version}). Chỉ quản trị viên mới có thể truy cập web-admin.",
+        )
+
         return (
             {
                 "release": {
@@ -623,7 +632,12 @@ def publish_config_release(
                     "state": "PUBLISHED",
                     "content_sha256": content_sha256,
                     "lock_version": new_lock_version,
-                }
+                },
+                "maintenance": {
+                    "active": True,
+                    "status": "UPDATING",
+                    "message": m_info["admin_message"],
+                },
             },
             200,
             None,

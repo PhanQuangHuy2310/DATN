@@ -205,6 +205,21 @@ def require_actor(*required_roles: str) -> Callable:
                 return api_error(request, "PASSWORD_CHANGE_REQUIRED", status=403)
             if required_roles and not actor.roles.intersection(required_roles):
                 return api_error(request, "FORBIDDEN", status=403)
+            from api_core.maintenance import (
+                MAINTENANCE_MSG_USER,
+                get_maintenance_info,
+                is_admin_actor,
+                is_maintenance_active,
+            )
+
+            if is_maintenance_active() and not is_admin_actor(actor):
+                m_info = get_maintenance_info()
+                return api_error(
+                    request,
+                    "SYSTEM_UNDER_MAINTENANCE",
+                    status=503,
+                    fields={"message": [m_info.get("message") or MAINTENANCE_MSG_USER]},
+                )
             request.actor = actor
             return view(request, *args, **kwargs)
 
