@@ -4,8 +4,12 @@ AI Service — Cấu hình chung (config.py)
 """
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_AI_SERVICE_DIR = Path(__file__).resolve().parent
+_AI_ENV_PATH = _AI_SERVICE_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -39,7 +43,10 @@ class Settings(BaseSettings):
     auto_approve_only_template_a: bool = True
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(
+            _AI_ENV_PATH if _AI_ENV_PATH.exists() else ".env",
+            ".env",
+        ),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
