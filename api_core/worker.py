@@ -28,6 +28,9 @@ def retry_delay(attempts: int) -> timedelta:
     return timedelta(seconds=min(15 * (2 ** (attempts - 1)), 300))
 
 
+SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
+
+
 def safe_error_code(value: object) -> str:
     code = re.sub(r"[^A-Z0-9_]+", "_", type(value).__name__.upper()).strip("_")
     return (code or "UNKNOWN_ERROR")[:80]
@@ -42,7 +45,7 @@ def classify_sla_alert(
 ) -> str | None:
     if breached_at is not None:
         return None
-    if breached_at is None and now >= due_at:
+    if now >= due_at:
         return "BREACH"
     reminder_at = started_at + (due_at - started_at) / 2
     if now >= reminder_at:
@@ -55,7 +58,7 @@ def claim_outbox(*, batch_size: int = 20, lease_seconds: int = 60) -> list[Outbo
         raise ValueError("Unsafe worker claim parameters")
     token = str(uuid4())
     with transaction.atomic(), connection.cursor() as cursor:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             """
             UPDATE eas.outbox_event
@@ -119,7 +122,7 @@ def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
 
 def acknowledge_outbox(item: OutboxItem) -> None:
     with transaction.atomic(), connection.cursor() as cursor:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             """
             SELECT state,lease_token::text,lease_until > statement_timestamp()
@@ -222,7 +225,7 @@ def process_sla_batch(*, batch_size: int = 100) -> int:
     created = 0
     now = timezone.now()
     with transaction.atomic(), connection.cursor() as cursor:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             """
             SELECT s.id::text,s.request_id::text,s.started_at,s.due_at,s.breached_at

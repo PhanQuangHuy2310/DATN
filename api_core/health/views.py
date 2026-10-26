@@ -99,7 +99,7 @@ def storage_readiness() -> dict[str, bool]:
             (settings.EAS_CLAMAV_HOST, settings.EAS_CLAMAV_PORT), timeout=2
         ):
             scanner_reachable = True
-    except (OSError, TimeoutError):
+    except OSError:
         pass
     return {
         "attachment_storage_requirement_satisfied": configured,
@@ -205,7 +205,7 @@ def ready(request):
         cache_key = "eas:health:ready"
         cache.set(cache_key, "ok", timeout=5)
         checks["shared_security_cache"] = cache.get(cache_key) == "ok"
-    except (RedisError, OSError, TimeoutError):
+    except (RedisError, OSError):
         checks["shared_security_cache"] = False
     checks.update(storage_readiness())
     is_ready = is_ready and all(bool(value) for value in checks.values())

@@ -3,7 +3,7 @@ from __future__ import annotations
 import socket
 import struct
 from dataclasses import dataclass
-from urllib.error import HTTPError, URLError
+from urllib.error import URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
@@ -42,7 +42,7 @@ def scan_with_clamav(data: bytes) -> None:
                 scanner.sendall(struct.pack("!I", len(chunk)) + chunk)
             scanner.sendall(struct.pack("!I", 0))
             response = scanner.recv(4096).decode("utf-8", errors="replace")
-    except (TimeoutError, OSError) as exc:
+    except OSError as exc:
         raise StorageError("MALWARE_SCANNER_UNAVAILABLE") from exc
     if not response.endswith("OK\0"):
         if "FOUND" in response:
@@ -82,7 +82,7 @@ def put_private_object(
         with urlopen(request, timeout=30) as response:
             if response.status not in {200, 201}:
                 raise StorageError("STORAGE_UPLOAD_FAILED")
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except (URLError, TimeoutError) as exc:
         raise StorageError("STORAGE_UPLOAD_FAILED") from exc
     return StoredObject(key=key, version=sha256)
 
@@ -92,7 +92,7 @@ def delete_private_object(key: str) -> None:
     try:
         with urlopen(request, timeout=15):
             return
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except (URLError, TimeoutError) as exc:
         raise StorageError("STORAGE_COMPENSATION_FAILED") from exc
 
 

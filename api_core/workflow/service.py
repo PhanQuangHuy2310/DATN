@@ -26,6 +26,17 @@ from api_core.workflow.constants import (
     ERR_VERSION_CONFLICT,
 )
 
+SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
+SQL_COMPLETE_WORKFLOW = (
+    "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s"
+)
+SQL_CLOSE_SLA_STAGE = (
+    "UPDATE eas.sla_stage SET closed_at=%s WHERE request_id=%s AND closed_at IS NULL"
+)
+SQL_INSERT_OUTBOX_EVENT = """
+            INSERT INTO eas.outbox_event(request_id,event_type,payload,dedupe_key)
+            VALUES (%s,%s,%s,%s)
+            """
 HTML_TAG = re.compile(r"<[^>]+>")
 
 
@@ -269,7 +280,7 @@ def _execute_idempotent(
     key = _canonical_uuid(key, "INVALID_IDEMPOTENCY_KEY")
     request_hash = canonical_sha256(command_body)
     with transaction.atomic(), connection.cursor() as cursor:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
             [f"{actor_id}:{scope}:{key}"],
@@ -379,7 +390,7 @@ def create_draft(
     type_code, origin_request_id, clean_title = _validate_create_draft_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         if origin_request_id:
             cursor.execute(
                 "SELECT 1 FROM eas.request WHERE id = %s AND requester_id = %s",
@@ -599,7 +610,7 @@ def update_draft(
     ) = _validate_update_draft_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             """
             SELECT r.status, r.lock_version, r.type_id::text, rt.code,
@@ -759,7 +770,7 @@ def report_execution_issue(
     ) = _validate_execution_issue_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             """
             SELECT r.status, r.lock_version, r.type_id::text, v.department_id::text,
@@ -1232,7 +1243,7 @@ def submit_request(
     ) = _validate_submit_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         (
             type_id,
             lifecycle,
@@ -1484,7 +1495,7 @@ def _handle_approval_approved(
     approved_at = now
     if lifecycle == "A":
         cursor.execute(
-            "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s",
+            SQL_COMPLETE_WORKFLOW,
             [now, instance_id],
         )
         return "COMPLETED", approved_at, now, None
@@ -1564,7 +1575,7 @@ def decide_approval(
     outcome, reason, expected_version = _validate_approval_decision_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             """
             SELECT r.status,r.lock_version,r.type_id::text,v.department_id::text,
@@ -1642,7 +1653,7 @@ def decide_approval(
             ],
         )
         cursor.execute(
-            "UPDATE eas.sla_stage SET closed_at=%s WHERE request_id=%s AND closed_at IS NULL",
+            SQL_CLOSE_SLA_STAGE,
             [now, request_id],
         )
 
@@ -1703,10 +1714,7 @@ def decide_approval(
         else:
             event_type = f"APPROVAL_{outcome}"
         cursor.execute(
-            """
-            INSERT INTO eas.outbox_event(request_id,event_type,payload,dedupe_key)
-            VALUES (%s,%s,%s,%s)
-            """,
+            SQL_INSERT_OUTBOX_EVENT,
             [
                 request_id,
                 event_type,
@@ -1751,7 +1759,7 @@ def start_execution(
         raise CommandError("EXPECTED_VERSION_REQUIRED")
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             """
             SELECT r.status,r.lock_version,r.type_id::text,v.department_id::text,
@@ -1888,7 +1896,7 @@ def _apply_execution_submission(
             [result_note, external_reference, now, now, attempt_id],
         )
         cursor.execute(
-            "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s",
+            SQL_COMPLETE_WORKFLOW,
             [now, instance_id],
         )
         return "COMPLETED", now
@@ -1901,7 +1909,7 @@ def _apply_execution_submission(
             [result_note, external_reference, now, attempt_id],
         )
         cursor.execute(
-            "UPDATE eas.sla_stage SET closed_at=%s WHERE request_id=%s AND closed_at IS NULL",
+            SQL_CLOSE_SLA_STAGE,
             [now, request_id],
         )
         acceptance_hours = sla.get("acceptance_hours")
@@ -2032,10 +2040,7 @@ def submit_execution(
         )
         event_type = "ACCEPTANCE_REQUESTED" if lifecycle == "C" else "REQUEST_COMPLETED"
         cursor.execute(
-            """
-            INSERT INTO eas.outbox_event(request_id,event_type,payload,dedupe_key)
-            VALUES (%s,%s,%s,%s)
-            """,
+            SQL_INSERT_OUTBOX_EVENT,
             [
                 request_id,
                 event_type,
@@ -2099,7 +2104,7 @@ def _apply_acceptance_decision(
 ) -> tuple[str, datetime | None, str | None]:
     if outcome == "ACCEPT":
         cursor.execute(
-            "UPDATE eas.workflow_instance SET state='COMPLETED',closed_at=%s WHERE id=%s",
+            SQL_COMPLETE_WORKFLOW,
             [now, instance_id],
         )
         return "COMPLETED", now, None
@@ -2157,7 +2162,7 @@ def decide_acceptance(
     outcome, reason, expected_version = _validate_acceptance_input(body)
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             """
             SELECT r.status,r.lock_version,r.type_id::text,v.department_id::text,
@@ -2217,7 +2222,7 @@ def decide_acceptance(
             ["ACCEPTED" if outcome == "ACCEPT" else "REWORK", now, attempt_id],
         )
         cursor.execute(
-            "UPDATE eas.sla_stage SET closed_at=%s WHERE request_id=%s AND closed_at IS NULL",
+            SQL_CLOSE_SLA_STAGE,
             [now, request_id],
         )
         next_status, completed_at, next_attempt_id = _apply_acceptance_decision(
@@ -2251,10 +2256,7 @@ def decide_acceptance(
             occurred_at=now,
         )
         cursor.execute(
-            """
-            INSERT INTO eas.outbox_event(request_id,event_type,payload,dedupe_key)
-            VALUES (%s,%s,%s,%s)
-            """,
+            SQL_INSERT_OUTBOX_EVENT,
             [
                 request_id,
                 "REQUEST_COMPLETED" if outcome == "ACCEPT" else "EXECUTION_REWORK",
@@ -2309,7 +2311,7 @@ def cancel_request(
     reason = reason.strip()
 
     def operation(cursor) -> tuple[dict[str, Any], int, str]:
-        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             """
             SELECT status,lock_version,requester_id::text,current_revision_id::text
@@ -2344,7 +2346,7 @@ def cancel_request(
                 [now, request_id],
             )
             cursor.execute(
-                "UPDATE eas.sla_stage SET closed_at=%s WHERE request_id=%s AND closed_at IS NULL",
+                SQL_CLOSE_SLA_STAGE,
                 [now, request_id],
             )
         cursor.execute(

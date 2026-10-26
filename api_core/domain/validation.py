@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+SCHEMA_ERROR_KEY = "$schema"
 HTML_TAG = re.compile(r"<[^>]+>")
 SUPPORTED_TYPES = {"integer", "string"}
 SUPPORTED_P0_TYPES = {"ACCESS", "EQUIPMENT", "LEAVE"}
@@ -45,15 +46,15 @@ def _validate_schema_structure(
         or form_schema.get("type") != "object"
         or form_schema.get("additionalProperties") is not False
     ):
-        raise PayloadValidationError({"$schema": ["UNSUPPORTED_SCHEMA"]})
+        raise PayloadValidationError({SCHEMA_ERROR_KEY: ["UNSUPPORTED_SCHEMA"]})
     if not isinstance(properties, dict) or not isinstance(required, list):
-        raise PayloadValidationError({"$schema": ["INVALID_SCHEMA"]})
+        raise PayloadValidationError({SCHEMA_ERROR_KEY: ["INVALID_SCHEMA"]})
     if (
         any(not isinstance(field, str) for field in required)
         or len(set(required)) != len(required)
         or not set(required).issubset(properties)
     ):
-        raise PayloadValidationError({"$schema": ["INVALID_REQUIRED_FIELDS"]})
+        raise PayloadValidationError({SCHEMA_ERROR_KEY: ["INVALID_REQUIRED_FIELDS"]})
 
     schema_errors: list[str] = []
     for field, spec in properties.items():
@@ -104,7 +105,7 @@ def _validate_schema_structure(
             ):
                 schema_errors.append(f"{field}:INVALID_NUMERIC_BOUNDS")
     if schema_errors:
-        raise PayloadValidationError({"$schema": sorted(set(schema_errors))})
+        raise PayloadValidationError({SCHEMA_ERROR_KEY: sorted(set(schema_errors))})
     return properties, required
 
 
@@ -263,7 +264,7 @@ def validate_draft_payload(
         or form_schema.get("additionalProperties") is not False
         or not isinstance(properties, dict)
     ):
-        raise PayloadValidationError({"$schema": ["UNSUPPORTED_SCHEMA"]})
+        raise PayloadValidationError({SCHEMA_ERROR_KEY: ["UNSUPPORTED_SCHEMA"]})
 
     normalized = _normalize_payload(payload, properties, errors)
 

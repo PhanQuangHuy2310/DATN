@@ -40,8 +40,8 @@
  * ============================================================================
  */
 
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 const DEFAULT_OUTPUT = path.join(REPO_ROOT, "ai_service", "data", "mock");
@@ -159,9 +159,9 @@ const SCHEMA_REGISTRY = {
           employee_id: row.employee_id,
           type: row.leave_type,
           year: row.year,
-          entitled: parseFloat(row.entitled_days),
-          used: parseFloat(row.used_days),
-          remaining: parseFloat(row.entitled_days) - parseFloat(row.used_days),
+          entitled: Number.parseFloat(row.entitled_days),
+          used: Number.parseFloat(row.used_days),
+          remaining: Number.parseFloat(row.entitled_days) - Number.parseFloat(row.used_days),
         }),
       },
     ],
@@ -345,7 +345,7 @@ const SCHEMA_REGISTRY = {
           customer_id: row.customer_id,
           period: { from: row.starts_on, to: row.ends_on },
           currency: row.currency,
-          value_vnd: parseInt(row.value_minor) / 100, // minor → VND (đồng)
+          value_vnd: Number.parseInt(row.value_minor, 10) / 100, // minor → VND (đồng)
           status: row.status,
           is_active: row.status === "ACTIVE",
         }),
@@ -404,7 +404,7 @@ const SCHEMA_REGISTRY = {
           category: row.category,
           supplier_id: row.supplier_id,
           currency: row.currency,
-          price_vnd: parseInt(row.unit_price_minor) / 100,
+          price_vnd: Number.parseInt(row.unit_price_minor, 10) / 100,
           status: row.status,
           is_available: row.status === "ACTIVE",
         }),
@@ -523,17 +523,17 @@ const SCHEMA_REGISTRY = {
           cost_center: row.cost_center,
           year: row.fiscal_year,
           currency: row.currency,
-          approved_vnd: parseInt(row.approved_minor) / 100,
-          committed_vnd: parseInt(row.committed_minor) / 100,
-          spent_vnd: parseInt(row.spent_minor) / 100,
+          approved_vnd: Number.parseInt(row.approved_minor, 10) / 100,
+          committed_vnd: Number.parseInt(row.committed_minor, 10) / 100,
+          spent_vnd: Number.parseInt(row.spent_minor, 10) / 100,
           remaining_vnd:
-            (parseInt(row.approved_minor) -
-              parseInt(row.committed_minor) -
-              parseInt(row.spent_minor)) /
+            (Number.parseInt(row.approved_minor, 10) -
+              Number.parseInt(row.committed_minor, 10) -
+              Number.parseInt(row.spent_minor, 10)) /
             100,
           utilization_pct: (
-            ((parseInt(row.committed_minor) + parseInt(row.spent_minor)) /
-              parseInt(row.approved_minor)) *
+            ((Number.parseInt(row.committed_minor, 10) + Number.parseInt(row.spent_minor, 10)) /
+              Number.parseInt(row.approved_minor, 10)) *
             100
           ).toFixed(1),
         }),
@@ -556,9 +556,9 @@ const SCHEMA_REGISTRY = {
           code: row.category_code,
           label: row.name,
           receipt_threshold_vnd:
-            parseInt(row.receipt_required_above_minor) / 100,
+            Number.parseInt(row.receipt_required_above_minor, 10) / 100,
           daily_limit_vnd: row.daily_limit_minor
-            ? parseInt(row.daily_limit_minor) / 100
+            ? Number.parseInt(row.daily_limit_minor, 10) / 100
             : null,
           currency: row.currency,
           is_active: row.status === "ACTIVE",
@@ -593,7 +593,7 @@ const SCHEMA_REGISTRY = {
           grade: row.employee_grade,
           mode: row.travel_mode,
           class: row.cabin_or_class,
-          max_amount_vnd: parseInt(row.max_amount_minor) / 100,
+          max_amount_vnd: Number.parseInt(row.max_amount_minor, 10) / 100,
           currency: row.currency,
           min_quotes: row.requires_quote_count,
           is_active: row.status === "ACTIVE",
@@ -625,7 +625,7 @@ const SCHEMA_REGISTRY = {
           destination: row.destination,
           departs: row.departs_at,
           arrives: row.arrives_at,
-          price_vnd: parseInt(row.price_minor) / 100,
+          price_vnd: Number.parseInt(row.price_minor, 10) / 100,
           currency: row.currency,
           refundable: row.refundable,
           status: row.availability_status,
@@ -680,6 +680,12 @@ const STATUS_DEFAULT_TABLES = new Set([
   "mock_travel.travel_policy",
 ]);
 
+function skipSqlComment(sql, i) {
+  let idx = i;
+  while (idx < sql.length && sql[idx] !== "\n") idx++;
+  return idx;
+}
+
 function stripSqlComments(sql) {
   let out = "";
   let inStr = false;
@@ -698,7 +704,7 @@ function stripSqlComments(sql) {
       inStr = true;
       out += ch;
     } else if (ch === "-" && sql[i + 1] === "-") {
-      while (i < sql.length && sql[i] !== "\n") i++;
+      i = skipSqlComment(sql, i);
       out += "\n";
     } else {
       out += ch;
@@ -713,9 +719,32 @@ function parseLiteral(token) {
   if (/^null$/i.test(t)) return null;
   if (/^true$/i.test(t)) return true;
   if (/^false$/i.test(t)) return false;
-  if (t.startsWith("'")) return t.slice(1, -1).replace(/''/g, "'");
+  if (t.startsWith("'")) return t.slice(1, -1).replaceAll("''", "'");
   if (/^-?\d+(\.\d+)?$/.test(t)) return t; // giữ dạng chuỗi như pg (bigint/numeric)
   throw new Error(`Literal không hỗ trợ: ${t}`);
+}
+
+function handleTupleChar(ch, depth, current, token, tuples) {
+  if (ch === "(") {
+    if (depth === 0) return { depth: 1, current: [], token: "" };
+    return { depth: depth + 1, current, token: token + ch };
+  }
+  if (ch === ")") {
+    if (depth === 1) {
+      current.push(parseLiteral(token));
+      tuples.push(current);
+      return { depth: 0, current: null, token: "" };
+    }
+    return { depth: depth - 1, current, token: token + ch };
+  }
+  if (ch === "," && depth === 1) {
+    current.push(parseLiteral(token));
+    return { depth, current, token: "" };
+  }
+  if (depth >= 1) {
+    return { depth, current, token: token + ch };
+  }
+  return { depth, current, token };
 }
 
 /** Tách phần VALUES thành danh sách tuple, mỗi tuple là mảng token */
@@ -738,26 +767,12 @@ function parseTuples(valuesSql) {
     if (ch === "'") {
       inStr = true;
       token += ch;
-    } else if (ch === "(") {
-      depth++;
-      if (depth === 1) {
-        current = [];
-        token = "";
-      } else token += ch;
-    } else if (ch === ")") {
-      depth--;
-      if (depth === 0) {
-        current.push(parseLiteral(token));
-        tuples.push(current);
-        current = null;
-        token = "";
-      } else token += ch;
-    } else if (ch === "," && depth === 1) {
-      current.push(parseLiteral(token));
-      token = "";
-    } else if (depth >= 1) {
-      token += ch;
+      continue;
     }
+    const state = handleTupleChar(ch, depth, current, token, tuples);
+    depth = state.depth;
+    current = state.current;
+    token = state.token;
   }
   return tuples;
 }
@@ -820,7 +835,7 @@ function createSqlSource(seedPath) {
   const all = { ...tables, ...buildViews(tables) };
   console.log(`✓ Đã parse seed: ${path.relative(REPO_ROOT, seedPath)} (${Object.keys(tables).length} bảng)`);
   return {
-    label: `sql:${path.relative(REPO_ROOT, seedPath).replace(/\\/g, "/")}`,
+    label: `sql:${path.relative(REPO_ROOT, seedPath).replaceAll("\\", "/")}`,
     async fetch(schemaName, entity) {
       const rows = all[`${schemaName}.${entity.table}`] || [];
       // Chỉ giữ các cột khai báo (giống SELECT), cột thiếu → null
@@ -877,12 +892,17 @@ async function normalizeSchema(source, schemaKey) {
   let totalRecords = 0;
   let errors = 0;
 
-  for (const entity of config.entities) {
-    const result = await fetchEntity(source, config.schema, entity);
-    entities[entity.table] = result;
-    totalRecords += result.raw_count;
-    if (result.error) errors++;
-    console.log(`  ${result.error ? "✗" : "✓"} ${entity.table}: ${result.raw_count} bản ghi`);
+  const fetchedEntities = await Promise.all(
+    config.entities.map((entity) =>
+      fetchEntity(source, config.schema, entity).then((res) => ({ entity, res }))
+    )
+  );
+
+  for (const { entity, res } of fetchedEntities) {
+    entities[entity.table] = res;
+    totalRecords += res.raw_count;
+    if (res.error) errors++;
+    console.log(`  ${res.error ? "✗" : "✓"} ${entity.table}: ${res.raw_count} bản ghi`);
   }
 
   return {
@@ -987,8 +1007,13 @@ Tuỳ chọn:
       schemas: {},
     };
 
-    for (const schemaKey of schemas) {
-      const data = await normalizeSchema(source, schemaKey);
+    const normalizedSchemas = await Promise.all(
+      schemas.map((schemaKey) =>
+        normalizeSchema(source, schemaKey).then((data) => ({ schemaKey, data }))
+      )
+    );
+
+    for (const { schemaKey, data } of normalizedSchemas) {
       writeOutput(data, outputDir, format);
       if (data.meta.error_count > 0) failed = true;
       manifest.schemas[schemaKey] = {

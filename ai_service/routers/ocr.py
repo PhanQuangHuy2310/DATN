@@ -9,6 +9,7 @@ Dùng PaddleOCR (pre-trained tiếng Việt) — không cần train thêm.
 Fallback: nếu PaddleOCR chưa cài được thì trả về raw text từ Gemini Vision.
 """
 
+import asyncio
 import base64
 import io
 import ipaddress
@@ -25,6 +26,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from loguru import logger
 from pydantic import BaseModel
 
+MIME_JPEG = "image/jpeg"
 settings = get_settings()
 router = APIRouter()
 
@@ -176,10 +178,10 @@ def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float]:
 
 
 async def ocr_with_gemini_vision(
-    image_bytes: bytes, mime_type: str = "image/jpeg"
+    image_bytes: bytes, mime_type: str = MIME_JPEG
 ) -> tuple[str, float]:
     """Dùng Gemini Vision làm fallback khi PaddleOCR chưa khả dụng."""
-    try:
+    def _call_gemini() -> tuple[str, float]:
         import google.generativeai as genai
 
         genai.configure(api_key=settings.gemini_api_key)
@@ -198,11 +200,14 @@ async def ocr_with_gemini_vision(
             ]
         )
         return response.text, 0.75  # Gemini không trả confidence nên hardcode 0.75
-    except Exception as e:  # noqa: BLE001
+
+    try:
+        return await asyncio.to_thread(_call_gemini)
+    except Exception as e:
         logger.error(f"Gemini Vision error: {e}")
         raise HTTPException(
             status_code=500, detail=f"Cả PaddleOCR và Gemini Vision đều lỗi: {e}"
-        )
+        ) from e
 
 
 # ---------------------------------------------------------------------------
@@ -223,7 +228,7 @@ async def extract_from_upload(
     - **file**: ảnh JPEG hoặc PNG
     - **request_type**: ví dụ `"purchase"`, `"expense_claim"` (tùy chọn)
     """
-    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/tiff"}
+    allowed_types = {MIME_JPEG, "image/png", "image/webp", "image/tiff"}
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=400,

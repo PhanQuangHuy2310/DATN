@@ -306,6 +306,27 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
             revision_payload if revision_payload is not None else draft_payload
         )
 
+    workflow_payload = None
+    if workflow:
+        attempt_payload = (
+            {
+                "id": workflow[3],
+                "attempt_no": workflow[4],
+                "executor_id": workflow[5],
+                "state": workflow[6],
+                "result_note": workflow[7],
+                "external_reference": workflow[8],
+            }
+            if workflow[3]
+            else None
+        )
+        workflow_payload = {
+            "lifecycle": workflow[0],
+            "planned_executor_id": workflow[1],
+            "acceptor_id": workflow[2],
+            "attempt": attempt_payload,
+        }
+
     return JsonResponse(
         {
             "request": {
@@ -329,27 +350,7 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
                     }
                     for step in steps
                 ],
-                "workflow": (
-                    {
-                        "lifecycle": workflow[0],
-                        "planned_executor_id": workflow[1],
-                        "acceptor_id": workflow[2],
-                        "attempt": (
-                            {
-                                "id": workflow[3],
-                                "attempt_no": workflow[4],
-                                "executor_id": workflow[5],
-                                "state": workflow[6],
-                                "result_note": workflow[7],
-                                "external_reference": workflow[8],
-                            }
-                            if workflow[3]
-                            else None
-                        ),
-                    }
-                    if workflow
-                    else None
-                ),
+                "workflow": workflow_payload,
             },
             "correlation_id": correlation_id(request),
         }

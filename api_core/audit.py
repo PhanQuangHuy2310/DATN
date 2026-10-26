@@ -30,7 +30,7 @@ def _nfc(value: Any) -> Any:
 def canonical_bytes(value: Any) -> bytes:
     try:
         return rfc8785.dumps(_nfc(value))
-    except (rfc8785.CanonicalizationError, UnicodeError, ValueError) as exc:
+    except (rfc8785.CanonicalizationError, ValueError) as exc:
         raise AuditCanonicalizationError("Audit event cannot be canonicalized") from exc
 
 

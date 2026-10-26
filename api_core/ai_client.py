@@ -139,16 +139,15 @@ class AIServiceClient:
             else request_count_30d
         )
         actual_dept = department if department is not None else requester_dept_category
-        actual_receipt = (
-            has_receipt
-            if has_receipt is not None
-            else (1 if actual_attachments > 0 or actual_amount == 0 else 0)
-        )
-        actual_off_hours = (
-            is_off_hours
-            if is_off_hours is not None
-            else (1 if is_weekend_or_holiday else 0)
-        )
+        if has_receipt is not None:
+            actual_receipt = has_receipt
+        else:
+            actual_receipt = 1 if (actual_attachments > 0 or actual_amount == 0) else 0
+
+        if is_off_hours is not None:
+            actual_off_hours = is_off_hours
+        else:
+            actual_off_hours = 1 if is_weekend_or_holiday else 0
         past_rej_rate = min(
             1.0, max(0.0, float(reject_count_30d) / max(1, actual_past_requests))
         )
