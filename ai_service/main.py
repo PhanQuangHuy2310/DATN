@@ -82,7 +82,10 @@ async def verify_internal_secret(request: Request, call_next):
         return await call_next(request)
 
     if not settings.internal_api_secret:
-        return JSONResponse(status_code=503, content={"detail": "AI internal authentication is not configured"})
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "AI internal authentication is not configured"},
+        )
     secret = request.headers.get("X-Internal-Secret")
     if secret != settings.internal_api_secret:
         return JSONResponse(

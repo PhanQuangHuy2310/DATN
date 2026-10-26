@@ -8,6 +8,7 @@ Output: training/data/synthetic_requests.csv
 
 Chạy: python training/generate_synthetic_data.py
 """
+
 import json
 import os
 
@@ -23,22 +24,141 @@ np.random.seed(42)
 
 REQUEST_TYPES = [
     # name, risk_weight, template, dept_categories, has_amount, typical_amount_range
-    {"name": "leave_short",      "risk_weight": 1, "template": "A", "depts": ["operations","commerce","hr_admin","technology","booking"],     "has_amount": False, "amount_range": (0, 0)},
-    {"name": "leave_long",       "risk_weight": 3, "template": "A", "depts": ["operations","commerce","hr_admin"],                             "has_amount": False, "amount_range": (0, 0)},
-    {"name": "purchase_low",     "risk_weight": 2, "template": "B", "depts": ["operations","commerce","hr_admin","technology"],               "has_amount": True,  "amount_range": (500_000, 10_000_000)},
-    {"name": "purchase_high",    "risk_weight": 5, "template": "B", "depts": ["operations","commerce","finance"],                             "has_amount": True,  "amount_range": (10_000_000, 200_000_000)},
-    {"name": "room_booking",     "risk_weight": 1, "template": "A", "depts": ["operations","commerce","technology","hr_admin","booking"],     "has_amount": False, "amount_range": (0, 0)},
-    {"name": "expense_claim",    "risk_weight": 2, "template": "A", "depts": ["operations","commerce","technology"],                          "has_amount": True,  "amount_range": (100_000, 5_000_000)},
-    {"name": "overtime",         "risk_weight": 2, "template": "A", "depts": ["operations","technology","booking"],                           "has_amount": False, "amount_range": (0, 0)},
-    {"name": "asset_request",    "risk_weight": 3, "template": "C", "depts": ["technology","operations","commerce"],                          "has_amount": True,  "amount_range": (5_000_000, 50_000_000)},
-    {"name": "late_checkin",     "risk_weight": 1, "template": "A", "depts": ["operations","commerce","hr_admin","technology","booking","finance"], "has_amount": False, "amount_range": (0, 0)},
-    {"name": "contract_approval","risk_weight": 5, "template": "C", "depts": ["commerce","finance","hr_admin"],                               "has_amount": True,  "amount_range": (50_000_000, 2_000_000_000)},
-    {"name": "it_request",       "risk_weight": 3, "template": "B", "depts": ["technology","operations","commerce"],                          "has_amount": False, "amount_range": (0, 0)},
-    {"name": "facility_repair",  "risk_weight": 2, "template": "B", "depts": ["hr_admin","operations"],                                       "has_amount": True,  "amount_range": (500_000, 20_000_000)},
-    {"name": "flashsale_voucher","risk_weight": 4, "template": "B", "depts": ["commerce","operations"],                                       "has_amount": True,  "amount_range": (1_000_000, 100_000_000)},
-    {"name": "data_extract",     "risk_weight": 3, "template": "B", "depts": ["technology","finance"],                                        "has_amount": False, "amount_range": (0, 0)},
-    {"name": "refund",           "risk_weight": 2, "template": "A", "depts": ["commerce","operations","finance"],                             "has_amount": True,  "amount_range": (50_000, 3_000_000)},
-    {"name": "onboarding",       "risk_weight": 3, "template": "C", "depts": ["hr_admin"],                                                    "has_amount": False, "amount_range": (0, 0)},
+    {
+        "name": "leave_short",
+        "risk_weight": 1,
+        "template": "A",
+        "depts": ["operations", "commerce", "hr_admin", "technology", "booking"],
+        "has_amount": False,
+        "amount_range": (0, 0),
+    },
+    {
+        "name": "leave_long",
+        "risk_weight": 3,
+        "template": "A",
+        "depts": ["operations", "commerce", "hr_admin"],
+        "has_amount": False,
+        "amount_range": (0, 0),
+    },
+    {
+        "name": "purchase_low",
+        "risk_weight": 2,
+        "template": "B",
+        "depts": ["operations", "commerce", "hr_admin", "technology"],
+        "has_amount": True,
+        "amount_range": (500_000, 10_000_000),
+    },
+    {
+        "name": "purchase_high",
+        "risk_weight": 5,
+        "template": "B",
+        "depts": ["operations", "commerce", "finance"],
+        "has_amount": True,
+        "amount_range": (10_000_000, 200_000_000),
+    },
+    {
+        "name": "room_booking",
+        "risk_weight": 1,
+        "template": "A",
+        "depts": ["operations", "commerce", "technology", "hr_admin", "booking"],
+        "has_amount": False,
+        "amount_range": (0, 0),
+    },
+    {
+        "name": "expense_claim",
+        "risk_weight": 2,
+        "template": "A",
+        "depts": ["operations", "commerce", "technology"],
+        "has_amount": True,
+        "amount_range": (100_000, 5_000_000),
+    },
+    {
+        "name": "overtime",
+        "risk_weight": 2,
+        "template": "A",
+        "depts": ["operations", "technology", "booking"],
+        "has_amount": False,
+        "amount_range": (0, 0),
+    },
+    {
+        "name": "asset_request",
+        "risk_weight": 3,
+        "template": "C",
+        "depts": ["technology", "operations", "commerce"],
+        "has_amount": True,
+        "amount_range": (5_000_000, 50_000_000),
+    },
+    {
+        "name": "late_checkin",
+        "risk_weight": 1,
+        "template": "A",
+        "depts": [
+            "operations",
+            "commerce",
+            "hr_admin",
+            "technology",
+            "booking",
+            "finance",
+        ],
+        "has_amount": False,
+        "amount_range": (0, 0),
+    },
+    {
+        "name": "contract_approval",
+        "risk_weight": 5,
+        "template": "C",
+        "depts": ["commerce", "finance", "hr_admin"],
+        "has_amount": True,
+        "amount_range": (50_000_000, 2_000_000_000),
+    },
+    {
+        "name": "it_request",
+        "risk_weight": 3,
+        "template": "B",
+        "depts": ["technology", "operations", "commerce"],
+        "has_amount": False,
+        "amount_range": (0, 0),
+    },
+    {
+        "name": "facility_repair",
+        "risk_weight": 2,
+        "template": "B",
+        "depts": ["hr_admin", "operations"],
+        "has_amount": True,
+        "amount_range": (500_000, 20_000_000),
+    },
+    {
+        "name": "flashsale_voucher",
+        "risk_weight": 4,
+        "template": "B",
+        "depts": ["commerce", "operations"],
+        "has_amount": True,
+        "amount_range": (1_000_000, 100_000_000),
+    },
+    {
+        "name": "data_extract",
+        "risk_weight": 3,
+        "template": "B",
+        "depts": ["technology", "finance"],
+        "has_amount": False,
+        "amount_range": (0, 0),
+    },
+    {
+        "name": "refund",
+        "risk_weight": 2,
+        "template": "A",
+        "depts": ["commerce", "operations", "finance"],
+        "has_amount": True,
+        "amount_range": (50_000, 3_000_000),
+    },
+    {
+        "name": "onboarding",
+        "risk_weight": 3,
+        "template": "C",
+        "depts": ["hr_admin"],
+        "has_amount": False,
+        "amount_range": (0, 0),
+    },
 ]
 
 DEPT_BUDGET_LIMITS = {
@@ -60,11 +180,12 @@ TYPE_MAP = {rt["name"]: i for i, rt in enumerate(REQUEST_TYPES)}
 # 2. Hàm tính risk label (ground truth)
 # ---------------------------------------------------------------------------
 
+
 def compute_risk_label(row: dict) -> int:
     """
     Tính risk score (1-5) dựa trên các điều kiện nghiệp vụ.
     Đây là label được dùng để train XGBoost.
-    
+
     Logic bám sát rule-based trong routers/risk.py nhưng thêm noise để
     XGBoost học được pattern phức tạp hơn rule đơn giản.
     """
@@ -83,7 +204,10 @@ def compute_risk_label(row: dict) -> int:
         score += 1
 
     # --- Nghỉ phép quá hạn mức ---
-    if row["days_requested"] > row["leave_balance_remaining"] and row["days_requested"] > 0:
+    if (
+        row["days_requested"] > row["leave_balance_remaining"]
+        and row["days_requested"] > 0
+    ):
         score += 1.5
 
     # --- Lịch sử từ chối ---
@@ -126,6 +250,7 @@ def compute_risk_label(row: dict) -> int:
 # 3. Sinh một mẫu dữ liệu
 # ---------------------------------------------------------------------------
 
+
 def generate_sample(rt: dict) -> dict:
     dept = np.random.choice(rt["depts"])
     budget_limit = DEPT_BUDGET_LIMITS.get(dept, 5_000_000)
@@ -134,10 +259,15 @@ def generate_sample(rt: dict) -> dict:
     if rt["has_amount"]:
         lo, hi = rt["amount_range"]
         # Phần lớn giao dịch nhỏ, ít giao dịch lớn (lognormal)
-        amount = float(np.clip(np.random.lognormal(
-            mean=np.log(max(lo, 1) + (hi - lo) * 0.3),
-            sigma=0.8
-        ), lo, hi))
+        amount = float(
+            np.clip(
+                np.random.lognormal(
+                    mean=np.log(max(lo, 1) + (hi - lo) * 0.3), sigma=0.8
+                ),
+                lo,
+                hi,
+            )
+        )
         amount = round(amount / 1000) * 1000  # Làm tròn nghìn
     else:
         amount = 0.0
@@ -146,18 +276,28 @@ def generate_sample(rt: dict) -> dict:
 
     # Ngày nghỉ
     if rt["name"] in ("leave_short", "leave_long"):
-        days = np.random.choice([1, 2, 3, 4, 5, 7, 10, 14], p=[0.3, 0.25, 0.15, 0.1, 0.1, 0.05, 0.03, 0.02])
+        days = np.random.choice(
+            [1, 2, 3, 4, 5, 7, 10, 14], p=[0.3, 0.25, 0.15, 0.1, 0.1, 0.05, 0.03, 0.02]
+        )
     else:
         days = 0
 
     # Số phép còn lại
-    leave_balance = int(np.random.choice([0, 1, 2, 3, 5, 7, 10, 12], p=[0.05, 0.1, 0.15, 0.15, 0.2, 0.15, 0.1, 0.1]))
+    leave_balance = int(
+        np.random.choice(
+            [0, 1, 2, 3, 5, 7, 10, 12], p=[0.05, 0.1, 0.15, 0.15, 0.2, 0.15, 0.1, 0.1]
+        )
+    )
 
     # Level người gửi (1-5, phần lớn staff level 1-2)
     level = int(np.random.choice([1, 2, 3, 4, 5], p=[0.45, 0.3, 0.15, 0.07, 0.03]))
 
     # Lịch sử
-    req_count = int(np.random.choice([0, 1, 2, 3, 4, 5, 8, 10], p=[0.1, 0.25, 0.25, 0.15, 0.1, 0.07, 0.05, 0.03]))
+    req_count = int(
+        np.random.choice(
+            [0, 1, 2, 3, 4, 5, 8, 10], p=[0.1, 0.25, 0.25, 0.15, 0.1, 0.07, 0.05, 0.03]
+        )
+    )
     reject_count = int(np.random.choice([0, 1, 2, 3], p=[0.6, 0.25, 0.1, 0.05]))
     reject_count = min(reject_count, req_count)
 
@@ -205,10 +345,28 @@ def generate_sample(rt: dict) -> dict:
 # 4. Main: Sinh dataset
 # ---------------------------------------------------------------------------
 
+
 def generate_dataset(n_samples: int = 5000) -> pd.DataFrame:
     rows = []
     # Phân phối đều nhưng có trọng số (loại phổ biến nhiều mẫu hơn)
-    type_weights = [0.15, 0.08, 0.1, 0.05, 0.12, 0.08, 0.08, 0.04, 0.1, 0.02, 0.04, 0.04, 0.02, 0.02, 0.04, 0.02]
+    type_weights = [
+        0.15,
+        0.08,
+        0.1,
+        0.05,
+        0.12,
+        0.08,
+        0.08,
+        0.04,
+        0.1,
+        0.02,
+        0.04,
+        0.04,
+        0.02,
+        0.02,
+        0.04,
+        0.02,
+    ]
     type_weights = [w / sum(type_weights) for w in type_weights]  # Normalize
 
     for _ in range(n_samples):
@@ -246,13 +404,25 @@ if __name__ == "__main__":
 
     # Lưu feature columns (để serve đúng thứ tự)
     feature_cols = [
-        "request_type_enc", "lifecycle_template_enc", "risk_weight",
-        "amount_log", "amount_millions", "amount_vs_limit_ratio",
-        "days_requested", "requester_level", "requester_dept_enc",
-        "leave_balance_remaining", "leave_deficit",
-        "request_count_30d", "reject_count_30d", "reject_ratio_30d",
-        "attachment_count", "has_attachment",
-        "is_near_deadline", "is_weekend_or_holiday", "no_attachment_financial",
+        "request_type_enc",
+        "lifecycle_template_enc",
+        "risk_weight",
+        "amount_log",
+        "amount_millions",
+        "amount_vs_limit_ratio",
+        "days_requested",
+        "requester_level",
+        "requester_dept_enc",
+        "leave_balance_remaining",
+        "leave_deficit",
+        "request_count_30d",
+        "reject_count_30d",
+        "reject_ratio_30d",
+        "attachment_count",
+        "has_attachment",
+        "is_near_deadline",
+        "is_weekend_or_holiday",
+        "no_attachment_financial",
     ]
     os.makedirs("models", exist_ok=True)
     with open("models/feature_columns.json", "w") as f:

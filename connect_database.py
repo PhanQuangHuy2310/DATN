@@ -4,20 +4,13 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 import re
 import runpy
 import sys
+from pathlib import Path
 from urllib.parse import quote
 
-EXPECTED_TABLES = (
-    "security_epoch department app_user request_type role_membership config_release "
-    "request request_revision workflow_instance request_participant approval_step "
-    "approval_decision execution_attempt acceptance_decision execution_issue attachment "
-    "draft_attachment revision_attachment execution_attachment sla_stage sla_alert "
-    "audit_head audit_event admin_event audit_checkpoint outbox_event notification "
-    "idempotency_record privacy_case retention_hold"
-).split()
+EXPECTED_TABLES = ["security_epoch", "department", "app_user", "request_type", "role_membership", "config_release", "request", "request_revision", "workflow_instance", "request_participant", "approval_step", "approval_decision", "execution_attempt", "acceptance_decision", "execution_issue", "attachment", "draft_attachment", "revision_attachment", "execution_attachment", "sla_stage", "sla_alert", "audit_head", "audit_event", "admin_event", "audit_checkpoint", "outbox_event", "notification", "idempotency_record", "privacy_case", "retention_hold"]
 
 
 class ConfigurationError(ValueError):

@@ -9,6 +9,7 @@ Dùng để:
 
 Chạy: python training/evaluate_model.py
 """
+
 import json
 import os
 import time
@@ -26,14 +27,22 @@ FEATURE_COLS_PATH = "models/feature_columns.json"
 def rule_based_predict(row: pd.Series) -> int:
     """Rule-based fallback để so sánh với XGBoost."""
     score = row["risk_weight"]
-    if row["amount_millions"] > 50: score += 2
-    elif row["amount_millions"] > 10: score += 1
-    if row["amount"] > 0 and row["attachment_count"] == 0: score += 1
-    if row["leave_deficit"] > 0: score += 1
-    if row["reject_count_30d"] >= 2: score += 1
-    if row["request_count_30d"] >= 5: score += 1
-    if row["is_near_deadline"]: score += 0.5
-    if row["is_weekend_or_holiday"]: score += 0.5
+    if row["amount_millions"] > 50:
+        score += 2
+    elif row["amount_millions"] > 10:
+        score += 1
+    if row["amount"] > 0 and row["attachment_count"] == 0:
+        score += 1
+    if row["leave_deficit"] > 0:
+        score += 1
+    if row["reject_count_30d"] >= 2:
+        score += 1
+    if row["request_count_30d"] >= 5:
+        score += 1
+    if row["is_near_deadline"]:
+        score += 0.5
+    if row["is_weekend_or_holiday"]:
+        score += 0.5
     return int(np.clip(round(score), 1, 5))
 
 
@@ -95,24 +104,33 @@ def main():
     print(f"{'Latency (ms/sample)':<25} {xgb_latency:>12.4f} {rule_latency:>12.4f}")
 
     print("\n📋 XGBoost Classification Report:")
-    print(classification_report(
-        y_true, y_pred,
-        target_names=[f"Risk {i}" for i in range(1, 6)],
-    ))
+    print(
+        classification_report(
+            y_true,
+            y_pred,
+            target_names=[f"Risk {i}" for i in range(1, 6)],
+        )
+    )
 
     # --- Error Analysis ---
     errors = df.copy()
     errors["predicted"] = y_pred
     errors = errors[errors["risk_score"] != errors["predicted"]]
 
-    print(f"\n❌ Số mẫu dự đoán sai: {len(errors)} / {len(df)} ({len(errors)/len(df)*100:.1f}%)")
+    print(
+        f"\n❌ Số mẫu dự đoán sai: {len(errors)} / {len(df)} ({len(errors) / len(df) * 100:.1f}%)"
+    )
 
     if len(errors) > 0:
         print("\n🔍 Phân tích lỗi theo loại yêu cầu:")
-        error_by_type = errors.groupby("request_type").size().sort_values(ascending=False)
+        error_by_type = (
+            errors.groupby("request_type").size().sort_values(ascending=False)
+        )
         for rtype, count in error_by_type.items():
             total = len(df[df["request_type"] == rtype])
-            print(f"   {rtype:25s}: {count:3d}/{total:3d} ({count/total*100:.0f}% sai)")
+            print(
+                f"   {rtype:25s}: {count:3d}/{total:3d} ({count / total * 100:.0f}% sai)"
+            )
 
     # --- Latency test ---
     print("\n⚡ Latency Test (1000 requests đơn lẻ):")

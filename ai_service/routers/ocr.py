@@ -181,6 +181,7 @@ async def ocr_with_gemini_vision(
     image_bytes: bytes, mime_type: str = MIME_JPEG
 ) -> tuple[str, float]:
     """Dùng Gemini Vision làm fallback khi PaddleOCR chưa khả dụng."""
+
     def _call_gemini() -> tuple[str, float]:
         import google.generativeai as genai
 

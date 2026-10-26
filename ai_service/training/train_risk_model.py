@@ -21,6 +21,7 @@ Output:
 Cách chạy:
   python training/train_risk_model.py
 """
+
 import json
 import os
 from datetime import datetime, timezone
@@ -69,10 +70,14 @@ def load_dataset() -> pd.DataFrame:
             print("\n[+] Phân bố nhãn risk_score:")
             dist = df["risk_score"].value_counts().sort_index()
             for score, cnt in dist.items():
-                print(f"    - Risk Score {score}: {cnt:,} mẫu ({cnt/len(df)*100:.1f}%)")
+                print(
+                    f"    - Risk Score {score}: {cnt:,} mẫu ({cnt / len(df) * 100:.1f}%)"
+                )
             return df
 
-    raise FileNotFoundError(f"Không tìm thấy file dữ liệu nào trong: {CANDIDATE_DATA_PATHS}")
+    raise FileNotFoundError(
+        f"Không tìm thấy file dữ liệu nào trong: {CANDIDATE_DATA_PATHS}"
+    )
 
 
 def preprocess_and_feature_engineer(df: pd.DataFrame):
@@ -94,16 +99,26 @@ def preprocess_and_feature_engineer(df: pd.DataFrame):
         df["amount_millions"] = df["amount_vnd"] / 1_000_000.0
 
     if "budget_remaining_vnd" in df.columns:
-        df["budget_log"] = np.log1p(np.maximum(0, df["budget_remaining_vnd"].astype(float)))
-        df["amount_to_budget_ratio"] = df["amount_vnd"] / (df["budget_remaining_vnd"] + 1.0)
+        df["budget_log"] = np.log1p(
+            np.maximum(0, df["budget_remaining_vnd"].astype(float))
+        )
+        df["amount_to_budget_ratio"] = df["amount_vnd"] / (
+            df["budget_remaining_vnd"] + 1.0
+        )
         if "is_over_budget" not in df.columns:
-            df["is_over_budget"] = (df["amount_vnd"] > df["budget_remaining_vnd"]).astype(int)
+            df["is_over_budget"] = (
+                df["amount_vnd"] > df["budget_remaining_vnd"]
+            ).astype(int)
 
     if "has_receipt" in df.columns and "amount_vnd" in df.columns:
-        df["no_receipt_has_amount"] = ((df["amount_vnd"] > 0) & (df["has_receipt"] == 0)).astype(int)
+        df["no_receipt_has_amount"] = (
+            (df["amount_vnd"] > 0) & (df["has_receipt"] == 0)
+        ).astype(int)
 
     if "past_rejection_rate" in df.columns:
-        df["high_rejection_rate"] = (df["past_rejection_rate"].astype(float) > 0.25).astype(int)
+        df["high_rejection_rate"] = (
+            df["past_rejection_rate"].astype(float) > 0.25
+        ).astype(int)
 
     # 3. Danh sách đặc trưng phục vụ huấn luyện
     candidate_features = [
@@ -168,7 +183,8 @@ def train_xgboost(X_train, y_train, X_val, y_val):
     )
 
     model.fit(
-        X_train, y_train,
+        X_train,
+        y_train,
         eval_set=[(X_train, y_train), (X_val, y_val)],
         verbose=50,
     )
@@ -188,12 +204,14 @@ def evaluate_and_save(model, X_test, y_test, feature_cols, encoders):
     f1_macro = f1_score(y_test_orig, y_pred_orig, average="macro")
     f1_weighted = f1_score(y_test_orig, y_pred_orig, average="weighted")
 
-    print(f"\n* Accuracy:       {acc*100:.2f}%")
+    print(f"\n* Accuracy:       {acc * 100:.2f}%")
     print(f"* Macro F1:       {f1_macro:.4f}")
     print(f"* Weighted F1:    {f1_weighted:.4f}")
 
     target_names = [f"Risk {i}" for i in range(1, 6)]
-    report = classification_report(y_test_orig, y_pred_orig, target_names=target_names, digits=4)
+    report = classification_report(
+        y_test_orig, y_pred_orig, target_names=target_names, digits=4
+    )
     print("\n* Báo cáo phân loại chi tiết (Classification Report):")
     print(report)
 
@@ -202,7 +220,7 @@ def evaluate_and_save(model, X_test, y_test, feature_cols, encoders):
     print("        Pred 1  Pred 2  Pred 3  Pred 4  Pred 5")
     for i, row in enumerate(cm):
         row_str = "  ".join(f"{val:6d}" for val in row)
-        print(f"True {i+1}: {row_str}")
+        print(f"True {i + 1}: {row_str}")
 
     importances = model.feature_importances_
     sorted_idx = np.argsort(importances)[::-1]
@@ -212,7 +230,7 @@ def evaluate_and_save(model, X_test, y_test, feature_cols, encoders):
         feat_name = feature_cols[idx]
         score = importances[idx]
         bar = "#" * int(score * 100)
-        line = f"  {rank:2d}. {feat_name:26s}: {score*100:5.2f}% {bar}"
+        line = f"  {rank:2d}. {feat_name:26s}: {score * 100:5.2f}% {bar}"
         print(line)
         top_features_report.append(line)
 
@@ -227,10 +245,14 @@ def evaluate_and_save(model, X_test, y_test, feature_cols, encoders):
         json.dump(encoders, f, indent=2, ensure_ascii=False)
 
     with open(REPORT_PATH, "w", encoding="utf-8") as f:
-        f.write("BÁO CÁO HUẤN LUYỆN MÔ HÌNH XGBOOST RISK & FRAUD SCORING (50,000 MẪU)\n")
-        f.write(f"Thời gian: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(
+            "BÁO CÁO HUẤN LUYỆN MÔ HÌNH XGBOOST RISK & FRAUD SCORING (50,000 MẪU)\n"
+        )
+        f.write(
+            f"Thời gian: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}\n"
+        )
         f.write(f"Số lượng mẫu test: {len(y_test):,}\n")
-        f.write(f"Accuracy: {acc*100:.2f}%\n")
+        f.write(f"Accuracy: {acc * 100:.2f}%\n")
         f.write(f"Macro F1: {f1_macro:.4f}\n")
         f.write(f"Weighted F1: {f1_weighted:.4f}\n\n")
         f.write("CLASSIFICATION REPORT:\n")
@@ -259,7 +281,9 @@ def main():
         X_temp, y_temp, test_size=0.50, random_state=42, stratify=y_temp
     )
 
-    print(f"[+] Kích thước Train: {len(X_train):,} | Val: {len(X_val):,} | Test: {len(X_test):,}")
+    print(
+        f"[+] Kích thước Train: {len(X_train):,} | Val: {len(X_val):,} | Test: {len(X_test):,}"
+    )
 
     model = train_xgboost(X_train, y_train, X_val, y_val)
     evaluate_and_save(model, X_test, y_test, feature_cols, encoders)
