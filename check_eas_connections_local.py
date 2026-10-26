@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import socket
 import sys
 from pathlib import Path
@@ -243,7 +244,9 @@ def main(argv=None):
     if clientfile.is_file() and routerfile.is_file():
         client = clientfile.read_text(encoding="utf-8")
         router = routerfile.read_text(encoding="utf-8")
-        has_post_request = bool(re.search(r'@router\.post\(\s*["\']/request["\']', router))
+        has_post_request = bool(
+            re.search(r'@router\.post\(\s*["\']/request["\']', router)
+        )
         if "/ai/classify/request" in client and not has_post_request:
             c.add(
                 "FAIL",
