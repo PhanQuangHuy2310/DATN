@@ -91,8 +91,8 @@ def list_config_releases(
                    cr.lock_version, cr.content_sha256, cr.created_at, cr.published_at
             FROM eas.config_release cr
             JOIN eas.request_type rt ON rt.id = cr.type_id
-            WHERE (%s IS NULL OR rt.code = %s)
-              AND (%s IS NULL OR cr.state = %s)
+            WHERE (%s::text IS NULL OR rt.code = %s)
+              AND (%s::text IS NULL OR cr.state = %s)
               AND EXISTS (
                 SELECT 1 FROM eas.role_membership rm
                 WHERE rm.user_id = %s AND rm.role = 'POLICY_ADMIN' AND rm.revoked_at IS NULL

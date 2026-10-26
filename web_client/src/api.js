@@ -29,13 +29,21 @@ export async function api(path, options = {}) {
     headers,
     credentials: "same-origin",
   });
-  const body = await response
-    .json()
-    .catch(() => ({ error: { code: "INVALID_RESPONSE" } }));
+  // A failed Django request can return HTML (for example, a debug 500 page).
+  // Report the actual HTTP failure instead of presenting it as INVALID_RESPONSE.
+  const isJson = (response.headers.get("content-type") || "").includes("application/json");
+  const body = isJson ? await response.json().catch(() => null) : null;
   if (!response.ok) {
-    const error = new Error(body.error?.code || `HTTP_${response.status}`);
+    const code = body?.error?.code || (response.status >= 500 ? "SERVER_ERROR" : `HTTP_${response.status}`);
+    const error = new Error(code);
     error.status = response.status;
-    error.fields = body.error?.fields;
+    error.fields = body?.error?.fields;
+    error.correlationId = body?.correlation_id || response.headers.get("X-Correlation-ID") || "";
+    throw error;
+  }
+  if (body === null) {
+    const error = new Error("INVALID_RESPONSE");
+    error.status = response.status;
     throw error;
   }
   return body;

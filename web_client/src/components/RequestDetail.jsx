@@ -132,13 +132,16 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged }) {
                 <button
                   key={key}
                   className={tab === key ? "active" : "secondary"}
-                  onClick={() => setTab(key)}
+                  onClick={() => {
+                    setTab(key);
+                    window.requestAnimationFrame(() => document.getElementById("request-detail-content")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+                  }}
                 >
                   {title}
                 </button>
               ))}
             </div>
-            <div className="detail-grid">
+            <div className="detail-grid" id="request-detail-content">
               <div className="panel">
                 {tab === "info" && (
                   <>

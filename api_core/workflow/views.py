@@ -92,41 +92,43 @@ def request_list(request: HttpRequest) -> JsonResponse:
 
     tab = request.GET.get("tab")
     status_filter = request.GET.get("status")
+    search_filter = request.GET.get("q", "").strip()[:100] or None
     type_code_filter = request.GET.get("type_code")
     dept_filter = request.GET.get("department_id")
     from_filter = request.GET.get("created_from")
     to_filter = request.GET.get("created_to")
 
     sql = """
-        SELECT DISTINCT r.id::text, r.code, rt.code, r.status, r.lock_version,
+        SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                r.updated_at, r.created_at
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
         LEFT JOIN eas.app_user u ON u.id = r.requester_id
-        WHERE (%s IS NULL OR r.status = %s)
-          AND (%s IS NULL OR rt.code = %s)
-          AND (%s IS NULL OR COALESCE(v.department_id, u.department_id) = %s)
-          AND (%s IS NULL OR r.created_at >= %s)
-          AND (%s IS NULL OR r.created_at <= %s)
+        WHERE (%s::text IS NULL OR r.status = %s)
+          AND (%s::text IS NULL OR STRPOS(LOWER(r.code), LOWER(%s::text)) > 0)
+          AND (%s::text IS NULL OR rt.code = %s)
+          AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
+          AND (%s::timestamptz IS NULL OR r.created_at >= %s::timestamptz)
+          AND (%s::timestamptz IS NULL OR r.created_at <= %s::timestamptz)
           AND (
-            (%s = 'mine' AND r.requester_id = %s)
-            OR (%s = 'approval' AND EXISTS (
+            (%s::text = 'mine' AND r.requester_id = %s)
+            OR (%s::text = 'approval' AND EXISTS (
               SELECT 1 FROM eas.approval_step ast
               WHERE ast.request_id = r.id AND ast.state = 'ACTIVE' AND ast.assignee_id = %s
             ))
-            OR (%s = 'execution' AND EXISTS (
+            OR (%s::text = 'execution' AND EXISTS (
               SELECT 1 FROM eas.workflow_instance wi
               JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
               WHERE wi.request_id = r.id AND ea.state IN ('READY', 'RUNNING') AND ea.executor_id = %s
             ))
-            OR (%s = 'acceptance' AND EXISTS (
+            OR (%s::text = 'acceptance' AND EXISTS (
               SELECT 1 FROM eas.workflow_instance wi
               JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
               WHERE wi.request_id = r.id AND wi.state = 'ACTIVE' AND wi.lifecycle = 'C'
                 AND wi.acceptor_id = %s AND ea.state = 'SUBMITTED'
             ))
-            OR (%s IS NULL AND (
+            OR (%s::text IS NULL AND (
                 r.requester_id = %s
                 OR (
                   r.status != 'DRAFT'
@@ -156,6 +158,8 @@ def request_list(request: HttpRequest) -> JsonResponse:
     params = [
         status_filter,
         status_filter,
+        search_filter,
+        search_filter,
         type_code_filter,
         type_code_filter,
         dept_filter,

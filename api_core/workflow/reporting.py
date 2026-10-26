@@ -43,7 +43,7 @@ def list_notifications(actor: Actor, query_params: dict[str, str]) -> dict[str, 
             SELECT id::text, event_id::text, request_id::text, label, read_at, created_at
             FROM eas.notification
             WHERE recipient_id = %s
-              AND (%s IS FALSE OR read_at IS NULL)
+              AND (%s::boolean IS FALSE OR read_at IS NULL)
             ORDER BY created_at DESC, id DESC
             LIMIT %s OFFSET %s
             """,
@@ -150,8 +150,8 @@ def get_request_metrics_report(
         WHERE r.status != 'DRAFT'
           AND r.created_at >= %s
           AND r.created_at <= %s
-          AND (%s IS NULL OR rt.code = %s)
-          AND (%s IS NULL OR COALESCE(v.department_id, u.department_id) = %s)
+          AND (%s::text IS NULL OR rt.code = %s)
+          AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
           AND (
             (r.requester_id = %s)
             OR (

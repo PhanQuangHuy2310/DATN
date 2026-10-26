@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, initializeCsrf } from "./api.js";
+import { PasswordField, PageControls } from "./components/ux.jsx";
 import { date, errorText, roles, statuses, types } from "./domain.js";
 import {
   ActionForm,
@@ -54,15 +55,7 @@ function Login({ onLogin }) {
             Tên đăng nhập
             <input name="username" autoComplete="username" required />
           </label>
-          <label>
-            Mật khẩu
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-            />
-          </label>
+          <PasswordField label="Mật khẩu" name="password" autoComplete="current-password" required />
         </ActionForm>
       </section>
     </main>
@@ -87,10 +80,17 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
   const [status, setStatus] = useState(""),
     [type, setType] = useState(""),
     [offset, setOffset] = useState(0),
+    [limit, setLimit] = useState(20),
     [query, setQuery] = useState(""),
+    [debouncedQuery, setDebouncedQuery] = useState(""),
     [from, setFrom] = useState(""),
     [to, setTo] = useState("");
-  const params = new URLSearchParams({ limit: "20", offset: String(offset) });
+  useEffect(() => {
+    const timer = setTimeout(() => { setDebouncedQuery(query.trim()); setOffset(0); }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (debouncedQuery) params.set("q", debouncedQuery);
   if (["mine", "approval", "execution", "acceptance"].includes(page))
     params.set("tab", page);
   if (status) params.set("status", status);
@@ -101,9 +101,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
     `/api/v1/${page === "ops" ? "ops/requests" : "requests"}?${params}&_revision=${revision}`,
   );
   const items = r.data?.items || [],
-    filtered = items.filter(
-      (i) => !query || i.code.toLowerCase().includes(query.toLowerCase()),
-    );
+    filtered = items;
   return (
     <>
       <div className="page-heading">
@@ -118,14 +116,34 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
           <button onClick={onNew}>+ Tạo yêu cầu mới</button>
         )}
       </div>
+      <section className="request-summary-strip" aria-label="Thống kê hồ sơ trên trang">
+        {[
+          ["Tất cả", "", "◫"],
+          ["Cần bổ sung", "NEEDS_INFO", "!"],
+          ["Chờ duyệt", "PENDING_APPROVAL", "⌛"],
+          ["Đang thực hiện", "IN_PROGRESS", "⇄"],
+          ["Hoàn thành", "COMPLETED", "✓"],
+          ["Bản nháp", "DRAFT", "▤"],
+        ].map(([label, code, icon]) => (
+          <button key={label} type="button"
+            className={`request-mini-stat ${status === code ? "current" : ""}`}
+            onClick={() => {setStatus(code);setOffset(0);}}
+            aria-pressed={status === code}>
+            <span className="mini-stat-icon" aria-hidden="true">{icon}</span>
+            <span className="mini-stat-label">{label}</span>
+            <strong>{code ? items.filter((item) => item.status === code).length : items.length}</strong>
+            <small>trên trang đang tải</small>
+          </button>
+        ))}
+      </section>
       <section className="panel filter-panel">
         <div className="filters">
           <label>
-            Mã trên trang hiện tại
+            Tìm mã yêu cầu (toàn bộ dữ liệu)
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tìm mã REQ…"
+              placeholder="Ví dụ: REQ-2026-001"
             />
           </label>
           <label>
@@ -218,9 +236,9 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
         {page === "ops" ? (
           <Operations items={filtered} onRefresh={r.reload} />
         ) : (
-          <section className="panel table-panel">
+          <section className="panel table-panel" id="request-results">
             <div className="table-wrap">
-              <table>
+              <table className="responsive-records">
                 <thead>
                   <tr>
                     <th>Mã yêu cầu</th>
@@ -233,8 +251,8 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
                 <tbody>
                   {filtered.map((i) => (
                     <tr key={i.id}>
-                      <td className="request-code">{i.code}</td>
-                      <td>
+                      <td data-label="Mã yêu cầu" className="request-code">{i.code}</td>
+                      <td data-label="Nghiệp vụ">
                         <span className="type-icon">
                           {i.type_code === "LEAVE"
                             ? "◷"
@@ -244,11 +262,11 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
                         </span>
                         {types[i.type_code] || i.type_code}
                       </td>
-                      <td>
+                      <td data-label="Trạng thái">
                         <Badge value={i.status} />
                       </td>
-                      <td>{date(i.updated_at)}</td>
-                      <td>
+                      <td data-label="Cập nhật">{date(i.updated_at)}</td>
+                      <td data-label="Thao tác">
                         <button className="link" onClick={() => onOpen(i.id)}>
                           Xem chi tiết →
                         </button>
@@ -266,31 +284,14 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
             )}
           </section>
         )}
-        <div className="pagination">
-          <span>
-            Trang {Math.floor(offset / 20) + 1} · {filtered.length} hồ sơ hiển
-            thị
-          </span>
-          <button
-            className="secondary"
-            disabled={!offset}
-            onClick={() => setOffset(offset - 20)}
-          >
-            ← Trước
-          </button>
-          <button
-            className="secondary"
-            disabled={r.data?.next_offset == null || offset >= 10000}
-            onClick={() => setOffset(r.data.next_offset)}
-          >
-            Sau →
-          </button>
-        </div>
+        <PageControls offset={offset} limit={limit} nextOffset={r.data?.next_offset}
+          count={filtered.length} title="hồ sơ" targetId="request-results"
+          onPage={setOffset} onLimit={setLimit} />
       </ResourceState>
     </>
   );
 }
-function Overview({ navigate }) {
+function Overview({ navigate, onOpen }) {
   const [period] = useState(() => {
     const end = new Date();
     return new URLSearchParams({
@@ -299,6 +300,7 @@ function Overview({ navigate }) {
     }).toString();
   });
   const r = useResource("/api/v1/reports/requests?" + period);
+  const recent = useResource("/api/v1/requests?limit=5&offset=0");
   const report = r.data?.report;
   return (
     <>
@@ -356,6 +358,33 @@ function Overview({ navigate }) {
           </>
         )}
       </ResourceState>
+      <div className="dashboard-board">
+        <section className="panel" aria-label="Hồ sơ cập nhật gần đây">
+          <div className="section-head">
+            <div><h2>Hồ sơ mới cập nhật</h2><p className="muted">Danh sách thực tế trong phạm vi bạn được phép xem.</p></div>
+            <button className="secondary" onClick={() => navigate("history")}>Xem danh sách →</button>
+          </div>
+          <ResourceState resource={recent}>
+            {recent.data?.items?.length ? (
+              <ul className="dashboard-list">
+                {recent.data.items.map((item) => <li key={item.id}>
+                  <div><strong>{item.code}</strong><small>{types[item.type_code] || item.type_code} · {date(item.updated_at)}</small><Badge value={item.status}/></div>
+                  <button className="link" onClick={() => onOpen(item.id)}>Xem chi tiết →</button>
+                </li>)}
+              </ul>
+            ) : <p className="muted">Chưa có hồ sơ trong phạm vi quyền xem.</p>}
+          </ResourceState>
+        </section>
+        <aside className="panel">
+          <h2>Truy cập nhanh</h2>
+          <p className="muted">Đi thẳng đến khu vực làm việc, hệ thống tự cuộn về phần thao tác.</p>
+          <div className="dashboard-quick">
+            <button onClick={() => navigate("mine")}>▤ Yêu cầu của tôi →</button>
+            <button className="secondary" onClick={() => navigate("notifications")}>◉ Trung tâm thông báo →</button>
+            <button className="secondary" onClick={() => navigate("history")}>◷ Tra cứu hồ sơ →</button>
+          </div>
+        </aside>
+      </div>
       <section className="welcome-banner">
         <div>
           <h2>Công việc rõ ràng. Tiến độ minh bạch.</h2>
@@ -374,6 +403,15 @@ function Workspace({ user, onLogout }) {
     [editor, setEditor] = useState(null),
     [revision, setRevision] = useState(0),
     [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const main = document.getElementById("main");
+      main?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const heading = main?.querySelector("h1");
+      if (heading) { heading.setAttribute("tabindex", "-1"); heading.focus({ preventScroll: true }); }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [page, selected, editor]);
   function navigate(next) {
     setPage(next);
     setSelected(null);
@@ -382,6 +420,7 @@ function Workspace({ user, onLogout }) {
   }
   return (
     <div className="app-shell">
+      {menuOpen && <button className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")}>
         <a className="brand" href="#main" onClick={() => navigate("home")}>
           <span className="brand-mark">E</span>
@@ -401,24 +440,28 @@ function Workspace({ user, onLogout }) {
             + Tạo yêu cầu mới
           </button>
         )}
-        <p className="nav-caption">KHÔNG GIAN LÀM VIỆC</p>
         <nav aria-label="Điều hướng chính">
-          {menu
-            .filter((m) => !m[3] || user.roles.includes(m[3]))
-            .map(([key, title, icon]) => (
-              <button
-                key={key}
-                className={
-                  page === key && !selected && !editor
-                    ? "nav-item active"
-                    : "nav-item"
-                }
-                onClick={() => navigate(key)}
-              >
-                <span aria-hidden="true">{icon}</span>
-                {title}
-              </button>
-            ))}
+          {[
+            ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history"]],
+            ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
+            ["QUẢN TRỊ HỆ THỐNG", ["policy", "ops", "identity", "audit", "events"]],
+            ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
+          ].map(([group, keys]) => {
+            const visible = menu.filter((m) => keys.includes(m[0]) && (!m[3] || user.roles.includes(m[3])));
+            return visible.length ? (
+              <div key={group} className="nav-group">
+                <p className="nav-caption">{group}</p>
+                {visible.map(([key, title, icon]) => (
+                  <button key={key}
+                    className={page === key && !selected && !editor ? "nav-item active" : "nav-item"}
+                    aria-current={page === key && !selected && !editor ? "page" : undefined}
+                    onClick={() => navigate(key)}>
+                    <span aria-hidden="true">{icon}</span>{title}
+                  </button>
+                ))}
+              </div>
+            ) : null;
+          })}
         </nav>
         <div className="sidebar-footer">
           <strong>Quy trình có kiểm soát</strong>
@@ -458,7 +501,7 @@ function Workspace({ user, onLogout }) {
             <ActionForm onSubmit={onLogout} submitLabel="Đăng xuất" />
           </div>
         </header>
-        <main id="main" className="content">
+        <main id="main" className="content" tabIndex={-1}>
           {editor ? (
             <RequestEditor
               key={editor.id || "new"}
@@ -480,7 +523,7 @@ function Workspace({ user, onLogout }) {
               onChanged={() => setRevision((v) => v + 1)}
             />
           ) : page === "home" ? (
-            <Overview navigate={navigate} />
+            <Overview navigate={navigate} onOpen={setSelected} />
           ) : page === "identity" ? (
             <IdentityAdmin />
           ) : page === "policy" ? (

@@ -16,6 +16,7 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+.venv-ai/
 venv/
 
 # Node and frontend
@@ -62,22 +63,7 @@ plantuml.jar
 ai_service/training/data/partitions/
 ai_service/training/data/enterprise_requests_dataset_large.csv
 
-# Python environments
-.venv/
-.venv-ai/
-venv/
-__pycache__/
-*.pyc
 
-# Frontend dependencies
-node_modules/
-dist/
-
-# Secrets
-.env
-.env.*
-!.env.example
-!.env.*.example
-
-# Local files
+# Diagnostic logs (may contain sensitive traces)
+logs/
 *.log

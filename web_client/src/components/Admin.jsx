@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { PasswordField, PageControls, useLocalPagination } from "./ux.jsx";
 import { api } from "../api.js";
 import { date, types } from "../domain.js";
 import {
@@ -20,6 +21,10 @@ export function Policy() {
     setSelected((await api(`/api/v1/config-releases/${id}`)).release);
     setValidation(null);
   }
+  const policies = useLocalPagination(10);
+  useEffect(() => {
+    if (selected) document.getElementById("policy-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selected]);
   return (
     <>
       <div className="page-heading">
@@ -35,7 +40,7 @@ export function Policy() {
       <section className="panel">
         <ResourceState resource={resource}>
           <div className="table-wrap">
-            <table>
+            <table className="responsive-records">
               <thead>
                 <tr>
                   <th>Loại yêu cầu</th>
@@ -46,15 +51,13 @@ export function Policy() {
                 </tr>
               </thead>
               <tbody>
-                {resource.data?.items?.map((r) => (
+                {policies.slice(resource.data?.items || []).map((r) => (
                   <tr key={r.id}>
-                    <td>{types[r.type_code]}</td>
-                    <td>v{r.version}</td>
-                    <td>
-                      <Badge value={r.state} />
-                    </td>
-                    <td>{date(r.published_at)}</td>
-                    <td>
+                    <td data-label="Loại yêu cầu">{types[r.type_code]}</td>
+                    <td data-label="Phiên bản">v{r.version}</td>
+                    <td data-label="Trạng thái"><Badge value={r.state} /></td>
+                    <td data-label="Công bố">{date(r.published_at)}</td>
+                    <td data-label="Thao tác">
                       <ActionForm
                         onSubmit={() => open(r.id)}
                         submitLabel="Mở cấu hình"
@@ -68,10 +71,15 @@ export function Policy() {
           {!resource.data?.items?.length && (
             <p className="empty">Chưa có phiên bản cấu hình.</p>
           )}
+          <PageControls offset={policies.offset} limit={policies.pageSize}
+            count={policies.slice(resource.data?.items || []).length} title="phiên bản"
+            nextOffset={policies.nextOffset(resource.data?.items || [])}
+            onPage={policies.setOffset} onLimit={policies.setPageSize} />
         </ResourceState>
       </section>
       {selected && (
         <section
+          id="policy-editor"
           className="panel"
           key={selected.id + ":" + selected.lock_version}
         >
@@ -227,17 +235,17 @@ export function Operations({ items, onRefresh }) {
             <tbody>
               {items.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.code}</td>
-                  <td>
+                  <td data-label="Mã yêu cầu">{r.code}</td>
+                  <td data-label="Trạng thái">
                     <Badge value={r.status} />
                   </td>
-                  <td>
+                  <td data-label="Hạn xử lý">
                     {date(r.sla?.due_at)}{" "}
                     {r.sla?.breached_at && (
                       <span className="badge REJECTED">Quá hạn</span>
                     )}
                   </td>
-                  <td>
+                  <td data-label="Thao tác">
                     <button
                       className="secondary"
                       disabled={[
@@ -348,9 +356,10 @@ export function Operations({ items, onRefresh }) {
 }
 export function Notifications({ onOpen }) {
   const [offset, setOffset] = useState(0),
+    [limit, setLimit] = useState(20),
     [unread, setUnread] = useState(false);
   const r = useResource(
-    `/api/v1/notifications?limit=20&offset=${offset}&unread=${unread}`,
+    `/api/v1/notifications?limit=${limit}&offset=${offset}&unread=${unread}`,
   );
   return (
     <section className="panel">
@@ -401,33 +410,24 @@ export function Notifications({ onOpen }) {
           </article>
         ))}
         {!r.data?.items?.length && <p className="empty">Không có thông báo.</p>}
-        <div className="pagination">
-          <button
-            className="secondary"
-            disabled={!offset}
-            onClick={() => setOffset(offset - 20)}
-          >
-            Trước
-          </button>
-          <button
-            className="secondary"
-            disabled={r.data?.next_offset == null}
-            onClick={() => setOffset(r.data.next_offset)}
-          >
-            Sau
-          </button>
-        </div>
+        <PageControls offset={offset} limit={limit} nextOffset={r.data?.next_offset}
+          count={r.data?.items?.length || 0} title="thông báo"
+          onPage={setOffset} onLimit={setLimit} />
       </ResourceState>
     </section>
   );
 }
 export function AdminEvents() {
-  const r = useResource("/api/v1/admin-events?limit=50");
+  const [offset, setOffset] = useState(0);
+  const [limit, setLimit] = useState(20);
+  const r = useResource(`/api/v1/admin-events?limit=${limit}&offset=${offset}`);
   return (
     <section className="panel">
       <h2>Nhật ký quản trị</h2>
       <ResourceState resource={r}>
         <Data value={r.data?.items} />
+        <PageControls offset={offset} limit={limit} nextOffset={r.data?.next_offset}
+          count={r.data?.items?.length || 0} title="sự kiện" onPage={setOffset} onLimit={setLimit} />
       </ResourceState>
     </section>
   );
@@ -447,6 +447,11 @@ export function Profile({ user, onChanged }) {
         onSubmit={async (v) => {
           if (v.new_password !== v.confirm_password)
             throw new Error("Mật khẩu xác nhận không khớp.");
+          const pwd = v.new_password;
+          if (pwd.length < 12 || pwd.length > 128 || !/[a-z]/.test(pwd) ||
+            !/[A-Z]/.test(pwd) || !/[0-9]/.test(pwd) || !/[^\p{L}\p{N}]/u.test(pwd) ||
+            (user.username && pwd.toLowerCase().includes(user.username.toLowerCase())))
+            throw new Error("Mật khẩu chưa đạt chính sách: 12–128 ký tự, có chữ hoa, thường, số, ký tự đặc biệt và không chứa username.");
           await api("/api/v1/auth/password", {
             method: "POST",
             body: JSON.stringify({
@@ -458,33 +463,10 @@ export function Profile({ user, onChanged }) {
           if (onChanged) await onChanged();
         }}
       >
-        <label>
-          Mật khẩu hiện tại
-          <input
-            name="current_password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-        </label>
-        <label>
-          Mật khẩu mới
-          <input
-            name="new_password"
-            type="password"
-            autoComplete="new-password"
-            required
-          />
-        </label>
-        <label>
-          Xác nhận mật khẩu
-          <input
-            name="confirm_password"
-            type="password"
-            autoComplete="new-password"
-            required
-          />
-        </label>
+        <PasswordField label="Mật khẩu hiện tại" name="current_password" autoComplete="current-password" required />
+        <PasswordField label="Mật khẩu mới" name="new_password" autoComplete="new-password" minLength={12} maxLength={128} required
+          help="12–128 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt; không chứa tên đăng nhập." />
+        <PasswordField label="Xác nhận mật khẩu" name="confirm_password" autoComplete="new-password" required />
       </ActionForm>
       {done && <p className="success">Đã đổi mật khẩu.</p>}
     </section>
