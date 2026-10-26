@@ -81,6 +81,7 @@ jobs:
       EAS_WORKER_DATABASE_URL: postgresql://ci_worker:ci_only@db.invalid:5432/postgres?sslmode=require
       EAS_DJANGO_SECRET_KEY: ci-only-not-a-real-secret-000000000000000000000000000000
       EAS_SUPABASE_URL: https://ci-project.invalid
+      INTERNAL_API_SECRET: ci-shared-internal-secret-for-container-config-check-only
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
