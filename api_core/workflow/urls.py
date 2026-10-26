@@ -1,8 +1,13 @@
 from django.urls import path
 
-from . import views
+from . import history_views, views
 
 urlpatterns = [
+    path("requests/<uuid:request_id>/history", history_views.history),
+    path(
+        "request-drafts/<uuid:request_id>/attachments/<uuid:attachment_id>",
+        history_views.remove_draft_attachment,
+    ),
     # Draft & Submit
     path("request-drafts", views.draft, name="request-draft-create"),
     path("requests", views.request_list_or_create, name="request-list"),

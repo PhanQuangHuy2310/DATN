@@ -77,7 +77,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       # Kết nối nội bộ tới AI service (api_core/integrations/ai_service.py)
       EAS_AI_SERVICE_URL: ${EAS_AI_SERVICE_URL:-http://ai-service:8001}
-      EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:-datn-internal-secret-change-in-prod}
+      EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5}
     ports:
       - "127.0.0.1:8000:8000"
@@ -202,7 +202,7 @@ services:
       - "127.0.0.1:8001:8001"
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-datn-internal-secret-change-in-prod}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
       - OCR_USE_GPU=false
     volumes:
       - ./ai_service/models:/app/models        # Persist trained models

@@ -46,10 +46,12 @@ def parse_database_url(url: str) -> dict[str, object]:
             "HOST": host,
             "PORT": int(port_text),
             "CONN_MAX_AGE": 60,
+            "DISABLE_SERVER_SIDE_CURSORS": True,
             "CONN_HEALTH_CHECKS": True,
             "OPTIONS": {
                 "sslmode": sslmode,
                 "connect_timeout": 10,
+                "prepare_threshold": None,
                 "options": "-c statement_timeout=30000 -c lock_timeout=5000",
             },
         }

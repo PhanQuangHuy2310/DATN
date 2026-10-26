@@ -134,8 +134,8 @@ def _validate_roles_manifest(roles: list[dict]) -> list[str]:
         type_id = r.get("type_id")
         if type_scope == "ALL" and type_id is not None:
             errors.append(f"Role [{idx}]: ALL type_scope must have type_id as null.")
-        elif type_scope == "TYPE" and type_id is None:
-            errors.append(f"Role [{idx}]: TYPE scope requires non-null type_id.")
+        elif type_scope == "ONE" and type_id is None:
+            errors.append(f"Role [{idx}]: ONE scope requires non-null type_id.")
     return errors
 
 
@@ -177,12 +177,11 @@ def _apply_identity_changes(
         is_active = u.get("is_active", True)
         cursor.execute(
             """
-            INSERT INTO eas.app_user(id, username, display_name, email, department_id, manager_id, is_active, password_hash, auth_version)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, '!TEMP_IMPORT_PASSWORD', 1)
+            INSERT INTO eas.app_user(id, username, display_name, department_id, manager_id, is_active, password_hash, auth_version)
+            VALUES (%s, %s, %s, %s, %s, %s, '!TEMP_IMPORT_PASSWORD', 1)
             ON CONFLICT (id) DO UPDATE
             SET username = EXCLUDED.username,
                 display_name = EXCLUDED.display_name,
-                email = EXCLUDED.email,
                 department_id = EXCLUDED.department_id,
                 manager_id = EXCLUDED.manager_id,
                 is_active = EXCLUDED.is_active,
@@ -192,7 +191,6 @@ def _apply_identity_changes(
                 uid,
                 u["username"],
                 u["display_name"],
-                u.get("email", f"{u['username']}@company.local"),
                 u.get("department_id"),
                 u.get("manager_id"),
                 is_active,

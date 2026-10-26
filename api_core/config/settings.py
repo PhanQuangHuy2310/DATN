@@ -145,7 +145,7 @@ EAS_AI_SERVICE_URL = os.getenv("EAS_AI_SERVICE_URL", "http://ai-service:8001").r
 )
 EAS_AI_INTERNAL_SECRET = os.getenv(
     "EAS_AI_INTERNAL_SECRET",
-    os.getenv("INTERNAL_API_SECRET", "datn-internal-secret-change-in-prod"),
+    os.getenv("INTERNAL_API_SECRET", ""),
 )
 if (
     ENVIRONMENT == "production"

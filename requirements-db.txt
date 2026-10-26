@@ -1,0 +1,2 @@
+# Match the driver already used by the supplied EAS project.
+psycopg[binary]==3.3.6

@@ -59,10 +59,12 @@ def _object_url(key: str) -> str:
 
 
 def _headers(mime: str | None = None) -> dict[str, str]:
-    headers = {
-        "Authorization": f"Bearer {settings.SUPABASE_SECRET_KEY}",
-        "apikey": settings.SUPABASE_SECRET_KEY,
-    }
+    key = settings.SUPABASE_SECRET_KEY
+    headers = {"apikey": key}
+    # Legacy JWT service_role keys can also be sent as Bearer tokens; newer
+    # sb_secret_* keys are API keys, not JWTs. Never send as Bearer.
+    if not key.startswith(("sb_secret_", "sb_publishable_")):
+        headers["Authorization"] = f"Bearer {key}"
     if mime:
         headers.update(
             {"Content-Type": mime, "x-upsert": "false", "Cache-Control": "no-store"}

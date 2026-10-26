@@ -154,8 +154,9 @@ def heuristic_classify(text: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
+@router.post("/classify", include_in_schema=False)  # Backward-compatible old endpoint
 @router.post(
-    "/classify",
+    "/request",
     response_model=ClassifyRequestResult,
     summary="Phân loại yêu cầu tự động (NLP)",
 )

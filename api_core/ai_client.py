@@ -46,7 +46,7 @@ AI_SERVICE_URL = _URL or os.getenv(
 ).rstrip("/")
 INTERNAL_SECRET = _SECRET or os.getenv(
     "EAS_AI_INTERNAL_SECRET",
-    os.getenv("INTERNAL_API_SECRET", "datn-internal-secret-change-in-prod"),
+    os.getenv("INTERNAL_API_SECRET", ""),
 )
 TIMEOUT = float(_TIMEOUT or os.getenv("EAS_AI_TIMEOUT_SECONDS", "30.0"))
 

@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     risk_feature_columns_path: str = "models/feature_columns.json"
 
     # --- Security ---
-    internal_api_secret: str = "datn-internal-secret-change-in-prod"
+    internal_api_secret: str = ""
     cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000"
 
     # --- OCR ---
@@ -60,10 +60,10 @@ class Settings(BaseSettings):
             .lower()
             .strip()
         )
-        if (
-            env == "production"
-            and self.internal_api_secret == "datn-internal-secret-change-in-prod"
-        ):
+        if env == "production" and self.internal_api_secret in {
+            "",
+            "datn-internal-secret-change-in-prod",
+        }:
             raise ValueError(
                 "INTERNAL_API_SECRET must be configured with a secure secret in production"
             )
