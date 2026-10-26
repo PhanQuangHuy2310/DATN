@@ -26,7 +26,7 @@ class ReportCompatibilityTests(unittest.TestCase):
         self.assertEqual(len(matrix['business_rules']),7)
 
     def test_expansion_is_schema_driven_and_rejects_unknown_fields(self):
-        val=module_from_file('isolated_validation','api_core/domain/validation.py')
+        from api_core.domain import validation as val  # load as a package so relative imports resolve
         schema={'schema_version':1,'type':'object','additionalProperties':False,
           'properties':{'title':{'type':'string','minLength':5,'maxLength':120},
                         'cost':{'type':'integer','minimum':0,'maximum':500000000}},

@@ -53,3 +53,9 @@ test("UC17 API catalog and matrix require GLOBAL+ALL ops capability", () => {
   assert.ok(!visiblePages(["POLICY_ADMIN", "AUDITOR"]).includes("api-admin"));
   assert.ok(roleTasks(["OPS_ADMIN"], {identity_manage:true}).some(t => t.page === "api-admin"));
 });
+
+
+test("Plan request blueprints are available only to policy/operations admins", () => {
+  for (const role of ["POLICY_ADMIN", "OPS_ADMIN"]) assert.equal(canNavigate([role], "plan-catalog"), true);
+  for (const role of ["REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR", "AUDITOR"]) assert.equal(canNavigate([role], "plan-catalog"), false);
+});

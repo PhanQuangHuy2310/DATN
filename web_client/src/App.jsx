@@ -15,6 +15,7 @@ import RequestEditor from "./components/RequestEditor.jsx";
 import RequestDetail from "./components/RequestDetail.jsx";
 import IdentityAdmin from "./components/IdentityAdmin.jsx";
 import ApiAdministration from "./components/ApiAdministration.jsx";
+import PlanCatalog from "./components/PlanCatalog.jsx";
 import {
   AdminEvents,
   Notifications,
@@ -73,6 +74,7 @@ const menu = [
   ["acceptance", "Chờ nghiệm thu", "◇", "ACCEPTOR"],
   ["history", "Hồ sơ liên quan", "◷"],
   ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
+  ["plan-catalog", "Danh mục 18 loại đơn", "▦"],
   ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
   ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
   ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
@@ -102,6 +104,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
   if (type) params.set("type_code", type);
   if (from) params.set("created_from", from + "T00:00:00+07:00");
   if (to) params.set("created_to", to + "T23:59:59.999999+07:00");
+  const availableTypes = useResource("/api/v1/request-types");
   const r = useResource(
     `/api/v1/${page === "ops" ? "ops/requests" : "requests"}?${params}&_revision=${revision}`,
   );
@@ -161,9 +164,9 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
               }}
             >
               <option value="">Tất cả loại</option>
-              {Object.entries(types).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
+              {(availableTypes.data?.items || []).map(({code, name}) => (
+                <option key={code} value={code}>
+                  {name || types[code] || code}
                 </option>
               ))}
             </select>
@@ -538,8 +541,10 @@ function Workspace({ user, onLogout }) {
             <IdentityAdmin />
           ) : page === "api-admin" ? (
             <ApiAdministration />
+          ) : page === "plan-catalog" ? (
+            <PlanCatalog />
           ) : page === "policy" ? (
-            <Policy />
+            <Policy canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />
           ) : page === "notifications" ? (
             <Notifications onOpen={setSelected} />
           ) : page === "profile" ? (

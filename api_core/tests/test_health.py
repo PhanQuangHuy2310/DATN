@@ -51,6 +51,7 @@ class ReadinessLogicTests(SimpleTestCase):
         checks = assess_request_types(rows, require_active_releases=True)
         self.assertTrue(checks["request_types_match_p0"])
         self.assertFalse(checks["all_active_types_configured"])
+        self.assertFalse(checks["p0_active_types_configured"])
 
     @override_settings(
         EAS_REQUIRE_STORAGE=True,
@@ -73,7 +74,7 @@ class HealthEndpointTests(SimpleTestCase):
 
     @patch(
         "api_core.health.views.database_readiness",
-        return_value=(True, {"database": True}),
+        return_value=(True, {"database": True}, {"unconfigured_active_type_count": 7}),
     )
     @override_settings(EAS_REQUIRE_STORAGE=False)
     def test_ready_returns_200_when_checks_pass(self, _probe):
@@ -83,10 +84,29 @@ class HealthEndpointTests(SimpleTestCase):
 
     @patch(
         "api_core.health.views.database_readiness",
-        return_value=(False, {"runtime_role_is_non_admin": False}),
+        return_value=(False, {"runtime_role_is_non_admin": False}, {"unconfigured_active_type_count": 7}),
     )
     @override_settings(EAS_REQUIRE_STORAGE=False)
     def test_ready_fails_closed(self, _probe):
         response = self.client.get("/health/ready")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["status"], "not_ready")
+
+
+class OptionalCatalogReadinessTests(SimpleTestCase):
+    def test_optional_types_do_not_break_p0_gates(self):
+        rows = [
+            ("LEAVE", "A", True), ("ACCESS", "B", True),
+            ("EQUIPMENT", "C", True), ("BUSINESS_TRIP", "B", False),
+            ("ROOM_BOOKING", "A", False),
+        ]
+        result = assess_request_types(rows, require_active_releases=True)
+        self.assertTrue(result["request_types_match_p0"])
+        self.assertTrue(result["p0_active_types_configured"])
+        self.assertFalse(result["all_active_types_configured"])
+
+    def test_missing_p0_release_still_blocks_core_readiness(self):
+        rows = [("LEAVE", "A", True), ("ACCESS", "B", False),
+                ("EQUIPMENT", "C", True)]
+        result = assess_request_types(rows, require_active_releases=True)
+        self.assertFalse(result["p0_active_types_configured"])

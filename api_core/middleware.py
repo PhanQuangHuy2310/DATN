@@ -1,30 +1,18 @@
-"""Safe JSON error handling for unexpected API database failures.
+"""Safe JSON reporting of unexpected API database failures.
 
-Retains HTTP 500, logs a SQLSTATE and correlation ID without SQL text, values,
-or credentials, and avoids exposing Django debug HTML to the React client.
+Logs only a redacted SQLSTATE, exception class and correlation ID. These
+are sufficient for diagnosis without exposing credentials or SQL payloads.
 """
 from __future__ import annotations
 
 import logging
 
-from django.conf import settings
 from django.db import DatabaseError
 
+from api_core.db_diagnostics import api_db_failure, failure_category, sqlstate
 from api_core.http import api_error, correlation_id
 
 log = logging.getLogger("eas.database")
-
-
-def _sqlstate(exc: BaseException) -> str:
-    visited: set[int] = set()
-    current = exc
-    while current is not None and id(current) not in visited:
-        visited.add(id(current))
-        state = getattr(current, "sqlstate", None)
-        if isinstance(state, str) and len(state) == 5 and state.isalnum():
-            return state
-        current = getattr(current, "__cause__", None) or getattr(current, "__context__", None)
-    return "unknown"
 
 
 class ApiDatabaseErrorMiddleware:
@@ -38,16 +26,15 @@ class ApiDatabaseErrorMiddleware:
         if not request.path.startswith("/api/v1/") or not isinstance(exception, DatabaseError):
             return None
         request_id = correlation_id(request)
-        state = _sqlstate(exception)
+        state = sqlstate(exception)
+        category = failure_category(exception)
+        code, status = api_db_failure(exception)
         log.error(
-            "API database exception: path=%s, SQLSTATE=%s, correlation_id=%s",
-            request.path, state, request_id,
+            "API database failure: path=%s category=%s exception_type=%s "
+            "SQLSTATE=%s correlation_id=%s",
+            request.path, category, type(exception).__name__, state, request_id,
             extra={"correlation_id": request_id},
         )
-        headers = {"X-EAS-SQLSTATE": state} if settings.DEBUG else None
-        return api_error(
-            request,
-            "DATABASE_QUERY_FAILED",
-            status=500,
-            headers=headers,
-        )
+        # No raw driver message, SQL, credentials, host or user info in response.
+        headers = {"Retry-After": "3"} if status == 503 else None
+        return api_error(request, code, status=status, headers=headers)

@@ -19,6 +19,8 @@ from api_core.workflow.config_service import (
     create_or_clone_release,
     get_config_release,
     list_config_releases,
+    list_policy_type_status,
+    policy_actor_options,
     publish_config_release,
     update_draft_release,
     validate_release_candidate,
@@ -797,6 +799,28 @@ def config_releases_view(request: HttpRequest) -> JsonResponse:
 
         return _post(request)
     return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+
+
+@require_GET
+@require_actor("POLICY_ADMIN")
+def policy_actor_options_view(request: HttpRequest) -> JsonResponse:
+    try:
+        data = policy_actor_options(request.actor, request.GET.get("type_code", ""))
+        data["correlation_id"] = correlation_id(request)
+        return JsonResponse(data)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+
+
+@require_GET
+@require_actor("POLICY_ADMIN")
+def policy_type_status_view(request: HttpRequest) -> JsonResponse:
+    try:
+        data = list_policy_type_status(request.actor)
+        data["correlation_id"] = correlation_id(request)
+        return JsonResponse(data)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
 
 
 def config_release_detail_view(request: HttpRequest, release_id: str) -> JsonResponse:

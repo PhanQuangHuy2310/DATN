@@ -60,6 +60,17 @@ else:
     except DatabaseUrlError as exc:
         raise RuntimeError(str(exc)) from None
 
+    # Optional: set to 0 when diagnosing stale long-lived Supabase/PgBouncer
+    # connections in local development. Default remains 60 to avoid changing
+    # the production connection policy unexpectedly.
+    try:
+        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "60"))
+        if not 0 <= _db_max_age <= 3600:
+            raise ValueError
+    except ValueError:
+        raise RuntimeError("EAS_DB_CONN_MAX_AGE must be 0..3600") from None
+    DATABASES["default"]["CONN_MAX_AGE"] = _db_max_age
+
 LANGUAGE_CODE = "vi"
 TIME_ZONE = "Asia/Ho_Chi_Minh"
 USE_I18N = True
@@ -132,6 +143,12 @@ if os.getenv("EAS_TRUST_PROXY_HEADERS", "false").lower() == "true":
 EAS_RELEASE = os.getenv("EAS_RELEASE", "dev")
 EAS_REQUIRE_ACTIVE_RELEASES = (
     os.getenv("EAS_REQUIRE_ACTIVE_RELEASES", "true").lower() == "true"
+)
+# New request types may be active but not yet published during migration.
+# P0 releases are still mandatory when EAS_REQUIRE_ACTIVE_RELEASES=true.
+# Opt into full-catalog gating only when *every* active type must be configured.
+EAS_REQUIRE_FULL_CATALOG_READY = (
+    os.getenv("EAS_REQUIRE_FULL_CATALOG_READY", "false").lower() == "true"
 )
 EAS_REQUIRE_MOCK_SOURCES = (
     os.getenv("EAS_REQUIRE_MOCK_SOURCES", "true").lower() == "true"

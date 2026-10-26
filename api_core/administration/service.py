@@ -20,6 +20,8 @@ from api_core.workflow.service import (
     _execute_idempotent,
 )
 
+REQUEST_TYPE_CATEGORIES = {"HR", "IT", "FACILITY", "PROCUREMENT", "ASSET", "FINANCE", "GENERAL"}
+
 ROLES = {
     "REQUESTER",
     "APPROVER",
@@ -61,7 +63,7 @@ TABLES = {
     ),
     "request-types": (
         "request_type",
-        ("id", "code", "lifecycle", "is_active", "active_release_id"),
+        ("id", "code", "name", "description", "category", "lifecycle", "is_active", "active_release_id"),
     ),
 }
 
@@ -162,7 +164,7 @@ def _list_filters(kind, query):
     searchable = {
         "users": ("username", "display_name"),
         "departments": ("code", "name"),
-        "request-types": ("code", "lifecycle"),
+        "request-types": ("code", "name", "category", "description"),
         "memberships": ("role", "user_id::text"),
     }
     if q:
@@ -265,7 +267,10 @@ def validate(kind, body, old=None):
             "valid_from",
             "valid_to",
         },
-        "request-types": ({"is_active", "code", "lifecycle"} if old is None else {"is_active"}),
+        "request-types": (
+            {"is_active", "code", "lifecycle", "name", "description", "category"}
+            if old is None else {"is_active", "name", "description", "category"}
+        ),
     }[kind]
     if set(body) - allowed:
         raise CommandError("UNKNOWN_FIELD", status=422)
@@ -324,7 +329,18 @@ def validate(kind, body, old=None):
         ) <= datetime.fromisoformat(v["valid_from"]):
             raise CommandError("INVALID_VALIDITY_WINDOW", status=422)
     elif kind == "request-types":
-        v["is_active"] = boolean(v.get("is_active", True))
+        # Schema 2026-10-26: name, description and category are NOT NULL.
+        # Never silently generate missing business metadata in the API.
+        v["is_active"] = boolean(v.get("is_active", False))
+        v["name"] = text(v.get("name"), "name", 150)
+        description = v.get("description")
+        if not isinstance(description, str) or len(description) > 2000:
+            raise CommandError("INVALID_DESCRIPTION", status=422)
+        v["description"] = description.strip()
+        category = v.get("category")
+        if category not in REQUEST_TYPE_CATEGORIES:
+            raise CommandError("INVALID_CATEGORY", status=422)
+        v["category"] = category
         if old is None:
             code = v.get("code")
             lifecycle = v.get("lifecycle")
@@ -332,6 +348,9 @@ def validate(kind, body, old=None):
                 raise CommandError("INVALID_TYPE_CODE", status=422)
             if lifecycle not in {"A", "B", "C"}:
                 raise CommandError("INVALID_LIFECYCLE", status=422)
+            # A new type has no published release; prohibit premature activation.
+            if v["is_active"]:
+                raise CommandError("TYPE_RELEASE_REQUIRED", status=409)
             v["code"] = code
             v["lifecycle"] = lifecycle
     else:
@@ -409,6 +428,15 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 )
                 if c.fetchone():
                     raise CommandError("DEPARTMENT_IN_USE", status=409)
+        elif kind == "request-types" and v["is_active"] and (old is None or not old["is_active"]):
+            c.execute("""SELECT EXISTS (
+                SELECT 1 FROM eas.request_type rt
+                JOIN eas.config_release cr ON cr.id = rt.active_release_id
+                WHERE rt.id = %s AND cr.type_id = rt.id
+                  AND cr.lifecycle = rt.lifecycle AND cr.state = 'PUBLISHED'
+            )""", [id])
+            if not c.fetchone()[0]:
+                raise CommandError("TYPE_RELEASE_REQUIRED", status=409)
         elif kind == "memberships":
             if v["user_id"] == actor.id:
                 raise CommandError("SELF_ADMIN_CHANGE_FORBIDDEN", status=403)
@@ -437,7 +465,10 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 "valid_from",
                 "valid_to",
             ],
-            "request-types": (["code", "lifecycle", "is_active"] if method == "POST" else ["is_active"]),
+            "request-types": (
+                ["code", "lifecycle", "name", "description", "category", "is_active"]
+                if method == "POST" else ["name", "description", "category", "is_active"]
+            ),
         }[kind].copy()
         if kind == "users":
             v["auth_version"] = (old or {}).get("auth_version", 0) + 1

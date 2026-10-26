@@ -102,6 +102,12 @@ export default function ApiAdministration() {
       <ResourceState resource={ready}>
         <div className="api-health-summary"><span className={ready.data?.status === "ready" ? "api-health-light success" : "api-health-light"}/><strong>{ready.data?.status === "ready" ? "Dịch vụ sẵn sàng" : "Dịch vụ chưa sẵn sàng"}</strong></div>
         <div className="api-check-grid">{Object.entries(ready.data?.checks || {}).map(([key, value]) => <div className="api-check" key={key}><span aria-hidden="true">{value ? "✓" : "!"}</span><code>{key}</code><strong>{value ? "PASS" : "FAIL"}</strong></div>)}</div>
+        {ready.data?.catalog && <div className="api-inline-note" role="status">
+          <strong>Danh mục yêu cầu:</strong> {ready.data.catalog.active_type_count} loại đang bật; <strong>{ready.data.catalog.unconfigured_active_type_count} loại thiếu quy chế PUBLISHED</strong>.
+          {ready.data.catalog.unconfigured_active_type_count > 0
+            ? " Các loại này sẽ chưa được phép tạo/gửi đơn cho đến khi Policy Admin công bố release hợp lệ; các loại P0 có cấu hình vẫn hoạt động."
+            : " Tất cả loại đang bật đều có release hợp lệ."}
+        </div>}
       </ResourceState>
     </section>}
     <div className="api-inline-note" role="note"><strong>Giới hạn theo P0:</strong> tài liệu mô tả quản lý danh tính qua công cụ vận hành được kiểm soát; giao diện này bổ sung danh mục API và ma trận quyền để vận hành/kiểm chứng. Không có API-key CRUD, proxy gọi API tùy ý hoặc chuyển quyền của người dùng bằng việc sửa catalogue.</div>

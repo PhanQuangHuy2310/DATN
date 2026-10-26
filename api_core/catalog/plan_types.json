@@ -1,0 +1,1219 @@
+{
+  "schema_version": 1,
+  "origin": "plan.docx — 4 bảng yêu cầu nghiệp vụ (25,27,28,29)",
+  "count": 18,
+  "items": [
+    {
+      "code": "LEAVE_ANNUAL",
+      "name": "Nghỉ phép thường niên",
+      "category": "Nhân sự",
+      "lifecycle": "A",
+      "required_fields": [
+        "start_date",
+        "end_date",
+        "reason",
+        "replacement_person"
+      ],
+      "approval_route": "Trưởng phòng duyệt",
+      "executor": "Không cần",
+      "acceptor": "Không cần",
+      "sla_hours": 24,
+      "ai_hook": "Kiểm tra số dư phép tồn, phát hiện trùng lịch trực",
+      "source_table": 25,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "start_date": "Ngày bắt đầu",
+        "end_date": "Ngày kết thúc",
+        "reason": "Lý do",
+        "replacement_person": "Người thay thế"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "replacement_person": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "start_date",
+          "end_date",
+          "reason",
+          "replacement_person"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": []
+    },
+    {
+      "code": "LEAVE_LONG",
+      "name": "Nghỉ phép dài hạn (>2 ngày)",
+      "category": "Nhân sự",
+      "lifecycle": "A",
+      "required_fields": [
+        "start_date",
+        "end_date",
+        "handover_doc",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Trưởng phòng\n Cấp 2: Giám đốc Khối",
+      "executor": "HR ghi nhận",
+      "acceptor": "Trưởng phòng",
+      "sla_hours": 48,
+      "ai_hook": "Cảnh báo quân số phòng ban dưới ngưỡng an toàn",
+      "source_table": 25,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "start_date": "Ngày bắt đầu",
+        "end_date": "Ngày kết thúc",
+        "handover_doc": "Biên bản bàn giao",
+        "reason": "Lý do"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "handover_doc": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "start_date",
+          "end_date",
+          "handover_doc",
+          "reason"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "TEMPLATE_A_ROLE_CONFLICT: tài liệu có thực hiện/nghiệm thu dù template A không có bước này",
+        "ATTACHMENT_OR_SENSITIVE_DATA: trường chứng từ cần gắn vào attachment riêng tư; không nhập đường dẫn tùy ý"
+      ]
+    },
+    {
+      "code": "RESIGNATION",
+      "name": "Thôi việc / Bàn giao",
+      "category": "Nhân sự",
+      "lifecycle": "C",
+      "required_fields": [
+        "effective_date",
+        "reason",
+        "handover_plan"
+      ],
+      "approval_route": "Cấp 1: Trưởng phòng\n Cấp 2: Giám đốc HR\n Cấp 3: CEO",
+      "executor": "4 bên song song (IT, Admin, Kế toán, Sếp)",
+      "acceptor": "HR & Người gửi",
+      "sla_hours": 168,
+      "ai_hook": "Tóm tắt hợp đồng lao động, tự động sinh checklist thu hồi tài sản",
+      "source_table": 25,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "effective_date": "Ngày hiệu lực",
+        "reason": "Lý do",
+        "handover_plan": "Kế hoạch bàn giao"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "handover_plan": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "effective_date",
+          "reason",
+          "handover_plan"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "ROUTE_ACTOR_NOT_SUPPORTED: cần bổ sung actor resolver và cấp quyền",
+        "ACCEPTOR_RESOLVER_REVIEW: cần xác định người nghiệm thu độc lập theo scope"
+      ]
+    },
+    {
+      "code": "OVERTIME_REQ",
+      "name": "Đăng ký làm thêm giờ (OT)",
+      "category": "Nhân sự",
+      "lifecycle": "B",
+      "required_fields": [
+        "work_date",
+        "hours",
+        "project_id",
+        "deliverables"
+      ],
+      "approval_route": "Trưởng phòng duyệt",
+      "executor": "HR tính lương",
+      "acceptor": "Trưởng phòng",
+      "sla_hours": 24,
+      "ai_hook": "Cảnh báo trần 40 giờ OT/tháng theo luật lao động",
+      "source_table": 25,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "work_date": "Ngày làm thêm",
+        "hours": "Số giờ",
+        "project_id": "Dự án",
+        "deliverables": "Kết quả công việc"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "work_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "hours": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deliverables": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "work_date",
+          "hours",
+          "project_id",
+          "deliverables"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "TEMPLATE_B_ACCEPTANCE_CONFLICT: B không có bước nghiệm thu độc lập; phải điều chỉnh template hay nghiệp vụ"
+      ]
+    },
+    {
+      "code": "WFH_REQ",
+      "name": "Làm việc từ xa (WFH)",
+      "category": "Nhân sự",
+      "lifecycle": "A",
+      "required_fields": [
+        "date",
+        "task_list",
+        "communication_channel"
+      ],
+      "approval_route": "Trưởng nhóm / Trưởng phòng",
+      "executor": "Không cần",
+      "acceptor": "Sếp đánh giá task",
+      "sla_hours": 12,
+      "ai_hook": "Đếm số lần WFH trong tháng (tối đa 2 lần/tháng)",
+      "source_table": 25,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "date": "Ngày",
+        "task_list": "Danh sách công việc",
+        "communication_channel": "Kênh liên lạc"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "task_list": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "communication_channel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "date",
+          "task_list",
+          "communication_channel"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "TEMPLATE_A_ROLE_CONFLICT: tài liệu có thực hiện/nghiệm thu dù template A không có bước này"
+      ]
+    },
+    {
+      "code": "ROOM_VEHICLE",
+      "name": "Mượn phòng họp / Xe công vụ",
+      "category": "Nhân sự",
+      "lifecycle": "B",
+      "required_fields": [
+        "start_time",
+        "end_time",
+        "capacity",
+        "destination"
+      ],
+      "approval_route": "AI Auto-Approve (nếu lịch trống)",
+      "executor": "Lễ tân / Đội xe",
+      "acceptor": "Người đặt",
+      "sla_hours": 1,
+      "ai_hook": "Tự động quét lịch trùng và cấp phòng trong 1 giây",
+      "source_table": 25,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "start_time": "Giờ bắt đầu (ISO 8601)",
+        "end_time": "Giờ kết thúc (ISO 8601)",
+        "capacity": "Sức chứa",
+        "destination": "Địa điểm / Điểm đến"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "start_time": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "end_time": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "destination": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "start_time",
+          "end_time",
+          "capacity",
+          "destination"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "AUTO_APPROVAL_CONFLICT: tài liệu mô tả AI duyệt nhưng Template B/C không được tự phê duyệt",
+        "TEMPLATE_B_ACCEPTANCE_CONFLICT: B không có bước nghiệm thu độc lập; phải điều chỉnh template hay nghiệp vụ"
+      ]
+    },
+    {
+      "code": "ADVANCE_SMALL",
+      "name": "Tạm ứng chi phí (<10tr)",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "B",
+      "required_fields": [
+        "amount",
+        "currency",
+        "purpose",
+        "expected_refund_date"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp\n Cấp 2: Kế toán thanh toán",
+      "executor": "Thủ quỹ chi trả",
+      "acceptor": "Người nhận tiền",
+      "sla_hours": 24,
+      "ai_hook": "Kiểm tra khoản tạm ứng cũ quá hạn chưa hoàn",
+      "source_table": 27,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "amount": "Số tiền (VND)",
+        "currency": "Đơn vị tiền",
+        "purpose": "Mục đích",
+        "expected_refund_date": "Ngày dự kiến hoàn ứng"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000000
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "expected_refund_date": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "title",
+          "amount",
+          "currency",
+          "purpose",
+          "expected_refund_date"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "TEMPLATE_B_ACCEPTANCE_CONFLICT: B không có bước nghiệm thu độc lập; phải điều chỉnh template hay nghiệp vụ",
+        "ROUTE_ACTOR_NOT_SUPPORTED: cần bổ sung actor resolver và cấp quyền"
+      ]
+    },
+    {
+      "code": "ADVANCE_MEDIUM",
+      "name": "Tạm ứng chi phí (10-50tr)",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "B",
+      "required_fields": [
+        "amount",
+        "budget_item",
+        "detailed_estimate"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp\n Cấp 2: Kế toán trưởng",
+      "executor": "Kế toán thanh toán",
+      "acceptor": "Người nhận tiền",
+      "sla_hours": 48,
+      "ai_hook": "Đánh giá lịch sử hoàn ứng của nhân viên",
+      "source_table": 27,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "amount": "Số tiền (VND)",
+        "budget_item": "Hạng mục ngân sách",
+        "detailed_estimate": "Dự toán chi tiết"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000000
+          },
+          "budget_item": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "detailed_estimate": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "amount",
+          "budget_item",
+          "detailed_estimate"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "TEMPLATE_B_ACCEPTANCE_CONFLICT: B không có bước nghiệm thu độc lập; phải điều chỉnh template hay nghiệp vụ"
+      ]
+    },
+    {
+      "code": "ADVANCE_LARGE",
+      "name": "Tạm ứng dự án lớn (>50tr)",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "B",
+      "required_fields": [
+        "amount",
+        "project_id",
+        "board_resolution"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp\n Cấp 2: Kế toán trưởng\n Cấp 3: CEO",
+      "executor": "Kế toán chuyển khoản",
+      "acceptor": "Kế toán viên",
+      "sla_hours": 72,
+      "ai_hook": "Cảnh báo hạn mức ngân sách quý của khối",
+      "source_table": 27,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "amount": "Số tiền (VND)",
+        "project_id": "Dự án",
+        "board_resolution": "Quyết định / Tệp nghị quyết"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000000
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "board_resolution": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "amount",
+          "project_id",
+          "board_resolution"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "TEMPLATE_B_ACCEPTANCE_CONFLICT: B không có bước nghiệm thu độc lập; phải điều chỉnh template hay nghiệp vụ",
+        "ATTACHMENT_OR_SENSITIVE_DATA: trường chứng từ cần gắn vào attachment riêng tư; không nhập đường dẫn tùy ý"
+      ]
+    },
+    {
+      "code": "REIMBURSEMENT",
+      "name": "Hoàn ứng / Thanh toán chi phí",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "B",
+      "required_fields": [
+        "invoice_images",
+        "total_amount",
+        "tax_id",
+        "merchant"
+      ],
+      "approval_route": "Cấp 1: Trưởng phòng trực thuộc\n Cấp 2: Kế toán trưởng",
+      "executor": "Thủ quỹ / Kế toán",
+      "acceptor": "Người nhận tiền",
+      "sla_hours": 48,
+      "ai_hook": "AI OCR đọc hóa đơn đỏ, so khớp mã số thuế, chống trùng 100%",
+      "source_table": 27,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "invoice_images": "Ảnh hóa đơn (mã tệp)",
+        "total_amount": "Tổng tiền",
+        "tax_id": "Mã số thuế",
+        "merchant": "Nhà cung cấp"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "invoice_images": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "total_amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000000
+          },
+          "tax_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "merchant": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "invoice_images",
+          "total_amount",
+          "tax_id",
+          "merchant"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "TEMPLATE_B_ACCEPTANCE_CONFLICT: B không có bước nghiệm thu độc lập; phải điều chỉnh template hay nghiệp vụ",
+        "ATTACHMENT_OR_SENSITIVE_DATA: trường chứng từ cần gắn vào attachment riêng tư; không nhập đường dẫn tùy ý"
+      ]
+    },
+    {
+      "code": "VENDOR_PAYMENT",
+      "name": "Thanh toán Hợp đồng Vendor",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "C",
+      "required_fields": [
+        "contract_id",
+        "acceptance_note",
+        "invoice_pdf",
+        "amount"
+      ],
+      "approval_route": "Cấp 1: Trưởng phòng trực thuộc\n Cấp 2: Kế toán trưởng\n Cấp 3: CEO",
+      "executor": "Kế toán chuyển khoản",
+      "acceptor": "Bộ phận thụ hưởng",
+      "sla_hours": 72,
+      "ai_hook": "So khớp điều khoản thanh toán trong hợp đồng và biên bản nghiệm thu",
+      "source_table": 27,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "contract_id": "Hợp đồng",
+        "acceptance_note": "Biên bản nghiệm thu",
+        "invoice_pdf": "Hóa đơn PDF (mã tệp)",
+        "amount": "Số tiền (VND)"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "contract_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "acceptance_note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "invoice_pdf": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000000000
+          }
+        },
+        "required": [
+          "title",
+          "contract_id",
+          "acceptance_note",
+          "invoice_pdf",
+          "amount"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "ATTACHMENT_OR_SENSITIVE_DATA: trường chứng từ cần gắn vào attachment riêng tư; không nhập đường dẫn tùy ý",
+        "ACCEPTOR_RESOLVER_REVIEW: cần xác định người nghiệm thu độc lập theo scope"
+      ]
+    },
+    {
+      "code": "LAPTOP_PROVISION",
+      "name": "Cấp phát Laptop / PC làm việc",
+      "category": "CNTT",
+      "lifecycle": "C",
+      "required_fields": [
+        "specs_needed",
+        "position",
+        "reason",
+        "location"
+      ],
+      "approval_route": "Quản lý trực tiếp duyệt nhu cầu",
+      "executor": "IT Helpdesk cài đặt",
+      "acceptor": "Nhân viên nhận máy",
+      "sla_hours": 48,
+      "ai_hook": "Gợi ý chuẩn cấu hình theo chức danh (Dev vs Sales)",
+      "source_table": 28,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "specs_needed": "Cấu hình cần thiết",
+        "position": "Vị trí công tác",
+        "reason": "Lý do",
+        "location": "Địa điểm"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "specs_needed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "position": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "specs_needed",
+          "position",
+          "reason",
+          "location"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": []
+    },
+    {
+      "code": "SOFTWARE_ACCESS",
+      "name": "Cấp quyền phần mềm thông thường",
+      "category": "CNTT",
+      "lifecycle": "B",
+      "required_fields": [
+        "app_name",
+        "role_needed",
+        "reason"
+      ],
+      "approval_route": "Quản lý trực tiếp duyệt",
+      "executor": "IT Admin tạo tài khoản",
+      "acceptor": "Nhân viên đăng nhập",
+      "sla_hours": 12,
+      "ai_hook": "Kiểm tra quyền trùng lặp hoặc tài khoản nhàn rỗi",
+      "source_table": 28,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "app_name": "Tên ứng dụng",
+        "role_needed": "Quyền truy cập yêu cầu",
+        "reason": "Lý do"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "role_needed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "app_name",
+          "role_needed",
+          "reason"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "TEMPLATE_B_ACCEPTANCE_CONFLICT: B không có bước nghiệm thu độc lập; phải điều chỉnh template hay nghiệp vụ"
+      ]
+    },
+    {
+      "code": "PROD_DATA_ACCESS",
+      "name": "Cấp quyền Dữ liệu nhạy cảm/Server",
+      "category": "CNTT",
+      "lifecycle": "C",
+      "required_fields": [
+        "server_ip",
+        "access_duration",
+        "data_scope",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp\n Cấp 2: Trưởng phòng Security\n Cấp 3: CTO",
+      "executor": "SysAdmin mở quyền",
+      "acceptor": "Security Audit log",
+      "sla_hours": 24,
+      "ai_hook": "Chấm điểm rủi ro an toàn thông tin (Risk = 5/5)",
+      "source_table": 28,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "server_ip": "Máy chủ / IP",
+        "access_duration": "Thời hạn quyền",
+        "data_scope": "Phạm vi dữ liệu",
+        "reason": "Lý do"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "server_ip": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "access_duration": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "data_scope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "server_ip",
+          "access_duration",
+          "data_scope",
+          "reason"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "ROUTE_ACTOR_NOT_SUPPORTED: cần bổ sung actor resolver và cấp quyền",
+        "ATTACHMENT_OR_SENSITIVE_DATA: trường chứng từ cần gắn vào attachment riêng tư; không nhập đường dẫn tùy ý",
+        "ACCEPTOR_RESOLVER_REVIEW: cần xác định người nghiệm thu độc lập theo scope"
+      ]
+    },
+    {
+      "code": "SAAS_LICENSE_BUY",
+      "name": "Mua bản quyền phần mềm mới",
+      "category": "CNTT",
+      "lifecycle": "C",
+      "required_fields": [
+        "software_name",
+        "seats_count",
+        "quote_file",
+        "period"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp\n Cấp 2: IT Lead\n Cấp 3: Kế toán trưởng",
+      "executor": "IT / Mua sắm mua key",
+      "acceptor": "Trưởng nhóm tech",
+      "sla_hours": 72,
+      "ai_hook": "Tra cứu xem công ty có phần mềm tương tự chưa",
+      "source_table": 28,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "software_name": "Phần mềm",
+        "seats_count": "Số lượng giấy phép",
+        "quote_file": "Báo giá (mã tệp)",
+        "period": "Thời hạn"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "software_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "seats_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "quote_file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "period": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "software_name",
+          "seats_count",
+          "quote_file",
+          "period"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "ROUTE_ACTOR_NOT_SUPPORTED: cần bổ sung actor resolver và cấp quyền",
+        "ATTACHMENT_OR_SENSITIVE_DATA: trường chứng từ cần gắn vào attachment riêng tư; không nhập đường dẫn tùy ý",
+        "ACCEPTOR_RESOLVER_REVIEW: cần xác định người nghiệm thu độc lập theo scope"
+      ]
+    },
+    {
+      "code": "OFFICE_SUPPLIES",
+      "name": "Văn phòng phẩm định mức tháng",
+      "category": "Hành chính & Tài sản",
+      "lifecycle": "B",
+      "required_fields": [
+        "items_list",
+        "quantity",
+        "department_id"
+      ],
+      "approval_route": "AI Auto-Approve (trong định mức)",
+      "executor": "Thủ kho xuất đồ",
+      "acceptor": "Nhân viên nhận",
+      "sla_hours": 24,
+      "ai_hook": "Tự động đối chiếu ngân sách tháng còn lại của phòng",
+      "source_table": 29,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "items_list": "Danh mục vật tư",
+        "quantity": "Số lượng",
+        "department_id": "Phòng ban"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "items_list": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "department_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "title",
+          "items_list",
+          "quantity",
+          "department_id"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "AUTO_APPROVAL_CONFLICT: tài liệu mô tả AI duyệt nhưng Template B/C không được tự phê duyệt",
+        "TEMPLATE_B_ACCEPTANCE_CONFLICT: B không có bước nghiệm thu độc lập; phải điều chỉnh template hay nghiệp vụ"
+      ]
+    },
+    {
+      "code": "ASSET_PURCHASE",
+      "name": "Mua sắm tài sản phòng ban",
+      "category": "Hành chính & Tài sản",
+      "lifecycle": "C",
+      "required_fields": [
+        "category",
+        "quantity",
+        "specs",
+        "3_quotes_files"
+      ],
+      "approval_route": "Cấp 1: Trưởng phòng yêu cầu\n Cấp 2: Trưởng phòng Mua sắm\n Cấp 3: Giám đốc Tài chính",
+      "executor": "Chuyên viên Mua sắm",
+      "acceptor": "Trưởng phòng nhận",
+      "sla_hours": 120,
+      "ai_hook": "So sánh giá chào với lịch sử mua sắm thị trường",
+      "source_table": 29,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "category": "Danh mục tài sản",
+        "quantity": "Số lượng",
+        "specs": "Thông số kỹ thuật",
+        "3_quotes_files": "3 báo giá (mã tệp)"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "specs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "3_quotes_files": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "category",
+          "quantity",
+          "specs",
+          "3_quotes_files"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "ROUTE_ACTOR_NOT_SUPPORTED: cần bổ sung actor resolver và cấp quyền",
+        "ATTACHMENT_OR_SENSITIVE_DATA: trường chứng từ cần gắn vào attachment riêng tư; không nhập đường dẫn tùy ý",
+        "ACCEPTOR_RESOLVER_REVIEW: cần xác định người nghiệm thu độc lập theo scope"
+      ]
+    },
+    {
+      "code": "FACILITY_REPAIR",
+      "name": "Sửa chữa sự cố văn phòng",
+      "category": "Hành chính & Tài sản",
+      "lifecycle": "C",
+      "required_fields": [
+        "location",
+        "issue_type",
+        "photo_evidence",
+        "urgency"
+      ],
+      "approval_route": "Quản lý tòa nhà / Hành chính",
+      "executor": "Thợ kỹ thuật sửa",
+      "acceptor": "Hành chính nghiệm thu",
+      "sla_hours": 12,
+      "ai_hook": "Phân loại khẩn cấp (Emergency) vs Thông thường",
+      "source_table": 29,
+      "source": "plan.docx — danh mục 18 mã ở các bảng 25/27/28/29",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "location": "Địa điểm",
+        "issue_type": "Loại sự cố",
+        "photo_evidence": "Ảnh sự cố (mã tệp)",
+        "urgency": "Mức độ khẩn cấp"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "issue_type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "photo_evidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "urgency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "location",
+          "issue_type",
+          "photo_evidence",
+          "urgency"
+        ]
+      },
+      "requires_policy_binding": true,
+      "ai_auto_approve_enabled": false,
+      "activation_warnings": [
+        "ATTACHMENT_OR_SENSITIVE_DATA: trường chứng từ cần gắn vào attachment riêng tư; không nhập đường dẫn tùy ý",
+        "ACCEPTOR_RESOLVER_REVIEW: cần xác định người nghiệm thu độc lập theo scope"
+      ]
+    }
+  ]
+}

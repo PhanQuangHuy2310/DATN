@@ -105,7 +105,23 @@ function Editor({ kind, record }) {
       <label>Mã loại yêu cầu<input name="code" placeholder="TRAVEL_EXPENSE" maxLength={30} pattern="[A-Z][A-Z0-9_]{1,29}" required /></label>
       <label>Mẫu vòng đời<select name="lifecycle" defaultValue="B"><option value="A">A — Phê duyệt</option><option value="B">B — Phê duyệt + Thực hiện</option><option value="C">C — Phê duyệt + Thực hiện + Nghiệm thu</option></select></label>
     </>}
-    <Active value={record?.is_active ?? true}/>
+    <div className="form-grid">
+      <label>Tên loại yêu cầu<input name="name" defaultValue={record?.name || ""} placeholder="Ví dụ: Cấp phát laptop" maxLength={150} required /></label>
+      <label>Nhóm nghiệp vụ
+        <select name="category" defaultValue={record?.category || "GENERAL"} required>
+          <option value="HR">HR — Nhân sự</option>
+          <option value="FINANCE">FINANCE — Tài chính</option>
+          <option value="PROCUREMENT">PROCUREMENT — Mua sắm</option>
+          <option value="IT">IT — Công nghệ thông tin</option>
+          <option value="FACILITY">FACILITY — Cơ sở vật chất</option>
+          <option value="ASSET">ASSET — Tài sản</option>
+          <option value="GENERAL">GENERAL — Chung</option>
+        </select>
+      </label>
+    </div>
+    <label>Mô tả nghiệp vụ<textarea name="description" defaultValue={record?.description || ""} maxLength={2000} rows={3} placeholder="Nêu mục đích và trường hợp áp dụng" /></label>
+    <Active value={record?.is_active ?? false}/>
+    {!record && <p className="muted">Loại mới được đăng ký ở trạng thái Ngừng hoạt động. Chỉ kích hoạt sau khi Policy Admin công bố release hợp lệ.</p>}
     <p className="muted">Việc tạo thêm loại chỉ khả dụng khi quản trị CSDL đã áp dụng migration mở rộng và bật EAS_ALLOW_REPORT_CATALOG_EXPANSION. Loại mới phải được Policy Admin công bố bản cấu hình và cấp quyền REQUESTER trước khi sử dụng.</p>
   </>;
 }
@@ -179,7 +195,7 @@ export default function IdentityAdmin() {
       <ResourceState resource={r}>
         <div className="table-wrap"><table className="responsive-records identity-table"><thead><tr><th>Thông tin</th><th>Phòng ban / scope</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
           {r.data?.items?.map((item) => <tr key={item.id}>
-            <td data-label="Thông tin"><div className="identity-primary"><span className="identity-avatar" aria-hidden="true">{(item.display_name || item.name || item.role || item.code || "E").slice(0, 1).toLocaleUpperCase("vi")}</span><span><strong>{item.display_name || item.name || roles[item.role] || item.code || "—"}</strong><small>{item.username || item.code || item.user_id || item.role || ""}</small><small className="identity-id">ID {item.id}</small></span></div></td>
+            <td data-label="Thông tin"><div className="identity-primary"><span className="identity-avatar" aria-hidden="true">{(item.display_name || item.name || item.role || item.code || "E").slice(0, 1).toLocaleUpperCase("vi")}</span><span><strong>{item.display_name || item.name || roles[item.role] || item.code || "—"}</strong><small>{item.username || item.code || item.user_id || item.role || ""}</small>{kind === "request-types" && <small>{item.category} · {item.lifecycle} · {item.description || "Chưa có mô tả"}</small>}<small className="identity-id">ID {item.id}</small></span></div></td>
             <td data-label="Phạm vi"><small>{item.scope_kind ? `${item.scope_kind} · ${item.type_scope}` : item.department_id ? `Phòng: ${item.department_id}` : "—"}</small></td>
             <td data-label="Trạng thái"><span className={`identity-status ${kind === "memberships" ? (item.revoked_at ? "off" : item.valid_to && new Date(item.valid_to) <= new Date() ? "off" : new Date(item.valid_from) > new Date() ? "future" : "on") : item.is_active ? "on" : "off"}`}>{kind === "memberships" ? item.revoked_at ? "Đã thu hồi" : item.valid_to && new Date(item.valid_to) <= new Date() ? "Hết hiệu lực" : new Date(item.valid_from) > new Date() ? "Chưa hiệu lực" : "Đang hiệu lực" : item.is_active ? "Hoạt động" : "Ngừng hoạt động"}</span></td>
             <td data-label="Thao tác"><div className="actions"><button type="button" className="secondary" onClick={() => setModal({mode:"view",record:item})}>Chi tiết</button><button type="button" className="secondary" disabled={!!item.revoked_at} onClick={() => setModal({mode:"edit",record:item})}>Sửa</button><button type="button" className="danger" disabled={kind === "memberships" ? !!item.revoked_at : !item.is_active} onClick={() => setModal({mode:"delete",record:item})}>{kind === "memberships" ? "Thu hồi" : "Vô hiệu hóa"}</button></div></td>

@@ -8,6 +8,9 @@ from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from .plan_constraints import plan_business_errors
+from .routing import APPROVER_SLOTS, EXECUTOR_SLOTS, ACCEPTOR_SLOTS
+
 HTML_TAG = re.compile(r"<[^>]+>")
 SUPPORTED_TYPES = {"integer", "string"}
 SUPPORTED_P0_TYPES = {"ACCESS", "EQUIPMENT", "LEAVE"}
@@ -201,6 +204,8 @@ def validate_payload(
     if type_code == "EQUIPMENT" and "amount_vnd" not in normalized:
         _add(errors, "amount_vnd", "REQUIRED")
 
+    for field, messages in plan_business_errors(type_code, normalized).items():
+        errors.setdefault(field, []).extend(messages)
     if errors:
         raise PayloadValidationError(errors)
     return normalized
@@ -380,7 +385,7 @@ def validate_config_release_payload(
                 errs.append(f"route_rules:rules[{idx}]:approvers must be 1..3 items")
             else:
                 for app in approvers:
-                    if app not in {"DIRECT_MANAGER", "FINANCE", "DIRECTOR"}:
+                    if app not in APPROVER_SLOTS:
                         errs.append(f"route_rules:unknown approver {app}")
 
             is_default = rule.get("default") is True
@@ -427,16 +432,13 @@ def validate_config_release_payload(
         acceptor = route_rules.get("acceptor")
         if lifecycle == "A" and (executor is not None or acceptor is not None):
             errs.append("route_rules:lifecycle A requires null executor and acceptor")
-        elif lifecycle == "B" and (executor != "EXECUTOR_IT" or acceptor is not None):
-            errs.append(
-                "route_rules:lifecycle B requires EXECUTOR_IT and null acceptor"
-            )
+        elif lifecycle == "B" and (executor not in EXECUTOR_SLOTS or executor is None or acceptor is not None):
+            errs.append("route_rules:lifecycle B requires a valid executor and null acceptor")
         elif lifecycle == "C" and (
-            executor != "EXECUTOR_ASSET" or acceptor != "REQUESTER"
+            executor not in EXECUTOR_SLOTS or executor is None
+            or acceptor not in ACCEPTOR_SLOTS or acceptor is None
         ):
-            errs.append(
-                "route_rules:lifecycle C requires EXECUTOR_ASSET and REQUESTER acceptor"
-            )
+            errs.append("route_rules:lifecycle C requires valid executor and acceptor")
 
     # sla_profile validation
     clock = sla_profile.get("clock")

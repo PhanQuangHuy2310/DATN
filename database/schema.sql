@@ -112,7 +112,11 @@ CREATE TABLE IF NOT EXISTS eas.request_type (
     lifecycle char(1) NOT NULL CHECK (lifecycle IN ('A', 'B', 'C')),
     is_active boolean NOT NULL DEFAULT true,
     active_release_id uuid NULL,
-    created_at timestamptz NOT NULL DEFAULT now()
+    name varchar(150) NOT NULL,
+    description varchar(2000) NOT NULL DEFAULT '',
+    category varchar(30) NOT NULL CHECK (category IN (
+        'HR', 'IT', 'FACILITY', 'PROCUREMENT', 'ASSET', 'FINANCE', 'GENERAL'
+    ))
 );
 
 -- ----------------------------------------------------------------------------------------
@@ -703,11 +707,11 @@ VALUES ('ADMIN', 0, '00000000000000000000000000000000000000000000000000000000000
 ON CONFLICT (scope_key) DO NOTHING;
 
 -- Khởi tạo các loại đơn chuẩn P0
-INSERT INTO eas.request_type (id, code, lifecycle, is_active)
-VALUES 
-    ('11111111-1111-1111-1111-111111111101', 'LEAVE', 'A', true),
-    ('11111111-1111-1111-1111-111111111102', 'ACCESS', 'B', true),
-    ('11111111-1111-1111-1111-111111111103', 'EQUIPMENT', 'C', true)
+INSERT INTO eas.request_type (id, code, lifecycle, is_active, name, description, category)
+VALUES
+    ('11111111-1111-1111-1111-111111111101', 'LEAVE', 'A', true, 'Nghỉ phép', 'Yêu cầu nghỉ phép theo quy chế doanh nghiệp', 'HR'),
+    ('11111111-1111-1111-1111-111111111102', 'ACCESS', 'B', true, 'Cấp quyền CNTT', 'Yêu cầu cấp quyền sử dụng hệ thống', 'IT'),
+    ('11111111-1111-1111-1111-111111111103', 'EQUIPMENT', 'C', true, 'Cấp thiết bị', 'Yêu cầu mua hoặc cấp phát thiết bị', 'ASSET')
 ON CONFLICT (code) DO NOTHING;
 
 -- Khởi tạo các phòng ban gốc

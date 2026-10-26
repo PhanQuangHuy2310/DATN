@@ -14,6 +14,7 @@ from psycopg.types.json import Jsonb
 
 from api_core.audit import canonical_sha256
 from api_core.authn.models import Actor
+from api_core.domain.routing import RoutingError
 from api_core.domain import (
     PayloadValidationError,
     resolve_route,
@@ -575,6 +576,8 @@ def update_draft(
                 raise CommandError(
                     "VALIDATION_FAILED", status=422, fields=exc.errors
                 ) from exc
+            if validated_patch.get("department_id") is not None and validated_patch["department_id"] != actor.department_id:
+                raise CommandError("DEPARTMENT_SCOPE_VIOLATION", status=403)
             merged_payload.update(validated_patch)
 
         final_amount_vnd = amount_vnd if amount_vnd is not None else existing_amount_vnd
@@ -925,15 +928,24 @@ def submit_request(
             )
         except PayloadValidationError as exc:
             raise CommandError("VALIDATION_FAILED", fields=exc.errors) from exc
+        # Department is derived from the current authenticated session.  A forged
+        # cross-department field must never influence assignment or reporting.
+        if normalized.get("department_id") is not None and normalized["department_id"] != actor.department_id:
+            raise CommandError("DEPARTMENT_SCOPE_VIOLATION", status=403)
         amount = normalized.get("amount_vnd")
-        decision = resolve_route(
-            route_rules=rules,
-            actor_bindings=bindings,
-            department_id=actor.department_id,
-            requester_id=actor.id,
-            manager_id=user[0],
-            amount_vnd=amount,
-        )
+        try:
+            decision = resolve_route(
+                route_rules=rules,
+                actor_bindings=bindings,
+                department_id=actor.department_id,
+                requester_id=actor.id,
+                manager_id=user[0],
+                amount_vnd=amount,
+            )
+        except RoutingError as exc:
+            # Unresolved role bindings are a configuration conflict, not a 500.
+            # No draft is submitted or workflow instance created.
+            raise CommandError("ROUTE_CONFIGURATION_INVALID", status=409) from exc
         routed_actors = set(decision.approver_ids)
         if decision.executor_id:
             routed_actors.add(decision.executor_id)
@@ -986,8 +998,16 @@ def submit_request(
             else:
                 resolved_attachments = []
 
-        if lifecycle == "C" and not resolved_attachments:
+        # A type's evidence requirements are determined by its published form,
+        # not by lifecycle C alone (e.g. onboarding can be C without a quote).
+        # The P0 EQUIPMENT quotation obligation remains unchanged.
+        evidence_fields = [name for name in form.get("required", [])
+                           if isinstance(name, str) and re.search(
+                               r"(?:_file|_files|_pdf|_doc|_images|photo_evidence|board_resolution|handover_doc)$", name)]
+        if type_code == "EQUIPMENT" and not resolved_attachments:
             raise CommandError("EQUIPMENT_QUOTE_REQUIRED")
+        if evidence_fields and not resolved_attachments:
+            raise CommandError("ATTACHMENT_REQUIRED", status=422)
 
         now = datetime.now(timezone.utc)
         request_id = existing_request_id or str(uuid4())

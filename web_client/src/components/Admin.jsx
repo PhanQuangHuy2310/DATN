@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { PasswordField, PageControls, useLocalPagination } from "./ux.jsx";
 import { api } from "../api.js";
-import { date, types } from "../domain.js";
+import PolicyBindings from "./PolicyBindings.jsx";
+import { date, types, errorText } from "../domain.js";
 import {
   ActionForm,
   Badge,
@@ -12,14 +13,36 @@ import {
   command,
   useResource,
 } from "./ui.jsx";
-export function Policy() {
-  const requestTypeCatalog = useResource("/api/v1/request-types");
+export function Policy({onManageAccess, canManageAccess=false}) {
+  const statusResource = useResource("/api/v1/config-releases/status");
   const resource = useResource("/api/v1/config-releases"),
     [selected, setSelected] = useState(null),
     [validation, setValidation] = useState(null),
-    [modal, setModal] = useState(null);
+    [modal, setModal] = useState(null),
+    [workflowMessage, setWorkflowMessage] = useState(""),
+    [workflowBusy, setWorkflowBusy] = useState(false),
+    [bindingJson, setBindingJson] = useState("");
+  const policyTypes = statusResource.data?.items || [];
+  async function createDraftFor(typeCode) {
+    if (!typeCode) return;
+    setWorkflowBusy(true);
+    setWorkflowMessage("");
+    try {
+      const result = await command("config-releases", {type_code: typeCode});
+      resource.reload();
+      statusResource.reload();
+      await open(result.release.id);
+      setWorkflowMessage(`Đã tạo bản nháp cho ${typeCode}. Hãy kiểm tra biểu mẫu, tuyến duyệt và điền actor_bindings bằng UUID người được cấp role hợp lệ.`);
+    } catch (error) {
+      setWorkflowMessage(errorText(error));
+    } finally {
+      setWorkflowBusy(false);
+    }
+  }
   async function open(id) {
-    setSelected((await api(`/api/v1/config-releases/${id}`)).release);
+    const release = (await api(`/api/v1/config-releases/${id}`)).release;
+    setSelected(release);
+    setBindingJson(JSON.stringify(release.actor_bindings, null, 2));
     setValidation(null);
   }
   const policies = useLocalPagination(10);
@@ -38,6 +61,46 @@ export function Policy() {
         </div>
         <button onClick={() => setModal("create")}>＋ Tạo bản nháp</button>
       </div>
+      <section className="panel" aria-label="Kiểm tra công bố và quyền tạo đơn">
+        <div className="section-head"><h2>Tình trạng công bố & quyền tạo đơn</h2>
+          <button type="button" className="secondary" onClick={() => { statusResource.reload(); resource.reload(); }}>
+            Kiểm tra lại
+          </button>
+        </div>
+        <p className="muted">POLICY_ADMIN tạo bản nháp, cập nhật biểu mẫu và công bố. OPS_ADMIN cấp quyền REQUESTER theo loại đơn/phòng ban trong mục Danh tính & phân quyền. Hai thao tác độc lập.</p>
+        {canManageAccess && <button className="secondary" type="button" onClick={onManageAccess}>Mở quản lý quyền REQUESTER</button>}
+        {workflowMessage && <p role="status" className="muted">{workflowMessage}</p>}
+        <ResourceState resource={statusResource}>
+          <div className="table-wrap"><table className="responsive-records"><thead><tr>
+            <th>Loại yêu cầu</th><th>Mẫu</th><th>Quy chế</th><th>Người có quyền tạo</th><th>Hành động</th>
+          </tr></thead><tbody>
+          {policyTypes.map((item) => {
+            const existingDraft = (resource.data?.items || []).find((r) => r.type_code === item.code && r.state === "DRAFT");
+            return <tr key={item.code}>
+              <td data-label="Loại yêu cầu"><strong>{item.name || item.code}</strong><br/><small>{item.code}</small></td>
+              <td data-label="Mẫu">{item.lifecycle}</td>
+              <td data-label="Quy chế">
+                <span className={item.has_published_release ? "success" : "muted"}>
+                  {item.has_published_release ? "Đã công bố" : "Chưa có release PUBLISHED"}
+                </span>
+                {!item.is_active && <div><small>Loại đơn đang ngừng hoạt động</small></div>}
+              </td>
+              <td data-label="Người có quyền tạo">
+                {item.requester_count > 0 ? `${item.requester_count} tài khoản` : "Chưa cấp quyền REQUESTER"}
+              </td>
+              <td data-label="Hành động">
+                {existingDraft ? <button type="button" className="secondary" disabled={workflowBusy} onClick={() => open(existingDraft.id)}>
+                  Mở nháp v{existingDraft.version}
+                </button> : <button type="button" className="secondary" disabled={workflowBusy} onClick={() => createDraftFor(item.code)}>
+                  {item.has_published_release ? "Tạo phiên bản mới" : "Tạo quy chế nháp"}
+                </button>}
+                {item.requester_count === 0 && <div><small>OPS_ADMIN → Danh tính & phân quyền → REQUESTER</small></div>}
+              </td>
+            </tr>;
+          })}</tbody></table></div>
+          {!policyTypes.length && <p className="empty">Không có loại đơn trong phạm vi POLICY_ADMIN hiện tại.</p>}
+        </ResourceState>
+      </section>
       <section className="panel">
         <ResourceState resource={resource}>
           <div className="table-wrap">
@@ -90,6 +153,7 @@ export function Policy() {
             </h2>
             <Badge value={selected.state} />
           </div>
+          {selected.state === "DRAFT" && <p className="muted">Để công bố cần có <code>actor_bindings.departments</code> chứa UUID phòng ban và UUID nhân sự cho các vai trò được định tuyến. Người nhận phải có quyền APPROVER/EXECUTOR/ACCEPTOR còn hiệu lực. Bản nháp từ plan chỉ là gợi ý, không tự được công bố.</p>}
           <ActionForm
             submitLabel={
               selected.state === "DRAFT"
@@ -116,8 +180,10 @@ export function Policy() {
                 await open(selected.id);
               }
               resource.reload();
+              statusResource.reload();
             }}
           >
+            {selected.state === "DRAFT" && <PolicyBindings release={selected} jsonText={bindingJson} onChange={(text) => {setBindingJson(text);setValidation(null);}} />}
             {[
               "form_schema",
               "route_rules",
@@ -138,7 +204,7 @@ export function Policy() {
                   name={key}
                   rows={7}
                   readOnly={selected.state !== "DRAFT"}
-                  defaultValue={JSON.stringify(selected[key], null, 2)}
+                  {...(key === "actor_bindings" ? {value: bindingJson, onChange: (e)=>{setBindingJson(e.target.value);setValidation(null);}} : {defaultValue: JSON.stringify(selected[key], null, 2)})}
                 />
               </label>
             ))}
@@ -188,15 +254,16 @@ export function Policy() {
               setSelected(null);
               setValidation(null);
               resource.reload();
+              statusResource.reload();
             }}
           >
             {modal === "create" ? (
               <label>
                 Loại yêu cầu
-                <select name="type_code">
-                  {(requestTypeCatalog.data?.items || []).map(({code, lifecycle}) => (
+                <select name="type_code" required>
+                  {policyTypes.map(({code, name, lifecycle}) => (
                     <option key={code} value={code}>
-                      {types[code] || code} · Mẫu {lifecycle}
+                      {name || types[code] || code} · Mẫu {lifecycle}
                     </option>
                   ))}
                 </select>
