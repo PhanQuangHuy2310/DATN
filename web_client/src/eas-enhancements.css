@@ -81,3 +81,99 @@ thead { position:sticky; top:0; z-index:1; }
 .request-mini-stat small { grid-column:1/3; grid-row:3; color:#708097; font-size:10px; align-self:end; }
 @media(max-width:1400px) { .request-summary-strip { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media(max-width:600px) { .request-summary-strip { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+/* SRS v2 UC01–UC17: task affordances adapt to assigned roles; API enforces permissions. */
+.role-task-board { margin:0 0 22px; padding:22px; }
+.role-task-board .section-head {margin-bottom:13px;}
+.role-badges {display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.role-pill {display:inline-block;background:#edf3ff;color:#173c94;font-size:11px;line-height:1.5;padding:6px 10px;border-radius:24px;border:1px solid #dce6f7;font-weight:650;}
+.role-task-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:13px;}
+.role-task {display:flex;gap:13px;align-items:flex-start;text-align:left;min-width:0;border:1px solid #dfe7f5;border-radius:11px;background:linear-gradient(145deg,#fff,#f9fbff);padding:17px;color:#112954;box-shadow:0 4px 12px #0e2c6908;}
+.role-task:hover {border-color:#a7c3ee;background:#edf4ff;transform:translateY(-1px);}
+.role-task:focus-visible {outline-offset:3px;}
+.role-task-icon {background:#e6efff;color:#1c4aa4;flex:0 0 36px;border-radius:8px;height:36px;display:grid;place-items:center;font-size:20px;}
+.role-task-content {display:flex;min-width:0;flex:1;flex-direction:column;gap:6px;}
+.role-task-content strong {font-size:15px;}
+.role-task-content small {font-size:12px;line-height:1.6;color:#5d6d85;}
+.role-task-content em {color:#5674aa;font-size:10px;font-style:normal;font-weight:750;letter-spacing:.3px;}
+.role-task-arrow {align-self:center;color:#3a60a1;font-size:21px;}
+.audit-scope-banner {border-left:4px solid #3769bd;padding:19px 22px;}
+.audit-scope-banner p {margin:9px 0 0;color:#526680;line-height:1.6;}
+.audit-search {display:flex;gap:12px;align-items:end;flex-wrap:wrap;}
+.audit-search label {flex:1 1 290px;min-width:180px;}
+.audit-search button {min-height:42px;}
+#audit-results,#audit-verification {scroll-margin-top:95px;}
+@media(max-width:600px){.role-task-board{padding:15px}.role-task-grid{grid-template-columns:1fr}.audit-search button{flex:1 1 45%}}
+@media(prefers-reduced-motion: reduce){.role-task:hover{transform:none}}
+/* UC17 / SRS 2.0: searchable identity CRUD, access matrix, and read-only API registry */
+.identity-explain,.api-inline-note {margin:0 0 18px; padding:15px 19px; background:#edf4ff; border:1px solid #d5e4fc; border-left:4px solid #2b56b5; border-radius:9px; line-height:1.6; color:#263b60; }
+.identity-explain code,.api-inline-note code {overflow-wrap:anywhere;}
+.identity-filter-panel {padding:19px 22px; margin:0 0 18px;}
+.identity-filter-grid,.api-filter-grid {display:grid;grid-template-columns:minmax(220px,2fr) repeat(2,minmax(155px,1fr)) auto;gap:16px;align-items:end;}
+.identity-filter-grid label,.api-filter-grid label {margin:0;}
+.identity-filter-grid input,.identity-filter-grid select,.api-filter-grid input,.api-filter-grid select {width:100%;margin-top:7px;}
+.identity-filter-reset {padding-bottom:1px;}
+.identity-result-head {padding:20px 20px 0;}
+.identity-result-head h2 {margin:0 0 4px;}
+.identity-table {min-width:780px;}
+.identity-table .actions {display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;}
+.identity-table .actions button {padding:8px 10px;font-size:12px;}
+.identity-primary {display:flex;align-items:center;gap:12px;min-width:0;}
+.identity-primary strong,.identity-primary small {display:block;}
+.identity-avatar {width:42px;height:42px;flex:0 0 42px;border-radius:11px;display:grid;place-items:center;background:#e5ecff;color:#1b3d9c;font-weight:800;font-size:18px;}
+.identity-id {font-size:10px;max-width:230px;overflow-wrap:anywhere;opacity:.8;}
+.identity-status {display:inline-block;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:750;border:1px solid #cfe9dd;background:#e8f7ef;color:#167048;}
+.identity-status.off {background:#fff2f2;border-color:#f2cece;color:#a63840;}
+.identity-status.future {background:#fff8de;border-color:#f4dfa2;color:#876308;}
+.lookup-select {display:grid;gap:6px;}
+.lookup-select > label {display:grid;gap:4px;}
+.lookup-select > label small {font-weight:400;}
+.lookup-select input,.lookup-select select {width:100%;}
+.identity-editor-help {background:#f2f6ff;border-radius:8px;border:1px solid #dce7f6;margin-bottom:15px;padding:13px 15px;}
+.identity-detail-card {max-height:240px;overflow:auto;}
+.identity-scope-list {display:grid;gap:9px;margin:14px 0 0;}
+.identity-scope-card {padding:12px 15px;display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,2fr) auto;align-items:center;gap:12px;border:1px solid #e0e8f5;border-radius:9px;background:#fbfcff;}
+.identity-scope-card span {overflow-wrap:anywhere;}
+.api-title {display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;}
+.api-readonly {display:inline-flex;align-items:center;border:1px solid #d9e4fa;color:#254994;background:#eaf1ff;font-weight:800;font-size:11px;letter-spacing:.45px;padding:8px 12px;border-radius:99px;white-space:nowrap;}
+.api-overview-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:21px;}
+.api-overview-stat {background:#fff;border:1px solid #e1e8f4;box-shadow:0 2px 14px #14295009;padding:18px;border-radius:11px;min-height:117px;display:flex;flex-direction:column;gap:8px;}
+.api-overview-stat > span {text-transform:uppercase;font-size:11px;color:#667693;letter-spacing:.5px;font-weight:750;}
+.api-overview-stat strong {font-size:28px;color:#102b63;line-height:1.2;}
+.api-overview-stat strong.api-ok {font-size:21px;color:#16764e;}
+.api-overview-stat strong.api-alert {font-size:15px;color:#ad5233;}
+.api-filter-grid {padding:0 20px 18px;grid-template-columns:minmax(200px,2fr) repeat(3,minmax(125px,1fr));}
+.api-filter-grid label {font-size:12px;font-weight:650;}
+.api-result-summary {padding:10px 20px;border-top:1px solid #e8eef7;color:#586984;font-size:12px;}
+.api-table {min-width:845px;}
+.api-endpoint {display:grid;gap:4px;max-width:350px;}
+.api-endpoint code {font-size:12px;overflow-wrap:anywhere;white-space:normal;color:#0f3691;font-weight:700;}
+.api-endpoint strong {color:#19345e;}
+.api-endpoint small {font-size:10px;}
+.api-method {display:inline-flex;align-items:center;justify-content:center;min-width:65px;font-weight:850;letter-spacing:.4px;font-size:10px;padding:6px 9px;border-radius:6px;background:#e8f4ff;color:#185d9f;}
+.api-post {background:#e8f7ed;color:#17653a;}.api-patch {background:#fff4df;color:#966411;}.api-delete {background:#ffeaed;color:#a32a40;}
+.api-role-list {display:flex;flex-wrap:wrap;gap:4px;}
+.api-role-chip {border-radius:5px;background:#eff2f8;color:#415475;padding:4px 7px;letter-spacing:.1px;font-size:9px;font-weight:750;}
+.role-matrix-cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 18px;}
+.role-matrix-card {background:#fff;border:1px solid #dfe7f5;border-radius:12px;box-shadow:0 4px 18px #172e6606;padding:20px;min-width:0;}
+.role-matrix-card .section-head {display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:0 0 12px;}
+.role-matrix-card .section-head h3 {margin:3px 0 0;color:#183771;}
+.role-matrix-card .section-head small {font-weight:750;color:#6178ab;}
+.role-matrix-card dl {display:grid;grid-template-columns:minmax(80px,130px) minmax(0,1fr);gap:12px;border-top:1px solid #e9eef8;padding-top:15px;margin:0;}
+.role-matrix-card dt {font-weight:750;color:#536789;font-size:12px;}.role-matrix-card dd {margin:0;overflow-wrap:anywhere;}
+.api-policy-footnotes {padding:20px;}.api-policy-footnotes h2 {margin:0 0 9px;}
+.api-health-panel {padding:22px;}.api-health-summary {display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+.api-health-light {width:13px;height:13px;border-radius:50%;background:#d97706;}.api-health-light.success {background:#1a985f;box-shadow:0 0 0 5px #e3f8ed;}
+.api-check-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.api-check {display:flex;gap:10px;align-items:center;min-width:0;border:1px solid #e4ebf5;padding:11px 13px;border-radius:8px;background:#fafcff;}
+.api-check > span {color:#16774c;font-weight:800;}.api-check code {flex:1;min-width:0;overflow-wrap:anywhere;}.api-check strong {font-size:11px;color:#406080;}
+@media(max-width:1200px){.identity-filter-grid,.api-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.api-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:800px){.identity-table,.api-table{min-width:0;}.identity-table .actions{justify-content:flex-end;}.identity-table td::before {flex-basis:80px;}.identity-primary{flex-direction:column;align-items:flex-end;text-align:right;}.identity-scope-card{grid-template-columns:1fr;}.api-endpoint{text-align:right;}.api-role-list{justify-content:flex-end;}}
+@media(max-width:650px){.identity-filter-grid,.api-filter-grid,.role-matrix-cards,.api-check-grid{grid-template-columns:1fr;}.identity-filter-panel{padding:15px;}.api-overview-grid{gap:9px;}.api-overview-stat{padding:12px;min-height:100px;}.api-overview-stat strong{font-size:22px;}.role-matrix-card{padding:15px;}.role-matrix-card dl{grid-template-columns:1fr;gap:4px;}.role-matrix-card dt:not(:first-child){margin-top:8px;}}
+
+/* Published request type catalogue: adaptive, keyboard-friendly selector. */
+.request-type-catalog { margin: 1rem 0 1.25rem; }
+.request-type-catalog .type-picker { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:.75rem; }
+.request-type-catalog .type-picker button { min-height:64px;white-space:normal;text-align:left;display:block; }
+.request-type-catalog .type-picker button small { font-weight:400;opacity:.75; }
+.request-type-catalog .type-picker button:focus-visible { outline:3px solid #2365c9;outline-offset:3px; }
+.request-type-catalog .muted { margin:0 0 .8rem; }

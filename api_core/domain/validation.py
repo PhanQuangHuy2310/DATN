@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 HTML_TAG = re.compile(r"<[^>]+>")
 SUPPORTED_TYPES = {"integer", "string"}
 SUPPORTED_P0_TYPES = {"ACCESS", "EQUIPMENT", "LEAVE"}
+TYPE_CODE_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,29}$")
 COMMON_PROPERTY_KEYS = {"type"}
 STRING_PROPERTY_KEYS = COMMON_PROPERTY_KEYS | {
     "enum",
@@ -43,7 +44,7 @@ def validate_payload(
     requester_id: str,
     today: date | None = None,
 ) -> dict[str, Any]:
-    """Validate and normalize one submitted P0 payload.
+    """Validate and normalize a submitted payload from a published configuration.
 
     This is a deliberately small JSON-schema profile. Unknown keywords and
     unsupported field types fail closed during config publication; this
@@ -53,8 +54,8 @@ def validate_payload(
     errors: dict[str, list[str]] = {}
     if not isinstance(payload, dict):
         raise PayloadValidationError({"$": ["OBJECT_REQUIRED"]})
-    if type_code not in SUPPORTED_P0_TYPES:
-        raise PayloadValidationError({"type_code": ["UNSUPPORTED_REQUEST_TYPE"]})
+    if not isinstance(type_code, str) or not TYPE_CODE_RE.fullmatch(type_code):
+        raise PayloadValidationError({"type_code": ["INVALID_REQUEST_TYPE"]})
 
     properties = form_schema.get("properties")
     required = form_schema.get("required")
@@ -216,8 +217,8 @@ def validate_draft_payload(
     errors: dict[str, list[str]] = {}
     if not isinstance(payload, dict):
         raise PayloadValidationError({"$": ["OBJECT_REQUIRED"]})
-    if type_code not in SUPPORTED_P0_TYPES:
-        raise PayloadValidationError({"type_code": ["UNSUPPORTED_REQUEST_TYPE"]})
+    if not isinstance(type_code, str) or not TYPE_CODE_RE.fullmatch(type_code):
+        raise PayloadValidationError({"type_code": ["INVALID_REQUEST_TYPE"]})
 
     properties = form_schema.get("properties")
     if (

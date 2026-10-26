@@ -49,9 +49,9 @@ function Audit({ id }) {
     </ResourceState>
   );
 }
-export default function RequestDetail({ id, user, onBack, onEdit, onChanged }) {
+export default function RequestDetail({ id, user, onBack, onEdit, onChanged, initialTab = "info" }) {
   const resource = useResource(`/api/v1/requests/${id}`),
-    [tab, setTab] = useState("info"),
+    [tab, setTab] = useState(initialTab),
     [action, setAction] = useState(null),
     [verify, setVerify] = useState(null);
   const r = resource.data?.request,
@@ -147,10 +147,10 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged }) {
                   <>
                     <h2>Nội dung đề nghị</h2>
                     <dl className="data-list">
-                      {fields[r.type_code]?.map(([name, label]) => (
+                      {Object.entries(r.payload || {}).map(([name, value]) => (
                         <div key={name}>
-                          <dt>{label}</dt>
-                          <dd>{String(r.payload?.[name] ?? "—")}</dd>
+                          <dt>{fields[r.type_code]?.find(([field]) => field === name)?.[1] || name.replaceAll("_", " ")}</dt>
+                          <dd>{typeof value === "object" ? JSON.stringify(value) : String(value ?? "—")}</dd>
                         </div>
                       ))}
                     </dl>

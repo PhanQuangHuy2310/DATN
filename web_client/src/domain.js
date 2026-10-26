@@ -65,27 +65,29 @@ export const labels = {
   INFECTED: "Tệp bị cách ly",
   ERROR: "Kiểm tra thất bại",
 };
+/** UC06/UC10/UC12: client affordances mirror SoD and FSM.
+ * API transaction and scoped role membership remain the source of truth.
+ */
 export function permissions(user, r) {
-  const has = (role) => user.roles.includes(role);
-  const owner = has("REQUESTER") && r.requester_id === user.id;
-  const executor =
-    has("EXECUTOR") && r.workflow?.attempt?.executor_id === user.id;
+  const granted = new Set(user?.roles || []);
+  const own = r.requester_id === user.id;
+  const owner = own && granted.has("REQUESTER");
+  const activeStep = r.approval_steps?.find((s) => s.state === "ACTIVE");
+  const attempt = r.workflow?.attempt;
+  const isExecutor = attempt?.executor_id === user.id;
+  const hasApprovedStep = r.approval_steps?.some((s) => s.assignee_id === user.id);
   return {
     edit: owner && ["DRAFT", "NEEDS_INFO"].includes(r.status),
-    cancel:
-      owner && ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(r.status),
-    approve:
-      has("APPROVER") &&
-      r.status === "PENDING_APPROVAL" &&
-      r.approval_steps?.some(
-        (s) => s.state === "ACTIVE" && s.assignee_id === user.id,
-      ),
-    claim: executor && r.status === "READY_FOR_EXECUTION",
-    execute: executor && r.status === "IN_PROGRESS",
-    accept:
-      has("ACCEPTOR") &&
-      r.status === "WAITING_FOR_ACCEPTANCE" &&
-      r.workflow?.acceptor_id === user.id,
+    cancel: owner && ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(r.status),
+    approve: granted.has("APPROVER") && r.status === "PENDING_APPROVAL" &&
+      !own && activeStep?.assignee_id === user.id,
+    claim: granted.has("EXECUTOR") && r.status === "READY_FOR_EXECUTION" &&
+      !own && !hasApprovedStep && isExecutor && attempt?.state === "READY",
+    execute: granted.has("EXECUTOR") && r.status === "IN_PROGRESS" &&
+      !own && !hasApprovedStep && isExecutor && attempt?.state === "RUNNING",
+    accept: granted.has("ACCEPTOR") && r.status === "WAITING_FOR_ACCEPTANCE" &&
+      r.workflow?.lifecycle === "C" && r.workflow?.acceptor_id === user.id &&
+      attempt?.state === "SUBMITTED" && !isExecutor,
   };
 }
 export const date = (v) => (v ? new Date(v).toLocaleString("vi-VN") : "—");
@@ -99,9 +101,11 @@ export function errorText(e) {
     DATABASE_QUERY_FAILED: "Máy chủ gặp lỗi truy vấn dữ liệu. Vui lòng thử lại hoặc báo quản trị viên.",
     SERVER_ERROR: "Máy chủ đang gặp lỗi (HTTP 500). Vui lòng thử lại sau.",
     INVALID_RESPONSE: "Máy chủ trả về dữ liệu không đúng định dạng. Hãy kiểm tra log Backend.",
+    CATALOG_EXPANSION_DISABLED: "Chức năng thêm loại yêu cầu chưa được DBA phê duyệt/mở khóa migration. Danh mục P0 vẫn hoạt động bình thường.",
+    REQUEST_TYPE_NOT_CONFIGURED: "Loại yêu cầu này chưa có phiên bản quy chế đã công bố.",
     INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng.",
     PASSWORD_REUSE_NOT_ALLOWED: "Mật khẩu mới phải khác mật khẩu cũ.",
-    PASSWORD_POLICY_VIOLATION: "Mật khẩu mới phải có 12–128 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt và không chứa tên đăng nhập.",
+    PASSWORD_POLICY_VIOLATION: "Mật khẩu mới phải có 15–128 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt và không chứa tên đăng nhập.",
     LOGIN_RATE_LIMITED: "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.",
     VALIDATION_FAILED: "Dữ liệu chưa hợp lệ.",
     VALIDATION_STALE:

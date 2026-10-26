@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
+from django.db import connection
 from django.core.cache import cache
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -108,6 +109,22 @@ def logout(request: HttpRequest) -> JsonResponse:
 @require_actor()
 def me(request: HttpRequest) -> JsonResponse:
     actor = request.actor
+    # UC17 can only be operated by GLOBAL / ALL OPS membership; mere
+    # OPS_ADMIN membership is not enough. Backend administration APIs still
+    # perform their own authorization checks on every operation.
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """SELECT EXISTS (
+                  SELECT 1 FROM eas.role_membership rm
+                  WHERE rm.user_id = %s AND rm.role = 'OPS_ADMIN'
+                    AND rm.revoked_at IS NULL
+                    AND rm.valid_from <= statement_timestamp()
+                    AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                    AND rm.scope_kind = 'GLOBAL' AND rm.type_scope = 'ALL'
+               )""",
+            [actor.id],
+        )
+        can_manage_identity = bool(cursor.fetchone()[0])
     return JsonResponse(
         {
             "user": {
@@ -116,6 +133,7 @@ def me(request: HttpRequest) -> JsonResponse:
                 "display_name": actor.display_name,
                 "department_id": actor.department_id,
                 "roles": sorted(actor.roles),
+                "capabilities": {"identity_manage": can_manage_identity},
                 "must_change_password": actor.must_change_password,
             },
             "correlation_id": correlation_id(request),

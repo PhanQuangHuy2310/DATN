@@ -9,7 +9,39 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     [error, setError] = useState(""),
     [files, setFiles] = useState([]),
     [notice, setNotice] = useState("");
+  const [catalog, setCatalog] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
   const createKey = useRef(idempotencyKey());
+  useEffect(() => {
+    let active = true;
+    api("/api/v1/meta/request-type-forms")
+      .then((result) => {
+        if (active) {
+          const items = result.items || [];
+          setCatalog(items);
+          if (!initial?.id && items.length && !items.some((item) => item.code === type))
+            setType(items[0].code);
+          setCatalogError("");
+        }
+      })
+      .catch((err) => {
+        if (active) setCatalogError(errorText(err));
+      })
+      .finally(() => { if (active) setCatalogLoading(false); });
+    return () => { active = false; };
+  }, []);
+  const current = catalog.find((entry) => entry.code === type);
+  const schema = current?.form_schema;
+  const formFields = schema?.properties
+    ? Object.entries(schema.properties).map(([name, spec]) => {
+        const legacy = fields[type]?.find(([field]) => field === name);
+        const label = legacy?.[1] || name.replaceAll("_", " ");
+        const inputType = spec.type === "integer" ? "number"
+          : spec.format === "date" ? "date" : "text";
+        return [name, label, legacy?.[2] === "textarea" ? "textarea" : inputType, spec];
+      })
+    : (fields[type] || []).map(([name, label, kind]) => [name, label, kind, {}]);
   useEffect(() => {
     if (!initial?.id) return;
     let active = true;
@@ -47,11 +79,15 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     const send = e.nativeEvent.submitter?.value === "send";
     const payload = Object.fromEntries(new FormData(form));
     delete payload.file;
-    for (const [name, , kind] of fields[type]) {
+    for (const [name, , kind] of formFields) {
       if (kind === "number") {
         if (payload[name] === "") delete payload[name];
         else payload[name] = Number(payload[name]);
       } else if (!payload[name]) delete payload[name];
+    }
+    if (!current) {
+      setError("Loại yêu cầu chưa có cấu hình đã công bố hoặc bạn chưa được cấp quyền tạo loại này.");
+      return;
     }
     setBusy(true);
     setError("");
@@ -100,6 +136,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           request_id: r.id,
           expected_version: r.lock_version,
           type_code: type,
+          viewed_release_id: current.release_id,
           payload,
         });
         onDone(r.id);
@@ -143,40 +180,50 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           Quay lại
         </button>
       </div>
-      <div className="type-picker">
-        {Object.entries(types).map(([key, label]) => (
-          <button
-            key={key}
-            disabled={!!record || busy}
-            className={type === key ? "selected" : "secondary"}
-            onClick={() => setType(key)}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="request-type-catalog panel-subtle" aria-label="Danh mục biểu mẫu được phép sử dụng">
+        <p className="muted">Chỉ hiển thị biểu mẫu đang hoạt động, có quy chế đã công bố và thuộc phạm vi quyền của bạn.</p>
+        {catalogLoading && <p role="status">Đang tải biểu mẫu từ hệ thống…</p>}
+        {catalogError && <p className="error" role="alert">Không tải được danh mục biểu mẫu: {catalogError}</p>}
+        {!catalogLoading && !catalogError && catalog.length === 0 && <p role="status">Không có biểu mẫu khả dụng. Hãy liên hệ quản trị viên quy chế.</p>}
+        <div className="type-picker">
+          {catalog.map(({code, lifecycle}) => (
+            <button type="button" key={code} disabled={!!record || busy}
+              aria-pressed={type === code}
+              className={type === code ? "selected" : "secondary"}
+              onClick={() => { setType(code); setError(""); }}>
+              <strong>{types[code] || code.replaceAll("_", " ")}</strong>
+              <small> · Mẫu {lifecycle}</small>
+            </button>
+          ))}
+        </div>
       </div>
-      <form onSubmit={save}>
-        <fieldset disabled={busy}>
+      <form onSubmit={save} key={type}>
+        <fieldset disabled={busy || catalogLoading || !!catalogError || !current}>
           <div className="form-grid">
-            {fields[type].map(([name, label, kind]) => (
+            {formFields.map(([name, label, kind, spec]) => (
               <label
                 key={type + name}
                 className={kind === "textarea" ? "wide" : ""}
               >
                 {label}
-                {kind === "textarea" ? (
-                  <textarea
-                    name={name}
-                    defaultValue={initial?.payload?.[name] || ""}
-                    rows={3}
-                  />
+                {Array.isArray(spec.enum) ? (
+                  <select name={name} defaultValue={initial?.payload?.[name] ?? ""}
+                    required={schema?.required?.includes(name)}>
+                    <option value="">— Chọn —</option>
+                    {spec.enum.map((value) => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                ) : kind === "textarea" ? (
+                  <textarea name={name} defaultValue={initial?.payload?.[name] || ""}
+                    required={schema?.required?.includes(name)} rows={3} maxLength={spec.maxLength} />
                 ) : (
-                  <input
-                    name={name}
-                    type={kind}
-                    min={kind === "number" ? 1 : undefined}
-                    defaultValue={initial?.payload?.[name] ?? ""}
-                  />
+                  <input name={name} type={kind}
+                    required={schema?.required?.includes(name)}
+                    min={kind === "number" ? spec.minimum : undefined}
+                    max={kind === "number" ? spec.maximum : undefined}
+                    minLength={kind === "text" ? spec.minLength : undefined}
+                    maxLength={kind === "text" ? spec.maxLength : undefined}
+                    step={kind === "number" ? 1 : undefined}
+                    defaultValue={initial?.payload?.[name] ?? ""} />
                 )}
               </label>
             ))}

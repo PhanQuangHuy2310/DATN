@@ -9,7 +9,7 @@
     "lint": "eslint src vite.config.js",
     "preview": "vite preview --host 0.0.0.0",
     "e2e": "playwright test",
-    "test": "node --test e2e/domain.test.mjs",
+    "test": "node --test e2e/*.test.mjs",
     "test:ui": "playwright test --config playwright.ui.config.js"
   },
   "dependencies": {

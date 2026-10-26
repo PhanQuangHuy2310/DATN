@@ -219,3 +219,62 @@ class AdministrationTests(SimpleTestCase):
         self.assertNotIn("DELETE FROM", sql)
         self.assertIn("SET revoked_at=", sql)
         self.assertIn("auth_version=auth_version+1", sql)
+
+    def test_admin_search_filter_values_are_parameterized(self):
+        from api_core.administration.service import _list_filters
+
+        injected = "' OR true --"
+        clause, params = _list_filters("users", {"q": injected, "active": "true", "role": "APPROVER"})
+        self.assertNotIn(injected, clause)
+        self.assertIn("ILIKE %s", clause)
+        self.assertIn("rm.role=%s", clause)
+        self.assertEqual(params[0], f"%{injected}%")
+        self.assertEqual(params[2], True)
+        self.assertEqual(params[3], "APPROVER")
+        with self.assertRaises(CommandError):
+            _list_filters("users", {"role": "ROOT"})
+        with self.assertRaises(CommandError):
+            _list_filters("memberships", {"active": "false"})
+        with self.assertRaises(CommandError):
+            _list_filters("users", {"q": "x" * 101})
+
+    def test_read_user_detail_has_role_memberships_no_password(self):
+        from api_core.administration.service import read_record
+        user_id = str(uuid4())
+        dept_id = str(uuid4())
+        membership_id = str(uuid4())
+        user = (user_id, "testuser", "Test user", dept_id, None, True, 1, False)
+        membership = (
+            membership_id, user_id, "APPROVER", "DEPARTMENT", dept_id,
+            "ONE", str(uuid4()), datetime.now(timezone.utc), None, None,
+        )
+        c = MagicMock()
+        c.fetchone.side_effect = [(True,), user]
+        c.fetchall.return_value = [membership]
+        with (patch("api_core.administration.service.transaction.atomic"),
+              patch("api_core.administration.service.connection.cursor") as cm):
+            cm.return_value.__enter__.return_value = c
+            out = read_record(self.actor, "users", user_id)
+        self.assertEqual(out["item"]["memberships"][0]["role"], "APPROVER")
+        self.assertNotIn("password_hash", str(out))
+
+    def test_api_catalog_and_matrix_are_readonly(self):
+        from api_core.administration.catalog import api_catalog, access_matrix
+
+        self.assertFalse(api_catalog()["mutable"])
+        self.assertEqual(len(access_matrix()["items"]), 7)
+        self.assertTrue(any(i["path"] == "/api/v1/admin/users" for i in api_catalog()["items"]))
+        self.assertEqual(len({(i["method"], i["path"]) for i in api_catalog()["items"]}), len(api_catalog()["items"]))
+        self.assertNotIn("password_hash", str(api_catalog()))
+
+    def test_api_catalog_checks_global_ops_scope(self):
+        from api_core.administration.views import api_catalog_view
+        req = RequestFactory().get("/api/v1/admin/api-catalog")
+        with patch("api_core.authn.service.load_actor_from_session", return_value=self.actor), \
+             patch("api_core.administration.views.transaction.atomic"), \
+             patch("api_core.administration.views.connection.cursor") as cm:
+            cursor = MagicMock()
+            cm.return_value.__enter__.return_value = cursor
+            cursor.fetchone.return_value = (False,)
+            response = api_catalog_view(req)
+        self.assertEqual(response.status_code, 403)

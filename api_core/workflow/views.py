@@ -267,8 +267,12 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
 
         cursor.execute(
             """
-            SELECT step_no, assignee_id::text, state, activated_at, closed_at
-            FROM eas.approval_step WHERE request_id = %s ORDER BY step_no
+            SELECT s.step_no, s.assignee_id::text, s.state, s.activated_at, s.closed_at
+            FROM eas.approval_step s
+            JOIN eas.workflow_instance i ON i.id = s.instance_id
+            JOIN eas.request r ON r.id = i.request_id
+            WHERE r.id = %s AND i.revision_id = r.current_revision_id
+            ORDER BY s.step_no
             """,
             [req_uuid],
         )

@@ -13,6 +13,7 @@ import {
   useResource,
 } from "./ui.jsx";
 export function Policy() {
+  const requestTypeCatalog = useResource("/api/v1/request-types");
   const resource = useResource("/api/v1/config-releases"),
     [selected, setSelected] = useState(null),
     [validation, setValidation] = useState(null),
@@ -53,7 +54,7 @@ export function Policy() {
               <tbody>
                 {policies.slice(resource.data?.items || []).map((r) => (
                   <tr key={r.id}>
-                    <td data-label="Loại yêu cầu">{types[r.type_code]}</td>
+                    <td data-label="Loại yêu cầu">{types[r.type_code] || r.type_code}</td>
                     <td data-label="Phiên bản">v{r.version}</td>
                     <td data-label="Trạng thái"><Badge value={r.state} /></td>
                     <td data-label="Công bố">{date(r.published_at)}</td>
@@ -85,7 +86,7 @@ export function Policy() {
         >
           <div className="section-head">
             <h2>
-              {types[selected.type_code]} · v{selected.version}
+              {types[selected.type_code] || selected.type_code} · v{selected.version}
             </h2>
             <Badge value={selected.state} />
           </div>
@@ -193,9 +194,9 @@ export function Policy() {
               <label>
                 Loại yêu cầu
                 <select name="type_code">
-                  {Object.entries(types).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v}
+                  {(requestTypeCatalog.data?.items || []).map(({code, lifecycle}) => (
+                    <option key={code} value={code}>
+                      {types[code] || code} · Mẫu {lifecycle}
                     </option>
                   ))}
                 </select>
@@ -448,10 +449,10 @@ export function Profile({ user, onChanged }) {
           if (v.new_password !== v.confirm_password)
             throw new Error("Mật khẩu xác nhận không khớp.");
           const pwd = v.new_password;
-          if (pwd.length < 12 || pwd.length > 128 || !/[a-z]/.test(pwd) ||
+          if (pwd.length < 15 || pwd.length > 128 || !/[a-z]/.test(pwd) ||
             !/[A-Z]/.test(pwd) || !/[0-9]/.test(pwd) || !/[^\p{L}\p{N}]/u.test(pwd) ||
             (user.username && pwd.toLowerCase().includes(user.username.toLowerCase())))
-            throw new Error("Mật khẩu chưa đạt chính sách: 12–128 ký tự, có chữ hoa, thường, số, ký tự đặc biệt và không chứa username.");
+            throw new Error("Mật khẩu chưa đạt chính sách: 15–128 ký tự, có chữ hoa, thường, số, ký tự đặc biệt và không chứa username.");
           await api("/api/v1/auth/password", {
             method: "POST",
             body: JSON.stringify({
@@ -464,8 +465,8 @@ export function Profile({ user, onChanged }) {
         }}
       >
         <PasswordField label="Mật khẩu hiện tại" name="current_password" autoComplete="current-password" required />
-        <PasswordField label="Mật khẩu mới" name="new_password" autoComplete="new-password" minLength={12} maxLength={128} required
-          help="12–128 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt; không chứa tên đăng nhập." />
+        <PasswordField label="Mật khẩu mới" name="new_password" autoComplete="new-password" minLength={15} maxLength={128} required
+          help="15–128 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt; không chứa tên đăng nhập." />
         <PasswordField label="Xác nhận mật khẩu" name="confirm_password" autoComplete="new-password" required />
       </ActionForm>
       {done && <p className="success">Đã đổi mật khẩu.</p>}

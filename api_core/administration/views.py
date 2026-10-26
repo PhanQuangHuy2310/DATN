@@ -1,11 +1,12 @@
-from django.db import IntegrityError
+from django.db import IntegrityError, connection, transaction
 from django.http import JsonResponse
 
 from api_core.authn.service import require_actor
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
 from api_core.workflow.service import CommandError
 
-from .service import TABLES, list_records, mutate
+from .catalog import access_matrix, api_catalog
+from .service import TABLES, authorize, list_records, mutate, read_record
 
 
 @require_actor("OPS_ADMIN")
@@ -13,8 +14,11 @@ def records(request, kind, record_id=None):
     if kind not in TABLES:
         return api_error(request, "NOT_FOUND", status=404)
     try:
-        if request.method == "GET" and record_id is None:
-            return JsonResponse(list_records(request.actor, kind, request.GET))
+        if request.method == "GET":
+            return JsonResponse(
+                read_record(request.actor, kind, str(record_id)) if record_id is not None
+                else list_records(request.actor, kind, request.GET)
+            )
         if (request.method == "POST" and record_id is None) or (
             request.method in {"PATCH", "DELETE"} and record_id is not None
         ):
@@ -38,3 +42,25 @@ def records(request, kind, record_id=None):
         return api_error(request, str(exc), status=400)
     except IntegrityError:
         return api_error(request, "CONSTRAINT_CONFLICT", status=409)
+
+
+def _read_admin_reference(request, supplier):
+    if request.method != "GET":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute("SELECT eas.lock_security(false)")
+            authorize(cursor, request.actor)
+            return JsonResponse(supplier())
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+
+
+@require_actor("OPS_ADMIN")
+def api_catalog_view(request):
+    return _read_admin_reference(request, api_catalog)
+
+
+@require_actor("OPS_ADMIN")
+def access_matrix_view(request):
+    return _read_admin_reference(request, access_matrix)

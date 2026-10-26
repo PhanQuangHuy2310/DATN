@@ -175,7 +175,7 @@ def create_or_clone_release(
     correlation_id: str,
 ) -> CommandResult:
     type_code = body.get("type_code")
-    if type_code not in ("LEAVE", "ACCESS", "EQUIPMENT"):
+    if not isinstance(type_code, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,29}", type_code):
         raise CommandError("UNKNOWN_TYPE_CODE", status=422)
 
     clone_from_id = body.get("clone_from_release_id")

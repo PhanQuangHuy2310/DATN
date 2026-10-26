@@ -70,9 +70,9 @@ def assess_request_types(
 ) -> dict[str, bool]:
     return {
         "request_types_match_p0": {(code, lifecycle) for code, lifecycle, _ in rows}
-        == EXPECTED_TYPES,
+        >= EXPECTED_TYPES,
         "all_active_types_configured": (not require_active_releases)
-        or (len(rows) == 3 and all(valid for _, _, valid in rows)),
+        or (len(rows) >= 3 and all(valid for _, _, valid in rows)),
     }
 
 

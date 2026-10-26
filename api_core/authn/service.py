@@ -6,6 +6,8 @@ from functools import wraps
 from uuid import UUID, uuid4
 
 from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.password_validation import CommonPasswordValidator
+from django.core.exceptions import ValidationError
 from django.core.cache import cache
 from django.db import connection, transaction
 from django.http import HttpRequest, HttpResponse
@@ -22,8 +24,17 @@ class PasswordChangeError(ValueError):
 
 
 def validate_new_password(password: object, username: str) -> str:
-    if not isinstance(password, str) or not 12 <= len(password) <= 128:
+    if not isinstance(password, str) or not 15 <= len(password) <= 128:
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
+    # SRS v2 NFR-Security: exclude passwords from a minimal weak-password
+    # denylist. This is intentionally additive to entropy/complexity rules.
+    weak = {"password123456!A", "qwerty123456!A", "admin123456789!A", "1234567890abc!A"}
+    if password.lower() in {item.lower() for item in weak}:
+        raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
+    try:
+        CommonPasswordValidator().validate(password)
+    except ValidationError:
+        raise PasswordChangeError("PASSWORD_POLICY_VIOLATION") from None
     if username.lower() in password.lower():
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
     required = (

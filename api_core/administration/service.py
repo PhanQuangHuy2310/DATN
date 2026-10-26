@@ -5,6 +5,8 @@ No password hashes are returned or written into audit payloads.
 """
 
 from datetime import datetime, timezone
+import re
+from django.conf import settings
 from uuid import UUID, uuid4
 
 from django.contrib.auth.hashers import make_password
@@ -126,27 +128,120 @@ def serialize(columns, row):
     return value
 
 
+def _list_filters(kind, query):
+    """Parameterize values; only fields from a fixed allowlist reach SQL."""
+    q = str(query.get("q", "")).strip()
+    if len(q) > 100:
+        raise CommandError("INVALID_SEARCH", status=422)
+    role = str(query.get("role", "")).strip()
+    if role and role not in ROLES:
+        raise CommandError("INVALID_ROLE", status=422)
+    if role and kind not in {"users", "memberships"}:
+        raise CommandError("INVALID_FILTER", status=422)
+    active = query.get("active", "")
+    if active not in ("", "true", "false") or (active and kind not in {"users", "departments", "request-types"}):
+        raise CommandError("INVALID_FILTER", status=422)
+    user_id = query.get("user_id", "")
+    if user_id and kind != "memberships":
+        raise CommandError("INVALID_FILTER", status=422)
+    department_id = query.get("department_id", "")
+    if department_id and kind not in {"users", "memberships"}:
+        raise CommandError("INVALID_FILTER", status=422)
+    state = query.get("state", "")
+    if state and (kind != "memberships" or state not in {"ACTIVE", "REVOKED", "EXPIRED", "FUTURE"}):
+        raise CommandError("INVALID_FILTER", status=422)
+    clauses, params = [], []
+    if state == "REVOKED":
+        clauses.append("t.revoked_at IS NOT NULL")
+    elif state == "ACTIVE":
+        clauses.append("t.revoked_at IS NULL AND t.valid_from<=statement_timestamp() AND (t.valid_to IS NULL OR t.valid_to>statement_timestamp())")
+    elif state == "EXPIRED":
+        clauses.append("t.revoked_at IS NULL AND t.valid_to<=statement_timestamp()")
+    elif state == "FUTURE":
+        clauses.append("t.revoked_at IS NULL AND t.valid_from>statement_timestamp()")
+    searchable = {
+        "users": ("username", "display_name"),
+        "departments": ("code", "name"),
+        "request-types": ("code", "lifecycle"),
+        "memberships": ("role", "user_id::text"),
+    }
+    if q:
+        cols = searchable[kind]
+        clauses.append("(" + " OR ".join(f"t.{col} ILIKE %s" for col in cols) + ")")
+        params.extend([f"%{q}%"] * len(cols))
+    if active:
+        clauses.append("t.is_active=%s")
+        params.append(active == "true")
+    if user_id:
+        clauses.append("t.user_id=%s")
+        params.append(uid(user_id, "user_id"))
+    if department_id:
+        clauses.append("t.department_id=%s")
+        params.append(uid(department_id, "department_id"))
+    if role:
+        if kind == "memberships":
+            clauses.append("t.role=%s")
+        else:
+            clauses.append("""EXISTS (
+                SELECT 1 FROM eas.role_membership rm WHERE rm.user_id=t.id
+                AND rm.role=%s AND rm.revoked_at IS NULL
+                AND rm.valid_from<=statement_timestamp()
+                AND (rm.valid_to IS NULL OR rm.valid_to>statement_timestamp())
+            )""")
+        params.append(role)
+    return " WHERE " + " AND ".join(clauses) if clauses else "", params
+
+
 def list_records(actor, kind, query):
     table, columns = TABLES[kind]
     try:
         limit = int(query.get("limit", 50))
         offset = int(query.get("offset", 0))
-        if not 1 <= limit <= 100 or not 0 <= offset <= 10000:
+        if not 1 <= limit <= 100 or not 0 <= offset <= 100000:
             raise ValueError
     except (ValueError, TypeError):
         raise CommandError("INVALID_PAGINATION", status=400) from None
+    where, params = _list_filters(kind, query)
+    fields = ",".join("t." + field for field in columns)
+    order = {"users": "t.username,t.id", "departments": "t.code,t.id", "memberships": "t.role,t.id", "request-types": "t.code,t.id"}[kind]
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
         authorize(c, actor)
+        c.execute(f"SELECT COUNT(*) FROM eas.{table} t{where}", params)
+        total = int(c.fetchone()[0])
         c.execute(
-            f"SELECT {','.join(columns)} FROM eas.{table} ORDER BY id LIMIT %s OFFSET %s",
-            [limit + 1, offset],
+            f"SELECT {fields} FROM eas.{table} t{where} ORDER BY {order} LIMIT %s OFFSET %s",
+            params + [limit, offset],
         )
         rows = c.fetchall()
     return {
-        "items": [serialize(columns, r) for r in rows[:limit]],
-        "next_offset": offset + limit if len(rows) > limit else None,
+        "items": [serialize(columns, r) for r in rows],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "next_offset": offset + limit if offset + limit < total else None,
     }
+
+
+def read_record(actor, kind, record_id):
+    table, columns = TABLES[kind]
+    record_id = uid(record_id, "id")
+    with transaction.atomic(), connection.cursor() as c:
+        c.execute("SELECT eas.lock_security(false)")
+        authorize(c, actor)
+        c.execute(f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s", [record_id])
+        row = c.fetchone()
+        if not row:
+            raise CommandError("NOT_FOUND", status=404)
+        item = serialize(columns, row)
+        if kind == "users":
+            member_columns = TABLES["memberships"][1]
+            c.execute(
+                f"SELECT {','.join(member_columns)} FROM eas.role_membership WHERE user_id=%s ORDER BY role,id",
+                [record_id],
+            )
+            item["memberships"] = [serialize(member_columns, r) for r in c.fetchall()]
+    return {"item": item}
 
 
 def validate(kind, body, old=None):
@@ -170,7 +265,7 @@ def validate(kind, body, old=None):
             "valid_from",
             "valid_to",
         },
-        "request-types": {"is_active"},
+        "request-types": ({"is_active", "code", "lifecycle"} if old is None else {"is_active"}),
     }[kind]
     if set(body) - allowed:
         raise CommandError("UNKNOWN_FIELD", status=422)
@@ -228,8 +323,19 @@ def validate(kind, body, old=None):
             v["valid_to"]
         ) <= datetime.fromisoformat(v["valid_from"]):
             raise CommandError("INVALID_VALIDITY_WINDOW", status=422)
+    elif kind == "request-types":
+        v["is_active"] = boolean(v.get("is_active", True))
+        if old is None:
+            code = v.get("code")
+            lifecycle = v.get("lifecycle")
+            if not isinstance(code, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,29}", code):
+                raise CommandError("INVALID_TYPE_CODE", status=422)
+            if lifecycle not in {"A", "B", "C"}:
+                raise CommandError("INVALID_LIFECYCLE", status=422)
+            v["code"] = code
+            v["lifecycle"] = lifecycle
     else:
-        v["is_active"] = boolean(v.get("is_active"))
+        raise CommandError("INVALID_KIND", status=422)
     return v
 
 
@@ -257,8 +363,8 @@ def check_cycle(c, table, parent_field, id, parent):
 
 def mutate(actor, kind, record_id, body, method, key, correlation_id):
     table, columns = TABLES[kind]
-    if method == "POST" and kind == "request-types":
-        raise CommandError("FIXED_REQUEST_TYPES", status=405)
+    if method == "POST" and kind == "request-types" and not settings.EAS_ALLOW_REPORT_CATALOG_EXPANSION:
+        raise CommandError("CATALOG_EXPANSION_DISABLED", status=403)
     reason = text(body.get("reason"), "reason", 2000)
     if len(reason) < 10:
         raise CommandError("REASON_INVALID", status=422)
@@ -331,7 +437,7 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 "valid_from",
                 "valid_to",
             ],
-            "request-types": ["is_active"],
+            "request-types": (["code", "lifecycle", "is_active"] if method == "POST" else ["is_active"]),
         }[kind].copy()
         if kind == "users":
             v["auth_version"] = (old or {}).get("auth_version", 0) + 1
