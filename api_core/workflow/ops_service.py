@@ -61,10 +61,10 @@ def list_ops_metadata(
     if not 1 <= limit <= 100 or not 0 <= offset <= 10_000:
         raise CommandError("INVALID_PAGINATION", status=400)
 
-    status_filter = query_params.get("status")
-    search_filter = query_params.get("q", "").strip()[:100] or None
-    type_code_filter = query_params.get("type_code")
-    dept_filter = query_params.get("department_id")
+    status_filter = (query_params.get("status") or "").strip() or None
+    search_filter = (query_params.get("q") or "").strip()[:100] or None
+    type_code_filter = (query_params.get("type_code") or "").strip() or None
+    dept_filter = (query_params.get("department_id") or "").strip() or None
 
     dept_uuid = None
     if dept_filter:

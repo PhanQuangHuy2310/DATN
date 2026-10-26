@@ -27,7 +27,7 @@ export async function api(path, options = {}) {
     ...options,
     method,
     headers,
-    credentials: "same-origin",
+    credentials: "include",
   });
   // A failed Django request can return HTML (for example, a debug 500 page).
   // Report the actual HTTP failure instead of presenting it as INVALID_RESPONSE.

@@ -45,7 +45,7 @@ class Command(BaseCommand):
             cursor.execute(
                 """
                 SELECT p.id::text, p.subject_user_id::text, p.case_type, p.status,
-                       u.username, u.email
+                       u.username, u.display_name
                 FROM eas.privacy_case p
                 JOIN eas.app_user u ON u.id = p.subject_user_id
                 WHERE p.id = %s
@@ -57,7 +57,7 @@ class Command(BaseCommand):
                 self.stderr.write(f"ERROR: Privacy case '{norm_case_id}' not found.")
                 sys.exit(2)
 
-            p_id, subject_user_id, case_type, current_status, username, _email = row
+            p_id, subject_user_id, case_type, current_status, username, _display_name = row
 
             cursor.execute(
                 """
@@ -144,11 +144,10 @@ class Command(BaseCommand):
                     SET display_name = 'REDACTED',
                         is_active = FALSE,
                         password_hash = '!PRIVACY_ERASED',
-                        email = %s,
                         auth_version = auth_version + 1
                     WHERE id = %s
                     """,
-                    [f"erased_{subject_user_id[:8]}@privacy.local", subject_user_id],
+                    [subject_user_id],
                 )
 
                 cursor.execute(

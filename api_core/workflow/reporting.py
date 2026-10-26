@@ -132,8 +132,8 @@ def get_request_metrics_report(
     if duration.total_seconds() > 366 * 86400:
         raise CommandError("PERIOD_INVALID", status=422)
 
-    type_code_filter = query_params.get("type_code")
-    dept_filter = query_params.get("department_id")
+    type_code_filter = (query_params.get("type_code") or "").strip() or None
+    dept_filter = (query_params.get("department_id") or "").strip() or None
 
     dept_uuid = None
     if dept_filter:
@@ -380,7 +380,6 @@ def verify_audit_chain(scope_key: str) -> dict[str, Any]:
                        type_id::text, details, reason, correlation_id::text,
                        occurred_at, prev_hash, hash
                 FROM eas.admin_event
-                WHERE scope_key = 'ADMIN'
                 ORDER BY seq ASC
                 """
             )

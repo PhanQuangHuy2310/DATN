@@ -552,6 +552,21 @@ function Workspace({ user, onLogout }) {
     </div>
   );
 }
+let _bootstrapSessionPromise = null;
+
+function fetchInitialSession() {
+  if (!_bootstrapSessionPromise) {
+    _bootstrapSessionPromise = initializeCsrf()
+      .then(() => api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } }))
+      .finally(() => {
+        setTimeout(() => {
+          _bootstrapSessionPromise = null;
+        }, 50);
+      });
+  }
+  return _bootstrapSessionPromise;
+}
+
 export default function App() {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
@@ -571,10 +586,9 @@ export default function App() {
   }
   useEffect(() => {
     let active = true;
-    initializeCsrf()
-      .then(() => api("/api/v1/auth/me"))
+    fetchInitialSession()
       .then((r) => {
-        if (active) setUser(r.user);
+        if (active) setUser(r?.user || null);
       })
       .catch((e) => {
         if (active) {

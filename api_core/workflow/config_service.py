@@ -76,8 +76,8 @@ def list_config_releases(
     actor: Actor,
     query_params: dict[str, str],
 ) -> dict[str, Any]:
-    type_code_filter = query_params.get("type_code")
-    state_filter = query_params.get("state")
+    type_code_filter = (query_params.get("type_code") or "").strip() or None
+    state_filter = (query_params.get("state") or "").strip() or None
 
     with connection.cursor() as cursor:
         _check_policy_admin(cursor, actor.id)
@@ -227,24 +227,28 @@ def create_or_clone_release(
                 },
                 "required": ["title", "reason"],
             }
+            default_rule = {
+                "id": f"{type_code}-DEFAULT",
+                "default": True,
+                "approvers": ["DIRECT_MANAGER"],
+            }
+            if rt_lifecycle in ("B", "C"):
+                default_rule["executor"] = "IT_EXEC"
+            if rt_lifecycle == "C":
+                default_rule["acceptor"] = "REQUESTER"
+
             route_rules = {
                 "schema_version": 1,
-                "rules": [
-                    {
-                        "id": f"{type_code}-DEFAULT",
-                        "default": True,
-                        "approvers": ["DIRECT_MANAGER"],
-                    }
-                ],
+                "rules": [default_rule],
             }
-            actor_bindings = {"schema_version": 1, "bindings": {}}
+            actor_bindings = {"schema_version": 1, "departments": {}}
             sla_profile = {
                 "schema_version": 1,
                 "clock": "CALENDAR_UTC",
                 "reminder_fraction": 0.5,
                 "approval_hours": 24,
-                "execution_hours": None,
-                "acceptance_hours": None,
+                "execution_hours": 48 if rt_lifecycle in ("B", "C") else None,
+                "acceptance_hours": 24 if rt_lifecycle == "C" else None,
             }
             lifecycle = rt_lifecycle
 
@@ -388,8 +392,7 @@ def update_draft_release(
                 route_rules = %s,
                 actor_bindings = %s,
                 sla_profile = %s,
-                lock_version = lock_version + 1,
-                updated_at = statement_timestamp()
+                lock_version = lock_version + 1
             WHERE id = %s
             RETURNING lock_version
             """,
@@ -578,8 +581,7 @@ def publish_config_release(
                 published_by = %s,
                 published_at = statement_timestamp(),
                 content_sha256 = %s,
-                lock_version = lock_version + 1,
-                updated_at = statement_timestamp()
+                lock_version = lock_version + 1
             WHERE id = %s
             RETURNING lock_version, published_at
             """,
@@ -590,8 +592,7 @@ def publish_config_release(
         cursor.execute(
             """
             UPDATE eas.request_type
-            SET active_release_id = %s,
-                updated_at = statement_timestamp()
+            SET active_release_id = %s
             WHERE id = %s
             """,
             [norm_id, type_id],

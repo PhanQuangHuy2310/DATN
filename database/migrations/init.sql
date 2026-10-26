@@ -732,7 +732,7 @@ INSERT INTO eas.app_user (
     true,
     true,
     1,
-    'pbkdf2_sha256$600000$admin_salt$dummy_hash_for_bootstrap_change_on_first_login'
+    'pbkdf2_sha256$600000$eas_seed_2026$/yIu1DHt5Xd+/BX6FW+U9GwEEuZjgxwk1613D9BohoU='
 ) ON CONFLICT (username) DO NOTHING;
 
 -- Gán vai trò quản trị toàn cục (OPS_ADMIN và POLICY_ADMIN) theo đúng allowlist SRS
@@ -746,3 +746,56 @@ ON CONFLICT DO NOTHING;
 -- ========================================================================================
 -- HOÀN TẤT THIẾT KẾ CƠ SỞ DỮ LIỆU CHUẨN EAS V2.0
 -- ========================================================================================
+
+-- ========================================================================================
+-- PL/pgSQL FUNCTIONS & TRIGGERS ĐỒNG BỘ VỚI 00_eas_supabase_schema.sql
+-- ========================================================================================
+
+CREATE SEQUENCE IF NOT EXISTS eas.request_code_seq AS bigint START WITH 1 NO CYCLE;
+
+CREATE OR REPLACE FUNCTION eas.next_request_code() RETURNS varchar(40)
+LANGUAGE sql VOLATILE SET search_path=pg_catalog,eas
+AS  SELECT ('EAS-'||to_char(clock_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh','YYYY')||'-'||lpad(n::text,greatest(6,length(n::text)),'0'))::varchar(40)
+      FROM (SELECT nextval('eas.request_code_seq'::regclass) AS n) s ;
+
+CREATE OR REPLACE FUNCTION eas.lock_security(p_write boolean DEFAULT false) RETURNS bigint
+LANGUAGE plpgsql SET search_path=pg_catalog,eas AS 
+DECLARE v bigint;
+BEGIN
+ IF p_write THEN SELECT version INTO STRICT v FROM eas.security_epoch WHERE id=1 FOR UPDATE;
+ ELSE SELECT version INTO STRICT v FROM eas.security_epoch WHERE id=1 FOR SHARE; END IF;
+ RETURN v;
+END ;
+
+CREATE OR REPLACE FUNCTION eas.lock_audit_head(p_scope text) RETURNS TABLE(seq bigint,last_hash char(64))
+LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,eas AS 
+ SELECT h.seq,h.last_hash FROM eas.audit_head h WHERE h.scope_key=p_scope FOR UPDATE
+;
+
+CREATE OR REPLACE FUNCTION eas.initialize_request_head() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,eas AS 
+BEGIN
+ INSERT INTO eas.audit_head(scope_key) VALUES('REQ:'||NEW.id::text);
+ RETURN NEW;
+END ;
+
+DROP TRIGGER IF EXISTS request_head ON eas.request;
+CREATE TRIGGER request_head AFTER INSERT ON eas.request FOR EACH ROW EXECUTE FUNCTION eas.initialize_request_head();
+
+CREATE OR REPLACE FUNCTION eas.advance_audit_head() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,eas AS 
+DECLARE scope text; h eas.audit_head;
+BEGIN
+ IF TG_TABLE_NAME='audit_event' THEN scope:='REQ:'||NEW.request_id::text; ELSE scope:='ADMIN'; END IF;
+ SELECT * INTO h FROM eas.audit_head WHERE scope_key=scope FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION USING ERRCODE='23503',MESSAGE='Audit head not found'; END IF;
+ IF NEW.seq<>h.seq+1 OR NEW.prev_hash<>h.last_hash THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Audit sequence/previous hash mismatch'; END IF;
+ UPDATE eas.audit_head SET seq=NEW.seq,last_hash=NEW.hash WHERE scope_key=scope;
+ RETURN NEW;
+END ;
+
+DROP TRIGGER IF EXISTS advance_request_audit ON eas.audit_event;
+CREATE TRIGGER advance_request_audit BEFORE INSERT ON eas.audit_event FOR EACH ROW EXECUTE FUNCTION eas.advance_audit_head();
+
+DROP TRIGGER IF EXISTS advance_admin_audit ON eas.admin_event;
+CREATE TRIGGER advance_admin_audit BEFORE INSERT ON eas.admin_event FOR EACH ROW EXECUTE FUNCTION eas.advance_audit_head();

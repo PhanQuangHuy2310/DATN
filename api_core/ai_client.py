@@ -44,16 +44,32 @@ except Exception:  # noqa: BLE001
 AI_SERVICE_URL = _URL or os.getenv(
     "EAS_AI_SERVICE_URL", os.getenv("AI_SERVICE_URL", "http://localhost:8001")
 ).rstrip("/")
-INTERNAL_SECRET = _SECRET or os.getenv(
-    "EAS_AI_INTERNAL_SECRET",
-    os.getenv("INTERNAL_API_SECRET", ""),
-)
 TIMEOUT = float(_TIMEOUT or os.getenv("EAS_AI_TIMEOUT_SECONDS", "30.0"))
+
+
+def _resolve_internal_secret() -> str:
+    secret = None
+    try:
+        from django.conf import settings as dj_settings
+
+        secret = getattr(dj_settings, "EAS_AI_INTERNAL_SECRET", None)
+    except Exception:  # noqa: BLE001
+        secret = None
+
+    if not secret:
+        secret = os.getenv("EAS_AI_INTERNAL_SECRET") or os.getenv("INTERNAL_API_SECRET")
+
+    if not secret or "replace-with-the-same-random-secret" in str(secret):
+        return "eas-local-dev-shared-internal-secret-2026"
+    return str(secret).strip()
+
+
+INTERNAL_SECRET = _resolve_internal_secret()
 
 
 def _headers(correlation_id: str | None = None) -> dict:
     headers = {
-        "X-Internal-Secret": INTERNAL_SECRET,
+        "X-Internal-Secret": _resolve_internal_secret(),
         "Content-Type": "application/json",
     }
     if correlation_id:
@@ -69,13 +85,13 @@ def _headers(correlation_id: str | None = None) -> dict:
 class AIServiceClient:
     def __init__(self):
         self.base_url = AI_SERVICE_URL
-        self.headers = _headers()
+
+    @property
+    def headers(self) -> dict:
+        return _headers()
 
     def _get_headers(self, correlation_id: str | None = None) -> dict:
-        headers = dict(self.headers)
-        if correlation_id:
-            headers["X-Correlation-ID"] = correlation_id
-        return headers
+        return _headers(correlation_id)
 
     async def health_check(self) -> bool:
         """Kiểm tra AI service còn sống không."""

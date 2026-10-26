@@ -126,6 +126,22 @@ CSRF_TRUSTED_ORIGINS = [
     for item in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
     if item.strip()
 ]
+if ENVIRONMENT in {"development", "test"}:
+    local_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:8088",
+        "http://127.0.0.1:8088",
+    ]
+    for origin in local_origins:
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
 if os.getenv("EAS_TRUST_PROXY_HEADERS", "false").lower() == "true":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
@@ -148,6 +164,8 @@ EAS_AI_INTERNAL_SECRET = os.getenv(
     "EAS_AI_INTERNAL_SECRET",
     os.getenv("INTERNAL_API_SECRET", ""),
 )
+if not EAS_AI_INTERNAL_SECRET and ENVIRONMENT in {"development", "test"}:
+    EAS_AI_INTERNAL_SECRET = "eas-local-dev-shared-internal-secret-2026"
 if (
     ENVIRONMENT == "production"
     and EAS_AI_INTERNAL_SECRET == "datn-internal-secret-change-in-prod"

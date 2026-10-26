@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -91,13 +92,34 @@ def request_list(request: HttpRequest) -> JsonResponse:
     if not 1 <= limit <= 100 or not 0 <= offset <= 10_000:
         return api_error(request, "INVALID_PAGINATION", status=400)
 
-    tab = request.GET.get("tab")
-    status_filter = request.GET.get("status")
-    search_filter = request.GET.get("q", "").strip()[:100] or None
-    type_code_filter = request.GET.get("type_code")
-    dept_filter = request.GET.get("department_id")
-    from_filter = request.GET.get("created_from")
-    to_filter = request.GET.get("created_to")
+    tab = (request.GET.get("tab") or "").strip() or None
+    status_filter = (request.GET.get("status") or "").strip() or None
+    search_filter = (request.GET.get("q") or "").strip()[:100] or None
+    type_code_filter = (request.GET.get("type_code") or "").strip() or None
+    dept_raw = (request.GET.get("department_id") or "").strip() or None
+    from_raw = (request.GET.get("created_from") or "").strip() or None
+    to_raw = (request.GET.get("created_to") or "").strip() or None
+
+    dept_filter = None
+    if dept_raw:
+        try:
+            dept_filter = str(UUID(dept_raw))
+        except (ValueError, TypeError):
+            return api_error(request, "INVALID_DEPARTMENT_ID", status=400)
+
+    from_filter = None
+    if from_raw:
+        try:
+            from_filter = datetime.fromisoformat(from_raw.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return api_error(request, "INVALID_DATE_FILTER", status=400)
+
+    to_filter = None
+    if to_raw:
+        try:
+            to_filter = datetime.fromisoformat(to_raw.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return api_error(request, "INVALID_DATE_FILTER", status=400)
 
     sql = """
         SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,

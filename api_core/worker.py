@@ -138,14 +138,14 @@ def acknowledge_outbox(item: OutboxItem) -> None:
                 """
                 SELECT u.is_active,
                        CASE
-                         WHEN %s IS NULL THEN TRUE
+                         WHEN %s::uuid IS NULL THEN TRUE
                          WHEN r.requester_id = u.id THEN TRUE
                          WHEN p.id IS NOT NULL AND p.read_revoked_at IS NULL THEN TRUE
                          ELSE FALSE
                        END AS can_read
                 FROM eas.app_user u
-                LEFT JOIN eas.request r ON r.id = %s
-                LEFT JOIN eas.request_participant p ON p.request_id = %s AND p.user_id = u.id
+                LEFT JOIN eas.request r ON r.id = %s::uuid
+                LEFT JOIN eas.request_participant p ON p.request_id = %s::uuid AND p.user_id = u.id
                 WHERE u.id = %s
                 """,
                 [item.request_id, item.request_id, item.request_id, recipient_id],

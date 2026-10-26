@@ -19,6 +19,7 @@ from .service import (
     find_user,
     load_actor_from_session,
     require_actor,
+    verify_user_password,
 )
 
 
@@ -130,7 +131,7 @@ def login(request: HttpRequest) -> JsonResponse:
 
     user = find_user(username)
     valid = bool(
-        user and user.is_active and check_password(password, user.password_hash)
+        user and user.is_active and verify_user_password(password, user.password_hash)
     )
     if not valid:
         _record_failed_login(key)
@@ -162,6 +163,11 @@ def logout(request: HttpRequest) -> JsonResponse:
     session_id = request.session.get("session_id")
     if isinstance(session_id, str):
         cache.delete(f"eas:session:{session_id}")
+        cache.set(
+            f"eas:session:revoked:{session_id}",
+            "1",
+            timeout=settings.SESSION_COOKIE_AGE,
+        )
     request.session.flush()
     return JsonResponse(
         {"status": "logged_out", "correlation_id": correlation_id(request)}

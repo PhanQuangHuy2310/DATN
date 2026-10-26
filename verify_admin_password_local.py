@@ -19,14 +19,12 @@ if __name__ == "__main__":
     import django
 
     django.setup()
-    from django.contrib.auth.hashers import check_password
-
-    from api_core.authn.service import find_user
+    from api_core.authn.service import find_user, verify_user_password
 
     obj = find_user(user)
     print("USER_EXISTS:", bool(obj))
     print("ACTIVE:", bool(obj.is_active) if obj else False)
     if obj:
         password = getpass.getpass("Password (hidden): ")
-        print("PASSWORD_MATCH:", bool(check_password(password, obj.password_hash)))
+        print("PASSWORD_MATCH:", bool(verify_user_password(password, obj.password_hash)))
         del password

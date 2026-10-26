@@ -207,10 +207,20 @@ def main(argv=None):
     dbsecret = (
         effective.get("EAS_AI_INTERNAL_SECRET")
         or effective.get("INTERNAL_API_SECRET")
-        or ""
+        or (
+            "eas-local-dev-shared-internal-secret-2026"
+            if effective.get("ENVIRONMENT", "development") in {"development", "test"}
+            else ""
+        )
     )
     aisecret = (
-        os.environ.get("INTERNAL_API_SECRET") or ai.get("INTERNAL_API_SECRET") or ""
+        os.environ.get("INTERNAL_API_SECRET")
+        or ai.get("INTERNAL_API_SECRET")
+        or (
+            "eas-local-dev-shared-internal-secret-2026"
+            if effective.get("ENVIRONMENT", "development") in {"development", "test"}
+            else ""
+        )
     )
     if dbsecret and aisecret and dbsecret == aisecret:
         c.add(
@@ -224,11 +234,11 @@ def main(argv=None):
             "Django ↔ AI secret",
             "EAS_AI_INTERNAL_SECRET của Django khác INTERNAL_API_SECRET của AI",
         )
-    if not aisecret:
+    if not ai.get("INTERNAL_API_SECRET"):
         c.add(
             "WARN",
             "AI secret missing",
-            "Chưa cấu hình INTERNAL_API_SECRET trong ai_service/.env",
+            "Chưa cấu hình INTERNAL_API_SECRET trong ai_service/.env (đang dùng fallback local)",
         )
     aiurl = effective.get("EAS_AI_SERVICE_URL", "http://ai-service:8001").rstrip("/")
     if aiurl == "http://127.0.0.1:8001" or aiurl == "http://localhost:8001":
@@ -318,18 +328,60 @@ def main(argv=None):
             "Gemini",
             "Chưa cấu hình khóa; API tóm tắt dùng Gemini có thể không chạy",
         )
-    workerurl = worker.get("EAS_WORKER_DATABASE_URL") or root.get(
-        "EAS_WORKER_DATABASE_URL"
+    raw_worker_url = worker.get("EAS_WORKER_DATABASE_URL") or root.get(
+        "EAS_WORKER_DATABASE_URL", ""
     )
-    if not workerurl:
+    placeholders = (
+        "YOUR_PROJECT_REF",
+        "YOUR_POOLER_HOST",
+        "ENCODED_PASSWORD",
+        "YOUR_PASSWORD",
+    )
+    has_placeholder = bool(
+        raw_worker_url and any(ph in raw_worker_url for ph in placeholders)
+    )
+
+    w_user = worker.get("WORKER_DB_USER") or effective.get("WORKER_DB_USER", "")
+    w_pass = worker.get("WORKER_DB_PASSWORD") or effective.get(
+        "WORKER_DB_PASSWORD", ""
+    )
+
+    workerurl = None
+    if (not raw_worker_url or has_placeholder) and w_user and w_pass:
+        host = effective.get("DB_HOST", "127.0.0.1")
+        port = effective.get("DB_PORT", "5432")
+        dbname = effective.get("DB_NAME", "postgres")
+        workerurl = f"postgresql://{quote(w_user, safe='.')}:{quote(w_pass, safe='')}@{host}:{port}/{dbname}"
+        has_placeholder = False
+    elif raw_worker_url and not has_placeholder:
+        workerurl = raw_worker_url
+
+    if not raw_worker_url and not workerurl:
         c.add(
             "WARN",
             "Worker DSN",
             "Không tìm thấy EAS_WORKER_DATABASE_URL trong .env.worker (hoặc .env Docker)",
         )
+    elif has_placeholder:
+        c.add(
+            "WARN",
+            "Worker DSN",
+            "EAS_WORKER_DATABASE_URL chứa chuỗi mẫu chưa cấu hình (YOUR_PROJECT_REF/YOUR_POOLER_HOST/ENCODED_PASSWORD)",
+        )
+        workerurl = None
     else:
         try:
             w = urlsplit(workerurl)
+            if w.username and w.password:
+                user = unquote(w.username)
+                pwd = unquote(w.password)
+                host_part = w.hostname
+                if w.port:
+                    host_part = f"{host_part}:{w.port}"
+                workerurl = f"{w.scheme}://{quote(user, safe='.')}:{quote(pwd, safe='')}@{host_part}{w.path}"
+                if w.query:
+                    workerurl += f"?{w.query}"
+                w = urlsplit(workerurl)
             if "worker" not in unquote(w.username or ""):
                 c.add(
                     "WARN",
@@ -349,6 +401,7 @@ def main(argv=None):
                 )
         except Exception:
             c.add("FAIL", "Worker config", "URL worker không hợp lệ")
+            workerurl = None
     if a.config_only:
         c.add(
             "SKIP",

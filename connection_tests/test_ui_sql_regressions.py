@@ -86,6 +86,59 @@ class EASRegressionTests(unittest.TestCase):
         ]:
             self.assertIn("PageControls", (ROOT / path).read_text(encoding="utf-8"))
 
+    def test_auth_me_optional_bootstrap_and_favicon_prevent_401_404(self):
+        auth_service = (ROOT / "api_core/authn/service.py").read_text(encoding="utf-8")
+        self.assertIn("X-Auth-Optional", auth_service)
+        self.assertIn('"authenticated": False', auth_service)
+
+        urls_py = (ROOT / "api_core/config/urls.py").read_text(encoding="utf-8")
+        self.assertIn('path("", health_views.live', urls_py)
+        self.assertIn('path("favicon.ico"', urls_py)
+
+        self.assertTrue((ROOT / "web_client/public/favicon.svg").is_file())
+        self.assertTrue((ROOT / "web_client/public/favicon.ico").is_file())
+
+        app_jsx = (ROOT / "web_client/src/App.jsx").read_text(encoding="utf-8")
+        self.assertIn("X-Auth-Optional", app_jsx)
+        self.assertIn("_bootstrapSessionPromise", app_jsx)
+
+        vite_cfg = (ROOT / "web_client/vite.config.js").read_text(encoding="utf-8")
+        self.assertIn('"/ai"', vite_cfg)
+        self.assertIn("127.0.0.1:8001", vite_cfg)
+
+    def test_sql_queries_do_not_reference_nonexistent_columns(self):
+        config_src = (ROOT / "api_core/workflow/config_service.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("updated_at = statement_timestamp()", config_src)
+
+        reporting_src = (ROOT / "api_core/workflow/reporting.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("WHERE scope_key = 'ADMIN'", reporting_src)
+
+        privacy_src = (
+            ROOT / "api_core/management/commands/privacy_case.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("u.email", privacy_src)
+        self.assertNotIn("email = %s", privacy_src)
+
+    def test_service_and_worker_nullable_uuid_parameters_are_typed(self):
+        service_src = (ROOT / "api_core/workflow/service.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "%s::uuid IS NULL AND a.state IN ('READY', 'RUNNING') OR a.id = %s::uuid",
+            service_src,
+        )
+
+        worker_src = (ROOT / "api_core/worker.py").read_text(encoding="utf-8")
+        self.assertIn("WHEN %s::uuid IS NULL THEN TRUE", worker_src)
+        self.assertIn("LEFT JOIN eas.request r ON r.id = %s::uuid", worker_src)
+        self.assertIn(
+            "LEFT JOIN eas.request_participant p ON p.request_id = %s::uuid", worker_src
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

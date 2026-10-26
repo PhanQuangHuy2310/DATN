@@ -779,7 +779,7 @@ def report_execution_issue(
             JOIN eas.request_revision v ON v.id = r.current_revision_id
             JOIN eas.workflow_instance i ON i.revision_id = v.id AND i.state = 'ACTIVE'
             JOIN eas.execution_attempt a ON a.instance_id = i.id
-              AND (%s IS NULL AND a.state IN ('READY', 'RUNNING') OR a.id = %s)
+              AND (%s::uuid IS NULL AND a.state IN ('READY', 'RUNNING') OR a.id = %s::uuid)
             WHERE r.id = %s
             ORDER BY a.attempt_no DESC LIMIT 1
             FOR UPDATE OF r, i, a

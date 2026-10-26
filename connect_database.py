@@ -78,6 +78,61 @@ def database_url(environ=None):
     )
 
 
+def worker_database_url(environ=None):
+    env = os.environ if environ is None else environ
+    raw = (env.get("EAS_WORKER_DATABASE_URL") or "").strip()
+    placeholders = (
+        "YOUR_PROJECT_REF",
+        "YOUR_POOLER_HOST",
+        "ENCODED_PASSWORD",
+        "YOUR_PASSWORD",
+    )
+    has_placeholder = any(ph in raw for ph in placeholders)
+
+    w_user = (env.get("WORKER_DB_USER") or "").strip()
+    w_pass = (env.get("WORKER_DB_PASSWORD") or "").strip()
+    if (not raw or has_placeholder) and w_user and w_pass:
+        host = env.get("DB_HOST", "127.0.0.1").strip()
+        port = env.get("DB_PORT", "5432").strip()
+        name = env.get("DB_NAME", "postgres").strip()
+        sslmode = env.get("DB_SSLMODE", "require")
+        return (
+            f"postgresql://{quote(w_user, safe='.')}:{quote(w_pass, safe='')}"
+            f"@{host}:{port}/{quote(name, safe='')}?sslmode={sslmode}"
+        )
+
+    if not raw:
+        raise ConfigurationError("Thieu cau hinh EAS_WORKER_DATABASE_URL trong .env.worker.")
+
+    if has_placeholder:
+        raise ConfigurationError(
+            f"EAS_WORKER_DATABASE_URL chua chuoi mau chua thay the ({', '.join(ph for ph in placeholders if ph in raw)})."
+        )
+
+    try:
+        from urllib.parse import unquote, urlsplit
+
+        parsed = urlsplit(raw)
+        if parsed.scheme not in ("postgres", "postgresql"):
+            raise ConfigurationError("EAS_WORKER_DATABASE_URL phai la URL PostgreSQL.")
+        if parsed.username and parsed.password:
+            user = unquote(parsed.username)
+            pwd = unquote(parsed.password)
+            host_part = parsed.hostname
+            if parsed.port:
+                host_part = f"{host_part}:{parsed.port}"
+            encoded = f"{parsed.scheme}://{quote(user, safe='.')}:{quote(pwd, safe='')}@{host_part}{parsed.path}"
+            if parsed.query:
+                encoded += f"?{parsed.query}"
+            return encoded
+    except Exception as exc:
+        if isinstance(exc, ConfigurationError):
+            raise
+        raise ConfigurationError(f"EAS_WORKER_DATABASE_URL khong hop le: {exc}") from exc
+
+    return raw
+
+
 def check_database(url):
     try:
         import psycopg
