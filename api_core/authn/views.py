@@ -5,7 +5,6 @@ from typing import Any
 from uuid import uuid4
 
 from django.conf import settings
-from django.contrib.auth.hashers import check_password
 from django.core.cache import cache
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie

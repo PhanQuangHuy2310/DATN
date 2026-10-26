@@ -57,7 +57,14 @@ class Command(BaseCommand):
                 self.stderr.write(f"ERROR: Privacy case '{norm_case_id}' not found.")
                 sys.exit(2)
 
-            p_id, subject_user_id, case_type, current_status, username, _display_name = row
+            (
+                p_id,
+                subject_user_id,
+                case_type,
+                current_status,
+                username,
+                _display_name,
+            ) = row
 
             cursor.execute(
                 """

@@ -16,7 +16,7 @@ try:
 except (ImportError, AttributeError):
     from ai_service.config import get_settings
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from loguru import logger
 from pydantic import BaseModel
 
@@ -134,7 +134,7 @@ def _local_extractive_summarize(req: SummarizeRequest) -> SummarizeResult:
 
     if req.data and isinstance(req.data, dict):
         for k in ("reason", "department", "vendor", "period", "purpose", "item_name"):
-            if k in req.data and req.data[k]:
+            if req.data.get(k):
                 key_points.append(f"{k.capitalize()}: {req.data[k]}")
 
     details = []

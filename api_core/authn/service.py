@@ -180,13 +180,12 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
         return None
     expected_marker = f"{user_id}:{auth_version}"
     active_session = cache.get(f"eas:session:{session_id}")
-    if active_session != expected_marker:
-        if (
-            active_session is not None
-            or getattr(settings, "ENVIRONMENT", "") != "development"
-            or getattr(settings, "REDIS_URL", "")
-        ):
-            return None
+    if active_session != expected_marker and (
+        active_session is not None
+        or getattr(settings, "ENVIRONMENT", "") != "development"
+        or getattr(settings, "REDIS_URL", "")
+    ):
+        return None
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -200,7 +199,10 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
         user = cursor.fetchone()
         if not user:
             return None
-        if active_session is None and getattr(settings, "ENVIRONMENT", "") == "development":
+        if (
+            active_session is None
+            and getattr(settings, "ENVIRONMENT", "") == "development"
+        ):
             cache.set(
                 f"eas:session:{session_id}",
                 expected_marker,
@@ -236,10 +238,10 @@ def require_actor(*required_roles: str) -> Callable:
             actor = load_actor_from_session(request)
             if actor is None:
                 request.session.flush()
-                if (
-                    request.headers.get("X-Auth-Optional") == "1"
-                    and request.path in {"/api/v1/auth/me", "/api/v1/me"}
-                ):
+                if request.headers.get("X-Auth-Optional") == "1" and request.path in {
+                    "/api/v1/auth/me",
+                    "/api/v1/me",
+                }:
                     return JsonResponse(
                         {
                             "user": None,
