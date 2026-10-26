@@ -1,5 +1,6 @@
 import json
-from unittest.mock import patch
+from typing import ClassVar
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from django.test import SimpleTestCase
@@ -9,6 +10,8 @@ from api_core.workflow.service import CommandError, CommandResult
 
 
 class WorkflowApiContractTests(SimpleTestCase):
+    databases: ClassVar[set[str]] = {"default"}
+
     def setUp(self):
         self.actor = Actor(
             id=str(uuid4()),
@@ -68,6 +71,20 @@ class WorkflowApiContractTests(SimpleTestCase):
     def test_unauthenticated_request_list_fails_closed(self):
         response = self.client.get("/api/v1/requests")
         self.assertEqual(response.status_code, 401)
+
+    @patch("api_core.workflow.views.connection.cursor")
+    @patch("api_core.authn.service.load_actor_from_session")
+    def test_authenticated_request_list_with_tabs(self, load_actor, mock_cursor_ctx):
+        load_actor.return_value = self.actor
+        mock_cursor = MagicMock()
+        mock_cursor_ctx.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = []
+
+        for tab in ("mine", "approval", "execution", "acceptance", ""):
+            query = f"?limit=20&offset=0&tab={tab}" if tab else "?limit=20&offset=0"
+            response = self.client.get(f"/api/v1/requests{query}")
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("items", response.json())
 
     @patch("api_core.integrations.ai_service.ai_client_sync.classify_request")
     @patch("api_core.authn.service.load_actor_from_session")

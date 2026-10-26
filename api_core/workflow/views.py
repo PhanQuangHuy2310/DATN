@@ -98,36 +98,59 @@ def request_list(request: HttpRequest) -> JsonResponse:
     from_filter = request.GET.get("created_from")
     to_filter = request.GET.get("created_to")
 
-    sql = """
-        SELECT DISTINCT r.id::text, r.code, rt.code, r.status, r.lock_version,
-               r.updated_at, r.created_at
-        FROM eas.request r
-        JOIN eas.request_type rt ON rt.id = r.type_id
-        LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
-        LEFT JOIN eas.app_user u ON u.id = r.requester_id
-        WHERE (%s IS NULL OR r.status = %s)
-          AND (%s IS NULL OR rt.code = %s)
-          AND (%s IS NULL OR COALESCE(v.department_id, u.department_id) = %s)
-          AND (%s IS NULL OR r.created_at >= %s)
-          AND (%s IS NULL OR r.created_at <= %s)
-          AND (
-            (%s = 'mine' AND r.requester_id = %s)
-            OR (%s = 'approval' AND EXISTS (
+    where_clauses = []
+    params = []
+
+    if status_filter:
+        where_clauses.append("r.status = %s")
+        params.append(status_filter)
+    if type_code_filter:
+        where_clauses.append("rt.code = %s")
+        params.append(type_code_filter)
+    if dept_filter:
+        where_clauses.append("COALESCE(v.department_id, u.department_id) = %s")
+        params.append(dept_filter)
+    if from_filter:
+        where_clauses.append("r.created_at >= %s")
+        params.append(from_filter)
+    if to_filter:
+        where_clauses.append("r.created_at <= %s")
+        params.append(to_filter)
+
+    valid_tab = tab if tab in ("mine", "approval", "execution", "acceptance") else None
+    if valid_tab == "mine":
+        where_clauses.append("r.requester_id = %s")
+        params.append(request.actor.id)
+    elif valid_tab == "approval":
+        where_clauses.append(
+            """EXISTS (
               SELECT 1 FROM eas.approval_step ast
               WHERE ast.request_id = r.id AND ast.state = 'ACTIVE' AND ast.assignee_id = %s
-            ))
-            OR (%s = 'execution' AND EXISTS (
+            )"""
+        )
+        params.append(request.actor.id)
+    elif valid_tab == "execution":
+        where_clauses.append(
+            """EXISTS (
               SELECT 1 FROM eas.workflow_instance wi
               JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
               WHERE wi.request_id = r.id AND ea.state IN ('READY', 'RUNNING') AND ea.executor_id = %s
-            ))
-            OR (%s = 'acceptance' AND EXISTS (
+            )"""
+        )
+        params.append(request.actor.id)
+    elif valid_tab == "acceptance":
+        where_clauses.append(
+            """EXISTS (
               SELECT 1 FROM eas.workflow_instance wi
               JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
               WHERE wi.request_id = r.id AND wi.state = 'ACTIVE' AND wi.lifecycle = 'C'
                 AND wi.acceptor_id = %s AND ea.state = 'SUBMITTED'
-            ))
-            OR (%s IS NULL AND (
+            )"""
+        )
+        params.append(request.actor.id)
+    else:
+        where_clauses.append(
+            """(
                 r.requester_id = %s
                 OR (
                   r.status != 'DRAFT'
@@ -148,38 +171,23 @@ def request_list(request: HttpRequest) -> JsonResponse:
                       AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
                   )
                 )
-            ))
-          )
+            )"""
+        )
+        params.extend([request.actor.id, request.actor.id, request.actor.id])
+
+    where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    sql = f"""
+        SELECT DISTINCT r.id::text, r.code, rt.code, r.status, r.lock_version,
+               r.updated_at, r.created_at
+        FROM eas.request r
+        JOIN eas.request_type rt ON rt.id = r.type_id
+        LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
+        LEFT JOIN eas.app_user u ON u.id = r.requester_id
+        {where_sql}
         ORDER BY r.updated_at DESC, r.id DESC
         LIMIT %s OFFSET %s
     """
-    valid_tab = tab if tab in ("mine", "approval", "execution", "acceptance") else None
-    params = [
-        status_filter,
-        status_filter,
-        type_code_filter,
-        type_code_filter,
-        dept_filter,
-        dept_filter,
-        from_filter,
-        from_filter,
-        to_filter,
-        to_filter,
-        valid_tab,
-        request.actor.id,
-        valid_tab,
-        request.actor.id,
-        valid_tab,
-        request.actor.id,
-        valid_tab,
-        request.actor.id,
-        valid_tab,
-        request.actor.id,
-        request.actor.id,
-        request.actor.id,
-        limit + 1,
-        offset,
-    ]
+    params.extend([limit + 1, offset])
 
     with connection.cursor() as cursor:
         cursor.execute(sql, params)

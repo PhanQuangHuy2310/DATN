@@ -39,16 +39,21 @@ def list_notifications(actor: Actor, query_params: dict[str, str]) -> dict[str, 
         )
         unread_count = cursor.fetchone()[0]
 
+        conditions = ["recipient_id = %s"]
+        params = [actor.id]
+        if unread_only:
+            conditions.append("read_at IS NULL")
+        params.extend([limit + 1, offset])
+
         cursor.execute(
-            """
+            f"""
             SELECT id::text, event_id::text, request_id::text, label, read_at, created_at
             FROM eas.notification
-            WHERE recipient_id = %s
-              AND (%s IS FALSE OR read_at IS NULL)
+            WHERE {" AND ".join(conditions)}
             ORDER BY created_at DESC, id DESC
             LIMIT %s OFFSET %s
             """,
-            [actor.id, unread_only, limit + 1, offset],
+            params,
         )
         rows = cursor.fetchall()
 
