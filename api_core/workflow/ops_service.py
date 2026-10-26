@@ -62,6 +62,7 @@ def list_ops_metadata(
         raise CommandError("INVALID_PAGINATION", status=400)
 
     status_filter = query_params.get("status")
+    search_filter = query_params.get("q", "").strip()[:100] or None
     type_code_filter = query_params.get("type_code")
     dept_filter = query_params.get("department_id")
 
@@ -88,9 +89,10 @@ def list_ops_metadata(
         LEFT JOIN eas.approval_step s ON s.instance_id = i.id AND s.state = 'ACTIVE'
         LEFT JOIN eas.execution_attempt a ON a.instance_id = i.id AND a.state IN ('READY', 'RUNNING', 'SUBMITTED')
         LEFT JOIN eas.sla_stage sla ON sla.request_id = r.id AND sla.closed_at IS NULL
-        WHERE (%s IS NULL OR r.status = %s)
-          AND (%s IS NULL OR rt.code = %s)
-          AND (%s IS NULL OR COALESCE(v.department_id, u.department_id) = %s)
+        WHERE (%s::text IS NULL OR r.status = %s)
+          AND (%s::text IS NULL OR STRPOS(LOWER(r.code), LOWER(%s::text)) > 0)
+          AND (%s::text IS NULL OR rt.code = %s)
+          AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
           AND EXISTS (
             SELECT 1 FROM eas.role_membership rm
             WHERE rm.user_id = %s AND rm.role = 'OPS_ADMIN' AND rm.revoked_at IS NULL
@@ -103,6 +105,8 @@ def list_ops_metadata(
     params = [
         status_filter,
         status_filter,
+        search_filter,
+        search_filter,
         type_code_filter,
         type_code_filter,
         dept_uuid,

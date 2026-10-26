@@ -96,15 +96,23 @@ export function errorText(e) {
     REQUEST_STATE_CONFLICT: "Trạng thái đã thay đổi. Hãy tải lại hồ sơ.",
     FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
     INVALID_CREDENTIALS: "Tên đăng nhập hoặc mật khẩu không đúng.",
+    DATABASE_QUERY_FAILED: "Máy chủ gặp lỗi truy vấn dữ liệu. Vui lòng thử lại hoặc báo quản trị viên.",
+    SERVER_ERROR: "Máy chủ đang gặp lỗi (HTTP 500). Vui lòng thử lại sau.",
+    INVALID_RESPONSE: "Máy chủ trả về dữ liệu không đúng định dạng. Hãy kiểm tra log Backend.",
+    INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng.",
+    PASSWORD_REUSE_NOT_ALLOWED: "Mật khẩu mới phải khác mật khẩu cũ.",
+    PASSWORD_POLICY_VIOLATION: "Mật khẩu mới phải có 12–128 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt và không chứa tên đăng nhập.",
+    LOGIN_RATE_LIMITED: "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.",
     VALIDATION_FAILED: "Dữ liệu chưa hợp lệ.",
     VALIDATION_STALE:
       "Cấu hình đã thay đổi. Hãy kiểm tra lại trước khi công bố.",
     ATTACHMENT_NOT_CLEAN: "Tệp chưa vượt qua kiểm tra. Hãy kiểm tra lại tệp.",
   };
   return (
-    (e.status === 401
+    (messages[e.message] || (e.status === 401
       ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
-      : messages[e.message] || e.message) +
-    (e.fields ? " " + JSON.stringify(e.fields) : "")
+      : e.message)) +
+    (e.fields ? " " + JSON.stringify(e.fields) : "") +
+    (e.correlationId ? ` (Mã lỗi: ${e.correlationId})` : "")
   );
 }

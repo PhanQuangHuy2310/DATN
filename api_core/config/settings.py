@@ -43,6 +43,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "api_core.middleware.ApiDatabaseErrorMiddleware",
 ]
 
 ROOT_URLCONF = "api_core.config.urls"

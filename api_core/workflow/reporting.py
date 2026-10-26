@@ -39,21 +39,16 @@ def list_notifications(actor: Actor, query_params: dict[str, str]) -> dict[str, 
         )
         unread_count = cursor.fetchone()[0]
 
-        conditions = ["recipient_id = %s"]
-        params = [actor.id]
-        if unread_only:
-            conditions.append("read_at IS NULL")
-        params.extend([limit + 1, offset])
-
         cursor.execute(
-            f"""
+            """
             SELECT id::text, event_id::text, request_id::text, label, read_at, created_at
             FROM eas.notification
-            WHERE {" AND ".join(conditions)}
+            WHERE recipient_id = %s
+              AND (%s::boolean IS FALSE OR read_at IS NULL)
             ORDER BY created_at DESC, id DESC
             LIMIT %s OFFSET %s
             """,
-            params,
+            [actor.id, unread_only, limit + 1, offset],
         )
         rows = cursor.fetchall()
 
@@ -156,8 +151,8 @@ def get_request_metrics_report(
         WHERE r.status != 'DRAFT'
           AND r.created_at >= %s
           AND r.created_at <= %s
-          AND (%s IS NULL OR rt.code = %s)
-          AND (%s IS NULL OR COALESCE(v.department_id, u.department_id) = %s)
+          AND (%s::text IS NULL OR rt.code = %s)
+          AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
           AND (
             (r.requester_id = %s)
             OR (

@@ -105,32 +105,23 @@ def run_diagnostics() -> int:
                 )
                 count = cur.fetchone()[0]
 
-                # Check list query (unread=false -> no read_at condition)
-                conditions = ["recipient_id = %s"]
-                params = [sample_uuid, 21, 0]
-                query_eas002 = f"""
+                # Check list query (unread=false -> evaluates %s::boolean IS FALSE)
+                query_eas002 = """
                     SELECT id::text, event_id::text, request_id::text, label, read_at, created_at
                     FROM eas.notification
-                    WHERE {" AND ".join(conditions)}
+                    WHERE recipient_id = %s
+                      AND (%s::boolean IS FALSE OR read_at IS NULL)
                     ORDER BY created_at DESC, id DESC
                     LIMIT %s OFFSET %s
                 """
-                cur.execute(query_eas002, params)
+                cur.execute(query_eas002, [sample_uuid, False, 21, 0])
                 rows_eas002 = cur.fetchall()
                 print(
                     f"[PASS] EAS-002: Query notifications (unread=false) thành công (count={count}, rows={len(rows_eas002)})."
                 )
 
                 # Also test unread=true
-                conditions_unread = ["recipient_id = %s", "read_at IS NULL"]
-                query_unread = f"""
-                    SELECT id::text, event_id::text, request_id::text, label, read_at, created_at
-                    FROM eas.notification
-                    WHERE {" AND ".join(conditions_unread)}
-                    ORDER BY created_at DESC, id DESC
-                    LIMIT %s OFFSET %s
-                """
-                cur.execute(query_unread, params)
+                cur.execute(query_eas002, [sample_uuid, True, 21, 0])
                 rows_unread = cur.fetchall()
                 print(
                     f"[PASS] EAS-002: Query notifications (unread=true) thành công (rows={len(rows_unread)})."
@@ -152,71 +143,91 @@ def run_diagnostics() -> int:
             try:
                 # Dynamic WHERE clauses matching fixed api_core/workflow/views.py
                 for test_tab in ["mine", "approval", "execution", "acceptance", "all"]:
-                    where_clauses = []
-                    tab_params: list[object] = []
-
-                    if test_tab == "mine":
-                        where_clauses.append("r.requester_id = %s")
-                        tab_params.append(sample_uuid)
-                    elif test_tab == "approval":
-                        where_clauses.append(
-                            """EXISTS (
-                              SELECT 1 FROM eas.approval_step ast
-                              WHERE ast.request_id = r.id AND ast.state = 'ACTIVE' AND ast.assignee_id = %s
-                            )"""
-                        )
-                        tab_params.append(sample_uuid)
-                    elif test_tab == "execution":
-                        where_clauses.append(
-                            """EXISTS (
-                              SELECT 1 FROM eas.workflow_instance wi
-                              JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
-                              WHERE wi.request_id = r.id AND ea.state IN ('READY', 'RUNNING') AND ea.executor_id = %s
-                            )"""
-                        )
-                        tab_params.append(sample_uuid)
-                    elif test_tab == "acceptance":
-                        where_clauses.append(
-                            """EXISTS (
-                              SELECT 1 FROM eas.workflow_instance wi
-                              JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
-                              WHERE wi.request_id = r.id AND wi.state = 'ACTIVE' AND wi.lifecycle = 'C'
-                                AND wi.acceptor_id = %s AND ea.state = 'SUBMITTED'
-                            )"""
-                        )
-                        tab_params.append(sample_uuid)
-                    else:
-                        where_clauses.append(
-                            """(
-                                r.requester_id = %s
-                                OR (
-                                  r.status != 'DRAFT'
-                                  AND EXISTS (
-                                    SELECT 1 FROM eas.role_membership rm
-                                    WHERE rm.user_id = %s
-                                      AND rm.role IN ('APPROVER', 'EXECUTOR', 'LINE_MANAGER', 'SYS_ADMIN', 'AUDITOR')
-                                      AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
-                                  )
-                                )
-                            )"""
-                        )
-                        tab_params.extend([sample_uuid, sample_uuid])
-
-                    where_sql = (
-                        f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-                    )
-                    query_eas003 = f"""
-                        SELECT DISTINCT r.id::text, r.code, rt.code, r.status, r.lock_version,
+                    valid_tab = test_tab if test_tab in ("mine", "approval", "execution", "acceptance") else None
+                    tab_params = [
+                        None,  # status_filter
+                        None,
+                        None,  # search_filter
+                        None,
+                        None,  # type_code_filter
+                        None,
+                        None,  # dept_filter
+                        None,
+                        None,  # from_filter
+                        None,
+                        None,  # to_filter
+                        None,
+                        valid_tab,
+                        sample_uuid,
+                        valid_tab,
+                        sample_uuid,
+                        valid_tab,
+                        sample_uuid,
+                        valid_tab,
+                        sample_uuid,
+                        valid_tab,
+                        sample_uuid,
+                        sample_uuid,
+                        sample_uuid,
+                        21,
+                        0,
+                    ]
+                    query_eas003 = """
+                        SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                                r.updated_at, r.created_at
                         FROM eas.request r
                         JOIN eas.request_type rt ON rt.id = r.type_id
                         LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
                         LEFT JOIN eas.app_user u ON u.id = r.requester_id
-                        {where_sql}
+                        WHERE (%s::text IS NULL OR r.status = %s)
+                          AND (%s::text IS NULL OR STRPOS(LOWER(r.code), LOWER(%s::text)) > 0)
+                          AND (%s::text IS NULL OR rt.code = %s)
+                          AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
+                          AND (%s::timestamptz IS NULL OR r.created_at >= %s::timestamptz)
+                          AND (%s::timestamptz IS NULL OR r.created_at <= %s::timestamptz)
+                          AND (
+                            (%s::text = 'mine' AND r.requester_id = %s)
+                            OR (%s::text = 'approval' AND EXISTS (
+                              SELECT 1 FROM eas.approval_step ast
+                              WHERE ast.request_id = r.id AND ast.state = 'ACTIVE' AND ast.assignee_id = %s
+                            ))
+                            OR (%s::text = 'execution' AND EXISTS (
+                              SELECT 1 FROM eas.workflow_instance wi
+                              JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
+                              WHERE wi.request_id = r.id AND ea.state IN ('READY', 'RUNNING') AND ea.executor_id = %s
+                            ))
+                            OR (%s::text = 'acceptance' AND EXISTS (
+                              SELECT 1 FROM eas.workflow_instance wi
+                              JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
+                              WHERE wi.request_id = r.id AND wi.state = 'ACTIVE' AND wi.lifecycle = 'C'
+                                AND wi.acceptor_id = %s AND ea.state = 'SUBMITTED'
+                            ))
+                            OR (%s::text IS NULL AND (
+                                r.requester_id = %s
+                                OR (
+                                  r.status != 'DRAFT'
+                                  AND EXISTS (
+                                    SELECT 1 FROM eas.request_participant p
+                                    WHERE p.request_id = r.id AND p.user_id = %s AND p.read_revoked_at IS NULL
+                                  )
+                                )
+                                OR (
+                                  r.status != 'DRAFT'
+                                  AND EXISTS (
+                                    SELECT 1 FROM eas.role_membership rm
+                                    WHERE rm.user_id = %s AND rm.role = 'AUDITOR'
+                                      AND rm.revoked_at IS NULL
+                                      AND rm.valid_from <= statement_timestamp()
+                                      AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                                      AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = COALESCE(v.department_id, u.department_id))
+                                      AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
+                                  )
+                                )
+                            ))
+                          )
                         ORDER BY r.updated_at DESC, r.id DESC
                         LIMIT %s OFFSET %s
                     """
-                    tab_params.extend([21, 0])
                     cur.execute(query_eas003, tab_params)
                     rows_tab = cur.fetchall()
                     print(

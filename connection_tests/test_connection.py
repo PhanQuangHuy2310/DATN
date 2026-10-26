@@ -12,12 +12,12 @@ import connect_database as db
 
 class ConnectionTests(unittest.TestCase):
     def config(self):
-        return dict(
-            DB_HOST="localhost",
-            DB_USER="runtime",
-            DB_PASSWORD="p@ss:#/? %",
-            DB_NAME="postgres",
-        )
+        return {
+            "DB_HOST": "localhost",
+            "DB_USER": "runtime",
+            "DB_PASSWORD": "p@ss:#/? %",
+            "DB_NAME": "postgres",
+        }
 
     def test_password_roundtrip(self):
         env = self.config()

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PasswordField, PageControls } from "./ux.jsx";
 import { roles, date } from "../domain.js";
 import {
   ActionForm,
@@ -64,19 +65,8 @@ function Editor({ kind, record }) {
             nullable
           />
         </div>
-        <label>
-          {record
-            ? "Mật khẩu tạm mới (bỏ trống nếu không đổi)"
-            : "Mật khẩu tạm"}
-          <input
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required={!record}
-            minLength={12}
-            maxLength={128}
-          />
-        </label>
+        <PasswordField label={record ? "Mật khẩu tạm mới (bỏ trống nếu không đổi)" : "Mật khẩu tạm"}
+          name="password" autoComplete="new-password" required={!record} minLength={12} maxLength={128} />
         <p className="muted">
           12–128 ký tự; gồm chữ hoa, chữ thường, số và ký tự đặc biệt; không
           chứa tên đăng nhập. Người dùng phải đổi mật khẩu khi đăng nhập.
@@ -206,9 +196,10 @@ function Active({ value }) {
 export default function IdentityAdmin() {
   const [kind, setKind] = useState("users"),
     [offset, setOffset] = useState(0),
+    [limit, setLimit] = useState(20),
     [modal, setModal] = useState(null),
     [notice, setNotice] = useState("");
-  const r = useResource(`/api/v1/admin/${kind}?limit=50&offset=${offset}`);
+  const r = useResource(`/api/v1/admin/${kind}?limit=${limit}&offset=${offset}`);
   async function save(v) {
     const body = { ...v };
     if ("is_active" in body) body.is_active = body.is_active === "true";
@@ -260,10 +251,10 @@ export default function IdentityAdmin() {
           {notice}
         </p>
       )}
-      <section className="panel">
+      <section className="panel" id="identity-results">
         <ResourceState resource={r}>
           <div className="table-wrap">
-            <table>
+            <table className="responsive-records">
               <thead>
                 <tr>
                   <th>Thông tin</th>
@@ -275,7 +266,7 @@ export default function IdentityAdmin() {
               <tbody>
                 {r.data?.items?.map((item) => (
                   <tr key={item.id}>
-                    <td>
+                    <td data-label="Thông tin">
                       <strong>
                         {item.display_name ||
                           item.name ||
@@ -286,10 +277,10 @@ export default function IdentityAdmin() {
                         {item.username || item.user_id || ""}
                       </small>
                     </td>
-                    <td>
+                    <td data-label="ID tham chiếu">
                       <code>{item.id}</code>
                     </td>
-                    <td>
+                    <td data-label="Trạng thái">
                       {kind === "memberships"
                         ? item.revoked_at
                           ? "Đã thu hồi"
@@ -303,7 +294,7 @@ export default function IdentityAdmin() {
                           ? "Hoạt động"
                           : "Ngừng hoạt động"}
                     </td>
-                    <td>
+                    <td data-label="Thao tác">
                       <div className="actions">
                         <button
                           className="secondary"
@@ -343,23 +334,9 @@ export default function IdentityAdmin() {
             </table>
           </div>
           {!r.data?.items?.length && <p className="empty">Chưa có dữ liệu.</p>}
-          <div className="pagination">
-            <button
-              className="secondary"
-              disabled={!offset}
-              onClick={() => setOffset(offset - 50)}
-            >
-              Trước
-            </button>
-            <span>Trang {offset / 50 + 1}</span>
-            <button
-              className="secondary"
-              disabled={r.data?.next_offset == null}
-              onClick={() => setOffset(r.data.next_offset)}
-            >
-              Sau
-            </button>
-          </div>
+          <PageControls offset={offset} limit={limit} nextOffset={r.data?.next_offset}
+            count={r.data?.items?.length || 0} title="bản ghi"
+            targetId="identity-results" onPage={setOffset} onLimit={setLimit} />
         </ResourceState>
       </section>
       {modal && (
