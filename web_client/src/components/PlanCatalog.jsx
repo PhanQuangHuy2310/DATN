@@ -21,6 +21,7 @@ export default function PlanCatalog() {
   const [filter,setFilter] = useState("");
   const [catalogMode,setCatalogMode] = useState("business");
   const [group,setGroup] = useState("Tất cả");
+  const [releaseFilter,setReleaseFilter] = useState("all");
   const [page,setPage] = useState(0);
   const [selected,setSelected] = useState(null);
   const [notice,setNotice] = useState("");
@@ -34,8 +35,11 @@ export default function PlanCatalog() {
   const groups = ["Tất cả", ...new Set(pool.map((x) => x.category))];
   const list = useMemo(() => pool.filter(x => {
     const match = !filter || `${x.name} ${x.code} ${x.category}`.toLowerCase().includes(filter.toLowerCase().trim());
-    return match && (group === "Tất cả" || x.category === group);
-  }), [source.data,filter,group,catalogMode]);
+    const db = available.get(x.code);
+    const published = !!db?.configured && db.lifecycle === x.lifecycle;
+    return match && (group === "Tất cả" || x.category === group) &&
+      (releaseFilter === "all" || (releaseFilter === "published" ? published : !published));
+  }), [pool, filter, group, releaseFilter, available]);
   const pageItems = list.slice(page*perPage,(page+1)*perPage);
   function open(type) {
     setSelected(type);
@@ -66,28 +70,38 @@ export default function PlanCatalog() {
     <section className="panel" ref={listRef}>
       <div className="actions" aria-label="Chọn bộ danh mục">
         <button type="button" className={catalogMode === "business" ? "" : "secondary"}
-          onClick={()=>{setCatalogMode("business");setGroup("Tất cả");setPage(0);setSelected(null);}}>Bảng chọn yêu cầu của nhân viên (20 mục)</button>
+          onClick={()=>{setCatalogMode("business");setGroup("Tất cả");setReleaseFilter("all");setPage(0);setSelected(null);}}>Bảng chọn yêu cầu của nhân viên (20 mục)</button>
         <button type="button" className={catalogMode === "plan" ? "" : "secondary"}
-          onClick={()=>{setCatalogMode("plan");setGroup("Tất cả");setPage(0);setSelected(null);}}>18 mã kế hoạch mở rộng</button>
+          onClick={()=>{setCatalogMode("plan");setGroup("Tất cả");setReleaseFilter("all");setPage(0);setSelected(null);}}>18 mã kế hoạch mở rộng</button>
       </div>
-      <div className="filters">
-        <label>Tìm mã hoặc tên yêu cầu<input value={filter} onChange={e=>{setFilter(e.target.value);setPage(0);}} placeholder="Ví dụ: SAAS_LICENSE_BUY" /></label>
-        <label>Nhóm nghiệp vụ<select value={group} onChange={e=>{setGroup(e.target.value);setPage(0);}}>{groups.map(x=><option key={x}>{x}</option>)}</select></label>
+      <div className="plan-filter-toolbar">
+        <label>Tìm theo tên hoặc mã
+          <input type="search" value={filter} onChange={e=>{setFilter(e.target.value);setPage(0);}} placeholder="Ví dụ: VPN, nghỉ phép, SAAS…" />
+        </label>
+        <label>Trạng thái công bố
+          <select value={releaseFilter} onChange={e=>{setReleaseFilter(e.target.value);setPage(0);}}>
+            <option value="all">Tất cả trạng thái</option><option value="published">Đã có release</option><option value="pending">Chưa có release phù hợp</option>
+          </select>
+        </label>
       </div>
+      <div className="plan-category-scroll" tabIndex={0} aria-label="Lọc nhóm yêu cầu, cuộn ngang để xem các nhóm khác">
+        <div className="plan-category-row">{groups.map(name=><button type="button" key={name} className={`plan-category-pill ${group===name ? "selected" : ""}`}
+          aria-pressed={group===name} onClick={()=>{setGroup(name);setPage(0);}}>{name}<small>{name==="Tất cả" ? pool.length : pool.filter(item=>item.category===name).length}</small></button>)}</div>
+      </div>
+      <div className="plan-list-count" role="status">{list.length} loại phù hợp bộ lọc</div>
       {source.loading && <p role="status">Đang nạp danh mục từ plan.docx…</p>}
       {source.error && <p className="error" role="alert">{source.error}</p>}
       {deployed.error && <p className="muted">Chưa lấy được trạng thái database: {deployed.error}</p>}
-      <div className="plan-type-grid">
-        {pageItems.map(item=>{
+      <div className="plan-type-list">
+        {pageItems.map((item,index)=>{
           const db=available.get(item.code);
           const live=!!db?.configured && db.lifecycle===item.lifecycle;
-          return <article className="plan-type-card" key={item.code}>
-            <div className="plan-type-top"><small>{item.code}</small><span className="plan-template">Mẫu {item.lifecycle}</span></div>
-            <h3>{item.name}</h3>
-            <p className="muted">{item.category}{item.sla_hours ? ` · SLA ${item.sla_hours} giờ` : " · SLA theo quy chế"}</p>
-            <p><span className={live?'plan-live':'plan-pending'}>{live?'Có release công bố':db?'Chưa có release':'Chưa đăng ký DB'}</span></p>
-            <button type="button" className="secondary" onClick={()=>open(item)}>Xem đặc tả và trường nhập</button>
-          </article>;
+          return <div className="plan-type-row" key={`${item.code}:${item.category}:${index}`}>
+            <div className="plan-type-identity"><strong>{item.name}</strong><span>{item.category} · {item.code}</span></div>
+            <div className="plan-type-meta"><span className="plan-template">Mẫu {item.lifecycle}</span><small>{item.sla_hours ? `SLA ${item.sla_hours} giờ` : "SLA theo quy chế"}</small></div>
+            <span className={live?'plan-live':'plan-pending'}>{live?'Đã có release':db?'Chưa có release':'Chưa đăng ký DB'}</span>
+            <button type="button" className="secondary" onClick={()=>open(item)}>Xem đặc tả →</button>
+          </div>;
         })}
       </div>
       {!source.loading && !list.length && <p className="empty">Không tìm thấy loại yêu cầu phù hợp.</p>}

@@ -83,6 +83,9 @@ X_FRAME_OPTIONS = "DENY"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_NAME = "eas_session"
 SESSION_COOKIE_AGE = int(os.getenv("EAS_SESSION_AGE_SECONDS", "28800"))
+EAS_SESSION_IDLE_SECONDS = int(os.getenv("EAS_SESSION_IDLE_SECONDS", "1800"))
+if not 0 < EAS_SESSION_IDLE_SECONDS <= SESSION_COOKIE_AGE:
+    raise RuntimeError("Session idle must be within absolute session lifetime")
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
@@ -111,6 +114,7 @@ else:
         }
     }
 EAS_LOGIN_MAX_ATTEMPTS = int(os.getenv("EAS_LOGIN_MAX_ATTEMPTS", "5"))
+EAS_LOGIN_MAX_IP_ATTEMPTS = int(os.getenv("EAS_LOGIN_MAX_IP_ATTEMPTS", "30"))
 EAS_LOGIN_WINDOW_SECONDS = int(os.getenv("EAS_LOGIN_WINDOW_SECONDS", "900"))
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")

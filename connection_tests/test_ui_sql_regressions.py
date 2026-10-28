@@ -32,6 +32,11 @@ class EASRegressionTests(unittest.TestCase):
         self.assertIn("%s::uuid IS NULL", sql)
         self.assertIn("%s::text = 'mine'", sql)
         self.assertIn("STRPOS(LOWER(r.code)", sql)
+        self.assertIn("wi.revision_id = r.current_revision_id", sql)
+        self.assertIn("r.status = 'PENDING_APPROVAL'", sql)
+        self.assertIn("r.status = 'READY_FOR_EXECUTION'", sql)
+        self.assertIn("r.status = 'WAITING_FOR_ACCEPTANCE'", sql)
+        self.assertIn("rp.read_revoked_at IS NULL", sql)
 
     def test_ops_query_bindings(self):
         sql, count = sql_and_params("api_core/workflow/ops_service.py", "list_ops_metadata")

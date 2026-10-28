@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PageControls } from "./ux.jsx";
 import { ResourceState, useResource } from "./ui.jsx";
 import { roles } from "../domain.js";
+import { buildAccessMatrix } from "../accessMatrix.js";
 
 const methodOrder = ["GET", "POST", "PATCH", "DELETE"];
 
@@ -13,23 +14,67 @@ function Info({ name, value }) {
   return <article className="api-overview-stat"><span>{name}</span><strong>{value}</strong></article>;
 }
 
-function Matrix({ data }) {
-  return <>
-    <div className="api-inline-note" role="note">
-      Quyền cuối cùng = tài khoản hoạt động + role còn hiệu lực + phạm vi phòng ban/loại yêu cầu + actor được giao + trạng thái + phân tách nhiệm vụ (SoD). Một người có nhiều role vẫn không vượt các ràng buộc này.
+function Matrix({ data, endpoints = [], catalogLoading = false, catalogError = "" }) {
+  const [focusRole, setFocusRole] = useState("");
+  const [focusDomain, setFocusDomain] = useState("");
+  const [selection, setSelection] = useState(null);
+  const matrix = useMemo(() => buildAccessMatrix(data?.items || [], endpoints), [data, endpoints]);
+  const columns = focusDomain ? matrix.domains.filter((name) => name === focusDomain) : matrix.domains;
+  const rows = focusRole ? matrix.rows.filter((item) => item.role === focusRole) : matrix.rows;
+  const selectedRole = (data?.items || []).find((item) => item.role === (selection?.role || focusRole)) || (data?.items || [])[0];
+  const selectedCell = selection && matrix.rows.find((row) => row.role === selection.role)?.cells.find((cell) => cell.domain === selection.domain);
+  return <section className="access-matrix-layout" aria-label="Biểu đồ ma trận phân quyền">
+    <div className="access-matrix-heading">
+      <div><p className="eyebrow">BẢN ĐỒ PHÂN QUYỀN</p><h2>Vai trò × nhóm nghiệp vụ</h2>
+        <p className="muted">Mỗi ô thể hiện số endpoint có khai báo vai trò trực tiếp trong danh mục API. Chọn một ô để xem chi tiết.</p></div>
+      <div className="access-matrix-legend" aria-label="Chú giải biểu đồ">
+        <span><i className="access-key access-none"/>Chưa khai báo</span><span><i className="access-key access-read"/>Chỉ đọc</span>
+        <span><i className="access-key access-write"/>Thao tác</span><span><i className="access-key access-both"/>Cả hai</span>
+      </div>
     </div>
-    <div className="role-matrix-cards">
-      {data.items.map((item) => <article className="role-matrix-card" key={item.role}>
-        <div className="section-head"><div><small>{item.uc}</small><h3>{item.name}</h3></div><span className="role-pill">{item.role}</span></div>
-        <dl><dt>Quyền xem</dt><dd>{item.read}</dd><dt>Hành động được phép</dt><dd>{item.write}</dd><dt>Giới hạn bắt buộc</dt><dd>{item.constraints}</dd></dl>
-      </article>)}
+    <div className="access-matrix-filters">
+      <label>Vai trò
+        <select value={focusRole} onChange={(e) => { setFocusRole(e.target.value); setSelection(null); }}><option value="">Cả 7 vai trò</option>
+          {(data?.items || []).map((item) => <option value={item.role} key={item.role}>{item.name}</option>)}
+        </select>
+      </label>
+      <label>Nhóm nghiệp vụ
+        <select value={focusDomain} onChange={(e) => {setFocusDomain(e.target.value);setSelection(null);}}><option value="">Tất cả nhóm</option>
+          {matrix.domains.map((domain) => <option key={domain} value={domain}>{domain}</option>)}
+        </select>
+      </label>
+      {(focusRole || focusDomain) && <button className="secondary" type="button" onClick={() => {setFocusRole("");setFocusDomain("");setSelection(null);}}>Đặt lại bộ lọc</button>}
     </div>
-    <section className="panel api-policy-footnotes">
-      <h2>Phạm vi được áp dụng</h2>
-      <p><strong>{data.scope_model}</strong> · Phạm vi DEPARTMENT không tự bao gồm phòng ban con. GLOBAL và ALL phải khai báo rõ.</p>
-      <p>{data.note}</p>
-    </section>
-  </>;
+    {catalogLoading ? <p role="status">Đang tải danh mục API để lập biểu đồ…</p> : catalogError ?
+      <p className="error" role="alert">Không tải được danh mục endpoint để lập biểu đồ: {catalogError}</p> : matrix.domains.length ? <>
+      <div className="access-matrix-scroll" tabIndex={0} aria-label="Bảng ma trận phân quyền, cuộn ngang để xem đủ cột">
+        <table className="access-matrix-heatmap" style={{minWidth: `${155 + columns.length * 116}px`}}>
+          <thead><tr><th scope="col">Vai trò</th>{columns.map((domain) => <th scope="col" key={domain}>{domain}</th>)}</tr></thead>
+          <tbody>{rows.map((row) => <tr key={row.role}>
+            <th scope="row"><strong>{row.name}</strong><small>{row.role}</small></th>
+            {row.cells.filter((cell) => columns.includes(cell.domain)).map((cell) =>
+              <td key={cell.domain}><button type="button" className={`access-matrix-cell access-${cell.kind} ${selection?.role === row.role && selection?.domain === cell.domain ? "is-focused" : ""}`}
+                aria-pressed={selection?.role === row.role && selection?.domain === cell.domain}
+                title={`${row.name} · ${cell.domain}: ${cell.reads} GET, ${cell.writes} thao tác`}
+                aria-label={`${row.name} / ${cell.domain}: ${cell.reads} endpoint đọc, ${cell.writes} endpoint thao tác`}
+                onClick={() => setSelection({role: row.role, domain: cell.domain})}>
+                <strong>{cell.count || "—"}</strong>{cell.count > 0 && <small>{cell.reads ? `${cell.reads} đọc` : ""}{cell.reads && cell.writes ? " · " : ""}{cell.writes ? `${cell.writes} ghi` : ""}</small>}
+              </button></td>)}
+          </tr>)}</tbody>
+        </table>
+      </div>
+      <p className="access-matrix-disclaimer">Chỉ phản ánh hợp đồng API; <strong>không phải quyền hiệu lực của từng tài khoản</strong>. Vai trò tổng quát như PARTICIPANT/AUTHENTICATED chưa được quy thành quyền trực tiếp. Ô trống không đồng nghĩa bị cấm tuyệt đối. Backend vẫn kiểm tra phiên, scope, actor, trạng thái và SoD.</p>
+    </> : <p role="status">Chưa có endpoint gán trực tiếp cho các vai trò trong danh mục API.</p>}
+    {selectedCell && <div className="access-matrix-drilldown" role="region" aria-label="Chi tiết nhóm quyền đã chọn">
+      <div className="section-head"><div><p className="eyebrow">CHI TIẾT Ô MA TRẬN</p><h3>{roles[selectedCell.role] || selectedCell.role} · {selectedCell.domain}</h3><p className="muted">{selectedCell.reads} endpoint GET · {selectedCell.writes} endpoint thao tác</p></div>
+        <button className="secondary" type="button" onClick={() => setSelection(null)}>Đóng chi tiết</button></div>
+      {selectedCell.endpoints.length ? <div className="access-matrix-endpoints">{selectedCell.endpoints.map((endpoint) => <div className="access-matrix-endpoint" key={`${endpoint.method}:${endpoint.path}`}><Method name={endpoint.method}/><div><code>{endpoint.path}</code><span>{endpoint.purpose}</span><small>{endpoint.protection}</small></div></div>)}</div> : <p className="muted">Danh mục API chưa khai báo endpoint trực tiếp cho cặp vai trò và nhóm này.</p>}
+    </div>}
+    {selectedRole && <div className="access-matrix-role-detail"><div className="section-head"><h3>Quy tắc nghiệp vụ · {selectedRole.name}</h3><small>{selectedRole.uc}</small></div>
+      <dl><div><dt>Phạm vi xem</dt><dd>{selectedRole.read}</dd></div><div><dt>Thao tác nghiệp vụ</dt><dd>{selectedRole.write}</dd></div><div><dt>Giới hạn bắt buộc</dt><dd>{selectedRole.constraints}</dd></div></dl>
+    </div>}
+    <div className="access-matrix-scope"><strong>Phạm vi cấp quyền: </strong>{data.scope_model}. {data.note}</div>
+  </section>;
 }
 
 export default function ApiAdministration() {
@@ -97,7 +142,7 @@ export default function ApiAdministration() {
         <PageControls offset={offset} limit={limit} count={visible.length} nextOffset={offset + limit < total ? offset + limit : null} onPage={setOffset} onLimit={(v) => { setLimit(v); setOffset(0); }} title="API" targetId="api-results"/>
       </ResourceState>
     </section>}
-    {tab === "matrix" && <ResourceState resource={matrix}><Matrix data={matrix.data}/></ResourceState>}
+    {tab === "matrix" && <ResourceState resource={matrix}><Matrix data={matrix.data} endpoints={items} catalogLoading={catalog.loading} catalogError={catalog.error}/></ResourceState>}
     {tab === "health" && <section className="panel api-health-panel"><div className="section-head"><div><h2>Kiểm tra trạng thái Backend</h2><p className="muted">Đọc trực tiếp /health/ready; mỗi dấu kiểm lấy từ Backend đang chạy, không sử dụng dữ liệu minh họa.</p></div><button className="secondary" type="button" onClick={ready.reload}>Kiểm tra lại</button></div>
       <ResourceState resource={ready}>
         <div className="api-health-summary"><span className={ready.data?.status === "ready" ? "api-health-light success" : "api-health-light"}/><strong>{ready.data?.status === "ready" ? "Dịch vụ sẵn sàng" : "Dịch vụ chưa sẵn sàng"}</strong></div>

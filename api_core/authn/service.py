@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from uuid import UUID, uuid4
 
+from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import CommonPasswordValidator
 from django.core.exceptions import ValidationError
@@ -168,6 +169,9 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
     active_session = cache.get(f"eas:session:{session_id}")
     if active_session != f"{user_id}:{auth_version}":
         return None
+    idle_key = f"eas:idle:{session_id}"
+    if cache.get(idle_key) != active_session:
+        return None
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -193,6 +197,9 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
             [user_id],
         )
         roles = frozenset(row[0] for row in cursor.fetchall())
+    # Sliding 30-minute inactivity window, but the original 8-hour absolute
+    # session key is NEVER refreshed here. Logout/password reset still revoke.
+    cache.set(idle_key, active_session, timeout=settings.EAS_SESSION_IDLE_SECONDS)
     return Actor(
         id=user[0],
         username=user[1],

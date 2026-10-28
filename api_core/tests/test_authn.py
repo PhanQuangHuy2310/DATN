@@ -40,6 +40,7 @@ class AuthenticationEndpointTests(SimpleTestCase):
         self.assertEqual(self.client.session["auth_version"], 3)
         session_id = self.client.session["session_id"]
         self.assertEqual(cache.get(f"eas:session:{session_id}"), f"{self.user.id}:3")
+        self.assertEqual(cache.get(f"eas:idle:{session_id}"), f"{self.user.id}:3")
         self.assertNotIn("password_hash", response.json()["user"])
 
         find_user.return_value = None
@@ -121,6 +122,24 @@ class AuthenticationEndpointTests(SimpleTestCase):
         response = self.client.post("/api/v1/auth/logout")
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(cache.get(f"eas:session:{session_id}"))
+        self.assertIsNone(cache.get(f"eas:idle:{session_id}"))
+
+    @patch("api_core.authn.service.connection")
+    @patch("api_core.authn.views.find_user")
+    def test_session_idle_timeout_fails_closed_without_extending_absolute_ttl(self, find_user, conn):
+        find_user.return_value = self.user
+        self.client.post("/api/v1/auth/login", data=json.dumps({
+            "username": "employee", "password": "Correct-Horse-2026",
+        }), content_type="application/json")
+        session_id = self.client.session["session_id"]
+        conn.cursor.return_value.__enter__.return_value.fetchone.return_value = (
+            self.user.id, self.user.username, self.user.display_name,
+            self.user.department_id, 3, False)
+        conn.cursor.return_value.__enter__.return_value.fetchall.return_value = [("REQUESTER",)]
+        # Do not need a live DB to check revoked inactivity before SQL access.
+        cache.delete(f"eas:idle:{session_id}")
+        response = self.client.get("/api/v1/auth/me")
+        self.assertEqual(response.status_code, 401)
 
     def test_password_policy_rejects_weak_or_username_derived_values(self):
         for invalid in ("short", "Abcdefgh1234!", "alllowercase123!", "EMPLOYEE-Strong-123!", "Password123456!A"):

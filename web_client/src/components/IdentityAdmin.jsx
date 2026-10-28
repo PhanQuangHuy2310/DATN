@@ -126,14 +126,50 @@ function Editor({ kind, record }) {
   </>;
 }
 
+const membershipStates = [
+  {key: "active", label: "Hiệu lực"},
+  {key: "future", label: "Chưa hiệu lực"},
+  {key: "expired", label: "Hết hạn"},
+  {key: "revoked", label: "Đã thu hồi"},
+];
+function membershipState(item) {
+  const now = Date.now();
+  if (item.revoked_at) return "revoked";
+  if (item.valid_to && Date.parse(item.valid_to) <= now) return "expired";
+  if (item.valid_from && Date.parse(item.valid_from) > now) return "future";
+  return "active";
+}
+/** Membership data is paginated. The chart summarizes *only the current page*. */
+function MembershipOverview({ items = [] }) {
+  if (!items.length) return null;
+  const rows = Object.entries(roles).map(([key, name]) => {
+    const matching = items.filter((item) => item.role === key);
+    return {key, name, total: matching.length, counts: Object.fromEntries(membershipStates.map((state) => [state.key, matching.filter((item) => membershipState(item) === state.key).length]))};
+  }).filter((row) => row.total > 0);
+  return <div className="membership-chart" aria-label="Biểu đồ số lượng phân quyền theo vai trò trên trang hiện tại">
+    <div className="membership-chart-head"><div><h3>Phân bổ quyền theo vai trò</h3><p className="muted">{items.length} bản ghi trên trang hiện tại, không phải toàn hệ thống</p></div>
+      <div className="membership-chart-legend">{membershipStates.map((state) => <span key={state.key}><i className={`membership-chart-key ${state.key}`}/>{state.label}</span>)}</div></div>
+    <div className="membership-chart-rows">{rows.map((row) => <div className="membership-chart-row" key={row.key}>
+      <span>{row.name}</span><div className="membership-chart-track" role="img" aria-label={`${row.name}: ${membershipStates.map((state) => `${row.counts[state.key]} ${state.label}`).join(", ")}`}>
+        {membershipStates.filter((state) => row.counts[state.key]).map((state) => <span key={state.key} className={`membership-chart-segment ${state.key}`} title={`${state.label}: ${row.counts[state.key]}`} style={{width: `${row.counts[state.key] / items.length * 100}%`}}/>)}
+      </div><strong>{row.total}</strong>
+    </div>)}</div>
+  </div>;
+}
+
 function UserDetail({ kind, item }) {
   const resource = useResource(`/api/v1/admin/${kind}/${item.id}`);
   return <ResourceState resource={resource}>
     <div className="identity-detail-card"><Data value={resource.data?.item || item}/></div>
-    {kind === "users" && <><h3>Các quyền đã cấp (kể cả đã thu hồi)</h3>
-      <div className="identity-scope-list">{(resource.data?.item?.memberships || []).map((m) => <article key={m.id} className="identity-scope-card"><strong>{roles[m.role] || m.role}</strong><span>{m.scope_kind}{m.department_id ? ` / ${m.department_id}` : ""} · {m.type_scope}{m.type_id ? ` / ${m.type_id}` : ""}</span><small>{m.revoked_at ? "Đã thu hồi" : m.valid_to && new Date(m.valid_to) < new Date() ? "Hết hạn" : "Chưa thu hồi"}</small></article>)}
+    {kind === "users" && <><h3>Quyền đã cấp và phạm vi hiệu lực</h3>
+      <div className="identity-membership-table-wrap"><table className="identity-membership-table"><thead><tr><th>Vai trò</th><th>Phạm vi phòng ban</th><th>Loại yêu cầu</th><th>Trạng thái</th></tr></thead><tbody>
+        {(resource.data?.item?.memberships || []).map((m) => <tr key={m.id}><td><strong>{roles[m.role] || m.role}</strong></td>
+          <td>{m.scope_kind}{m.department_id ? ` / ${m.department_id}` : ""}</td><td>{m.type_scope}{m.type_id ? ` / ${m.type_id}` : ""}</td>
+          <td><span className={`identity-membership-status ${membershipState(m)}`}>{membershipStates.find((state) => state.key === membershipState(m))?.label}</span></td></tr>)}
+      </tbody></table>
         {!resource.data?.item?.memberships?.length && <p className="muted">Chưa có role membership.</p>}
       </div></>}
+
   </ResourceState>;
 }
 
@@ -193,6 +229,7 @@ export default function IdentityAdmin() {
     </section>
     <section className="panel" id="identity-results"><div className="section-head identity-result-head"><div><h2>Danh sách {entities[kind].toLowerCase()}</h2><p className="muted">{total} bản ghi theo bộ lọc hiện tại · Phân trang trực tiếp trên PostgreSQL.</p></div></div>
       <ResourceState resource={r}>
+        {kind === "memberships" && <MembershipOverview items={r.data?.items || []}/>}
         <div className="table-wrap"><table className="responsive-records identity-table"><thead><tr><th>Thông tin</th><th>Phòng ban / scope</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
           {r.data?.items?.map((item) => <tr key={item.id}>
             <td data-label="Thông tin"><div className="identity-primary"><span className="identity-avatar" aria-hidden="true">{(item.display_name || item.name || item.role || item.code || "E").slice(0, 1).toLocaleUpperCase("vi")}</span><span><strong>{item.display_name || item.name || roles[item.role] || item.code || "—"}</strong><small>{item.username || item.code || item.user_id || item.role || ""}</small>{kind === "request-types" && <small>{item.category} · {item.lifecycle} · {item.description || "Chưa có mô tả"}</small>}<small className="identity-id">ID {item.id}</small></span></div></td>
