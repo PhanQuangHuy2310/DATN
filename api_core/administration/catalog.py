@@ -4,6 +4,16 @@ P0 APIs are code-defined contracts. This catalog is read-only: editing a route,
 secret or authorization rule from a browser is deliberately unsupported.
 """
 
+KIEM_TOAN = "Kiểm toán"
+XAC_THUC = "Xác thực"
+YEU_CAU = "Yêu cầu"
+THUC_HIEN = "Thực hiện"
+VAN_HANH = "Vận hành"
+CHINH_SACH = "Chính sách"
+DANH_TINH = "Danh tính"
+GLOBAL_ALL = "GLOBAL/ALL"
+
+
 ROLE_MATRIX = (
     {
         "role": "REQUESTER",
@@ -55,7 +65,7 @@ ROLE_MATRIX = (
     },
     {
         "role": "AUDITOR",
-        "name": "Kiểm toán",
+        "name": KIEM_TOAN,
         "read": "Hồ sơ, audit và báo cáo theo scope",
         "write": "Không ghi nghiệp vụ",
         "constraints": "Không sửa role hay nhật ký",
@@ -79,7 +89,7 @@ def _api(domain, method, route, purpose, role, uc, protection="session / scope")
 
 API_ENDPOINTS = (
     _api(
-        "Xác thực",
+        XAC_THUC,
         "GET",
         "auth/csrf",
         "Nhận CSRF cookie",
@@ -88,7 +98,7 @@ API_ENDPOINTS = (
         "CSRF cookie",
     ),
     _api(
-        "Xác thực",
+        XAC_THUC,
         "POST",
         "auth/login",
         "Đăng nhập / rate limit",
@@ -97,7 +107,7 @@ API_ENDPOINTS = (
         "CSRF + rate limit",
     ),
     _api(
-        "Xác thực",
+        XAC_THUC,
         "POST",
         "auth/logout",
         "Kết thúc phiên",
@@ -106,7 +116,7 @@ API_ENDPOINTS = (
         "CSRF + session",
     ),
     _api(
-        "Xác thực",
+        XAC_THUC,
         "GET",
         "auth/me",
         "Thông tin người dùng hiện tại",
@@ -115,7 +125,7 @@ API_ENDPOINTS = (
         "session",
     ),
     _api(
-        "Xác thực",
+        XAC_THUC,
         "POST",
         "auth/password",
         "Đổi mật khẩu",
@@ -124,7 +134,7 @@ API_ENDPOINTS = (
         "CSRF + security_epoch",
     ),
     _api(
-        "Yêu cầu",
+        YEU_CAU,
         "GET",
         "requests",
         "Danh sách theo quyền + phân trang",
@@ -133,7 +143,7 @@ API_ENDPOINTS = (
         "row-level predicate",
     ),
     _api(
-        "Yêu cầu",
+        YEU_CAU,
         "POST",
         "request-drafts",
         "Tạo nháp",
@@ -142,7 +152,7 @@ API_ENDPOINTS = (
         "owner + idempotency",
     ),
     _api(
-        "Yêu cầu",
+        YEU_CAU,
         "PATCH",
         "request-drafts/{id}",
         "Sửa nháp",
@@ -151,7 +161,7 @@ API_ENDPOINTS = (
         "owner + version",
     ),
     _api(
-        "Yêu cầu",
+        YEU_CAU,
         "POST",
         "requests/{id}/submit",
         "Gửi hoặc gửi lại",
@@ -160,7 +170,7 @@ API_ENDPOINTS = (
         "scope + version + idempotency",
     ),
     _api(
-        "Yêu cầu",
+        YEU_CAU,
         "GET",
         "requests/{id}",
         "Chi tiết theo predicate",
@@ -169,7 +179,7 @@ API_ENDPOINTS = (
         "404 ngoài quyền",
     ),
     _api(
-        "Yêu cầu",
+        YEU_CAU,
         "POST",
         "requests/{id}/cancel",
         "Hủy trước duyệt đủ",
@@ -187,7 +197,7 @@ API_ENDPOINTS = (
         "ACTIVE + scope + SoD",
     ),
     _api(
-        "Thực hiện",
+        THUC_HIEN,
         "POST",
         "requests/{id}/execution/start",
         "Nhận việc",
@@ -196,7 +206,7 @@ API_ENDPOINTS = (
         "assignee + attempt",
     ),
     _api(
-        "Thực hiện",
+        THUC_HIEN,
         "POST",
         "requests/{id}/issues",
         "Báo vướng mắc",
@@ -205,7 +215,7 @@ API_ENDPOINTS = (
         "assignee + reason",
     ),
     _api(
-        "Thực hiện",
+        THUC_HIEN,
         "POST",
         "requests/{id}/execution/submit",
         "Nộp kết quả",
@@ -250,7 +260,7 @@ API_ENDPOINTS = (
         "recipient only",
     ),
     _api(
-        "Vận hành",
+        VAN_HANH,
         "GET",
         "ops/requests",
         "Metadata điều phối",
@@ -259,7 +269,7 @@ API_ENDPOINTS = (
         "department + type scope",
     ),
     _api(
-        "Vận hành",
+        VAN_HANH,
         "POST",
         "requests/{id}/reassign",
         "Gán thay actor",
@@ -268,7 +278,7 @@ API_ENDPOINTS = (
         "scope + reason + SoD",
     ),
     _api(
-        "Vận hành",
+        VAN_HANH,
         "POST",
         "ops/outbox/{id}/replay",
         "Phát lại sự kiện lỗi",
@@ -277,7 +287,7 @@ API_ENDPOINTS = (
         "scope + audit",
     ),
     _api(
-        "Chính sách",
+        CHINH_SACH,
         "GET",
         "config-releases",
         "Danh sách phiên bản cấu hình",
@@ -286,7 +296,7 @@ API_ENDPOINTS = (
         "type scope",
     ),
     _api(
-        "Chính sách",
+        CHINH_SACH,
         "POST",
         "config-releases",
         "Tạo release DRAFT",
@@ -295,7 +305,7 @@ API_ENDPOINTS = (
         "scope + version",
     ),
     _api(
-        "Chính sách",
+        CHINH_SACH,
         "POST",
         "config-releases/{id}/publish",
         "Công bố release",
@@ -313,7 +323,7 @@ API_ENDPOINTS = (
         "predicate before count",
     ),
     _api(
-        "Kiểm toán",
+        KIEM_TOAN,
         "GET",
         "requests/{id}/audit",
         "Lịch sử audit hồ sơ",
@@ -322,7 +332,7 @@ API_ENDPOINTS = (
         "request predicate",
     ),
     _api(
-        "Kiểm toán",
+        KIEM_TOAN,
         "GET",
         "admin-events",
         "Nhật ký hành chính",
@@ -331,7 +341,7 @@ API_ENDPOINTS = (
         "admin target scope",
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "GET",
         "admin/users",
         "Danh sách user có tìm kiếm",
@@ -340,7 +350,7 @@ API_ENDPOINTS = (
         "GLOBAL/ALL only",
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "POST",
         "admin/users",
         "Tạo user",
@@ -349,7 +359,7 @@ API_ENDPOINTS = (
         "GLOBAL/ALL + reason + audit",
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "PATCH",
         "admin/users/{id}",
         "Sửa / đặt mật khẩu tạm",
@@ -358,7 +368,7 @@ API_ENDPOINTS = (
         "GLOBAL/ALL + revision",
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "DELETE",
         "admin/users/{id}",
         "Vô hiệu tài khoản",
@@ -367,16 +377,16 @@ API_ENDPOINTS = (
         "soft delete",
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "GET",
         "admin/memberships",
         "Tra cứu cấp quyền",
         ["OPS_ADMIN"],
         "UC17",
-        "GLOBAL/ALL",
+        GLOBAL_ALL,
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "POST",
         "admin/memberships",
         "Gán role theo scope",
@@ -385,7 +395,7 @@ API_ENDPOINTS = (
         "GLOBAL/ALL + epoch",
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "PATCH",
         "admin/memberships/{id}",
         "Cập nhật thời hạn/role",
@@ -394,7 +404,7 @@ API_ENDPOINTS = (
         "GLOBAL/ALL + revision",
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "DELETE",
         "admin/memberships/{id}",
         "Thu hồi role",
@@ -403,22 +413,22 @@ API_ENDPOINTS = (
         "revoke + session invalidation",
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "GET",
         "admin/departments",
         "Danh mục phòng ban",
         ["OPS_ADMIN"],
         "UC17",
-        "GLOBAL/ALL",
+        GLOBAL_ALL,
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "GET",
         "admin/request-types",
         "Danh mục loại yêu cầu đã khai báo",
         ["OPS_ADMIN"],
         "UC17",
-        "GLOBAL/ALL",
+        GLOBAL_ALL,
     ),
     _api(
         "Danh mục",
@@ -430,7 +440,7 @@ API_ENDPOINTS = (
         "chỉ published + membership",
     ),
     _api(
-        "Danh tính",
+        DANH_TINH,
         "POST",
         "admin/request-types",
         "Đăng ký loại mới (opt-in)",

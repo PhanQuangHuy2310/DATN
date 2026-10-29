@@ -387,32 +387,91 @@ PLAN_ROUTE_SUGGESTIONS = {
 }
 
 
-def initial_policy_draft(type_code: str, lifecycle: str) -> dict:
-    """Prefer the versioned plan's draft spec, otherwise a safe editable starter.
-
-    This function does not manufacture staff IDs, grants, or AI auto approval.
-    """
+def _load_blueprint_draft(type_code: str, lifecycle: str):
     import json
     from pathlib import Path
-
-    from api_core.catalog.plan_catalog import enterprise_item, plan_item
 
     path = (
         Path(__file__).resolve().parents[2]
         / "docs"
         / "APPROVAL_MENU_POLICY_DRAFTS.json"
     )
-    draft = None
-    if path.is_file():
-        blueprints = json.loads(path.read_text(encoding="utf-8"))
-        draft = next(
-            (
-                p
-                for p in blueprints.get("drafts", [])
-                if p.get("code") == type_code and p.get("lifecycle") == lifecycle
-            ),
-            None,
+    if not path.is_file():
+        return None
+    blueprints = json.loads(path.read_text(encoding="utf-8"))
+    return next(
+        (
+            p
+            for p in blueprints.get("drafts", [])
+            if p.get("code") == type_code and p.get("lifecycle") == lifecycle
+        ),
+        None,
+    )
+
+
+def _try_plan_or_enterprise_draft(type_code: str, lifecycle: str, form, route, sla):
+    from api_core.catalog.plan_catalog import enterprise_item, plan_item
+
+    item = plan_item(type_code)
+    if item and item["lifecycle"] == lifecycle:
+        plan_form = deepcopy(item["form_schema"])
+        sla["approval_hours"] = max(1, min(720, int(item.get("sla_hours", 24))))
+        suggested = PLAN_ROUTE_SUGGESTIONS.get(type_code)
+        if suggested:
+            slots, executor, acceptor = suggested
+            route.update(
+                {
+                    "rules": [
+                        {
+                            "id": f"{type_code}-DEFAULT",
+                            "default": True,
+                            "approvers": slots,
+                        }
+                    ],
+                    "executor": executor,
+                    "acceptor": acceptor,
+                }
+            )
+        return {
+            "source": "PLAN_FORM_ROUTE_SUGGESTION",
+            "form_schema": plan_form,
+            "route_rules": route,
+            "actor_bindings": {"schema_version": 1, "departments": {}},
+            "sla_profile": sla,
+        }
+
+    e_item = enterprise_item(type_code)
+    if e_item and e_item["lifecycle"] == lifecycle:
+        ent_form = deepcopy(e_item["form_schema"])
+        sla["approval_hours"] = max(1, min(720, int(e_item.get("sla_hours", 24))))
+        route.update(
+            {
+                "rules": [
+                    {
+                        "id": f"{type_code}-DEFAULT",
+                        "default": True,
+                        "approvers": list(
+                            e_item.get("approver_resolvers") or ["DIRECT_MANAGER"]
+                        ),
+                    }
+                ],
+                "executor": e_item.get("executor_resolver"),
+                "acceptor": e_item.get("acceptor_resolver"),
+            }
         )
+        return {
+            "source": "ENTERPRISE_5LEVEL_DRAFT",
+            "form_schema": ent_form,
+            "route_rules": route,
+            "actor_bindings": {"schema_version": 1, "departments": {}},
+            "sla_profile": sla,
+        }
+    return None
+
+
+def initial_policy_draft(type_code: str, lifecycle: str) -> dict:
+    """Prefer the versioned plan's draft spec, otherwise a safe editable starter."""
+    draft = _load_blueprint_draft(type_code, lifecycle)
     if draft:
         keys = ("form_schema", "route_rules", "actor_bindings", "sla_profile")
         return {"source": "PLAN_DRAFT", **{key: deepcopy(draft[key]) for key in keys}}
@@ -447,62 +506,14 @@ def initial_policy_draft(type_code: str, lifecycle: str) -> dict:
         "execution_hours": 48 if lifecycle != "A" else None,
         "acceptance_hours": 24 if lifecycle == "C" else None,
     }
-    item = plan_item(type_code)
-    if item and item["lifecycle"] == lifecycle:
-        form = deepcopy(item["form_schema"])
-        sla["approval_hours"] = max(1, min(720, int(item.get("sla_hours", 24))))
-        suggested = PLAN_ROUTE_SUGGESTIONS.get(type_code)
-        if suggested:
-            slots, executor, acceptor = suggested
-            route.update(
-                {
-                    "rules": [
-                        {
-                            "id": f"{type_code}-DEFAULT",
-                            "default": True,
-                            "approvers": slots,
-                        }
-                    ],
-                    "executor": executor,
-                    "acceptor": acceptor,
-                }
-            )
-        return {
-            "source": "PLAN_FORM_ROUTE_SUGGESTION",
-            "form_schema": form,
-            "route_rules": route,
-            "actor_bindings": {"schema_version": 1, "departments": {}},
-            "sla_profile": sla,
-        }
-    e_item = enterprise_item(type_code)
-    if e_item and e_item["lifecycle"] == lifecycle:
-        form = deepcopy(e_item["form_schema"])
-        sla["approval_hours"] = max(1, min(720, int(e_item.get("sla_hours", 24))))
-        route.update(
-            {
-                "rules": [
-                    {
-                        "id": f"{type_code}-DEFAULT",
-                        "default": True,
-                        "approvers": list(
-                            e_item.get("approver_resolvers") or ["DIRECT_MANAGER"]
-                        ),
-                    }
-                ],
-                "executor": e_item.get("executor_resolver"),
-                "acceptor": e_item.get("acceptor_resolver"),
-            }
-        )
-        return {
-            "source": "ENTERPRISE_5LEVEL_DRAFT",
-            "form_schema": form,
-            "route_rules": route,
-            "actor_bindings": {"schema_version": 1, "departments": {}},
-            "sla_profile": sla,
-        }
+
+    special = _try_plan_or_enterprise_draft(type_code, lifecycle, form, route, sla)
+    if special:
+        return special
+
     if type_code in CORE_EXTRA_TEMPLATES:
         c_form, c_route, c_sla_hours = deepcopy(CORE_EXTRA_TEMPLATES[type_code])
-        if (
+        match = (
             (
                 lifecycle == "A"
                 and c_route["executor"] is None
@@ -518,10 +529,12 @@ def initial_policy_draft(type_code: str, lifecycle: str) -> dict:
                 and c_route["executor"] is not None
                 and c_route["acceptor"] is not None
             )
-        ):
+        )
+        if match:
             form = c_form
             route = c_route
             sla.update(c_sla_hours)
+
     return {
         "source": "SAFE_STARTER",
         "form_schema": form,
@@ -574,14 +587,60 @@ def binding_errors(route_rules: dict, actor_bindings: dict) -> list[str]:
     return errors
 
 
+def _has_active_scoped_grant(
+    cursor, user_id: str, role: str, type_id: str, dept_id: str
+) -> bool:
+    cursor.execute(
+        """
+        SELECT EXISTS (
+          SELECT 1 FROM eas.app_user u
+          JOIN eas.role_membership m ON m.user_id=u.id
+          WHERE u.id=%s AND u.is_active AND m.role=%s
+            AND m.revoked_at IS NULL
+            AND m.valid_from<=statement_timestamp()
+            AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
+            AND (m.type_scope='ALL' OR (m.type_scope='ONE' AND m.type_id=%s))
+            AND (m.scope_kind='GLOBAL' OR (m.scope_kind='DEPARTMENT' AND m.department_id=%s))
+        )
+        """,
+        [user_id, role, type_id, dept_id],
+    )
+    return bool(cursor.fetchone()[0])
+
+
+def _check_dept_static_conflicts(
+    dept_id: str, mapping: dict, route_rules: dict, errors: list[str]
+) -> None:
+    for rule in route_rules.get("rules", []):
+        approver_ids = [
+            mapping[slot] for slot in rule["approvers"] if slot != "DIRECT_MANAGER"
+        ]
+        if len(approver_ids) != len(set(approver_ids)):
+            errors.append(
+                f"actor_bindings:{dept_id}:same approver assigned to distinct steps"
+            )
+        executor_slot = route_rules.get("executor")
+        acceptor_slot = route_rules.get("acceptor")
+        executor_id = (
+            mapping.get(executor_slot)
+            if executor_slot not in (None, "DIRECT_MANAGER")
+            else None
+        )
+        acceptor_id = (
+            mapping.get(acceptor_slot)
+            if acceptor_slot not in (None, "DIRECT_MANAGER", "REQUESTER")
+            else None
+        )
+        if executor_id and executor_id in approver_ids:
+            errors.append(f"actor_bindings:{dept_id}:executor cannot also approve")
+        if executor_id and acceptor_id and executor_id == acceptor_id:
+            errors.append(f"actor_bindings:{dept_id}:executor cannot also accept")
+
+
 def role_grant_errors(
     cursor, type_id: str, route_rules: dict, actor_bindings: dict
 ) -> list[str]:
-    """Verify current role grants for explicit policy assignees at validation time.
-
-    The runtime always re-checks grants under request submission locks, so a
-    role revoked *after* publication can never be used to route a new request.
-    """
+    """Verify current role grants for explicit policy assignees at validation time."""
     errors = binding_errors(route_rules, actor_bindings)
     if errors:
         return errors
@@ -603,50 +662,9 @@ def role_grant_errors(
             continue
         for slot, role in sorted(assignments):
             assignee = mapping[slot]
-            cursor.execute(
-                """
-                SELECT EXISTS (
-                  SELECT 1 FROM eas.app_user u
-                  JOIN eas.role_membership m ON m.user_id=u.id
-                  WHERE u.id=%s AND u.is_active AND m.role=%s
-                    AND m.revoked_at IS NULL
-                    AND m.valid_from<=statement_timestamp()
-                    AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
-                    AND (m.type_scope='ALL' OR
-                         (m.type_scope='ONE' AND m.type_id=%s))
-                    AND (m.scope_kind='GLOBAL' OR
-                         (m.scope_kind='DEPARTMENT' AND m.department_id=%s))
-                )
-                """,
-                [assignee, role, type_id, dept_id],
-            )
-            if not cursor.fetchone()[0]:
+            if not _has_active_scoped_grant(cursor, assignee, role, type_id, dept_id):
                 errors.append(
                     f"actor_bindings:{dept_id}:{slot} requires active {role} grant in type/department scope"
                 )
-        # Check static conflicts within every possible approval rule.
-        for rule in route_rules.get("rules", []):
-            approver_ids = [
-                mapping[slot] for slot in rule["approvers"] if slot != "DIRECT_MANAGER"
-            ]
-            if len(approver_ids) != len(set(approver_ids)):
-                errors.append(
-                    f"actor_bindings:{dept_id}:same approver assigned to distinct steps"
-                )
-            executor_slot = route_rules.get("executor")
-            acceptor_slot = route_rules.get("acceptor")
-            executor_id = (
-                mapping.get(executor_slot)
-                if executor_slot not in (None, "DIRECT_MANAGER")
-                else None
-            )
-            acceptor_id = (
-                mapping.get(acceptor_slot)
-                if acceptor_slot not in (None, "DIRECT_MANAGER", "REQUESTER")
-                else None
-            )
-            if executor_id and executor_id in approver_ids:
-                errors.append(f"actor_bindings:{dept_id}:executor cannot also approve")
-            if executor_id and acceptor_id and executor_id == acceptor_id:
-                errors.append(f"actor_bindings:{dept_id}:executor cannot also accept")
+        _check_dept_static_conflicts(dept_id, mapping, route_rules, errors)
     return list(dict.fromkeys(errors))

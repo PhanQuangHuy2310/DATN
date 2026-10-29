@@ -45,11 +45,11 @@ export default function RequestTypeMenu({ options = [], onSelect, disabled = fal
         </div>
       </div>
       <div className="request-menu-tools">
-        <label className="request-menu-search">Tìm loại yêu cầu
+        <label className="request-menu-search"><span className="label-text">Tìm loại yêu cầu</span>
           <input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setExpanded(true); }}
             placeholder="Nghỉ phép, mua sắm, VPN, hợp đồng, tuyển dụng, hotfix…" disabled={disabled}/>
         </label>
-        <label className="request-menu-availability">Cấp phê duyệt (5 cấp)
+        <label className="request-menu-availability"><span className="label-text">Cấp phê duyệt (5 cấp)</span>
           <select value={levelFilter} disabled={disabled} onChange={(event) => { setLevelFilter(event.target.value); setExpanded(true); }}>
             <option value="all">Tất cả 5 cấp duyệt</option>
             <option value="1">Cấp 1 — Duyệt 1 cấp (Quản lý trực tiếp)</option>
@@ -59,7 +59,7 @@ export default function RequestTypeMenu({ options = [], onSelect, disabled = fal
             <option value="5">Cấp 5 — Duyệt 5 cấp (Tổng Giám đốc / CTO)</option>
           </select>
         </label>
-        <label className="request-menu-availability">Trạng thái biểu mẫu
+        <label className="request-menu-availability"><span className="label-text">Trạng thái biểu mẫu</span>
           <select value={availability} disabled={disabled} onChange={(event) => { setAvailability(event.target.value); setExpanded(true); }}>
             <option value="all">Tất cả trạng thái</option><option value="available">Có thể tạo</option><option value="pending">Chưa kích hoạt</option>
           </select>
@@ -99,10 +99,10 @@ export default function RequestTypeMenu({ options = [], onSelect, disabled = fal
               </div>
             );
           })}
-          {filtered.length === 0 && <div className="request-menu-no-results" role="status">Không tìm thấy biểu mẫu phù hợp. Hãy thử tên hoặc nhóm khác.</div>}
+          {filtered.length === 0 && <output className="request-menu-no-results">Không tìm thấy biểu mẫu phù hợp. Hãy thử tên hoặc nhóm khác.</output>}
         </div>}
       </section>
-      {options.length === 0 && <p role="status">Hệ thống chưa cấp quyền sử dụng biểu mẫu cho tài khoản này.</p>}
+      {options.length === 0 && <output className="request-menu-empty">Hệ thống chưa cấp quyền sử dụng biểu mẫu cho tài khoản này.</output>}
     </div>
   );
 }

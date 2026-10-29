@@ -77,10 +77,10 @@ def main() -> int:
         )
     except SystemExit as exc:
         # Existing project command calls sys.exit(0) even when successful.
-        status = exc.code if isinstance(exc.code, int) else 1
-        if status == 0:
-            print("Password reset committed. Sign in with the new password and change it immediately.")
-        return status
+        if exc.code not in (0, None):
+            raise
+        print("Password reset committed. Sign in with the new password and change it immediately.")
+        return 0
     except Exception as exc:
         print("Reset could not be completed:", type(exc).__name__, file=sys.stderr)
         return 3

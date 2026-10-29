@@ -1512,8 +1512,6 @@ def _handle_approval_approved(
     acceptor_id: str | None,
     sla: dict[str, Any],
     now: datetime,
-    risk_weight: int = 3,
-    approval_level: int = 1,
 ) -> tuple[str, datetime | None, datetime | None, str | None]:
     cursor.execute(
         """
@@ -1609,8 +1607,6 @@ def _handle_approval_rejected_or_needs_info(
     instance_id: str,
     outcome: str,
     now: datetime,
-    risk_weight: int = 3,
-    approval_level: int = 1,
 ) -> str:
     if outcome == "NEEDS_INFO":
         cursor.execute(
@@ -1963,8 +1959,6 @@ def _apply_execution_submission(
     external_reference: str,
     sla: dict[str, Any],
     now: datetime,
-    risk_weight: int = 3,
-    approval_level: int = 1,
 ) -> tuple[str, datetime | None]:
     if lifecycle == "B":
         cursor.execute(
@@ -2181,8 +2175,6 @@ def _apply_acceptance_decision(
     type_id: str,
     sla: dict[str, Any],
     now: datetime,
-    risk_weight: int = 3,
-    approval_level: int = 1,
 ) -> tuple[str, datetime | None, str | None]:
     if outcome == "ACCEPT":
         cursor.execute(

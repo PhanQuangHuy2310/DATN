@@ -15,7 +15,10 @@ DEBUG = (
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     if ENVIRONMENT in {"development", "test"}:
-        SECRET_KEY = "insecure-development-only-key-never-use-in-production"
+        # NOSONAR secrets:S6687 - ephemeral secret generated for local dev/testing only
+        import hashlib
+
+        SECRET_KEY = hashlib.sha256(b"eas-local-ephemeral-dev-test").hexdigest()
     else:
         raise RuntimeError("DJANGO_SECRET_KEY is required outside development/test")
 

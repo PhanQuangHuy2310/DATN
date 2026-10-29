@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import math
 import re
 import unicodedata
 from datetime import date, datetime
@@ -400,7 +401,9 @@ def _validate_sla_profile_config(
     reminder_fraction = sla_profile.get("reminder_fraction")
     if clock != "CALENDAR_UTC":
         errs.append("sla_profile:clock must be CALENDAR_UTC")
-    if reminder_fraction != 0.5:
+    if not isinstance(reminder_fraction, (int, float)) or not math.isclose(
+        float(reminder_fraction), 0.5, rel_tol=1e-9
+    ):
         errs.append("sla_profile:reminder_fraction must be 0.5")
 
     app_h = sla_profile.get("approval_hours")

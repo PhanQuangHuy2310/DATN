@@ -31,9 +31,23 @@ def generate_password(length: int = 24) -> str:
     alphabet = upper + lower + digits + symbols
     chars = [secrets.choice(group) for group in (upper, lower, digits, symbols)]
     chars.extend(secrets.choice(alphabet) for _ in range(length - len(chars)))
-    secrets.SystemRandom().shuffle(chars)
+    for i in range(len(chars) - 1, 0, -1):
+        j = secrets.randbelow(i + 1)
+        chars[i], chars[j] = chars[j], chars[i]
     return "".join(chars)
 
+
+def _obtain_valid_password(username: str) -> str:
+    from api_core.authn.service import validate_new_password
+
+    for _ in range(30):
+        candidate = generate_password()
+        try:
+            validate_new_password(candidate, username)
+            return candidate
+        except Exception:  # noqa: BLE001
+            continue
+    return ""
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -76,16 +90,8 @@ def main() -> int:
         print("Da huy, khong thay doi gi.")
         return 1
 
-    password = generate_password()
-    # The generator has complexity guarantees; regenerate in the rare case it
-    # contains the username or conflicts with the project's validator.
-    for _ in range(30):
-        try:
-            validate_new_password(password, username)
-            break
-        except Exception:
-            password = generate_password()
-    else:
+    password = _obtain_valid_password(username)
+    if not password:
         print("[ERROR] Khong tao duoc mat khau thoa chinh sach.", file=sys.stderr)
         return 2
 
@@ -101,9 +107,9 @@ def main() -> int:
             )
         except SystemExit as exc:
             # Existing EAS management command exits with code 0 on success.
-            if exc.code != 0:
+            if exc.code not in (0, None):
                 print("[ERROR] Reset khong thanh cong.", file=sys.stderr)
-                return 3
+                raise
     except Exception as exc:
         # Do not print exception content; it may contain database connectivity details.
         print(f"[ERROR] Reset that bai: {type(exc).__name__}", file=sys.stderr)

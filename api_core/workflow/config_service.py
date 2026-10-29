@@ -640,6 +640,49 @@ def validate_release_candidate(*, actor: Actor, release_id: str) -> dict[str, An
     }
 
 
+def _check_publish_candidate_errors(
+    cursor,
+    type_code: str,
+    type_id: str,
+    lifecycle: str,
+    form_schema: dict,
+    route_rules: dict,
+    actor_bindings: dict,
+    sla_profile: dict,
+) -> list[str]:
+    errors = validate_config_release_payload(
+        lifecycle=lifecycle,
+        form_schema=form_schema,
+        route_rules=route_rules,
+        actor_bindings=actor_bindings,
+        sla_profile=sla_profile,
+    )
+    if type_code == "RESIGNATION" and not route_rules.get("executor"):
+        errors.append(
+            "RESIGNATION:executor must be configured for offboarding checklist"
+        )
+    core_types = {
+        "ACCESS_FACILITY",
+        "BUSINESS_TRIP",
+        "EQUIPMENT_BORROW",
+        "EXPENSE_CLAIM",
+        "IT_SUPPORT",
+        "LEAVE_SPECIAL",
+        "ROOM_BOOKING",
+    }
+    if (
+        type_code in core_types
+        and isinstance(form_schema.get("properties"), dict)
+        and set(form_schema["properties"]) <= {"title", "reason"}
+    ):
+        errors.append(
+            "form_schema:define business-specific fields for this request type before publishing"
+        )
+    if not errors:
+        errors.extend(role_grant_errors(cursor, type_id, route_rules, actor_bindings))
+    return errors
+
+
 def publish_config_release(
     *,
     actor: Actor,
@@ -699,38 +742,16 @@ def publish_config_release(
         if lock_version != expected_version:
             raise CommandError(ERR_VERSION_CONFLICT, status=409)
 
-        errors = validate_config_release_payload(
-            lifecycle=lifecycle,
-            form_schema=form_schema,
-            route_rules=route_rules,
-            actor_bindings=actor_bindings,
-            sla_profile=sla_profile,
+        errors = _check_publish_candidate_errors(
+            cursor,
+            type_code,
+            type_id,
+            lifecycle,
+            form_schema,
+            route_rules,
+            actor_bindings,
+            sla_profile,
         )
-        if type_code == "RESIGNATION" and not route_rules.get("executor"):
-            errors.append(
-                "RESIGNATION:executor must be configured for offboarding checklist"
-            )
-        if (
-            type_code
-            in {
-                "ACCESS_FACILITY",
-                "BUSINESS_TRIP",
-                "EQUIPMENT_BORROW",
-                "EXPENSE_CLAIM",
-                "IT_SUPPORT",
-                "LEAVE_SPECIAL",
-                "ROOM_BOOKING",
-            }
-            and isinstance(form_schema.get("properties"), dict)
-            and set(form_schema["properties"]) <= {"title", "reason"}
-        ):
-            errors.append(
-                "form_schema:define business-specific fields for this request type before publishing"
-            )
-        if not errors:
-            errors.extend(
-                role_grant_errors(cursor, type_id, route_rules, actor_bindings)
-            )
         if errors:
             raise CommandError("CONFIG_INVALID", status=422, fields=errors)
 

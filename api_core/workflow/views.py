@@ -291,6 +291,7 @@ def request_list(request: HttpRequest) -> JsonResponse:
     ]
 
     with connection.cursor() as cursor:
+        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
         cursor.execute(sql, params)
         rows = cursor.fetchall()
 
@@ -452,11 +453,14 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
             "attempt": attempt_payload,
         }
 
-    risk_w, app_lvl = resolve_five_level_metadata(
-        row[2],
-        row[11] if len(row) > 11 else None,
-        len(steps) if steps else (row[12] if len(row) > 12 else None),
-    )
+    raw_risk = row[11] if len(row) > 11 else None
+    if steps:
+        raw_app_level = len(steps)
+    elif len(row) > 12:
+        raw_app_level = row[12]
+    else:
+        raw_app_level = None
+    risk_w, app_lvl = resolve_five_level_metadata(row[2], raw_risk, raw_app_level)
     return JsonResponse(
         {
             "request": {
@@ -874,8 +878,16 @@ def attachment_download(request: HttpRequest, attachment_id: str) -> HttpRespons
     except CommandError as exc:
         return api_error(request, exc.code, status=exc.status, fields=exc.fields)
 
-    response = HttpResponse(data, content_type=mime)
+    safe_mime = (
+        "application/octet-stream"
+        if mime in ("text/html", "application/xhtml+xml", "text/xml")
+        else mime
+    )
+    response = HttpResponse(
+        data, content_type=safe_mime
+    )  # NOSONAR pythonsecurity:S5131
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Content-Security-Policy"] = "default-src 'none'"
     response["Cache-Control"] = "no-store"
     response["X-Content-Type-Options"] = "nosniff"
     response["X-Correlation-ID"] = correlation_id(request)

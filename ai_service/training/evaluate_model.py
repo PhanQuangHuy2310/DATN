@@ -138,7 +138,7 @@ def main():
     times = []
     for _ in range(1000):
         t = time.time()
-        model.predict(single_x)
+        _ = model.predict(single_x)
         times.append((time.time() - t) * 1000)
 
     p50 = np.percentile(times, 50)

@@ -15,6 +15,12 @@ const useResource = (url) => {
   return state;
 };
 
+function getCatalogModeLabel(mode) {
+  if (mode === "business") return "theo bảng chọn";
+  if (mode === "enterprise") return "Quản trị 5 Cấp";
+  return "từ plan.docx";
+}
+
 export default function PlanCatalog() {
   const source = useResource("/api/v1/meta/plan-request-types");
   const deployed = useResource("/api/v1/request-types");
@@ -67,7 +73,7 @@ export default function PlanCatalog() {
       </div>
     </header>
     <section className="panel plan-catalog-overview">
-      <div className="plan-stat"><strong>{pool.length}</strong><span>Mã loại {catalogMode === "business" ? "theo bảng chọn" : catalogMode === "enterprise" ? "Quản trị 5 Cấp" : "từ plan.docx"}</span></div>
+      <div className="plan-stat"><strong>{pool.length}</strong><span>Mã loại {getCatalogModeLabel(catalogMode)}</span></div>
       <div className="plan-stat"><strong>5 Cấp</strong><span>Phân tầng Rủi ro & Phê duyệt</span></div>
       <div className="plan-stat"><strong>{(deployed.data?.items||[]).filter(x=>x.configured).length}</strong><span>Tổng mã có release hoạt động</span></div>
       <p className="muted plan-note">Hệ thống vận hành đầy đủ 53 loại yêu cầu (10 Core + 18 Menu + 13 Plan + 12 Enterprise 5 Cấp) trải đều trên 5 tầng trọng số rủi ro và 1–5 cấp phê duyệt tuần tự.</p>
@@ -82,10 +88,10 @@ export default function PlanCatalog() {
           onClick={()=>{setCatalogMode("enterprise");setGroup("Tất cả");setReleaseFilter("all");setLevelFilter("all");setPage(0);setSelected(null);}}>12 mã Quản trị Doanh nghiệp 5 Cấp</button>
       </div>
       <div className="plan-filter-toolbar">
-        <label>Tìm theo tên hoặc mã
+        <label><span className="label-text">Tìm theo tên hoặc mã</span>
           <input type="search" value={filter} onChange={e=>{setFilter(e.target.value);setPage(0);}} placeholder="Ví dụ: VPN, nghỉ phép, SAAS, tuyển dụng, hotfix…" />
         </label>
-        <label>Cấp phê duyệt (5 cấp)
+        <label><span className="label-text">Cấp phê duyệt (5 cấp)</span>
           <select value={levelFilter} onChange={e=>{setLevelFilter(e.target.value);setPage(0);}}>
             <option value="all">Tất cả 5 cấp</option>
             <option value="1">Cấp 1 (Duyệt 1 cấp)</option>
@@ -95,7 +101,7 @@ export default function PlanCatalog() {
             <option value="5">Cấp 5 (Duyệt 5 cấp)</option>
           </select>
         </label>
-        <label>Trạng thái công bố
+        <label><span className="label-text">Trạng thái công bố</span>
           <select value={releaseFilter} onChange={e=>{setReleaseFilter(e.target.value);setPage(0);}}>
             <option value="all">Tất cả trạng thái</option><option value="published">Đã có release</option><option value="pending">Chưa có release phù hợp</option>
           </select>
@@ -105,8 +111,8 @@ export default function PlanCatalog() {
         <div className="plan-category-row">{groups.map(name=><button type="button" key={name} className={`plan-category-pill ${group===name ? "selected" : ""}`}
           aria-pressed={group===name} onClick={()=>{setGroup(name);setPage(0);}}>{name}<small>{name==="Tất cả" ? pool.length : pool.filter(item=>item.category===name).length}</small></button>)}</div>
       </div>
-      <div className="plan-list-count" role="status">{list.length} loại phù hợp bộ lọc</div>
-      {source.loading && <p role="status">Đang nạp danh mục…</p>}
+      <output className="plan-list-count">{list.length} loại phù hợp bộ lọc</output>
+      {source.loading && <output className="plan-status">Đang nạp danh mục…</output>}
       {source.error && <p className="error" role="alert">{source.error}</p>}
       {deployed.error && <p className="muted">Chưa lấy được trạng thái database: {deployed.error}</p>}
       <div className="plan-type-list">
@@ -145,7 +151,7 @@ export default function PlanCatalog() {
             {selected.sla_hours ? ` · SLA ${selected.sla_hours} giờ` : " · SLA theo quy chế"}
           </p>
         </div>
-        <button className="secondary" onClick={()=>setSelected(null)}>Đóng</button>
+        <button type="button" className="secondary" onClick={()=>setSelected(null)}>Đóng</button>
       </div>
       <div className="plan-detail-grid">
         <div><h3>Luồng phê duyệt (1–5 cấp)</h3><p>{selected.approval_route || "Được xác định từ bản quy chế đã công bố"}</p></div>
@@ -157,8 +163,8 @@ export default function PlanCatalog() {
       <div className="plan-fields">{(selected.required_fields || selected.form_schema?.required?.filter(f=>f!=="title") || []).map(f=><span key={f}>{selected.field_labels?.[f] || f} <small>({f})</small></span>)}</div>
       {!!selected.activation_warnings?.length && <div className="plan-warnings" role="note"><strong>Yêu cầu rà soát trước khi kích hoạt</strong>{selected.activation_warnings.map(w=><p key={w}>{w}</p>)}</div>}
       <p className="muted">Template thiết kế chỉ phục vụ lập bản nháp chính sách. Không tự động cho phép AI phê duyệt hay bỏ qua kiểm tra quyền và nghiệm thu.</p>
-      <button onClick={copySchema}>Sao chép JSON Schema</button>
-      {notice && <p role="status" className="success">{notice}</p>}
+      <button type="button" onClick={copySchema}>Sao chép JSON Schema</button>
+      {notice && <output className="success">{notice}</output>}
       <details><summary>JSON Schema để cấu hình biểu mẫu</summary><pre className="plan-code">{JSON.stringify(selected.form_schema,null,2)}</pre></details>
     </section>}
   </>;

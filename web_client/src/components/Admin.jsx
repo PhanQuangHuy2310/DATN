@@ -59,7 +59,7 @@ export function Policy({onManageAccess, canManageAccess=false}) {
             Soạn thảo, kiểm tra và công bố quy trình nghiệp vụ.
           </p>
         </div>
-        <button onClick={() => setModal("create")}>＋ Tạo bản nháp</button>
+        <button type="button" onClick={() => setModal("create")}>＋ Tạo bản nháp</button>
       </div>
       <section className="panel" aria-label="Kiểm tra công bố và quyền tạo đơn">
         <div className="section-head"><h2>Tình trạng công bố & quyền tạo đơn</h2>
@@ -69,7 +69,7 @@ export function Policy({onManageAccess, canManageAccess=false}) {
         </div>
         <p className="muted">POLICY_ADMIN tạo bản nháp, cập nhật biểu mẫu và công bố. OPS_ADMIN cấp quyền REQUESTER theo loại đơn/phòng ban trong mục Danh tính & phân quyền. Hai thao tác độc lập.</p>
         {canManageAccess && <button className="secondary" type="button" onClick={onManageAccess}>Mở quản lý quyền REQUESTER</button>}
-        {workflowMessage && <p role="status" className="muted">{workflowMessage}</p>}
+        {workflowMessage && <output className="muted">{workflowMessage}</output>}
         <ResourceState resource={statusResource}>
           <div className="table-wrap"><table className="responsive-records"><thead><tr>
             <th>Loại yêu cầu</th><th>Mẫu</th><th>Quy chế</th><th>Người có quyền tạo</th><th>Hành động</th>

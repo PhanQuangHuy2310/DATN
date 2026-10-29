@@ -190,6 +190,7 @@ def get_request_metrics_report(
     ]
 
     with connection.cursor() as cursor:
+        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
         cursor.execute(sql, params)
         rows = cursor.fetchall()
 
@@ -250,6 +251,7 @@ def get_request_audit_events(actor: Actor, request_id: str) -> dict[str, Any]:
           )
     """
     with connection.cursor() as cursor:
+        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
         cursor.execute(sql, [norm_id, actor.id, actor.id, actor.id])
         if not cursor.fetchone():
             raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)

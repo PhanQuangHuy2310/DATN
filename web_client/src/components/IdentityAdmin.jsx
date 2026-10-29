@@ -214,10 +214,10 @@ export default function IdentityAdmin() {
     <div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ DANH TÍNH / UC17</p><h1>Người dùng & ma trận phân quyền</h1><p className="muted">Quản trị tài khoản, quan hệ quản lý, phòng ban, vai trò có thời hạn và phạm vi áp dụng; không xóa user có dữ liệu lịch sử.</p></div>
       <button type="button" onClick={() => setModal({mode: "edit", record: null})}>+ {kind === "users" ? "Tạo người dùng" : kind === "memberships" ? "Cấp quyền" : kind === "request-types" ? "Tạo loại yêu cầu" : "Thêm phòng ban"}</button>
     </div>
-    {kind === "request-types" && <p className="muted" role="status">Báo cáo v1.0 đặt mục tiêu 16 loại yêu cầu. Hệ thống hiện có {total} loại theo bộ lọc đang chọn; loại mới cần được cấp quyền, cấu hình và công bố trước khi tạo hồ sơ.</p>}
+    {kind === "request-types" && <output className="muted">Báo cáo v1.0 đặt mục tiêu 16 loại yêu cầu. Hệ thống hiện có {total} loại theo bộ lọc đang chọn; loại mới cần được cấp quyền, cấu hình và công bố trước khi tạo hồ sơ.</output>}
     <div className="identity-explain" role="note"><strong>Bảo mật UC17:</strong> chỉ OPS_ADMIN với role membership <code>GLOBAL + ALL</code> mới được gọi API quản lý. Không suy quyền từ chức danh; mọi hành động cần lý do, idempotency và audit; không tự cấp/sửa role của chính mình.</div>
     <div className="tabs" aria-label="Mục quản trị danh tính">{Object.entries(entities).map(([k, v]) => <button type="button" className={kind === k ? "active" : "secondary"} key={k} onClick={() => switchKind(k)}>{v}</button>)}</div>
-    {notice && <p className="success" role="status">{notice}</p>}
+    {notice && <output className="success">{notice}</output>}
     <section className="panel identity-filter-panel" aria-label="Lọc dữ liệu">
       <div className="identity-filter-grid">
         <label>Tìm kiếm {entities[kind].toLowerCase()}

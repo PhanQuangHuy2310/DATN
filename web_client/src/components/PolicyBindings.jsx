@@ -75,7 +75,7 @@ export default function PolicyBindings({ release, jsonText, onChange }) {
         <button type="button" className="secondary" onClick={()=>updateBinding(false)}>Thêm phòng ban</button>
         {requested.length>0 && <button type="button" className="secondary" disabled={!chosenUser} onClick={()=>updateBinding(true)}>Gán người vào JSON</button>}
       </div>
-      {!!message && <p role="status" className="muted">{message}</p>}
+      {!!message && <output className="muted">{message}</output>}
     </>}
     {!candidates.loading && departments.length===0 && !candidates.error && <p className="muted">Không có phòng ban trong phạm vi POLICY_ADMIN. Kiểm tra role membership trước khi công bố.</p>}
   </div>;

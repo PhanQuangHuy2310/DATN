@@ -66,15 +66,15 @@ export function useResource(url) {
 export function ResourceState({ resource, children }) {
   if (resource.loading)
     return (
-      <p role="status" className="empty">
+      <output className="empty">
         Đang tải dữ liệu…
-      </p>
+      </output>
     );
   if (resource.error)
     return (
       <div role="alert" className="error">
         {resource.error}{" "}
-        <button className="secondary" onClick={resource.reload}>
+        <button type="button" className="secondary" onClick={resource.reload}>
           Thử lại
         </button>
       </div>
@@ -93,6 +93,7 @@ export function Modal({ title, onClose, children }) {
       <div className="section-head">
         <h2>{title}</h2>
         <button
+          type="button"
           className="secondary"
           onClick={onClose}
           aria-label="Đóng hộp thoại"
@@ -148,7 +149,7 @@ export function ActionForm({
           </p>
         )}
         <div className="form-actions">
-          <button className={danger ? "danger" : ""} disabled={busy}>
+          <button type="submit" className={danger ? "danger" : ""} disabled={busy}>
             {busy ? "Đang xử lý…" : submitLabel || title}
           </button>
         </div>

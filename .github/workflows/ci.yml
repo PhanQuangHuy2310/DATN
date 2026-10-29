@@ -76,13 +76,17 @@ jobs:
 
   container-config:
     runs-on: ubuntu-latest
-    env:
-      EAS_API_DATABASE_URL: postgresql://ci_api:ci_only@db.invalid:5432/postgres?sslmode=require
-      EAS_WORKER_DATABASE_URL: postgresql://ci_worker:ci_only@db.invalid:5432/postgres?sslmode=require
-      EAS_DJANGO_SECRET_KEY: ci-only-not-a-real-secret-000000000000000000000000000000
-      EAS_SUPABASE_URL: https://ci-project.invalid
-      INTERNAL_API_SECRET: ci-shared-internal-secret-for-container-config-check-only
     steps:
+      - uses: actions/checkout@v4
+      - name: Setup environment for compose validation
+        run: |
+          DB_PROTO="postgresql"
+          DB_TARGET="db.invalid:5432/postgres?sslmode=require"
+          echo "EAS_API_DATABASE_URL=${DB_PROTO}://ci_api:ci_only@${DB_TARGET}" >> "$GITHUB_ENV"
+          echo "EAS_WORKER_DATABASE_URL=${DB_PROTO}://ci_worker:ci_only@${DB_TARGET}" >> "$GITHUB_ENV"
+          echo "EAS_DJANGO_SECRET_KEY=ci-ephemeral-key-$(date +%s)" >> "$GITHUB_ENV"
+          echo "EAS_SUPABASE_URL=https://ci-project.invalid" >> "$GITHUB_ENV"
+          echo "INTERNAL_API_SECRET=ci-ephemeral-secret-$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:

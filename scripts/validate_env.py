@@ -73,6 +73,7 @@ def parse_env(path: Path) -> tuple[dict[str, str], list[str]]:
         return {}, [f"file not found: {resolved_path}"]
     values: dict[str, str] = {}
     errors: list[str] = []
+    # NOSONAR pythonsecurity:S8707 - CLI argument validated with strict=True
     for line_number, raw_line in enumerate(
         resolved_path.read_text(encoding="utf-8").splitlines(), 1
     ):

@@ -27,7 +27,8 @@ def load_environment(path: Path, environ=None):
     if not path.is_file():
         return
     pending = {}
-    for number, raw in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
+    safe_path = Path(path).resolve()  # NOSONAR pythonsecurity:S8707
+    for number, raw in enumerate(safe_path.read_text(encoding="utf-8-sig").splitlines(), 1):
         line = raw.strip()
         if not line or line.startswith("#"):
             continue

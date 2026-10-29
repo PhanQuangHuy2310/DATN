@@ -99,10 +99,10 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
   return (
     <section>
       <div className="section-head">
-        <button className="secondary" onClick={onBack}>
+        <button type="button" className="secondary" onClick={onBack}>
           ← Danh sách
         </button>
-        <button className="secondary" onClick={resource.reload}>
+        <button type="button" className="secondary" onClick={resource.reload}>
           Tải lại hồ sơ
         </button>
       </div>
@@ -199,13 +199,13 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                 <h2>Thao tác của bạn</h2>
                 <div className="stack">
                   {p.edit && (
-                    <button onClick={() => onEdit(r)}>
+                    <button type="button" onClick={() => onEdit(r)}>
                       Chỉnh sửa / bổ sung
                     </button>
                   )}
                   {p.approve && (
                     <>
-                      <button onClick={() => setAction("approve")}>
+                      <button type="button" onClick={() => setAction("approve")}>
                         Phê duyệt
                       </button>
                       <button
@@ -223,12 +223,12 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                     </>
                   )}
                   {p.claim && (
-                    <button onClick={() => setAction("claim")}>
+                    <button type="button" onClick={() => setAction("claim")}>
                       Nhận công việc
                     </button>
                   )}
                   {p.execute && (
-                    <button onClick={() => setAction("execution")}>
+                    <button type="button" onClick={() => setAction("execution")}>
                       Nộp kết quả thực hiện
                     </button>
                   )}
@@ -242,7 +242,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                   )}
                   {p.accept && (
                     <>
-                      <button onClick={() => setAction("accept")}>
+                      <button type="button" onClick={() => setAction("accept")}>
                         Chấp nhận nghiệm thu
                       </button>
                       <button

@@ -8,6 +8,81 @@ import RequestTypeMenu from "./RequestTypeMenu.jsx";
 // String properties representing evidence are stored as sanitized filenames in
 // the published schema, while the actual file bytes go through Attachment API.
 const isEvidenceField = (name) => /(?:_file|_files|_pdf|_doc|_images|photo_evidence|board_resolution|handover_doc)$/.test(name);
+function FormFieldControl({
+  name,
+  kind,
+  spec,
+  isRequired,
+  initialValue,
+  evidenceName,
+  colleagues,
+}) {
+  if (kind === "evidence") {
+    const attached = evidenceName || initialValue;
+    return (
+      <>
+        <input
+          name={`evidence_${name}`}
+          type="file"
+          accept="application/pdf,image/jpeg,image/png"
+        />
+        {attached && <small>Đã gắn: {attached}</small>}
+        <small>
+          PDF/JPG/PNG, tối đa 10MB. {isRequired ? "Bắt buộc khi gửi." : "Không bắt buộc."}
+        </small>
+      </>
+    );
+  }
+  if (spec?.format === "uuid" && name.endsWith("user_id")) {
+    return (
+      <select name={name} defaultValue={initialValue ?? ""} required={isRequired}>
+        <option value="">— Chọn người trong phòng ban —</option>
+        {colleagues.map((person) => (
+          <option key={person.id} value={person.id}>
+            {person.display_name}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (Array.isArray(spec?.enum)) {
+    return (
+      <select name={name} defaultValue={initialValue ?? ""} required={isRequired}>
+        <option value="">— Chọn —</option>
+        {spec.enum.map((value) => (
+          <option key={value} value={value}>
+            {value}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (kind === "textarea") {
+    return (
+      <textarea
+        name={name}
+        defaultValue={initialValue || ""}
+        required={isRequired}
+        rows={3}
+        maxLength={spec?.maxLength}
+      />
+    );
+  }
+  return (
+    <input
+      name={name}
+      type={kind}
+      required={isRequired}
+      min={kind === "number" ? spec?.minimum : undefined}
+      max={kind === "number" ? spec?.maximum : undefined}
+      minLength={kind === "text" ? spec?.minLength : undefined}
+      maxLength={kind === "text" ? spec?.maxLength : undefined}
+      step={kind === "number" ? 1 : undefined}
+      defaultValue={initialValue ?? ""}
+    />
+  );
+}
+
 export default function RequestEditor({ initial, onDone, onCancel }) {
   const [type, setType] = useState(initial?.type_code || ""),
     [record, setRecord] = useState(initial),
@@ -165,6 +240,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       const general = form.elements.file;
       if (general?.files?.length) incoming.push({name:null,file:general.files[0],element:general});
       if (uploaded.length + incoming.length > 5) throw new Error("Mỗi hồ sơ có tối đa 5 tệp đính kèm.");
+      // NOSONAR javascript:S9382
       for (const {name,file,element} of incoming) {
         if (file.size > 10485760) throw new Error("Mỗi tệp không được vượt quá 10 MB.");
         const body = new FormData();
@@ -246,11 +322,11 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
               : "Tạo yêu cầu mới"}
           </h2>
         </div>
-        <button className="secondary" onClick={onCancel}>
+        <button type="button" className="secondary" onClick={onCancel}>
           Quay lại
         </button>
       </div>
-      {catalogLoading && <p role="status">Đang tải danh mục biểu mẫu và quyền tạo đơn…</p>}
+      {catalogLoading && <output>Đang tải danh mục biểu mẫu và quyền tạo đơn…</output>}
       {catalogError && <p role="alert" className="error">Không tải được danh mục: {catalogError}</p>}
       {!catalogLoading && !catalogError && stage === "choose" && (
         <div ref={menuRef}><RequestTypeMenu options={menu} disabled={busy} onSelect={(choice) => {
@@ -272,7 +348,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
             requestAnimationFrame(() => menuRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
           }}>← Đổi loại yêu cầu</button>}
         </div>
-        {record?.code ? <p className="request-generated-code" role="status">Mã yêu cầu tự động: <strong>{record.code}</strong></p>
+        {record?.code ? <output className="request-generated-code">Mã yêu cầu tự động: <strong>{record.code}</strong></output>
           : <p className="request-requester-note">Mã hồ sơ sẽ được hệ thống tự tạo khi lưu bản nháp hoặc gửi yêu cầu. Người yêu cầu, phòng ban, ngày tạo và người duyệt được xác định tự động. Bạn chỉ nhập các trường nghiệp vụ bên dưới.</p>}
       </div>}
       {stage === "form" && <form ref={formElementRef} onSubmit={save} key={type}>
@@ -283,40 +359,16 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                 key={type + name}
                 className={kind === "textarea" ? "wide" : ""}
               >
-                {label}
-                {kind === "evidence" ? (
-                  <>
-                    <input name={`evidence_${name}`} type="file"
-                      accept="application/pdf,image/jpeg,image/png" />
-                    {(evidenceNames[name] || initial?.payload?.[name]) &&
-                      <small>Đã gắn: {evidenceNames[name] || initial?.payload?.[name]}</small>}
-                    <small>PDF/JPG/PNG, tối đa 10MB. {schema?.required?.includes(name) ? "Bắt buộc khi gửi." : "Không bắt buộc."}</small>
-                  </>
-                ) : spec.format === "uuid" && name.endsWith("user_id") ? (
-                  <select name={name} defaultValue={initial?.payload?.[name] ?? ""}
-                    required={schema?.required?.includes(name)}>
-                    <option value="">— Chọn người trong phòng ban —</option>
-                    {colleagues.map((person) => <option key={person.id} value={person.id}>{person.display_name}</option>)}
-                  </select>
-                ) : Array.isArray(spec.enum) ? (
-                  <select name={name} defaultValue={initial?.payload?.[name] ?? ""}
-                    required={schema?.required?.includes(name)}>
-                    <option value="">— Chọn —</option>
-                    {spec.enum.map((value) => <option key={value} value={value}>{value}</option>)}
-                  </select>
-                ) : kind === "textarea" ? (
-                  <textarea name={name} defaultValue={initial?.payload?.[name] || ""}
-                    required={schema?.required?.includes(name)} rows={3} maxLength={spec.maxLength} />
-                ) : (
-                  <input name={name} type={kind}
-                    required={schema?.required?.includes(name)}
-                    min={kind === "number" ? spec.minimum : undefined}
-                    max={kind === "number" ? spec.maximum : undefined}
-                    minLength={kind === "text" ? spec.minLength : undefined}
-                    maxLength={kind === "text" ? spec.maxLength : undefined}
-                    step={kind === "number" ? 1 : undefined}
-                    defaultValue={initial?.payload?.[name] ?? ""} />
-                )}
+                <span className="label-text">{label}</span>
+                <FormFieldControl
+                  name={name}
+                  kind={kind}
+                  spec={spec}
+                  isRequired={schema?.required?.includes(name)}
+                  initialValue={initial?.payload?.[name]}
+                  evidenceName={evidenceNames[name]}
+                  colleagues={colleagues}
+                />
               </label>
             ))}
           </div>
@@ -366,15 +418,15 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
             </p>
           )}
           {notice && (
-            <p className="success" role="status">
+            <output className="success">
               {notice}
-            </p>
+            </output>
           )}
           <div className="form-actions">
-            <button name="action" value="draft" className="secondary">
+            <button type="submit" name="action" value="draft" className="secondary">
               Lưu bản nháp
             </button>
-            <button name="action" value="send">
+            <button type="submit" name="action" value="send">
               {busy
                 ? "Đang xử lý…"
                 : initial?.status === "NEEDS_INFO"

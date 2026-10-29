@@ -17,6 +17,13 @@ from api_core.health.request_type_readiness import assess_request_types
 from connect_database import database_url, load_environment
 
 
+def _invalid_release_reason(has_release: bool, state: str) -> str:
+    if not has_release:
+        return 'chua gan active_release_id'
+    if state != 'PUBLISHED':
+        return 'release khong PUBLISHED'
+    return 'release khong khop type_id/lifecycle'
+
 def run() -> int:
     load_environment(Path(__file__).with_name('.env.database'))
     try:
@@ -28,8 +35,7 @@ def run() -> int:
         with psycopg.connect(
             database_url(), connect_timeout=10, prepare_threshold=None,
             options='-c statement_timeout=10000 -c lock_timeout=2500',
-        ) as conn:
-            with conn.cursor() as cur:
+        ) as conn, conn.cursor() as cur:
                 cur.execute('SET TRANSACTION READ ONLY')
                 cur.execute("""
                     SELECT c.relname
@@ -63,10 +69,7 @@ def run() -> int:
                 invalid = [r for r in rows if not r[4]]
                 print(f'[INFO] request_type: {len(rows)} dang active; {len(invalid)} chua co release hop le')
                 for code, lifecycle, has_release, state, _ in invalid:
-                    detail = 'chua gan active_release_id' if not has_release else (
-                        'release khong PUBLISHED' if state != 'PUBLISHED' else
-                        'release khong khop type_id/lifecycle'
-                    )
+                    detail = _invalid_release_reason(has_release, state)
                     print(f'[WARN] {code} (Template {lifecycle}): {detail}')
                 if not invalid:
                     print('[PASS] Moi loai don active co release PUBLISHED phu hop.')

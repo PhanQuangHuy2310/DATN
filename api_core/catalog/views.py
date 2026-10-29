@@ -150,91 +150,83 @@ def request_types(request):
     )
 
 
-@require_GET
-@require_actor("REQUESTER")
-def request_type_forms(request):
-    """Configured templates visible to a requester inside their effective scope.
-
-    A published schema can be used to render a form; write services re-check all
-    authorizations. Never expose actor_bindings, route_rules or secrets here.
-    """
-    actor = request.actor
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT rt.code, rt.lifecycle, cr.id::text, cr.form_schema,
-                   rt.name, rt.description, rt.category,
-                   rt.risk_weight, rt.approval_level
-            FROM eas.request_type rt
-            JOIN eas.config_release cr ON cr.id=rt.active_release_id
-            WHERE rt.is_active AND cr.state='PUBLISHED'
-              AND cr.type_id=rt.id AND cr.lifecycle=rt.lifecycle
-              AND EXISTS (
-                SELECT 1 FROM eas.role_membership m
-                WHERE m.user_id=%s AND m.role='REQUESTER'
-                  AND m.revoked_at IS NULL
-                  AND m.valid_from<=statement_timestamp()
-                  AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
-                  AND (m.scope_kind='GLOBAL' OR
-                       (m.scope_kind='DEPARTMENT' AND m.department_id=%s))
-                  AND (m.type_scope='ALL' OR
-                       (m.type_scope='ONE' AND m.type_id=rt.id))
-              )
-            ORDER BY rt.code
-        """,
-            [actor.id, actor.department_id],
+def _fetch_requester_form_items(cursor, actor):
+    cursor.execute(
+        """
+        SELECT rt.code, rt.lifecycle, cr.id::text, cr.form_schema,
+               rt.name, rt.description, rt.category,
+               rt.risk_weight, rt.approval_level
+        FROM eas.request_type rt
+        JOIN eas.config_release cr ON cr.id=rt.active_release_id
+        WHERE rt.is_active AND cr.state='PUBLISHED'
+          AND cr.type_id=rt.id AND cr.lifecycle=rt.lifecycle
+          AND EXISTS (
+            SELECT 1 FROM eas.role_membership m
+            WHERE m.user_id=%s AND m.role='REQUESTER'
+              AND m.revoked_at IS NULL
+              AND m.valid_from<=statement_timestamp()
+              AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
+              AND (m.scope_kind='GLOBAL' OR
+                   (m.scope_kind='DEPARTMENT' AND m.department_id=%s))
+              AND (m.type_scope='ALL' OR
+                   (m.type_scope='ONE' AND m.type_id=rt.id))
+          )
+        ORDER BY rt.code
+    """,
+        [actor.id, actor.department_id],
+    )
+    items = []
+    for row in cursor.fetchall():
+        code, lifecycle, release_id, form_schema, name, description, category = row[:7]
+        db_rw = row[7] if len(row) > 7 else None
+        db_al = row[8] if len(row) > 8 else None
+        risk_w, app_lvl = resolve_five_level_metadata(code, db_rw, db_al)
+        items.append(
+            {
+                "code": code,
+                "name": name.strip() or approval_type_name(code),
+                "description": description,
+                "category": category,
+                "lifecycle": lifecycle,
+                "release_id": release_id,
+                "form_schema": form_schema,
+                "field_labels": resolve_field_labels(code),
+                "department_id": actor.department_id,
+                "risk_weight": risk_w,
+                "approval_level": app_lvl,
+            }
         )
-        items = []
-        for row in cursor.fetchall():
-            code, lifecycle, release_id, form_schema, name, description, category = row[
-                :7
-            ]
-            db_rw = row[7] if len(row) > 7 else None
-            db_al = row[8] if len(row) > 8 else None
-            risk_w, app_lvl = resolve_five_level_metadata(code, db_rw, db_al)
-            items.append(
-                {
-                    "code": code,
-                    "name": name.strip() or approval_type_name(code),
-                    "description": description,
-                    "category": category,
-                    "lifecycle": lifecycle,
-                    "release_id": release_id,
-                    "form_schema": form_schema,
-                    "field_labels": resolve_field_labels(code),
-                    "department_id": actor.department_id,
-                    "risk_weight": risk_w,
-                    "approval_level": app_lvl,
-                }
-            )
-    # Distinguish real publication blockers from scoped REQUESTER permission
-    # without returning private policy JSON, memberships or assignee identities.
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT rt.code, rt.lifecycle, rt.is_active,
-                   (cr.id IS NOT NULL AND cr.state='PUBLISHED'
-                    AND cr.type_id=rt.id AND cr.lifecycle=rt.lifecycle) AS has_release,
-                   EXISTS (
-                     SELECT 1 FROM eas.role_membership m
-                     WHERE m.user_id=%s AND m.role='REQUESTER'
-                       AND m.revoked_at IS NULL AND m.valid_from<=statement_timestamp()
-                       AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
-                       AND (m.scope_kind='GLOBAL' OR
-                            (m.scope_kind='DEPARTMENT' AND m.department_id=%s))
-                       AND (m.type_scope='ALL' OR
-                            (m.type_scope='ONE' AND m.type_id=rt.id))
-                   ) AS scoped
-            FROM eas.request_type rt
-            LEFT JOIN eas.config_release cr ON cr.id=rt.active_release_id
-        """,
-            [actor.id, actor.department_id],
-        )
-        states = {
-            code: (lc, active, published, scoped)
-            for code, lc, active, published, scoped in cursor.fetchall()
-        }
+    return items
 
+
+def _fetch_requester_type_states(cursor, actor):
+    cursor.execute(
+        """
+        SELECT rt.code, rt.lifecycle, rt.is_active,
+               (cr.id IS NOT NULL AND cr.state='PUBLISHED'
+                AND cr.type_id=rt.id AND cr.lifecycle=rt.lifecycle) AS has_release,
+               EXISTS (
+                 SELECT 1 FROM eas.role_membership m
+                 WHERE m.user_id=%s AND m.role='REQUESTER'
+                   AND m.revoked_at IS NULL AND m.valid_from<=statement_timestamp()
+                   AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
+                   AND (m.scope_kind='GLOBAL' OR
+                        (m.scope_kind='DEPARTMENT' AND m.department_id=%s))
+                   AND (m.type_scope='ALL' OR
+                        (m.type_scope='ONE' AND m.type_id=rt.id))
+               ) AS scoped
+        FROM eas.request_type rt
+        LEFT JOIN eas.config_release cr ON cr.id=rt.active_release_id
+    """,
+        [actor.id, actor.department_id],
+    )
+    return {
+        code: (lc, active, published, scoped)
+        for code, lc, active, published, scoped in cursor.fetchall()
+    }
+
+
+def _build_requester_menu(items, states):
     available = {item["code"]: item for item in items}
     menu = []
     for row in approval_menu_blueprint()["options"] + enterprise_options():
@@ -274,6 +266,22 @@ def request_type_forms(request):
                     "disabled_reason": None,
                 }
             )
+    return menu
+
+
+@require_GET
+@require_actor("REQUESTER")
+def request_type_forms(request):
+    """Configured templates visible to a requester inside their effective scope.
+
+    A published schema can be used to render a form; write services re-check all
+    authorizations. Never expose actor_bindings, route_rules or secrets here.
+    """
+    actor = request.actor
+    with connection.cursor() as cursor:
+        items = _fetch_requester_form_items(cursor, actor)
+        states = _fetch_requester_type_states(cursor, actor)
+    menu = _build_requester_menu(items, states)
     return JsonResponse(
         {
             "items": items,
