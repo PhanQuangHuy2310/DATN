@@ -32,7 +32,7 @@ async function fixture(page, role = "REQUESTER", state = "DRAFT") {
     type_code: "LEAVE",
     status,
     lock_version: version,
-    requester_id: userId,
+    requester_id: (role === "REQUESTER" || role === "ALL") ? userId : "33333333-3333-4333-8333-333333333333",
     payload: {
       title: "Đăng ký nghỉ phép tháng 10",
       reason: "Nghỉ phép theo kế hoạch cá nhân",
@@ -42,10 +42,21 @@ async function fixture(page, role = "REQUESTER", state = "DRAFT") {
     },
     created_at: "2026-10-23T09:00:00Z",
     updated_at: "2026-10-23T09:00:00Z",
-    approval_steps: [{ step_no: 1, state: "ACTIVE", assignee_id: userId }],
+    approval_steps: [
+      {
+        step_no: 1,
+        state: (role === "APPROVER" || role === "ALL") && status === "PENDING_APPROVAL" ? "ACTIVE" : (status === "DRAFT" ? "PENDING" : "APPROVED"),
+        assignee_id: (role === "APPROVER" || role === "ALL") ? userId : "44444444-4444-4444-8444-444444444444",
+      },
+    ],
     workflow: {
-      acceptor_id: userId,
-      attempt: { executor_id: userId, state: "RUNNING", attempt_no: 1 },
+      lifecycle: "C",
+      acceptor_id: (role === "ACCEPTOR" || role === "ALL") ? userId : "55555555-5555-4555-8555-555555555555",
+      attempt: {
+        executor_id: (role === "EXECUTOR" || (role === "ALL" && status !== "WAITING_FOR_ACCEPTANCE")) ? userId : "66666666-6666-4666-8666-666666666666",
+        state: status === "WAITING_FOR_ACCEPTANCE" ? "SUBMITTED" : (status === "READY_FOR_EXECUTION" ? "READY" : "RUNNING"),
+        attempt_no: 1,
+      },
     },
   });
   await page.route("**/api/v1/**", async (route) => {
@@ -70,6 +81,7 @@ async function fixture(page, role = "REQUESTER", state = "DRAFT") {
           id: userId,
           display_name: "Nguyễn Minh Anh",
           roles: role === "ALL" ? all : [role],
+          capabilities: { identity_manage: role === "OPS_ADMIN" || role === "ALL" },
         },
       });
     if (path === "reports/requests") {
@@ -194,6 +206,37 @@ async function fixture(page, role = "REQUESTER", state = "DRAFT") {
       });
     if (path.endsWith("/read"))
       return send({ notification: { id, read_at: "2026-10-23" } });
+    if (path === "meta/request-type-forms")
+      return send({
+        items: [
+          {
+            code: "LEAVE",
+            name: "Nghỉ phép",
+            lifecycle: "C",
+            risk_weight: 1,
+            approval_level: 3,
+            release_id: id,
+            form_schema: {
+              type: "object",
+              required: ["title", "reason", "start_date", "end_date"],
+              properties: {
+                title: { type: "string", title: "Tiêu đề" },
+                reason: { type: "string", title: "Lý do" },
+                start_date: { type: "string", format: "date", title: "Ngày bắt đầu" },
+                end_date: { type: "string", format: "date", title: "Ngày kết thúc" },
+                handover_user_id: { type: "string", format: "uuid", title: "ID người nhận bàn giao" },
+              },
+            },
+            field_labels: {
+              title: "Tiêu đề",
+              reason: "Lý do",
+              start_date: "Ngày bắt đầu",
+              end_date: "Ngày kết thúc",
+              handover_user_id: "ID người nhận bàn giao",
+            },
+          },
+        ],
+      });
     return send({});
   });
   return calls;
@@ -389,6 +432,6 @@ test('identity CRUD creates, edits and deactivates department',async({page})=>{
 test('temporary password blocks workspace until changed',async({page})=>{
  await fixture(page);let changed=false;
  await page.route('**/api/v1/auth/me',route=>route.fulfill(changed?{json:{user:{id:userId,display_name:'Test User',roles:['REQUESTER'],must_change_password:false}}}:{status:403,json:{error:{code:'PASSWORD_CHANGE_REQUIRED'}}}));
- await page.route('**/api/v1/auth/password',async route=>{const body=route.request().postDataJSON();expect(body.current_password).toBe('Old!12345678');expect(body.new_password).toBe('New!87654321');changed=true;await route.fulfill({json:{status:'ok'}});});
- await page.goto('/');await expect(page.getByRole('heading',{name:'Đổi mật khẩu để tiếp tục'})).toBeVisible();await expect(page.getByRole('navigation')).toHaveCount(0);await page.getByLabel('Mật khẩu hiện tại').fill('Old!12345678');await page.getByLabel('Mật khẩu mới',{exact:true}).fill('New!87654321');await page.getByLabel('Xác nhận mật khẩu').fill('New!87654321');await page.getByRole('button',{name:'Đổi mật khẩu',exact:true}).click();await expect(page.getByRole('heading',{name:'Tổng quan xử lý yêu cầu'})).toBeVisible();
+ await page.route('**/api/v1/auth/password',async route=>{const body=route.request().postDataJSON();expect(body.current_password).toBe('Old!12345678');expect(body.new_password).toBe('New!87654321Pass');changed=true;await route.fulfill({json:{status:'ok'}});});
+ await page.goto('/');await expect(page.getByRole('heading',{name:'Đổi mật khẩu để tiếp tục'})).toBeVisible();await expect(page.getByRole('navigation')).toHaveCount(0);await page.getByLabel('Mật khẩu hiện tại').fill('Old!12345678');await page.getByLabel('Mật khẩu mới',{exact:true}).fill('New!87654321Pass');await page.getByLabel('Xác nhận mật khẩu').fill('New!87654321Pass');await page.getByRole('button',{name:'Đổi mật khẩu',exact:true}).click();await expect(page.getByRole('heading',{name:'Tổng quan xử lý yêu cầu'})).toBeVisible();
 });

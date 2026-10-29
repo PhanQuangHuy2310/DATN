@@ -144,7 +144,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   const current = catalog.find((entry) => entry.code === type);
   const schema = current?.form_schema;
   const formFields = schema?.properties
-    ? Object.entries(schema.properties).filter(([name]) => name !== "title" && name !== "department_id").map(([name, spec]) => {
+    ? Object.entries(schema.properties).filter(([name]) => name !== "department_id").map(([name, spec]) => {
         const legacy = fields[type]?.find(([field]) => field === name);
         const label = current?.field_labels?.[name] || legacy?.[1] || fieldLabels[name] || name.replaceAll("_", " ");
         const inputType = spec.type === "integer" ? "number"
@@ -152,7 +152,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
         return [name, label, isEvidenceField(name) && spec.type === "string" ? "evidence" :
           (legacy?.[2] === "textarea" ? "textarea" : inputType), spec];
       })
-    : (fields[type] || []).filter(([name]) => name !== "title" && name !== "department_id").map(([name, label, kind]) => [name, label, kind, {}]);
+    : (fields[type] || []).filter(([name]) => name !== "department_id").map(([name, label, kind]) => [name, label, kind, {}]);
   useEffect(() => {
     if (!initial?.id) return;
     let active = true;
@@ -282,7 +282,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           request_id: r.id,
           expected_version: r.lock_version,
           type_code: type,
-          viewed_release_id: current.release_id,
+          viewed_release_id: current?.release_id,
           payload,
         });
         onDone(r.id);
@@ -348,11 +348,11 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
             requestAnimationFrame(() => menuRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
           }}>← Đổi loại yêu cầu</button>}
         </div>
-        {record?.code ? <output className="request-generated-code">Mã yêu cầu tự động: <strong>{record.code}</strong></output>
+        {record?.code ? <div className="request-generated-code">Mã yêu cầu tự động: <strong>{record.code}</strong></div>
           : <p className="request-requester-note">Mã hồ sơ sẽ được hệ thống tự tạo khi lưu bản nháp hoặc gửi yêu cầu. Người yêu cầu, phòng ban, ngày tạo và người duyệt được xác định tự động. Bạn chỉ nhập các trường nghiệp vụ bên dưới.</p>}
       </div>}
       {stage === "form" && <form ref={formElementRef} onSubmit={save} key={type}>
-        <fieldset disabled={busy || catalogLoading || !!catalogError || !current}>
+        <fieldset disabled={busy || catalogLoading || Boolean(catalogError) || (!current && !(fields[type]?.length))}>
           <div className="form-grid">
             {formFields.map(([name, label, kind, spec]) => (
               <label

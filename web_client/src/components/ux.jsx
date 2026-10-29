@@ -9,7 +9,7 @@ export function PasswordField({ label, name, help, ...props }) {
       <div className="password-control">
         <input id={id} name={name} type={visible ? "text" : "password"} {...props} />
         <button type="button" className="password-toggle" aria-pressed={visible}
-          aria-label={`${visible ? "Ẩn" : "Hiện"} ${label.toLowerCase()}`}
+          aria-label={visible ? "Ẩn ký tự" : "Hiện ký tự"}
           onClick={() => setVisible((v) => !v)}>
           <span aria-hidden="true">{visible ? "◉" : "◎"}</span> {visible ? "Ẩn" : "Hiện"}
         </button>

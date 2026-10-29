@@ -24,7 +24,7 @@ thead { position:sticky; top:0; z-index:1; }
 .pagination-extended { padding:14px 18px; border-top:1px solid #e6ecf5; margin:0; flex-wrap:wrap; justify-content:space-between; min-height:74px; gap:10px; }
 .pagination-extended .pagination-context { display:flex; flex-direction:column; gap:1px; min-width:180px; }
 .pagination-extended .pagination-context strong { color:#192c52; font-size:13px; }
-.pagination-extended .pagination-context span { font-size:12px; color:#64748b; margin:0; }
+.pagination-extended .pagination-context span { font-size:12px; color:#374151; margin:0; }
 .pagination-extended .page-size { margin:0; display:flex; align-items:center; gap:8px; font-size:12px; white-space:nowrap; }
 .pagination-extended select { padding:7px 22px 7px 9px; background-color:#fff; }
 .pagination-extended .page-buttons { display:flex; align-items:center; gap:7px; }
@@ -78,7 +78,8 @@ thead { position:sticky; top:0; z-index:1; }
 .request-mini-stat .mini-stat-icon { order:2; grid-column:2; grid-row:1; display:grid; width:30px; height:30px; place-items:center; border-radius:6px; background:#e5edff; color:#153898; font-size:16px; }
 .request-mini-stat .mini-stat-label { grid-column:1; grid-row:1; text-transform:uppercase; color:#46546f; font-size:10px; letter-spacing:.25px; font-weight:700; }
 .request-mini-stat strong { grid-column:1/3; grid-row:2; color:#10244c; font-size:24px; font-weight:800; line-height:1; }
-.request-mini-stat small { grid-column:1/3; grid-row:3; color:#708097; font-size:10px; align-self:end; }
+.request-mini-stat small { grid-column:1/3; grid-row:3; color:#374151; font-size:10px; align-self:end; }
+.request-mini-stat:hover small, .request-mini-stat.current small { color:#1e3a8a; }
 @media(max-width:1400px) { .request-summary-strip { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media(max-width:600px) { .request-summary-strip { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 /* SRS v2 UC01–UC17: task affordances adapt to assigned roles; API enforces permissions. */
