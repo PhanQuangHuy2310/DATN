@@ -63,7 +63,7 @@ TABLES = {
     ),
     "request-types": (
         "request_type",
-        ("id", "code", "name", "description", "category", "lifecycle", "is_active", "active_release_id"),
+        ("id", "code", "name", "description", "category", "lifecycle", "is_active", "active_release_id", "risk_weight", "approval_level"),
     ),
 }
 
@@ -268,8 +268,8 @@ def validate(kind, body, old=None):
             "valid_to",
         },
         "request-types": (
-            {"is_active", "code", "lifecycle", "name", "description", "category"}
-            if old is None else {"is_active", "name", "description", "category"}
+            {"is_active", "code", "lifecycle", "name", "description", "category", "risk_weight", "approval_level"}
+            if old is None else {"is_active", "name", "description", "category", "risk_weight", "approval_level"}
         ),
     }[kind]
     if set(body) - allowed:
@@ -341,6 +341,11 @@ def validate(kind, body, old=None):
         if category not in REQUEST_TYPE_CATEGORIES:
             raise CommandError("INVALID_CATEGORY", status=422)
         v["category"] = category
+        for lvl_field, default_lvl in (("risk_weight", 3), ("approval_level", 1)):
+            lvl_val = v.get(lvl_field, default_lvl)
+            if isinstance(lvl_val, bool) or not isinstance(lvl_val, int) or not (1 <= lvl_val <= 5):
+                raise CommandError("INVALID_" + lvl_field.upper(), status=422)
+            v[lvl_field] = lvl_val
         if old is None:
             code = v.get("code")
             lifecycle = v.get("lifecycle")
@@ -466,8 +471,8 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 "valid_to",
             ],
             "request-types": (
-                ["code", "lifecycle", "name", "description", "category", "is_active"]
-                if method == "POST" else ["name", "description", "category", "is_active"]
+                ["code", "lifecycle", "name", "description", "category", "is_active", "risk_weight", "approval_level"]
+                if method == "POST" else ["name", "description", "category", "is_active", "risk_weight", "approval_level"]
             ),
         }[kind].copy()
         if kind == "users":

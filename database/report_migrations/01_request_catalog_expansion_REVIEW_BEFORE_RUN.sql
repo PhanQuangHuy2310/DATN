@@ -12,6 +12,7 @@ ALTER TABLE eas.request_type
 -- New API is scoped to OPS_ADMIN GLOBAL/ALL, reason, idempotency and audit;
 -- nonetheless this broadens SQL privileges and needs DBA/security sign-off.
 GRANT INSERT ON eas.request_type TO eas_api;
+GRANT UPDATE (response_body) ON eas.idempotency_record TO eas_api;
 COMMIT;
 -- With migration and backend tests complete, set EAS_ALLOW_REPORT_CATALOG_EXPANSION=true.
 -- New types are NOT usable until Policy Admin publishes a validated config and

@@ -236,7 +236,7 @@ def validate_payload(
 
     normalized = _normalize_payload(payload, properties, errors)
 
-    if type_code == "LEAVE":
+    if type_code in {"LEAVE", "LEAVE_SPECIAL"}:
         _validate_leave_rules(normalized, requester_id, today, errors)
 
     if type_code in {"LEAVE", "ACCESS"} and "amount_vnd" in normalized:
@@ -278,7 +278,7 @@ def validate_draft_payload(
 
     normalized = _normalize_payload(payload, properties, errors)
 
-    if type_code == "LEAVE":
+    if type_code in {"LEAVE", "LEAVE_SPECIAL"}:
         _validate_leave_rules(normalized, requester_id, today, errors)
 
     if type_code in {"LEAVE", "ACCESS"} and "amount_vnd" in normalized:
@@ -313,8 +313,8 @@ def _validate_route_rules_config(
             rule_ids.add(r_id)
 
         approvers = rule.get("approvers")
-        if not isinstance(approvers, list) or not (1 <= len(approvers) <= 3):
-            errs.append(f"route_rules:rules[{idx}]:approvers must be 1..3 items")
+        if not isinstance(approvers, list) or not (1 <= len(approvers) <= 5):
+            errs.append(f"route_rules:rules[{idx}]:approvers must be 1..5 items")
         else:
             for app in approvers:
                 if app not in APPROVER_SLOTS:

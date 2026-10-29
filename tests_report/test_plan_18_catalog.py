@@ -49,7 +49,7 @@ class PlanCatalogTests(unittest.TestCase):
         self.assertEqual(d["PROD_DATA_ACCESS"]["lifecycle"],"C")
 
     def test_sql_registration_is_inactive(self):
-        text=(ROOT/"database/report_migrations/02_plan_18_type_registration_DBA_REVIEW_ONLY.sql").read_text()
+        text=(ROOT/"database/report_migrations/02_plan_18_type_registration_DBA_REVIEW_ONLY.sql").read_text(encoding="utf-8")
         self.assertEqual(text.count("INSERT INTO eas.request_type"),18)
         self.assertEqual(text.count(",false,"),18)
         self.assertEqual(text.count("ON CONFLICT (code) DO NOTHING"),18)

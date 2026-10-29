@@ -46,6 +46,38 @@ ACCEPTOR_SLOTS = {None} | {
     "REQUESTER",
 }
 SUPPORTED_OPERATORS = {"amount_gt", "amount_gte", "days_gt", "app_code_in"}
+MONETARY_PAYLOAD_FIELDS = (
+    "amount_vnd",
+    "amount",
+    "estimated_budget",
+    "refund_amount",
+    "contract_value",
+    "estimated_cost",
+    "estimated_price", "deal_value_vnd", "salary_budget_vnd", "residual_value_vnd",
+)
+
+
+def extract_amount_vnd(
+    payload: dict[str, Any] | None,
+    explicit_amount: int | None = None,
+    *,
+    allow_zero: bool = False,
+) -> int | None:
+    if (
+        explicit_amount is not None
+        and not isinstance(explicit_amount, bool)
+        and isinstance(explicit_amount, int)
+        and (explicit_amount >= 0 if allow_zero else explicit_amount > 0)
+    ):
+        return explicit_amount
+    if not isinstance(payload, dict):
+        return None
+    for field in MONETARY_PAYLOAD_FIELDS:
+        val = payload.get(field)
+        if val is not None and not isinstance(val, bool) and isinstance(val, int):
+            if (val >= 0) if allow_zero else (val > 0):
+                return val
+    return None
 
 
 @dataclass(frozen=True)
@@ -240,12 +272,13 @@ def resolve_route(
         raise RoutingError("At least one route rule is required")
 
     default_rule, conditional = _validate_route_rules_structure(rules)
+    effective_amount = extract_amount_vnd(payload, amount_vnd, allow_zero=True)
 
     matched = next(
         (
             rule
             for rule in sorted(conditional, key=lambda item: item["priority"])
-            if _matches(rule.get("when", {}), amount_vnd, payload)
+            if _matches(rule.get("when", {}), effective_amount, payload)
         ),
         default_rule,
     )
@@ -255,10 +288,10 @@ def resolve_route(
         raise RoutingError("Matched rule requires an ID")
     if (
         not isinstance(slots, list)
-        or not 1 <= len(slots) <= 3
+        or not 1 <= len(slots) <= 5
         or not all(slot in APPROVER_SLOTS for slot in slots)
     ):
-        raise RoutingError("Approval route must contain one to three allowed slots")
+        raise RoutingError("Approval route must contain one to five allowed slots")
 
     executor_slot = route_rules.get("executor")
     acceptor_slot = route_rules.get("acceptor")

@@ -4,7 +4,7 @@ import { PasswordField, PageControls } from "./components/ux.jsx";
 import { canNavigate } from "./rolePolicy.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
-import { date, errorText, roles, statuses, types } from "./domain.js";
+import { date, errorText, roles, statuses, types, typeLevels } from "./domain.js";
 import {
   ActionForm,
   Badge,
@@ -269,6 +269,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
                               : "▣"}
                         </span>
                         {types[i.type_code] || i.type_code}
+                        <small className="muted" style={{display: "block"}}>Trọng số Cấp {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · Duyệt {i.approval_level || typeLevels[i.type_code]?.approval_level || 1}/5 cấp</small>
                       </td>
                       <td data-label="Trạng thái">
                         <Badge value={i.status} />
@@ -454,7 +455,7 @@ function Workspace({ user, onLogout }) {
           {[
             ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history"]],
             ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
-            ["QUẢN TRỊ HỆ THỐNG", ["policy", "ops", "identity", "api-admin", "audit", "events"]],
+            ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events"]],
             ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
           ].map(([group, keys]) => {
             const visible = menu.filter((m) => keys.includes(m[0]) && canNavigate(user.roles, m[0], user.capabilities));

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, idempotencyKey } from "../api.js";
-import { fields, types, errorText } from "../domain.js";
+import { fields, fieldLabels, types, errorText, riskLevels, approvalLevels, typeLevels } from "../domain.js";
 import { Badge, command } from "./ui.jsx";
 import { AiRequestAssist } from "./AiAssist.jsx";
 import RequestTypeMenu from "./RequestTypeMenu.jsx";
@@ -71,7 +71,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   const formFields = schema?.properties
     ? Object.entries(schema.properties).filter(([name]) => name !== "title" && name !== "department_id").map(([name, spec]) => {
         const legacy = fields[type]?.find(([field]) => field === name);
-        const label = current?.field_labels?.[name] || legacy?.[1] || name.replaceAll("_", " ");
+        const label = current?.field_labels?.[name] || legacy?.[1] || fieldLabels[name] || name.replaceAll("_", " ");
         const inputType = spec.type === "integer" ? "number"
           : spec.format === "date" ? "date" : "text";
         return [name, label, isEvidenceField(name) && spec.type === "string" ? "evidence" :
@@ -185,8 +185,19 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
         );
       const body = { expected_version: r.lock_version, payload };
       // Upload already links files to this draft; keep existing links across edits.
-      if (type === "EQUIPMENT" && payload.amount_vnd)
-        body.amount_vnd = payload.amount_vnd;
+      const monetaryAmount =
+        payload.amount_vnd ??
+        payload.amount ??
+        payload.estimated_budget ??
+        payload.refund_amount ??
+        payload.contract_value ??
+        payload.estimated_cost ??
+        payload.estimated_price;
+      if (
+        (type === "EQUIPMENT" && payload.amount_vnd) ||
+        (typeof monetaryAmount === "number" && Number.isInteger(monetaryAmount) && monetaryAmount > 0 && !["LEAVE", "ACCESS"].includes(type))
+      )
+        body.amount_vnd = payload.amount_vnd || monetaryAmount;
       await command(`request-drafts/${r.id}`, body, "PATCH");
       r = (await api(`/api/v1/requests/${r.id}`)).request;
       setRecord(r);
@@ -254,7 +265,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           <div>
             <p className="eyebrow">BƯỚC 2 / THÔNG TIN NGHIỆP VỤ</p>
             <strong>{chosenLabel || current?.name || types[type] || type}</strong>
-            <small>Mẫu {current?.lifecycle || "?"} · Quy trình theo cấu hình đã công bố</small>
+            <small>Mẫu {current?.lifecycle || "?"} · {riskLevels[current?.risk_weight || typeLevels[type]?.risk_weight || 3] || "Cấp 3"} · {approvalLevels[current?.approval_level || typeLevels[type]?.approval_level || 1] || "Duyệt 1 cấp"}</small>
           </div>
           {!record && <button type="button" className="secondary" onClick={() => {
             setStage("choose");setType("");setError("");

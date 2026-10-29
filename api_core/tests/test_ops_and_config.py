@@ -190,7 +190,24 @@ class OpsAndConfigBoundaryTests(SimpleTestCase):
             )
         self.assertEqual(raised.exception.code, "REASON_INVALID")
 
-    def test_config_release_clone_validates_type_code(self):
+    @patch("api_core.workflow.config_service._execute_idempotent")
+    def test_config_release_clone_validates_type_code(self, mock_exec):
+        with self.assertRaises(CommandError) as raised_syntax:
+            create_or_clone_release(
+                actor=self.policy_actor,
+                body={"type_code": "invalid-type"},
+                idempotency_key=self.key,
+                correlation_id=str(uuid4()),
+            )
+        self.assertEqual(raised_syntax.exception.code, "UNKNOWN_TYPE_CODE")
+
+        def _invoke_op(*args, **kwargs):
+            op = kwargs.get("operation")
+            mock_cursor = MagicMock()
+            mock_cursor.fetchone.return_value = None
+            return op(mock_cursor)
+
+        mock_exec.side_effect = _invoke_op
         with self.assertRaises(CommandError) as raised:
             create_or_clone_release(
                 actor=self.policy_actor,

@@ -26,6 +26,7 @@ from api_core.workflow.config_service import (
     update_draft_release,
     validate_release_candidate,
 )
+from api_core.catalog.plan_catalog import resolve_five_level_metadata
 from api_core.workflow.constants import ERR_REQUEST_NOT_FOUND
 from api_core.workflow.ops_service import (
     list_ops_metadata,
@@ -125,7 +126,9 @@ def request_list(request: HttpRequest) -> JsonResponse:
 
     sql = """
         SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
-               r.updated_at, r.created_at
+               r.updated_at, r.created_at,
+               COALESCE(r.risk_weight, rt.risk_weight),
+               COALESCE(r.approval_level, rt.approval_level)
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
@@ -282,18 +285,26 @@ def request_list(request: HttpRequest) -> JsonResponse:
         cursor.execute(sql, params)
         rows = cursor.fetchall()
 
-    items = [
-        {
-            "id": row[0],
-            "code": row[1],
-            "type_code": row[2],
-            "status": row[3],
-            "lock_version": row[4],
-            "updated_at": row[5].isoformat(),
-            "created_at": row[6].isoformat(),
-        }
-        for row in rows[:limit]
-    ]
+    items = []
+    for row in rows[:limit]:
+        risk_w, app_lvl = resolve_five_level_metadata(
+            row[2],
+            row[7] if len(row) > 7 else None,
+            row[8] if len(row) > 8 else None,
+        )
+        items.append(
+            {
+                "id": row[0],
+                "code": row[1],
+                "type_code": row[2],
+                "status": row[3],
+                "lock_version": row[4],
+                "updated_at": row[5].isoformat(),
+                "created_at": row[6].isoformat(),
+                "risk_weight": risk_w,
+                "approval_level": app_lvl,
+            }
+        )
     return JsonResponse(
         {
             "items": items,
@@ -324,7 +335,9 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
             """
             SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                    r.requester_id::text, r.draft_payload, v.payload, v.revision_no,
-                   r.created_at, r.updated_at
+                   r.created_at, r.updated_at,
+                   COALESCE(v.risk_weight, r.risk_weight, rt.risk_weight),
+                   COALESCE(v.approval_level, r.approval_level, rt.approval_level)
             FROM eas.request r
             JOIN eas.request_type rt ON rt.id = r.type_id
             LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
@@ -361,10 +374,12 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
 
         cursor.execute(
             """
-            SELECT s.step_no, s.assignee_id::text, s.state, s.activated_at, s.closed_at
+            SELECT s.step_no, s.assignee_id::text, s.state, s.activated_at, s.closed_at,
+                   s.tier_level, s.resolver_code, u.display_name
             FROM eas.approval_step s
             JOIN eas.workflow_instance i ON i.id = s.instance_id
             JOIN eas.request r ON r.id = i.request_id
+            LEFT JOIN eas.app_user u ON u.id = s.assignee_id
             WHERE r.id = %s AND i.revision_id = r.current_revision_id
             ORDER BY s.step_no
             """,
@@ -428,6 +443,11 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
             "attempt": attempt_payload,
         }
 
+    risk_w, app_lvl = resolve_five_level_metadata(
+        row[2],
+        row[11] if len(row) > 11 else None,
+        len(steps) if steps else (row[12] if len(row) > 12 else None),
+    )
     return JsonResponse(
         {
             "request": {
@@ -441,6 +461,8 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
                 "revision_no": row[8],
                 "created_at": row[9].isoformat(),
                 "updated_at": row[10].isoformat(),
+                "risk_weight": risk_w,
+                "approval_level": app_lvl,
                 "approval_steps": [
                     {
                         "step_no": step[0],
@@ -448,6 +470,9 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
                         "state": step[2],
                         "activated_at": step[3].isoformat() if step[3] else None,
                         "closed_at": step[4].isoformat() if step[4] else None,
+                        "tier_level": step[5] if len(step) > 5 and step[5] else step[0],
+                        "resolver_code": step[6] if len(step) > 6 else None,
+                        "assignee_name": step[7] if len(step) > 7 else None,
                     }
                     for step in steps
                 ],

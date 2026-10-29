@@ -20,7 +20,8 @@ from api_core.domain import (
     validate_draft_payload,
     validate_payload,
 )
-from api_core.domain.routing import RoutingError
+from api_core.domain.routing import RoutingError, extract_amount_vnd
+from api_core.catalog.plan_catalog import resolve_five_level_metadata
 from api_core.workflow.constants import (
     ERR_REQUEST_NOT_FOUND,
     ERR_STATE_CONFLICT,
@@ -425,10 +426,11 @@ def create_draft(
         request_id = str(uuid4())
         now = datetime.now(timezone.utc)
         draft_payload = {"title": clean_title} if clean_title else None
+        risk_w, app_lvl = resolve_five_level_metadata(type_code)
         cursor.execute(
             """
-            INSERT INTO eas.request(id,requester_id,type_id,draft_release_id,draft_payload,origin_request_id)
-            VALUES (%s,%s,%s,%s,%s,%s) RETURNING code
+            INSERT INTO eas.request(id,requester_id,type_id,draft_release_id,draft_payload,origin_request_id,risk_weight,approval_level)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING code
             """,
             [
                 request_id,
@@ -437,6 +439,8 @@ def create_draft(
                 release_id,
                 Jsonb(draft_payload) if draft_payload else None,
                 origin_request_id,
+                risk_w,
+                app_lvl,
             ],
         )
         code = cursor.fetchone()[0]
@@ -670,7 +674,7 @@ def update_draft(
             actor.department_id,
         )
 
-        final_amount_vnd = amount_vnd if amount_vnd is not None else existing_amount_vnd
+        final_amount_vnd = amount_vnd if amount_vnd is not None else extract_amount_vnd(merged_payload, existing_amount_vnd, allow_zero=False)
         if type_code in {"LEAVE", "ACCESS"} and final_amount_vnd is not None:
             raise CommandError("AMOUNT_NOT_ALLOWED", status=422)
 
@@ -1178,15 +1182,15 @@ def _create_submission_workflow(
     lifecycle: str,
     actor_id: str,
     sla: dict[str, Any],
-    now: datetime,
+    now: datetime, risk_weight: int = 3, approval_level: int = 1,
 ) -> str:
     instance_id = str(uuid4())
     cursor.execute(
         """
         INSERT INTO eas.workflow_instance(
           id,request_id,revision_id,matched_rule_id,resolved_route,lifecycle,
-          planned_executor_id,acceptor_id
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+          planned_executor_id,acceptor_id,risk_weight,approval_level
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """,
         [
             instance_id,
@@ -1197,6 +1201,8 @@ def _create_submission_workflow(
             lifecycle,
             decision.executor_id,
             decision.acceptor_id,
+            risk_weight,
+            approval_level,
         ],
     )
     participants: list[tuple[str, str]] = [(actor_id, "REQUESTER")]
@@ -1221,15 +1227,15 @@ def _create_submission_workflow(
             [request_id, user_id, joined_as],
         )
     first_step_id = None
-    for index, assignee_id in enumerate(decision.approver_ids, start=1):
+    for index, (slot, assignee_id) in enumerate(zip(decision.approver_slots, decision.approver_ids), start=1):
         step_id = str(uuid4())
         if index == 1:
             first_step_id = step_id
         cursor.execute(
             """
             INSERT INTO eas.approval_step(
-              id,request_id,instance_id,step_no,assignee_id,state,activated_at
-            ) VALUES (%s,%s,%s,%s,%s,%s,%s)
+              id,request_id,instance_id,step_no,assignee_id,state,activated_at,tier_level,resolver_code
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """,
             [
                 step_id,
@@ -1239,6 +1245,8 @@ def _create_submission_workflow(
                 assignee_id,
                 "ACTIVE" if index == 1 else "WAITING",
                 now if index == 1 else None,
+                index,
+                slot,
             ],
         )
     approval_hours = sla.get("approval_hours")
@@ -1318,7 +1326,7 @@ def submit_request(
         # cross-department field must never influence assignment or reporting.
         if normalized.get("department_id") is not None and normalized["department_id"] != actor.department_id:
             raise CommandError("DEPARTMENT_SCOPE_VIOLATION", status=403)
-        amount = normalized.get("amount_vnd")
+        amount = extract_amount_vnd(normalized, allow_zero=False)
         decision = _resolve_and_verify_route_actors(
             cursor=cursor,
             rules=rules,
@@ -1350,14 +1358,16 @@ def submit_request(
             "SELECT coalesce(max(revision_no),0)+1 FROM eas.request_revision WHERE request_id=%s",
             [request_id],
         )
+        eff_risk_w, _ = resolve_five_level_metadata(type_code)
+        eff_app_lvl = max(1, min(5, len(decision.approver_ids)))
         revision_no = cursor.fetchone()[0]
         revision_id = str(uuid4())
         cursor.execute(
             """
             INSERT INTO eas.request_revision(
               id,request_id,revision_no,release_id,department_id,payload,
-              amount_vnd,submitted_by,payload_sha256,submitted_at
-            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+              amount_vnd,submitted_by,payload_sha256,submitted_at,risk_weight,approval_level
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """,
             [
                 revision_id,
@@ -1370,6 +1380,8 @@ def submit_request(
                 actor.id,
                 canonical_sha256(normalized),
                 now,
+                eff_risk_w,
+                eff_app_lvl,
             ],
         )
         _link_revision_attachments(
@@ -1384,16 +1396,19 @@ def submit_request(
             actor_id=actor.id,
             sla=sla,
             now=now,
+            risk_weight=eff_risk_w,
+            approval_level=eff_app_lvl,
         )
 
         cursor.execute(
             """
             UPDATE eas.request SET status='PENDING_APPROVAL',current_revision_id=%s,
               draft_payload=%s,draft_amount_vnd=%s,draft_release_id=%s,
+              risk_weight=%s,approval_level=%s,
               lock_version=lock_version+1,updated_at=%s
             WHERE id=%s
             """,
-            [revision_id, Jsonb(normalized), amount, release_id, now, request_id],
+            [revision_id, Jsonb(normalized), amount, release_id, eff_risk_w, eff_app_lvl, now, request_id],
         )
         _append_request_audit(
             cursor,
@@ -1474,7 +1489,7 @@ def _handle_approval_approved(
     executor_id: str | None,
     acceptor_id: str | None,
     sla: dict[str, Any],
-    now: datetime,
+    now: datetime, risk_weight: int = 3, approval_level: int = 1,
 ) -> tuple[str, datetime | None, datetime | None, str | None]:
     cursor.execute(
         """
@@ -1569,7 +1584,7 @@ def _handle_approval_rejected_or_needs_info(
     request_id: str,
     instance_id: str,
     outcome: str,
-    now: datetime,
+    now: datetime, risk_weight: int = 3, approval_level: int = 1,
 ) -> str:
     if outcome == "NEEDS_INFO":
         cursor.execute(
@@ -1921,7 +1936,7 @@ def _apply_execution_submission(
     result_note: str,
     external_reference: str,
     sla: dict[str, Any],
-    now: datetime,
+    now: datetime, risk_weight: int = 3, approval_level: int = 1,
 ) -> tuple[str, datetime | None]:
     if lifecycle == "B":
         cursor.execute(
@@ -2137,7 +2152,7 @@ def _apply_acceptance_decision(
     department_id: str,
     type_id: str,
     sla: dict[str, Any],
-    now: datetime,
+    now: datetime, risk_weight: int = 3, approval_level: int = 1,
 ) -> tuple[str, datetime | None, str | None]:
     if outcome == "ACCEPT":
         cursor.execute(

@@ -3,7 +3,7 @@ import { AiSummary } from "./AiAssist.jsx";
 import { requestActionPayload } from "../actionPayload.js";
 import { useState } from "react";
 import { api, API_BASE } from "../api.js";
-import { date, fields, permissions, types } from "../domain.js";
+import { date, fields, fieldLabels, permissions, types, riskLevels, approvalLevels, resolverLabels, typeLevels } from "../domain.js";
 import {
   ActionForm,
   Badge,
@@ -116,7 +116,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                 </p>
                 <h1>{r.payload?.title || r.code}</h1>
                 <p className="muted">
-                  Tạo lúc {date(r.created_at)} · Cập nhật {date(r.updated_at)}
+                  Tạo lúc {date(r.created_at)} · Cập nhật {date(r.updated_at)} · {riskLevels[r.risk_weight || typeLevels[r.type_code]?.risk_weight || 3]} · {approvalLevels[r.approval_level || r.approval_steps?.length || typeLevels[r.type_code]?.approval_level || 1]}
                 </p>
               </div>
               <Badge value={r.status} />
@@ -148,7 +148,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                     <dl className="data-list">
                       {Object.entries(r.payload || {}).map(([name, value]) => (
                         <div key={name}>
-                          <dt>{fields[r.type_code]?.find(([field]) => field === name)?.[1] || name.replaceAll("_", " ")}</dt>
+                          <dt>{fields[r.type_code]?.find(([field]) => field === name)?.[1] || fieldLabels[name] || name.replaceAll("_", " ")}</dt>
                           <dd>{typeof value === "object" ? JSON.stringify(value) : String(value ?? "—")}</dd>
                         </div>
                       ))}
@@ -161,9 +161,9 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                     <ol className="timeline">
                       {r.approval_steps?.map((s, i) => (
                         <li key={i}>
-                          <strong>Cấp {s.step_no}</strong>{" "}
+                          <strong>Cấp {s.tier_level || s.step_no} / {r.approval_steps?.length || r.approval_level || 1}{s.resolver_code ? ` · ${resolverLabels[s.resolver_code] || s.resolver_code}` : ""}</strong>{" "}
                           <Badge value={s.state} />
-                          <p className="muted">Người xử lý: {s.assignee_id}</p>
+                          <p className="muted">Người xử lý: {s.assignee_name ? `${s.assignee_name} (${s.assignee_id})` : s.assignee_id}</p>
                           <small>{date(s.closed_at || s.activated_at)}</small>
                         </li>
                       ))}

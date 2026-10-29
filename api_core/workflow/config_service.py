@@ -551,8 +551,8 @@ def validate_release_candidate(*, actor: Actor, release_id: str) -> dict[str, An
         actor_bindings=actor_bindings,
         sla_profile=sla_profile,
     )
-    if _type_code == "RESIGNATION":
-        errors.append("RESIGNATION:parallel execution requires workflow engine support before publish")
+    if _type_code == "RESIGNATION" and not route_rules.get("executor"):
+        errors.append("RESIGNATION:executor must be configured for offboarding checklist")
     if _type_code in {"ACCESS_FACILITY","BUSINESS_TRIP","EQUIPMENT_BORROW", "EXPENSE_CLAIM", "IT_SUPPORT", "LEAVE_SPECIAL", "ROOM_BOOKING"} and isinstance(form_schema.get("properties"), dict) and set(form_schema["properties"]) <= {"title","reason"}:
         errors.append("form_schema:define business-specific fields for this request type before publishing")
     if not errors:
@@ -644,8 +644,8 @@ def publish_config_release(
             actor_bindings=actor_bindings,
             sla_profile=sla_profile,
         )
-        if type_code == "RESIGNATION":
-            errors.append("RESIGNATION:parallel execution requires workflow engine support before publish")
+        if type_code == "RESIGNATION" and not route_rules.get("executor"):
+            errors.append("RESIGNATION:executor must be configured for offboarding checklist")
         if type_code in {"ACCESS_FACILITY","BUSINESS_TRIP","EQUIPMENT_BORROW", "EXPENSE_CLAIM", "IT_SUPPORT", "LEAVE_SPECIAL", "ROOM_BOOKING"} and isinstance(form_schema.get("properties"), dict) and set(form_schema["properties"]) <= {"title","reason"}:
             errors.append("form_schema:define business-specific fields for this request type before publishing")
         if not errors:

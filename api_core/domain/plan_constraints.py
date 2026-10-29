@@ -1,4 +1,4 @@
-"""Additional plan.docx submission rules for 18 canonical request types.
+"""Additional plan.docx and enterprise 5-level submission rules for canonical request types.
 
 Rules operate on already-normalized, server-validated payloads and never grant
 any approval or bypass published policy/actor scope. No external data is assumed.
@@ -50,17 +50,42 @@ def plan_business_errors(type_code: str, values: dict) -> dict[str, list[str]]:
     if type_code == "WAREHOUSE_TRANSFER" and values.get("source_warehouse") and values.get("destination_warehouse"):
         if values["source_warehouse"].casefold() == values["destination_warehouse"].casefold():
             reject("destination_warehouse", "SOURCE_AND_DESTINATION_MUST_DIFFER")
+    if type_code == "BUDGET_REALLOCATION" and values.get("source_budget_code") and values.get("target_budget_code"):
+        if values["source_budget_code"].casefold() == values["target_budget_code"].casefold():
+            reject("target_budget_code", "SOURCE_AND_TARGET_BUDGET_MUST_DIFFER")
+    if type_code == "SPECIAL_DISCOUNT":
+        deal_val = values.get("deal_value_vnd")
+        disc_val = values.get("amount_vnd")
+        if isinstance(deal_val, int) and isinstance(disc_val, int) and disc_val > deal_val:
+            reject("amount_vnd", "DISCOUNT_EXCEEDS_DEAL_VALUE")
     if type_code == "FLASH_SALE_VOUCHER":
         try:
             if date.fromisoformat(values["end_date"]) < date.fromisoformat(values["start_date"]):
                 reject("end_date", "END_BEFORE_START")
         except (KeyError, ValueError, TypeError):
             pass
-    if type_code == "ROOM_STUDIO":
+    if type_code in ("ROOM_STUDIO", "ROOM_BOOKING"):
         start, end = values.get("start_time"), values.get("end_time")
         if start and end:
             if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", start) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", end):
                 reject("start_time", "INVALID_TIME_FORMAT")
             elif end <= start:
                 reject("end_time", "END_MUST_BE_AFTER_START")
+    if type_code in (
+        "LEAVE_SPECIAL",
+        "BUSINESS_TRIP",
+        "ACCESS_FACILITY",
+        "EQUIPMENT_BORROW",
+        "WFH_REQ",
+        "SOFTWARE_ACCESS",
+        "PROD_DATA_ACCESS",
+        "TRAINING_COURSE",
+        "MARKETING_CAMPAIGN",
+    ):
+        try:
+            if "start_date" in values and "end_date" in values:
+                if date.fromisoformat(values["end_date"]) < date.fromisoformat(values["start_date"]):
+                    reject("end_date", "END_BEFORE_START")
+        except (KeyError, ValueError, TypeError):
+            pass
     return errors
