@@ -1,4 +1,5 @@
 import FullHistory from "./FullHistory.jsx";
+import ActivityTimeline from "./ActivityTimeline.jsx";
 import { requestActionPayload } from "../actionPayload.js";
 import { useState } from "react";
 import { api, API_BASE } from "../api.js";
@@ -54,7 +55,8 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
   const resource = useResource(`/api/v1/requests/${id}`),
     [tab, setTab] = useState(initialTab),
     [action, setAction] = useState(null),
-    [verify, setVerify] = useState(null);
+    [verify, setVerify] = useState(null),
+    [expandProgress, setExpandProgress] = useState(false);
   const r = resource.data?.request,
     p = r ? permissions(user, r) : {};
   async function done() {
@@ -156,6 +158,10 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                 )}
                 {tab === "progress" && (
                   <>
+                    <ActivityTimeline id={id} />
+                    <details className="progress-extra"
+                      onToggle={(event) => setExpandProgress(event.currentTarget.open)}>
+                    <summary>Chi tiết các bước phê duyệt & nghiệm thu</summary>
                     <h2>Tiến trình phê duyệt</h2>
                     <ol className="timeline">
                       {r.approval_steps?.map((s, i) => (
@@ -187,10 +193,11 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                         tra cứu các lần đã kết thúc.
                       </p>
                     )}
+                    {expandProgress && <FullHistory id={id} />}
+                    </details>
                   </>
                 )}
                 {tab === "history" && <History id={id} />}
-                {tab === "progress" && <FullHistory id={id} />}
                 {tab === "audit" && <Audit id={id} />}
               </div>
               <aside className="panel">

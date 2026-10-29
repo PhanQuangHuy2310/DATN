@@ -60,16 +60,21 @@ else:
     except DatabaseUrlError as exc:
         raise RuntimeError(str(exc)) from None
 
-    # Optional: set to 0 when diagnosing stale long-lived Supabase/PgBouncer
-    # connections in local development. Default remains 60 to avoid changing
-    # the production connection policy unexpectedly.
+    # Django's threaded development server can otherwise retain one pooled
+    # PostgreSQL session per request thread. This exhausts the Supabase session
+    # pool on small projects. Keep production's existing 60s policy unchanged.
+    # Explicit EAS_DB_CONN_MAX_AGE overrides either environment.
+    _default_max_age = "0" if ENVIRONMENT == "development" else "60"
     try:
-        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "60"))
+        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", _default_max_age))
         if not 0 <= _db_max_age <= 3600:
             raise ValueError
     except ValueError:
         raise RuntimeError("EAS_DB_CONN_MAX_AGE must be 0..3600") from None
     DATABASES["default"]["CONN_MAX_AGE"] = _db_max_age
+
+# Optional read-only performance diagnostics. No SQL text or parameters logged.
+EAS_DB_TRACE_ENABLED = os.getenv("EAS_DB_TRACE_ENABLED", "false").lower() == "true"
 
 LANGUAGE_CODE = "vi"
 TIME_ZONE = "Asia/Ho_Chi_Minh"

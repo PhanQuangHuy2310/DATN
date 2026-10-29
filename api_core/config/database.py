@@ -51,6 +51,12 @@ def parse_database_url(url: str) -> dict[str, object]:
             "OPTIONS": {
                 "sslmode": sslmode,
                 "connect_timeout": 10,
+                # TCP keepalive helps detect connections dropped between the
+                # machine and a hosted PostgreSQL pooler. No credentials logged.
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 3,
                 "prepare_threshold": None,
                 "options": "-c statement_timeout=30000 -c lock_timeout=5000",
             },

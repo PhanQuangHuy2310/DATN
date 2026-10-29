@@ -84,7 +84,7 @@ export default function PlanCatalog() {
           </select>
         </label>
       </div>
-      <div className="plan-category-scroll" tabIndex={0} aria-label="Lọc nhóm yêu cầu, cuộn ngang để xem các nhóm khác">
+      <div className="plan-category-scroll" tabIndex={0} aria-label="Lọc theo nhóm yêu cầu">
         <div className="plan-category-row">{groups.map(name=><button type="button" key={name} className={`plan-category-pill ${group===name ? "selected" : ""}`}
           aria-pressed={group===name} onClick={()=>{setGroup(name);setPage(0);}}>{name}<small>{name==="Tất cả" ? pool.length : pool.filter(item=>item.category===name).length}</small></button>)}</div>
       </div>

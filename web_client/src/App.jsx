@@ -411,6 +411,9 @@ function Workspace({ user, onLogout }) {
     [selected, setSelected] = useState(null),
     [editor, setEditor] = useState(null),
     [revision, setRevision] = useState(0),
+    [selectedTab, setSelectedTab] = useState("info"),
+    [unreadCount, setUnreadCount] = useState(0),
+    [notificationRevision, setNotificationRevision] = useState(0),
     [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -421,10 +424,32 @@ function Workspace({ user, onLogout }) {
     });
     return () => cancelAnimationFrame(frame);
   }, [page, selected, editor]);
+  useEffect(() => {
+    let active = true;
+    async function refreshUnread() {
+      try {
+        const response = await api("/api/v1/notifications?limit=1");
+        if (active) setUnreadCount(response.unread_count || 0);
+      } catch {
+        // The inbox remains accessible. No misleading unread count on DB errors.
+        if (active) setUnreadCount(0);
+      }
+    }
+    refreshUnread();
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") refreshUnread();
+    }, 30000);
+    return () => { active = false; clearInterval(timer); };
+  }, [notificationRevision]);
+  function openRequest(id, tab = "info") {
+    setSelectedTab(tab);
+    setSelected(id);
+  }
   function navigate(next) {
     if (!canNavigate(user.roles, next, user.capabilities)) return;
     setPage(next);
     setSelected(null);
+    setSelectedTab("info");
     setEditor(null);
     setMenuOpen(false);
   }
@@ -495,7 +520,7 @@ function Workspace({ user, onLogout }) {
               className="secondary"
               onClick={() => navigate("notifications")}
             >
-              Thông báo
+              Thông báo {unreadCount > 0 && <span className="unread-badge" aria-label={`${unreadCount} thông báo chưa đọc`}>{unreadCount > 99 ? "99+" : unreadCount}</span>}
             </button>
             <button
               className="avatar"
@@ -519,14 +544,14 @@ function Workspace({ user, onLogout }) {
               onCancel={() => setEditor(null)}
               onDone={(id) => {
                 setEditor(null);
-                setSelected(id);
+                openRequest(id, "progress");
                 setRevision((v) => v + 1);
               }}
             />
           ) : selected ? (
             <RequestDetail
-              initialTab={page === "audit" ? "audit" : "info"}
-              key={selected}
+              initialTab={selectedTab === "progress" ? "progress" : page === "audit" ? "audit" : "info"}
+              key={`${selected}:${selectedTab}`}
               id={selected}
               user={user}
               onBack={() => setSelected(null)}
@@ -534,9 +559,9 @@ function Workspace({ user, onLogout }) {
               onChanged={() => setRevision((v) => v + 1)}
             />
           ) : page === "home" ? (
-            <Overview navigate={navigate} onOpen={setSelected} user={user} />
+            <Overview navigate={navigate} onOpen={(id) => openRequest(id)} user={user} />
           ) : page === "audit" ? (
-            <AuditorWorkspace onOpen={(id) => setSelected(id)} />
+            <AuditorWorkspace onOpen={(id) => openRequest(id)} />
           ) : page === "identity" ? (
             <IdentityAdmin />
           ) : page === "api-admin" ? (
@@ -546,7 +571,8 @@ function Workspace({ user, onLogout }) {
           ) : page === "policy" ? (
             <Policy canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />
           ) : page === "notifications" ? (
-            <Notifications onOpen={setSelected} />
+            <Notifications onOpen={(id) => openRequest(id, "progress")}
+              onRead={() => setNotificationRevision((value) => value + 1)} />
           ) : page === "profile" ? (
             <Profile user={user} />
           ) : page === "events" ? (
@@ -557,7 +583,7 @@ function Workspace({ user, onLogout }) {
               page={page}
               user={user}
               revision={revision}
-              onOpen={setSelected}
+              onOpen={(id) => openRequest(id)}
               onNew={() => setEditor({})}
             />
           )}

@@ -9,6 +9,7 @@ from django.db import connection, transaction
 from django.utils import timezone
 from psycopg.types.json import Jsonb
 
+from api_core.workflow.activity import activity_label
 from api_core.workflow.service import _append_admin_audit, _append_request_audit
 
 
@@ -90,6 +91,23 @@ def claim_outbox(*, batch_size: int = 20, lease_seconds: int = 60) -> list[Outbo
 
 
 def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
+    if item.event_type == "REQUEST_ACTIVITY":
+        # Never send draft messages to other users. Active participants receive
+        # updates only after submission and only while read access persists.
+        cursor.execute(
+            """
+            SELECT r.requester_id::text
+            FROM eas.request r WHERE r.id = %s
+            UNION
+            SELECT p.user_id::text
+            FROM eas.request_participant p JOIN eas.request r ON r.id=p.request_id
+            WHERE p.request_id = %s AND p.read_revoked_at IS NULL
+              AND r.status <> 'DRAFT'
+            """,
+            [item.request_id, item.request_id],
+        )
+        label = activity_label(item.payload.get("action"))
+        return [(row[0], label) for row in cursor.fetchall() if row[0]]
     if item.event_type == "APPROVAL_REQUESTED":
         cursor.execute(
             "SELECT assignee_id::text FROM eas.approval_step WHERE id=%s",

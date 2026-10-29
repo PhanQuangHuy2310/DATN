@@ -13,6 +13,7 @@ from django.db import connection, transaction
 from psycopg.types.json import Jsonb
 
 from api_core.audit import canonical_sha256
+from api_core.workflow.activity import is_notifiable_action
 from api_core.authn.models import Actor
 from api_core.domain.routing import RoutingError
 from api_core.domain import (
@@ -175,6 +176,22 @@ def _append_request_audit(
             digest,
         ],
     )
+    # A transactional outbox record is committed with the immutable audit event.
+    # This yields exactly one activity message per successful business change,
+    # even after idempotent command replays. No new DB table/trigger is needed.
+    if is_notifiable_action(action):
+        cursor.execute(
+            """
+            INSERT INTO eas.outbox_event(request_id,event_type,payload,dedupe_key)
+            VALUES (%s,'REQUEST_ACTIVITY',%s,%s)
+            ON CONFLICT (dedupe_key) DO NOTHING
+            """,
+            [
+                request_id,
+                Jsonb({"action": action, "audit_event_id": event_id}),
+                f"request-activity:{event_id}",
+            ],
+        )
 
 
 def _append_admin_audit(
@@ -411,7 +428,8 @@ def create_draft(
                 actor.id,
                 type_id,
                 release_id,
-                Jsonb(draft_payload) if draft_payload else None,
+                # DB07: draft_payload is JSONB NOT NULL; omit title => {}.
+                Jsonb(draft_payload or {}),
                 origin_request_id,
             ],
         )

@@ -422,61 +422,57 @@ export function Operations({ items, onRefresh }) {
     </>
   );
 }
-export function Notifications({ onOpen }) {
+export function Notifications({ onOpen, onRead }) {
   const [offset, setOffset] = useState(0),
     [limit, setLimit] = useState(20),
-    [unread, setUnread] = useState(false);
+    [unread, setUnread] = useState(false),
+    [actionError, setActionError] = useState("");
   const r = useResource(
     `/api/v1/notifications?limit=${limit}&offset=${offset}&unread=${unread}`,
   );
+  async function openNotification(item) {
+    setActionError("");
+    // Marking read is not allowed to block viewing a request; permissions
+    // for its detail and audit are checked again by the Django API.
+    if (!item.read_at) {
+      try {
+        await api(`/api/v1/notifications/${item.id}/read`, {method: "POST"});
+        onRead?.();
+        r.reload();
+      } catch (error) {
+        setActionError(errorText(error));
+      }
+    }
+    if (item.request_id) onOpen(item.request_id);
+  }
   return (
-    <section className="panel">
+    <section className="panel notification-center">
       <div className="section-head">
-        <h2>Trung tâm thông báo</h2>
+        <div><h2>Trung tâm thông báo</h2>
+          <p className="muted">Chọn một thông báo để xem dòng thời gian đang xử lý của hồ sơ.</p></div>
         <label className="inline">
-          <input
-            type="checkbox"
-            checked={unread}
-            onChange={(e) => {
-              setUnread(e.target.checked);
-              setOffset(0);
-            }}
-          />{" "}
+          <input type="checkbox" checked={unread}
+            onChange={(e) => { setUnread(e.target.checked); setOffset(0); }} />
           Chỉ chưa đọc
         </label>
       </div>
+      {actionError && <p role="alert" className="error">Không thể đánh dấu đã đọc: {actionError}</p>}
       <ResourceState resource={r}>
-        {r.data?.items?.map((n) => (
-          <article className="notification" key={n.id}>
-            <div>
-              <strong>{n.label}</strong>
-              <p className="muted">
-                {date(n.created_at)} · {n.read_at ? "Đã đọc" : "Chưa đọc"}
-              </p>
-            </div>
-            <div className="actions">
-              {n.request_id && (
-                <button
-                  className="secondary"
-                  onClick={() => onOpen(n.request_id)}
-                >
-                  Mở hồ sơ
-                </button>
-              )}
-              {!n.read_at && (
-                <ActionForm
-                  submitLabel="Đánh dấu đã đọc"
-                  onSubmit={async () => {
-                    await api(`/api/v1/notifications/${n.id}/read`, {
-                      method: "POST",
-                    });
-                    r.reload();
-                  }}
-                />
-              )}
-            </div>
-          </article>
-        ))}
+        <div className="notification-list">
+          {r.data?.items?.map((n) => (
+            <button type="button" className={`notification-row ${n.read_at ? "" : "unread"}`}
+              key={n.id} onClick={() => openNotification(n)}
+              disabled={!n.request_id}
+              aria-label={`${n.label}. ${n.read_at ? "Đã đọc" : "Chưa đọc"}. Xem tiến trình xử lý`}>
+              <span className="notification-dot" aria-hidden="true" />
+              <span className="notification-main">
+                <strong>{n.label}</strong>
+                <small>{date(n.created_at)} · {n.read_at ? "Đã đọc" : "Chưa đọc"}</small>
+              </span>
+              <span className="notification-open" aria-hidden="true">Xem tiến trình →</span>
+            </button>
+          ))}
+        </div>
         {!r.data?.items?.length && <p className="empty">Không có thông báo.</p>}
         <PageControls offset={offset} limit={limit} nextOffset={r.data?.next_offset}
           count={r.data?.items?.length || 0} title="thông báo"
