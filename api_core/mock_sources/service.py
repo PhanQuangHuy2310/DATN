@@ -336,8 +336,7 @@ def list_resource(resource: str, params, *, roles: frozenset[str]) -> dict:
     values.append(limit + 1)
     with transaction.atomic(), connection.cursor() as db_cursor:
         db_cursor.execute("SET LOCAL statement_timeout = '2s'")
-        # NOSONAR python:S2077 - relation and column identifiers validated against internal spec registry
-        db_cursor.execute(sql, values)
+        db_cursor.execute(sql, values)  # NOSONAR python:S2077
         rows = db_cursor.fetchall()
     has_more = len(rows) > limit
     rows = rows[:limit]

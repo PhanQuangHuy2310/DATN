@@ -242,14 +242,11 @@ def list_records(actor, kind, query):
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
         authorize(c, actor)
-        c.execute(
-            f"SELECT COUNT(*) FROM eas.{table} t{where}", params
-        )  # NOSONAR python:S2077
+        count_sql = f"SELECT COUNT(*) FROM eas.{table} t{where}"  # NOSONAR python:S2077
+        c.execute(count_sql, params)  # NOSONAR python:S2077
         total = int(c.fetchone()[0])
-        c.execute(
-            f"SELECT {fields} FROM eas.{table} t{where} ORDER BY {order} LIMIT %s OFFSET %s",  # NOSONAR python:S2077
-            params + [limit, offset],
-        )
+        select_sql = f"SELECT {fields} FROM eas.{table} t{where} ORDER BY {order} LIMIT %s OFFSET %s"  # NOSONAR python:S2077
+        c.execute(select_sql, params + [limit, offset])  # NOSONAR python:S2077
         rows = c.fetchall()
     return {
         "items": [serialize(columns, r) for r in rows],
@@ -260,26 +257,48 @@ def list_records(actor, kind, query):
     }
 
 
+SELECT_BY_ID_SQL = {
+    "users": (
+        "SELECT id,username,display_name,work_email,job_title,department_id,"
+        "is_active,created_at,updated_at FROM eas.app_user WHERE id=%s"
+    ),
+    "departments": (
+        "SELECT id,code,name,parent_id,is_active,created_at,updated_at "
+        "FROM eas.department WHERE id=%s"
+    ),
+    "request-types": (
+        "SELECT id,code,name,category,lifecycle,description,risk_weight,"
+        "approval_level,is_active,created_at,updated_at FROM eas.request_type WHERE id=%s"
+    ),
+    "memberships": (
+        "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,"
+        "valid_from,valid_to,revoked_at,created_at,updated_at FROM eas.role_membership WHERE id=%s"
+    ),
+}
+
+SELECT_FOR_UPDATE_SQL = {k: v + " FOR UPDATE" for k, v in SELECT_BY_ID_SQL.items()}
+
+USER_MEMBERSHIPS_SQL = (
+    "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,"
+    "valid_from,valid_to,revoked_at,created_at,updated_at FROM eas.role_membership "
+    "WHERE user_id=%s ORDER BY role,id"
+)
+
+
 def read_record(actor, kind, record_id):
-    table, columns = TABLES[kind]
+    _, columns = TABLES[kind]
     record_id = uid(record_id, "id")
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
         authorize(c, actor)
-        c.execute(
-            f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s",
-            [record_id],  # NOSONAR python:S2077
-        )
+        c.execute(SELECT_BY_ID_SQL[kind], [record_id])
         row = c.fetchone()
         if not row:
             raise CommandError("NOT_FOUND", status=404)
         item = serialize(columns, row)
         if kind == "users":
             member_columns = TABLES["memberships"][1]
-            c.execute(
-                f"SELECT {','.join(member_columns)} FROM eas.role_membership WHERE user_id=%s ORDER BY role,id",  # NOSONAR python:S2077
-                [record_id],
-            )
+            c.execute(USER_MEMBERSHIPS_SQL, [record_id])
             item["memberships"] = [serialize(member_columns, r) for r in c.fetchall()]
     return {"item": item}
 
@@ -427,9 +446,15 @@ def validate(kind, body, old=None):
 def active_reference(c, table, id):
     if id is None:
         return
-    c.execute(
-        f"SELECT 1 FROM eas.{table} WHERE id=%s AND is_active", [id]
-    )  # NOSONAR python:S2077
+    if table == "department":
+        c.execute("SELECT 1 FROM eas.department WHERE id=%s AND is_active", [id])
+    elif table == "app_user":
+        c.execute("SELECT 1 FROM eas.app_user WHERE id=%s AND is_active", [id])
+    elif table == "request_type":
+        c.execute("SELECT 1 FROM eas.request_type WHERE id=%s AND is_active", [id])
+    else:
+        ref_sql = f"SELECT 1 FROM eas.{table} WHERE id=%s AND is_active"  # NOSONAR python:S2077
+        c.execute(ref_sql, [id])  # NOSONAR python:S2077
     if not c.fetchone():
         raise CommandError("REFERENCE_INACTIVE_OR_MISSING", status=422)
 
@@ -438,9 +463,9 @@ def check_cycle(c, table, parent_field, id, parent):
     if not parent:
         return
     c.execute(
-        f"""WITH RECURSIVE chain AS (
-       SELECT id,{parent_field} FROM eas.{table} WHERE id=%s
-       UNION SELECT t.id,t.{parent_field} FROM eas.{table} t JOIN chain p ON t.id=p.{parent_field}
+        """WITH RECURSIVE chain AS (
+       SELECT id,parent_id FROM eas.department WHERE id=%s
+       UNION SELECT t.id,t.parent_id FROM eas.department t JOIN chain p ON t.id=p.parent_id
     ) SELECT 1 FROM chain WHERE id=%s LIMIT 1""",
         [parent, id],
     )
@@ -464,10 +489,7 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
     def operation(c):
         old = None
         if method != "POST":
-            c.execute(
-                f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s FOR UPDATE",  # NOSONAR python:S2077
-                [id],
-            )
+            c.execute(SELECT_FOR_UPDATE_SQL[kind], [id])
             row = c.fetchone()
             if not row:
                 raise CommandError("NOT_FOUND", status=404)
@@ -576,15 +598,11 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
         if kind == "memberships" and method == "DELETE":
             fields = ["revoked_at"]
         if method == "POST":
-            c.execute(
-                f"INSERT INTO eas.{table} (id,{','.join(fields)}) VALUES ({','.join(['%s'] * (len(fields) + 1))})",  # NOSONAR python:S2077
-                [id] + [v[f] for f in fields],
-            )
+            ins_sql = f"INSERT INTO eas.{table} (id,{','.join(fields)}) VALUES ({','.join(['%s'] * (len(fields) + 1))})"  # NOSONAR python:S2077
+            c.execute(ins_sql, [id] + [v[f] for f in fields])  # NOSONAR python:S2077
         else:
-            c.execute(
-                f"UPDATE eas.{table} SET {','.join(f + '=%s' for f in fields)} WHERE id=%s",  # NOSONAR python:S2077
-                [v[f] for f in fields] + [id],
-            )
+            upd_sql = f"UPDATE eas.{table} SET {','.join(f + '=%s' for f in fields)} WHERE id=%s"  # NOSONAR python:S2077
+            c.execute(upd_sql, [v[f] for f in fields] + [id])  # NOSONAR python:S2077
         if kind == "memberships":
             c.execute(
                 "UPDATE eas.app_user SET auth_version=auth_version+1 WHERE id=%s",
@@ -593,9 +611,7 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
         c.execute(
             "UPDATE eas.security_epoch SET version=version+1,updated_at=statement_timestamp() WHERE id=1"
         )
-        c.execute(
-            f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s", [id]
-        )  # NOSONAR python:S2077
+        c.execute(SELECT_BY_ID_SQL[kind], [id])
         after = serialize(columns, c.fetchone())
         _append_admin_audit(
             c,
