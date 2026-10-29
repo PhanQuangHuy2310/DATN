@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { api, initializeCsrf } from "./api.js";
 import { PasswordField, PageControls } from "./components/ux.jsx";
+import { canNavigate } from "./rolePolicy.js";
+import RoleTasks from "./components/RoleTasks.jsx";
+import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
 import { date, errorText, roles, statuses, types } from "./domain.js";
 import {
   ActionForm,
@@ -11,6 +14,8 @@ import {
 import RequestEditor from "./components/RequestEditor.jsx";
 import RequestDetail from "./components/RequestDetail.jsx";
 import IdentityAdmin from "./components/IdentityAdmin.jsx";
+import ApiAdministration from "./components/ApiAdministration.jsx";
+import PlanCatalog from "./components/PlanCatalog.jsx";
 import {
   AdminEvents,
   Notifications,
@@ -69,9 +74,11 @@ const menu = [
   ["acceptance", "Chờ nghiệm thu", "◇", "ACCEPTOR"],
   ["history", "Hồ sơ liên quan", "◷"],
   ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
+  ["plan-catalog", "Danh mục 18 loại đơn", "▦"],
   ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
   ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
-  ["audit", "Tra cứu kiểm tra", "⌕", "AUDITOR"],
+  ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
+  ["audit", "Kiểm toán hồ sơ", "⌕", "AUDITOR"],
   ["events", "Nhật ký quản trị", "≡", "AUDITOR"],
   ["notifications", "Thông báo", "○"],
   ["profile", "Tài khoản cá nhân", "◎"],
@@ -97,6 +104,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
   if (type) params.set("type_code", type);
   if (from) params.set("created_from", from + "T00:00:00+07:00");
   if (to) params.set("created_to", to + "T23:59:59.999999+07:00");
+  const availableTypes = useResource("/api/v1/request-types");
   const r = useResource(
     `/api/v1/${page === "ops" ? "ops/requests" : "requests"}?${params}&_revision=${revision}`,
   );
@@ -156,9 +164,9 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
               }}
             >
               <option value="">Tất cả loại</option>
-              {Object.entries(types).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
+              {(availableTypes.data?.items || []).map(({code, name}) => (
+                <option key={code} value={code}>
+                  {name || types[code] || code}
                 </option>
               ))}
             </select>
@@ -291,7 +299,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
     </>
   );
 }
-function Overview({ navigate, onOpen }) {
+function Overview({ navigate, onOpen, user }) {
   const [period] = useState(() => {
     const end = new Date();
     return new URLSearchParams({
@@ -358,6 +366,7 @@ function Overview({ navigate, onOpen }) {
           </>
         )}
       </ResourceState>
+      <RoleTasks user={user} navigate={navigate} />
       <div className="dashboard-board">
         <section className="panel" aria-label="Hồ sơ cập nhật gần đây">
           <div className="section-head">
@@ -413,6 +422,7 @@ function Workspace({ user, onLogout }) {
     return () => cancelAnimationFrame(frame);
   }, [page, selected, editor]);
   function navigate(next) {
+    if (!canNavigate(user.roles, next, user.capabilities)) return;
     setPage(next);
     setSelected(null);
     setEditor(null);
@@ -444,10 +454,10 @@ function Workspace({ user, onLogout }) {
           {[
             ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history"]],
             ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
-            ["QUẢN TRỊ HỆ THỐNG", ["policy", "ops", "identity", "audit", "events"]],
+            ["QUẢN TRỊ HỆ THỐNG", ["policy", "ops", "identity", "api-admin", "audit", "events"]],
             ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
           ].map(([group, keys]) => {
-            const visible = menu.filter((m) => keys.includes(m[0]) && (!m[3] || user.roles.includes(m[3])));
+            const visible = menu.filter((m) => keys.includes(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
             return visible.length ? (
               <div key={group} className="nav-group">
                 <p className="nav-caption">{group}</p>
@@ -515,6 +525,7 @@ function Workspace({ user, onLogout }) {
             />
           ) : selected ? (
             <RequestDetail
+              initialTab={page === "audit" ? "audit" : "info"}
               key={selected}
               id={selected}
               user={user}
@@ -523,11 +534,17 @@ function Workspace({ user, onLogout }) {
               onChanged={() => setRevision((v) => v + 1)}
             />
           ) : page === "home" ? (
-            <Overview navigate={navigate} onOpen={setSelected} />
+            <Overview navigate={navigate} onOpen={setSelected} user={user} />
+          ) : page === "audit" ? (
+            <AuditorWorkspace onOpen={(id) => setSelected(id)} />
           ) : page === "identity" ? (
             <IdentityAdmin />
+          ) : page === "api-admin" ? (
+            <ApiAdministration />
+          ) : page === "plan-catalog" ? (
+            <PlanCatalog />
           ) : page === "policy" ? (
-            <Policy />
+            <Policy canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />
           ) : page === "notifications" ? (
             <Notifications onOpen={setSelected} />
           ) : page === "profile" ? (

@@ -120,9 +120,9 @@ INSERT INTO eas.app_user (id, username, display_name, department_id, manager_id,
 -- ============================================================
 -- BẢNG: eas.request_type (3 bản ghi)
 -- ============================================================
-INSERT INTO eas.request_type (id, code, lifecycle, is_active, active_release_id) VALUES ('00000000-0000-4000-8000-000000000001', 'LEAVE', 'A', true, '00000003-0000-4000-8000-000000000001');
-INSERT INTO eas.request_type (id, code, lifecycle, is_active, active_release_id) VALUES ('00000000-0000-4000-8000-000000000002', 'ACCESS', 'B', true, '00000003-0000-4000-8000-000000000002');
-INSERT INTO eas.request_type (id, code, lifecycle, is_active, active_release_id) VALUES ('00000000-0000-4000-8000-000000000003', 'EQUIPMENT', 'C', true, '00000003-0000-4000-8000-000000000003');
+INSERT INTO eas.request_type (id,code,lifecycle,is_active,active_release_id,name,description,category) VALUES ('00000000-0000-4000-8000-000000000001','LEAVE','A',true,'00000003-0000-4000-8000-000000000001','Nghỉ phép','Yêu cầu nghỉ phép theo quy chế doanh nghiệp','HR');
+INSERT INTO eas.request_type (id,code,lifecycle,is_active,active_release_id,name,description,category) VALUES ('00000000-0000-4000-8000-000000000002','ACCESS','B',true,'00000003-0000-4000-8000-000000000002','Cấp quyền CNTT','Yêu cầu cấp quyền sử dụng hệ thống','IT');
+INSERT INTO eas.request_type (id,code,lifecycle,is_active,active_release_id,name,description,category) VALUES ('00000000-0000-4000-8000-000000000003','EQUIPMENT','C',true,'00000003-0000-4000-8000-000000000003','Cấp thiết bị','Yêu cầu mua hoặc cấp phát thiết bị','ASSET');
 
 -- ============================================================
 -- BẢNG: eas.role_membership (111 bản ghi)

@@ -1,17 +1,23 @@
 from __future__ import annotations
 
-import hashlib
 from typing import Any
 from uuid import uuid4
 
 from django.conf import settings
 from django.core.cache import cache
+from django.db import connection
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
 
+from .login_throttle import (
+    clear_account_failures,
+    is_throttled,
+    register_login_failure,
+    throttle_keys,
+)
 from .service import (
     PasswordChangeError,
     change_password,
@@ -20,12 +26,6 @@ from .service import (
     require_actor,
     verify_user_password,
 )
-
-
-def _rate_key(request: HttpRequest, username: str) -> str:
-    client = request.META.get("REMOTE_ADDR", "unknown")
-    digest = hashlib.sha256(f"{client}\0{username}".encode()).hexdigest()
-    return f"login:{digest}"
 
 
 @ensure_csrf_cookie
@@ -46,14 +46,6 @@ def _parse_credentials(request: HttpRequest) -> tuple[str, str] | JsonResponse:
     if not isinstance(username, str) or not isinstance(password, str):
         return api_error(request, "INVALID_CREDENTIALS", status=401)
     return username.strip().lower(), password
-
-
-def _record_failed_login(key: str) -> None:
-    if not cache.add(key, 1, settings.EAS_LOGIN_WINDOW_SECONDS):
-        try:
-            cache.incr(key)
-        except ValueError:
-            cache.set(key, 1, settings.EAS_LOGIN_WINDOW_SECONDS)
 
 
 def _check_maintenance_login(
@@ -109,6 +101,11 @@ def _establish_user_session(request: HttpRequest, user) -> None:
         f"{user.id}:{user.auth_version}",
         timeout=settings.SESSION_COOKIE_AGE,
     )
+    cache.set(
+        f"eas:idle:{session_id}",
+        f"{user.id}:{user.auth_version}",
+        timeout=settings.EAS_SESSION_IDLE_SECONDS,
+    )
 
 
 @require_POST
@@ -118,9 +115,13 @@ def login(request: HttpRequest) -> JsonResponse:
         return parsed
     username, password = parsed
 
-    key = _rate_key(request, username)
-    attempts = cache.get(key, 0)
-    if attempts >= settings.EAS_LOGIN_MAX_ATTEMPTS:
+    keys = throttle_keys(username, request.META.get("REMOTE_ADDR", "unknown"))
+    if is_throttled(
+        cache,
+        keys,
+        account_limit=settings.EAS_LOGIN_MAX_ATTEMPTS,
+        ip_limit=getattr(settings, "EAS_LOGIN_MAX_IP_ATTEMPTS", 30),
+    ):
         return api_error(
             request,
             "LOGIN_RATE_LIMITED",
@@ -133,14 +134,16 @@ def login(request: HttpRequest) -> JsonResponse:
         user and user.is_active and verify_user_password(password, user.password_hash)
     )
     if not valid:
-        _record_failed_login(key)
+        register_login_failure(
+            cache, keys, window_seconds=settings.EAS_LOGIN_WINDOW_SECONDS
+        )
         return api_error(request, "INVALID_CREDENTIALS", status=401)
 
     m_err, m_payload = _check_maintenance_login(request, user.id)
     if m_err:
         return m_err
 
-    cache.delete(key)
+    clear_account_failures(cache, keys)
     _establish_user_session(request, user)
 
     payload = {
@@ -162,6 +165,7 @@ def logout(request: HttpRequest) -> JsonResponse:
     session_id = request.session.get("session_id")
     if isinstance(session_id, str):
         cache.delete(f"eas:session:{session_id}")
+        cache.delete(f"eas:idle:{session_id}")
         cache.set(
             f"eas:session:revoked:{session_id}",
             "1",
@@ -187,6 +191,28 @@ def me(request: HttpRequest) -> JsonResponse:
     m_info = get_maintenance_info()
     is_admin = is_admin_actor(actor)
 
+    # UC17 can only be operated by GLOBAL / ALL OPS membership; mere
+    # OPS_ADMIN membership is not enough. Backend administration APIs still
+    # perform their own authorization checks on every operation.
+    can_manage_identity = False
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """SELECT EXISTS (
+                      SELECT 1 FROM eas.role_membership rm
+                      WHERE rm.user_id = %s AND rm.role = 'OPS_ADMIN'
+                        AND rm.revoked_at IS NULL
+                        AND rm.valid_from <= statement_timestamp()
+                        AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                        AND rm.scope_kind = 'GLOBAL' AND rm.type_scope = 'ALL'
+                   )""",
+                [actor.id],
+            )
+            row = cursor.fetchone()
+            can_manage_identity = bool(row[0]) if row else False
+    except Exception:
+        can_manage_identity = False
+
     payload = {
         "user": {
             "id": actor.id,
@@ -194,6 +220,7 @@ def me(request: HttpRequest) -> JsonResponse:
             "display_name": actor.display_name,
             "department_id": actor.department_id,
             "roles": sorted(actor.roles),
+            "capabilities": {"identity_manage": can_manage_identity},
             "must_change_password": actor.must_change_password,
         },
         "correlation_id": correlation_id(request),
@@ -254,6 +281,11 @@ def password(request: HttpRequest) -> JsonResponse:
         f"eas:session:{session_id}",
         f"{actor.id}:{new_version}",
         timeout=settings.SESSION_COOKIE_AGE,
+    )
+    cache.set(
+        f"eas:idle:{session_id}",
+        f"{actor.id}:{new_version}",
+        timeout=settings.EAS_SESSION_IDLE_SECONDS,
     )
     request.session.cycle_key()
     return JsonResponse(

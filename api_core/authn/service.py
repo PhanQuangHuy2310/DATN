@@ -7,6 +7,8 @@ from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.password_validation import CommonPasswordValidator
+from django.core.exceptions import ValidationError
 from django.core.cache import cache
 from django.db import connection, transaction
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -44,8 +46,17 @@ class PasswordChangeError(ValueError):
 
 
 def validate_new_password(password: object, username: str) -> str:
-    if not isinstance(password, str) or not 12 <= len(password) <= 128:
+    if not isinstance(password, str) or not 15 <= len(password) <= 128:
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
+    # SRS v2 NFR-Security: exclude passwords from a minimal weak-password
+    # denylist. This is intentionally additive to entropy/complexity rules.
+    weak = {"password123456!A", "qwerty123456!A", "admin123456789!A", "1234567890abc!A"}
+    if password.lower() in {item.lower() for item in weak}:
+        raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
+    try:
+        CommonPasswordValidator().validate(password)
+    except ValidationError:
+        raise PasswordChangeError("PASSWORD_POLICY_VIOLATION") from None
     if username.lower() in password.lower():
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
     required = (
@@ -186,6 +197,9 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
         or getattr(settings, "REDIS_URL", "")
     ):
         return None
+    idle_key = f"eas:idle:{session_id}"
+    if cache.get(idle_key) != active_session:
+        return None
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -220,6 +234,9 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
             [user_id],
         )
         roles = frozenset(row[0] for row in cursor.fetchall())
+    # Sliding 30-minute inactivity window, but the original 8-hour absolute
+    # session key is NEVER refreshed here. Logout/password reset still revoke.
+    cache.set(idle_key, active_session, timeout=settings.EAS_SESSION_IDLE_SECONDS)
     return Actor(
         id=user[0],
         username=user[1],

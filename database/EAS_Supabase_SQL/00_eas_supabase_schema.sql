@@ -82,6 +82,9 @@ code varchar(30) NOT NULL UNIQUE,
 lifecycle char(1) NOT NULL,
 is_active boolean NOT NULL DEFAULT true,
 active_release_id uuid,
+name varchar(150) NOT NULL,
+description varchar(2000) NOT NULL DEFAULT '',
+category varchar(30) NOT NULL CHECK (category IN ('HR','IT','FACILITY','PROCUREMENT','ASSET','FINANCE','GENERAL')),
 CONSTRAINT type_p0 CHECK ((code='LEAVE' AND lifecycle='A') OR (code='ACCESS' AND lifecycle='B') OR (code='EQUIPMENT' AND lifecycle='C'))
 );
 COMMENT ON TABLE eas.request_type IS 'DB05 — Ba loại hồ sơ P0. Con trỏ release được gắn FK sau khi tạo config_release.';
@@ -1220,10 +1223,10 @@ REVOKE ALL ON ALL SEQUENCES IN SCHEMA eas FROM PUBLIC;
 -- Reference data needed by an EMPTY production schema. No fake user/password/policy.
 INSERT INTO eas.security_epoch(id) VALUES(1);
 INSERT INTO eas.audit_head(scope_key) VALUES('ADMIN');
-INSERT INTO eas.request_type(id,code,lifecycle) VALUES
- ('00000000-0000-4000-8000-000000000001','LEAVE','A'),
- ('00000000-0000-4000-8000-000000000002','ACCESS','B'),
- ('00000000-0000-4000-8000-000000000003','EQUIPMENT','C');
+INSERT INTO eas.request_type(id,code,lifecycle,name,description,category) VALUES
+ ('00000000-0000-4000-8000-000000000001','LEAVE','A','Nghỉ phép','Yêu cầu nghỉ phép theo quy chế doanh nghiệp','HR'),
+ ('00000000-0000-4000-8000-000000000002','ACCESS','B','Cấp quyền CNTT','Yêu cầu cấp quyền sử dụng hệ thống','IT'),
+ ('00000000-0000-4000-8000-000000000003','EQUIPMENT','C','Cấp thiết bị','Yêu cầu mua hoặc cấp phát thiết bị','ASSET');
 COMMENT ON SCHEMA eas IS 'EAS schema migration 2.0.1; 30 domain tables; backend-only; docs v2.0; 2026-09-22';
 RESET ROLE;
 COMMIT;

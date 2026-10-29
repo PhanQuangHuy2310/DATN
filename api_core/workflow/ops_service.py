@@ -98,6 +98,11 @@ def list_ops_metadata(
             WHERE rm.user_id = %s AND rm.role = 'OPS_ADMIN' AND rm.revoked_at IS NULL
               AND rm.valid_from <= statement_timestamp()
               AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+              AND (
+                rm.scope_kind = 'GLOBAL'
+                OR rm.department_id = COALESCE(v.department_id, u.department_id)
+              )
+              AND (rm.type_scope = 'ALL' OR rm.type_id = r.type_id)
           )
         ORDER BY r.updated_at DESC, r.id DESC
         LIMIT %s OFFSET %s

@@ -1,0 +1,1335 @@
+{
+  "source": "Business catalogue provided by user; suggested technical routes, not pre-approved policy",
+  "drafts": [
+    {
+      "code": "LEAVE_ANNUAL",
+      "lifecycle": "A",
+      "risk_weight_reference_only": 1,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "replacement_person": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "start_date",
+          "end_date",
+          "reason",
+          "replacement_person"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "LEAVE_ANNUAL_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER"
+            ]
+          }
+        ],
+        "executor": null,
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": null,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "LEAVE_LONG",
+      "lifecycle": "A",
+      "risk_weight_reference_only": 3,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "handover_doc": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "start_date",
+          "end_date",
+          "handover_doc",
+          "reason"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "LEAVE_LONG_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER",
+              "DIRECTOR"
+            ]
+          }
+        ],
+        "executor": null,
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": null,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "OFFICE_SUPPLIES",
+      "lifecycle": "B",
+      "risk_weight_reference_only": 1,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "items_list": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "department_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "title",
+          "items_list",
+          "quantity",
+          "department_id"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "OFFICE_SUPPLIES_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_ADMIN",
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "LAPTOP_PROVISION",
+      "lifecycle": "C",
+      "risk_weight_reference_only": 3,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "specs_needed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "position": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "specs_needed",
+          "position",
+          "reason",
+          "location"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "LAPTOP_PROVISION_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_IT",
+        "acceptor": "REQUESTER"
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": 24,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "OVERTIME_APPROVAL",
+      "lifecycle": "A",
+      "risk_weight_reference_only": 2,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "work_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "hours": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "work_date",
+          "hours",
+          "reason"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "OVERTIME_APPROVAL_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER"
+            ]
+          }
+        ],
+        "executor": null,
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": null,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "PURCHASE_REQUEST",
+      "lifecycle": "B",
+      "risk_weight_reference_only": 5,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "item_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "specs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "item_name",
+          "quantity",
+          "amount_vnd",
+          "reason",
+          "specs"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "PURCHASE_HIGH",
+            "priority": 10,
+            "when": {
+              "amount_gt": 50000000
+            },
+            "approvers": [
+              "DIRECT_MANAGER",
+              "FINANCE",
+              "DIRECTOR"
+            ]
+          },
+          {
+            "id": "PURCHASE_MEDIUM",
+            "priority": 20,
+            "when": {
+              "amount_gte": 5000000
+            },
+            "approvers": [
+              "DIRECT_MANAGER",
+              "FINANCE"
+            ]
+          },
+          {
+            "id": "PURCHASE_LOW",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_PROCUREMENT",
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "FACILITY_MAINTENANCE",
+      "lifecycle": "B",
+      "risk_weight_reference_only": 2,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "issue_type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "Thường",
+              "Khẩn",
+              "Rất khẩn"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "location",
+          "issue_type",
+          "urgency",
+          "description"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "FACILITY_MAINTENANCE_DEFAULT",
+            "default": true,
+            "approvers": [
+              "OPERATIONS_MANAGER"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_FACILITY",
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "REFUND_COMPENSATION",
+      "lifecycle": "A",
+      "risk_weight_reference_only": 2,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "order_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "customer_reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "order_code",
+          "amount_vnd",
+          "reason",
+          "customer_reference"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "REFUND_COMPENSATION_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER"
+            ]
+          }
+        ],
+        "executor": null,
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": null,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "WAREHOUSE_TRANSFER",
+      "lifecycle": "B",
+      "risk_weight_reference_only": 3,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "source_warehouse": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "destination_warehouse": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "items_list": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "source_warehouse",
+          "destination_warehouse",
+          "items_list",
+          "quantity",
+          "reason"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "WAREHOUSE_TRANSFER_DEFAULT",
+            "default": true,
+            "approvers": [
+              "WAREHOUSE_MANAGER"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_WAREHOUSE",
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "FLASH_SALE_VOUCHER",
+      "lifecycle": "B",
+      "risk_weight_reference_only": 4,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "campaign_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "discount_percent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "margin_analysis": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "campaign_name",
+          "start_date",
+          "end_date",
+          "discount_percent",
+          "margin_analysis"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "FLASH_SALE_VOUCHER_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER",
+              "FINANCE"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_MARKETING",
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "CONTRACT_APPROVAL",
+      "lifecycle": "C",
+      "risk_weight_reference_only": 5,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "contract_title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "partner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "contract_reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "contract_title",
+          "partner",
+          "amount_vnd",
+          "purpose",
+          "contract_reference"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "CONTRACT_APPROVAL_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER",
+              "FINANCE",
+              "LEGAL"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_FINANCE",
+        "acceptor": "LEGAL"
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": 24,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "DATA_UAT_EXPORT",
+      "lifecycle": "B",
+      "risk_weight_reference_only": 3,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "dataset_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "data_scope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "access_duration": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "dataset_name",
+          "data_scope",
+          "purpose",
+          "access_duration"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "DATA_UAT_EXPORT_DEFAULT",
+            "default": true,
+            "approvers": [
+              "IT_MANAGER",
+              "SECURITY"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_TECH",
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "FEATURE_RELEASE",
+      "lifecycle": "C",
+      "risk_weight_reference_only": 4,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "feature_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "business_goal": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "release_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "acceptance_criteria": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "feature_name",
+          "business_goal",
+          "release_date",
+          "acceptance_criteria"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "FEATURE_RELEASE_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER",
+              "IT_MANAGER"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_TECH",
+        "acceptor": "PROJECT_MANAGER"
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": 24,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "SERVER_FIREWALL",
+      "lifecycle": "C",
+      "risk_weight_reference_only": 5,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "server_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "access_scope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "business_reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "implementation_window": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "server_name",
+          "access_scope",
+          "business_reason",
+          "implementation_window"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "SERVER_FIREWALL_DEFAULT",
+            "default": true,
+            "approvers": [
+              "IT_MANAGER",
+              "SECURITY",
+              "CTO"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_IT",
+        "acceptor": "CTO"
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": 24,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "ROOM_STUDIO",
+      "lifecycle": "A",
+      "risk_weight_reference_only": 1,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "start_time": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "end_time": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "room_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "start_date",
+          "start_time",
+          "end_time",
+          "room_name",
+          "purpose"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "ROOM_STUDIO_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER"
+            ]
+          }
+        ],
+        "executor": null,
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": null,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "ATTENDANCE_ADJUSTMENT",
+      "lifecycle": "A",
+      "risk_weight_reference_only": 1,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "work_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "Đi muộn",
+              "Về sớm",
+              "Quên chấm công"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "work_date",
+          "change_type",
+          "reason"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "ATTENDANCE_ADJUSTMENT_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER"
+            ]
+          }
+        ],
+        "executor": null,
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": null,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "SOFTWARE_ACCESS",
+      "lifecycle": "B",
+      "risk_weight_reference_only": 3,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "role_needed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "app_name",
+          "role_needed",
+          "reason"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "SOFTWARE_ACCESS_DEFAULT",
+            "default": true,
+            "approvers": [
+              "DIRECT_MANAGER",
+              "IT_MANAGER"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_IT",
+        "acceptor": null
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": null,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    },
+    {
+      "code": "EMPLOYEE_ONBOARDING",
+      "lifecycle": "C",
+      "risk_weight_reference_only": 4,
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "employee_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "department_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "position": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "equipment_needs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "employee_name",
+          "start_date",
+          "department_name",
+          "position",
+          "equipment_needs"
+        ]
+      },
+      "route_rules": {
+        "schema_version": 1,
+        "rules": [
+          {
+            "id": "EMPLOYEE_ONBOARDING_DEFAULT",
+            "default": true,
+            "approvers": [
+              "HR_MANAGER",
+              "DIRECT_MANAGER"
+            ]
+          }
+        ],
+        "executor": "EXECUTOR_HR",
+        "acceptor": "DIRECT_MANAGER"
+      },
+      "actor_bindings": {
+        "schema_version": 1,
+        "departments": {}
+      },
+      "sla_profile": {
+        "schema_version": 1,
+        "clock": "CALENDAR_UTC",
+        "approval_hours": 24,
+        "execution_hours": 48,
+        "acceptance_hours": 24,
+        "reminder_fraction": 0.5
+      },
+      "activation_state": "DRAFT_SUGGESTION",
+      "operator_instructions": "Fill actor_bindings.departments with verified UUIDs; ensure all assigned people have scoped and effective APPROVER/EXECUTOR/ACCEPTOR grants; validate UAT, then publish and activate. Never publish placeholder IDs."
+    }
+  ]
+}

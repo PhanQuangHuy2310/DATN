@@ -20,6 +20,7 @@ from api_core.domain import (
     validate_draft_payload,
     validate_payload,
 )
+from api_core.domain.routing import RoutingError
 from api_core.workflow.constants import (
     ERR_REQUEST_NOT_FOUND,
     ERR_STATE_CONFLICT,
@@ -574,6 +575,7 @@ def _merge_and_validate_draft_payload(
     type_code: str,
     form_schema: dict[str, Any],
     requester_id: str,
+    actor_department_id: str | None = None,
 ) -> dict[str, Any]:
     merged_payload = dict(existing_draft_payload or {})
     if payload is not None:
@@ -588,6 +590,12 @@ def _merge_and_validate_draft_payload(
             raise CommandError(
                 "VALIDATION_FAILED", status=422, fields=exc.errors
             ) from exc
+        if (
+            actor_department_id is not None
+            and validated_patch.get("department_id") is not None
+            and validated_patch["department_id"] != actor_department_id
+        ):
+            raise CommandError("DEPARTMENT_SCOPE_VIOLATION", status=403)
         merged_payload.update(validated_patch)
     return merged_payload
 
@@ -654,7 +662,12 @@ def update_draft(
 
         effective_release_id = viewed_release_id or active_release_id
         merged_payload = _merge_and_validate_draft_payload(
-            existing_draft_payload, payload, type_code, form_schema, actor.id
+            existing_draft_payload,
+            payload,
+            type_code,
+            form_schema,
+            actor.id,
+            actor.department_id,
         )
 
         final_amount_vnd = amount_vnd if amount_vnd is not None else existing_amount_vnd
@@ -992,15 +1005,20 @@ def _resolve_and_verify_route_actors(
     normalized: dict[str, Any],
     amount: int | None,
 ):
-    decision = resolve_route(
-        route_rules=rules,
-        actor_bindings=bindings,
-        department_id=actor.department_id,
-        requester_id=actor.id,
-        manager_id=manager_id,
-        amount_vnd=amount,
-        payload=normalized,
-    )
+    try:
+        decision = resolve_route(
+            route_rules=rules,
+            actor_bindings=bindings,
+            department_id=actor.department_id,
+            requester_id=actor.id,
+            manager_id=manager_id,
+            amount_vnd=amount,
+            payload=normalized,
+        )
+    except RoutingError as exc:
+        # Unresolved role bindings are a configuration conflict, not a 500.
+        # No draft is submitted or workflow instance created.
+        raise CommandError("ROUTE_CONFIGURATION_INVALID", status=409) from exc
     routed_actors = set(decision.approver_ids)
     if decision.executor_id:
         routed_actors.add(decision.executor_id)
@@ -1043,7 +1061,8 @@ def _resolve_submit_attachments(
     cursor,
     existing_request_id: str | None,
     attachment_ids: list[str] | None,
-    lifecycle: str,
+    type_code: str,
+    form: dict[str, Any],
 ) -> list[str]:
     resolved = attachment_ids
     if resolved is None:
@@ -1061,8 +1080,22 @@ def _resolve_submit_attachments(
         else:
             resolved = []
 
-    if lifecycle == "C" and not resolved:
+    # A type's evidence requirements are determined by its published form,
+    # not by lifecycle C alone (e.g. onboarding can be C without a quote).
+    # The P0 EQUIPMENT quotation obligation remains unchanged.
+    evidence_fields = [
+        name
+        for name in form.get("required", [])
+        if isinstance(name, str)
+        and re.search(
+            r"(?:_file|_files|_pdf|_doc|_images|photo_evidence|board_resolution|handover_doc)$",
+            name,
+        )
+    ]
+    if type_code == "EQUIPMENT" and not resolved:
         raise CommandError("EQUIPMENT_QUOTE_REQUIRED")
+    if evidence_fields and not resolved:
+        raise CommandError("ATTACHMENT_REQUIRED", status=422)
     return resolved
 
 
@@ -1281,6 +1314,10 @@ def submit_request(
             )
         except PayloadValidationError as exc:
             raise CommandError("VALIDATION_FAILED", fields=exc.errors) from exc
+        # Department is derived from the current authenticated session.  A forged
+        # cross-department field must never influence assignment or reporting.
+        if normalized.get("department_id") is not None and normalized["department_id"] != actor.department_id:
+            raise CommandError("DEPARTMENT_SCOPE_VIOLATION", status=403)
         amount = normalized.get("amount_vnd")
         decision = _resolve_and_verify_route_actors(
             cursor=cursor,
@@ -1294,7 +1331,7 @@ def submit_request(
         )
 
         resolved_attachments = _resolve_submit_attachments(
-            cursor, existing_request_id, attachment_ids, lifecycle
+            cursor, existing_request_id, attachment_ids, type_code, form
         )
 
         now = datetime.now(timezone.utc)

@@ -136,6 +136,8 @@ urlpatterns = [
     ),
     # Policy & Config Release
     path("config-releases", views.config_releases_view, name="config-releases"),
+    path("config-releases/status", views.policy_type_status_view, name="policy-type-status"),
+    path("config-releases/actor-options", views.policy_actor_options_view, name="policy-actor-options"),
     path(
         "config-releases/<uuid:release_id>",
         views.config_release_detail_view,

@@ -1,0 +1,1126 @@
+{
+  "source": "Danh mục Phân loại Yêu cầu, plan.docx; 20 dòng hiển thị tương ứng 18 mã duy nhất",
+  "display_rows": 20,
+  "unique_types": 18,
+  "options": [
+    {
+      "group": "Tài chính & Mua sắm",
+      "label": "Nghỉ phép dưới 3 ngày",
+      "code": "LEAVE_ANNUAL",
+      "risk_weight": 1,
+      "lifecycle": "A",
+      "description": "AI có thể gợi ý khi quỹ phép hợp lệ; hệ thống vẫn tuân theo release"
+    },
+    {
+      "group": "Tài chính & Mua sắm",
+      "label": "Nghỉ phép từ 3 ngày",
+      "code": "LEAVE_LONG",
+      "risk_weight": 3,
+      "lifecycle": "A",
+      "description": "Trưởng phòng duyệt; bàn giao công việc"
+    },
+    {
+      "group": "Tài chính & Mua sắm",
+      "label": "Cấp văn phòng phẩm",
+      "code": "OFFICE_SUPPLIES",
+      "risk_weight": 1,
+      "lifecycle": "B",
+      "description": "Hành chính xuất kho sau phê duyệt"
+    },
+    {
+      "group": "Tài chính & Mua sắm",
+      "label": "Cấp Laptop / Thiết bị",
+      "code": "LAPTOP_PROVISION",
+      "risk_weight": 3,
+      "lifecycle": "C",
+      "description": "IT cấp phát, người yêu cầu nghiệm thu"
+    },
+    {
+      "group": "Tài chính & Mua sắm",
+      "label": "Đăng ký làm thêm giờ (OT)",
+      "code": "OVERTIME_APPROVAL",
+      "risk_weight": 2,
+      "lifecycle": "A",
+      "description": "Trưởng phòng duyệt theo kế hoạch"
+    },
+    {
+      "group": "Tài chính & Mua sắm",
+      "label": "Đề nghị mua sắm",
+      "code": "PURCHASE_REQUEST",
+      "risk_weight": 5,
+      "lifecycle": "B",
+      "description": "Duyệt theo hạn mức; bộ phận mua sắm thực hiện"
+    },
+    {
+      "group": "Tài chính & Mua sắm",
+      "label": "Sửa chữa cơ sở vật chất",
+      "code": "FACILITY_MAINTENANCE",
+      "risk_weight": 2,
+      "lifecycle": "B",
+      "description": "Quản lý điều phối đội bảo trì"
+    },
+    {
+      "group": "Vận hành Kinh doanh & E-commerce",
+      "label": "Hoàn tiền / Đền bù",
+      "code": "REFUND_COMPENSATION",
+      "risk_weight": 2,
+      "lifecycle": "A",
+      "description": "Đối chiếu giao dịch và hạn mức"
+    },
+    {
+      "group": "Vận hành Kinh doanh & E-commerce",
+      "label": "Luân chuyển kho",
+      "code": "WAREHOUSE_TRANSFER",
+      "risk_weight": 3,
+      "lifecycle": "B",
+      "description": "Thủ kho duyệt; nhân viên kho thực hiện"
+    },
+    {
+      "group": "Vận hành Kinh doanh & E-commerce",
+      "label": "Flash Sale / Voucher",
+      "code": "FLASH_SALE_VOUCHER",
+      "risk_weight": 4,
+      "lifecycle": "B",
+      "description": "Kiểm tra biên lợi nhuận; Marketing thực hiện"
+    },
+    {
+      "group": "Vận hành Kinh doanh & E-commerce",
+      "label": "Duyệt hợp đồng",
+      "code": "CONTRACT_APPROVAL",
+      "risk_weight": 5,
+      "lifecycle": "C",
+      "description": "Duyệt ba cấp; bộ phận Pháp chế nghiệm thu"
+    },
+    {
+      "group": "Kỹ thuật & Công nghệ",
+      "label": "Trích xuất dữ liệu / UAT",
+      "code": "DATA_UAT_EXPORT",
+      "risk_weight": 3,
+      "lifecycle": "B",
+      "description": "Phê duyệt theo phạm vi; che dữ liệu cá nhân khi xuất"
+    },
+    {
+      "group": "Kỹ thuật & Công nghệ",
+      "label": "Feature Request / Release",
+      "code": "FEATURE_RELEASE",
+      "risk_weight": 4,
+      "lifecycle": "C",
+      "description": "Duyệt và giao đội kỹ thuật; PM nghiệm thu"
+    },
+    {
+      "group": "Kỹ thuật & Công nghệ",
+      "label": "Cấp Server / Firewall",
+      "code": "SERVER_FIREWALL",
+      "risk_weight": 5,
+      "lifecycle": "C",
+      "description": "Duyệt bảo mật nhiều cấp; CTO nghiệm thu"
+    },
+    {
+      "group": "Hành chính & Quản trị Nhân sự",
+      "label": "Mượn phòng họp / Studio",
+      "code": "ROOM_STUDIO",
+      "risk_weight": 1,
+      "lifecycle": "A",
+      "description": "Kiểm tra lịch phòng trước khi duyệt"
+    },
+    {
+      "group": "Hành chính & Quản trị Nhân sự",
+      "label": "Đi muộn / Về sớm / Quên chấm công",
+      "code": "ATTENDANCE_ADJUSTMENT",
+      "risk_weight": 1,
+      "lifecycle": "A",
+      "description": "HR đối soát lịch sử chấm công"
+    },
+    {
+      "group": "Hành chính & Quản trị Nhân sự",
+      "label": "Cấp phát Laptop / Thiết bị",
+      "code": "LAPTOP_PROVISION",
+      "risk_weight": 3,
+      "lifecycle": "C",
+      "description": "IT cấp phát, người yêu cầu nghiệm thu"
+    },
+    {
+      "group": "Hành chính & Quản trị Nhân sự",
+      "label": "Nghỉ từ 3 ngày / Thuê nhân sự thay thế",
+      "code": "LEAVE_LONG",
+      "risk_weight": 3,
+      "lifecycle": "A",
+      "description": "Trưởng phòng bố trí người thay thế"
+    },
+    {
+      "group": "Hành chính & Quản trị Nhân sự",
+      "label": "Cấp tài khoản / VPN",
+      "code": "SOFTWARE_ACCESS",
+      "risk_weight": 3,
+      "lifecycle": "B",
+      "description": "IT thực hiện sau phê duyệt"
+    },
+    {
+      "group": "Hành chính & Quản trị Nhân sự",
+      "label": "Onboarding nhân viên",
+      "code": "EMPLOYEE_ONBOARDING",
+      "risk_weight": 4,
+      "lifecycle": "C",
+      "description": "Nhiều bộ phận thực hiện; trưởng phòng nghiệm thu"
+    }
+  ],
+  "types": [
+    {
+      "code": "LEAVE_ANNUAL",
+      "name": "Nghỉ phép dưới 3 ngày",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "A",
+      "risk_weight": 1,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "start_date": "Ngày bắt đầu",
+        "end_date": "Ngày kết thúc",
+        "reason": "Lý do",
+        "replacement_person": "Người thay thế"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "replacement_person": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "start_date",
+          "end_date",
+          "reason",
+          "replacement_person"
+        ]
+      }
+    },
+    {
+      "code": "LEAVE_LONG",
+      "name": "Nghỉ phép từ 3 ngày",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "A",
+      "risk_weight": 3,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "start_date": "Ngày bắt đầu",
+        "end_date": "Ngày kết thúc",
+        "handover_doc": "Biên bản bàn giao",
+        "reason": "Lý do"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "handover_doc": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "start_date",
+          "end_date",
+          "handover_doc",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "OFFICE_SUPPLIES",
+      "name": "Cấp văn phòng phẩm",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "B",
+      "risk_weight": 1,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "items_list": "Danh mục vật tư",
+        "quantity": "Số lượng",
+        "department_id": "Phòng ban"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "items_list": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "department_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "title",
+          "items_list",
+          "quantity",
+          "department_id"
+        ]
+      }
+    },
+    {
+      "code": "LAPTOP_PROVISION",
+      "name": "Cấp Laptop / Thiết bị",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "C",
+      "risk_weight": 3,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "specs_needed": "Cấu hình cần thiết",
+        "position": "Vị trí công tác",
+        "reason": "Lý do",
+        "location": "Địa điểm"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "specs_needed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "position": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "specs_needed",
+          "position",
+          "reason",
+          "location"
+        ]
+      }
+    },
+    {
+      "code": "OVERTIME_APPROVAL",
+      "name": "Đăng ký làm thêm giờ (OT)",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "A",
+      "risk_weight": 2,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "work_date": "Ngày làm thêm",
+        "hours": "Số giờ",
+        "reason": "Lý do và công việc"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "work_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "hours": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "work_date",
+          "hours",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "PURCHASE_REQUEST",
+      "name": "Đề nghị mua sắm",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "B",
+      "risk_weight": 5,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "item_name": "Hàng hóa / Dịch vụ",
+        "quantity": "Số lượng",
+        "amount_vnd": "Tổng giá trị (VNĐ)",
+        "reason": "Mục đích mua sắm",
+        "specs": "Thông số / Quy cách"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "item_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "specs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "item_name",
+          "quantity",
+          "amount_vnd",
+          "reason",
+          "specs"
+        ]
+      }
+    },
+    {
+      "code": "FACILITY_MAINTENANCE",
+      "name": "Sửa chữa cơ sở vật chất",
+      "category": "Tài chính & Mua sắm",
+      "lifecycle": "B",
+      "risk_weight": 2,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "location": "Vị trí sự cố",
+        "issue_type": "Loại sự cố",
+        "urgency": "Mức độ khẩn cấp",
+        "description": "Mô tả hiện trạng"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "issue_type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "Thường",
+              "Khẩn",
+              "Rất khẩn"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "location",
+          "issue_type",
+          "urgency",
+          "description"
+        ]
+      }
+    },
+    {
+      "code": "REFUND_COMPENSATION",
+      "name": "Hoàn tiền / Đền bù",
+      "category": "Vận hành Kinh doanh & E-commerce",
+      "lifecycle": "A",
+      "risk_weight": 2,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "order_code": "Mã đơn hàng / Giao dịch",
+        "amount_vnd": "Số tiền hoàn / Đền bù",
+        "reason": "Lý do",
+        "customer_reference": "Tham chiếu khách hàng"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "order_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "customer_reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "order_code",
+          "amount_vnd",
+          "reason",
+          "customer_reference"
+        ]
+      }
+    },
+    {
+      "code": "WAREHOUSE_TRANSFER",
+      "name": "Luân chuyển kho",
+      "category": "Vận hành Kinh doanh & E-commerce",
+      "lifecycle": "B",
+      "risk_weight": 3,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "source_warehouse": "Kho xuất",
+        "destination_warehouse": "Kho nhận",
+        "items_list": "Danh sách hàng hóa",
+        "quantity": "Số lượng",
+        "reason": "Lý do điều chuyển"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "source_warehouse": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "destination_warehouse": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "items_list": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "source_warehouse",
+          "destination_warehouse",
+          "items_list",
+          "quantity",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "FLASH_SALE_VOUCHER",
+      "name": "Flash Sale / Voucher",
+      "category": "Vận hành Kinh doanh & E-commerce",
+      "lifecycle": "B",
+      "risk_weight": 4,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "campaign_name": "Tên chiến dịch",
+        "start_date": "Ngày bắt đầu",
+        "end_date": "Ngày kết thúc",
+        "discount_percent": "Mức ưu đãi (%)",
+        "margin_analysis": "Phân tích biên lợi nhuận"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "campaign_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "discount_percent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "margin_analysis": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "campaign_name",
+          "start_date",
+          "end_date",
+          "discount_percent",
+          "margin_analysis"
+        ]
+      }
+    },
+    {
+      "code": "CONTRACT_APPROVAL",
+      "name": "Duyệt hợp đồng",
+      "category": "Vận hành Kinh doanh & E-commerce",
+      "lifecycle": "C",
+      "risk_weight": 5,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "contract_title": "Tên hợp đồng",
+        "partner": "Đối tác",
+        "amount_vnd": "Giá trị hợp đồng (VNĐ)",
+        "purpose": "Mục đích hợp đồng",
+        "contract_reference": "Mã tham chiếu hợp đồng"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "contract_title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "partner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "contract_reference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "contract_title",
+          "partner",
+          "amount_vnd",
+          "purpose",
+          "contract_reference"
+        ]
+      }
+    },
+    {
+      "code": "DATA_UAT_EXPORT",
+      "name": "Trích xuất dữ liệu / UAT",
+      "category": "Kỹ thuật & Công nghệ",
+      "lifecycle": "B",
+      "risk_weight": 3,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "dataset_name": "Bộ dữ liệu cần trích xuất",
+        "data_scope": "Phạm vi dữ liệu",
+        "purpose": "Mục đích UAT",
+        "access_duration": "Thời hạn sử dụng"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "dataset_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "data_scope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "access_duration": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "dataset_name",
+          "data_scope",
+          "purpose",
+          "access_duration"
+        ]
+      }
+    },
+    {
+      "code": "FEATURE_RELEASE",
+      "name": "Feature Request / Release",
+      "category": "Kỹ thuật & Công nghệ",
+      "lifecycle": "C",
+      "risk_weight": 4,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "feature_name": "Chức năng / Phiên bản",
+        "business_goal": "Mục tiêu",
+        "release_date": "Ngày dự kiến",
+        "acceptance_criteria": "Tiêu chí nghiệm thu"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "feature_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "business_goal": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "release_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "acceptance_criteria": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "feature_name",
+          "business_goal",
+          "release_date",
+          "acceptance_criteria"
+        ]
+      }
+    },
+    {
+      "code": "SERVER_FIREWALL",
+      "name": "Cấp Server / Firewall",
+      "category": "Kỹ thuật & Công nghệ",
+      "lifecycle": "C",
+      "risk_weight": 5,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "server_name": "Máy chủ / Firewall",
+        "access_scope": "Phạm vi thay đổi",
+        "business_reason": "Mục đích và lý do",
+        "implementation_window": "Cửa sổ triển khai"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "server_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "access_scope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "business_reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "implementation_window": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "server_name",
+          "access_scope",
+          "business_reason",
+          "implementation_window"
+        ]
+      }
+    },
+    {
+      "code": "ROOM_STUDIO",
+      "name": "Mượn phòng họp / Studio",
+      "category": "Hành chính & Quản trị Nhân sự",
+      "lifecycle": "A",
+      "risk_weight": 1,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "start_date": "Ngày sử dụng",
+        "start_time": "Giờ bắt đầu",
+        "end_time": "Giờ kết thúc",
+        "room_name": "Phòng / Studio",
+        "purpose": "Nội dung cuộc họp"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "start_time": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "end_time": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "room_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "title",
+          "start_date",
+          "start_time",
+          "end_time",
+          "room_name",
+          "purpose"
+        ]
+      }
+    },
+    {
+      "code": "ATTENDANCE_ADJUSTMENT",
+      "name": "Đi muộn / Về sớm / Quên chấm công",
+      "category": "Hành chính & Quản trị Nhân sự",
+      "lifecycle": "A",
+      "risk_weight": 1,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "work_date": "Ngày cần điều chỉnh",
+        "change_type": "Loại điều chỉnh",
+        "reason": "Lý do"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "work_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "Đi muộn",
+              "Về sớm",
+              "Quên chấm công"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "work_date",
+          "change_type",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "SOFTWARE_ACCESS",
+      "name": "Cấp tài khoản / VPN",
+      "category": "Hành chính & Quản trị Nhân sự",
+      "lifecycle": "B",
+      "risk_weight": 3,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "app_name": "Tên ứng dụng",
+        "role_needed": "Quyền truy cập yêu cầu",
+        "reason": "Lý do"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "role_needed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "app_name",
+          "role_needed",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "EMPLOYEE_ONBOARDING",
+      "name": "Onboarding nhân viên",
+      "category": "Hành chính & Quản trị Nhân sự",
+      "lifecycle": "C",
+      "risk_weight": 4,
+      "field_labels": {
+        "title": "Tiêu đề",
+        "employee_name": "Tên nhân viên mới",
+        "start_date": "Ngày nhận việc",
+        "department_name": "Phòng ban",
+        "position": "Vị trí",
+        "equipment_needs": "Nhu cầu trang thiết bị / Tài khoản"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "employee_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "department_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "position": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "equipment_needs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "employee_name",
+          "start_date",
+          "department_name",
+          "position",
+          "equipment_needs"
+        ]
+      }
+    }
+  ]
+}

@@ -60,6 +60,17 @@ else:
     except DatabaseUrlError as exc:
         raise RuntimeError(str(exc)) from None
 
+    # Optional: set to 0 when diagnosing stale long-lived Supabase/PgBouncer
+    # connections in local development. Default remains 60 to avoid changing
+    # the production connection policy unexpectedly.
+    try:
+        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "60"))
+        if not 0 <= _db_max_age <= 3600:
+            raise ValueError
+    except ValueError:
+        raise RuntimeError("EAS_DB_CONN_MAX_AGE must be 0..3600") from None
+    DATABASES["default"]["CONN_MAX_AGE"] = _db_max_age
+
 LANGUAGE_CODE = "vi"
 TIME_ZONE = "Asia/Ho_Chi_Minh"
 USE_I18N = True
@@ -72,6 +83,9 @@ X_FRAME_OPTIONS = "DENY"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_NAME = "eas_session"
 SESSION_COOKIE_AGE = int(os.getenv("EAS_SESSION_AGE_SECONDS", "28800"))
+EAS_SESSION_IDLE_SECONDS = int(os.getenv("EAS_SESSION_IDLE_SECONDS", "1800"))
+if not 0 < EAS_SESSION_IDLE_SECONDS <= SESSION_COOKIE_AGE:
+    raise RuntimeError("Session idle must be within absolute session lifetime")
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
@@ -100,6 +114,7 @@ else:
         }
     }
 EAS_LOGIN_MAX_ATTEMPTS = int(os.getenv("EAS_LOGIN_MAX_ATTEMPTS", "5"))
+EAS_LOGIN_MAX_IP_ATTEMPTS = int(os.getenv("EAS_LOGIN_MAX_IP_ATTEMPTS", "30"))
 EAS_LOGIN_WINDOW_SECONDS = int(os.getenv("EAS_LOGIN_WINDOW_SECONDS", "900"))
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")
@@ -149,6 +164,12 @@ EAS_RELEASE = os.getenv("EAS_RELEASE", "dev")
 EAS_REQUIRE_ACTIVE_RELEASES = (
     os.getenv("EAS_REQUIRE_ACTIVE_RELEASES", "true").lower() == "true"
 )
+# New request types may be active but not yet published during migration.
+# P0 releases are still mandatory when EAS_REQUIRE_ACTIVE_RELEASES=true.
+# Opt into full-catalog gating only when *every* active type must be configured.
+EAS_REQUIRE_FULL_CATALOG_READY = (
+    os.getenv("EAS_REQUIRE_FULL_CATALOG_READY", "false").lower() == "true"
+)
 EAS_REQUIRE_MOCK_SOURCES = (
     os.getenv("EAS_REQUIRE_MOCK_SOURCES", "true").lower() == "true"
 )
@@ -189,3 +210,6 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": os.getenv("LOG_LEVEL", "INFO")},
 }
+
+# Opt-in only after DBA review of the report-catalog migration.
+EAS_ALLOW_REPORT_CATALOG_EXPANSION = os.getenv("EAS_ALLOW_REPORT_CATALOG_EXPANSION", "false").lower() == "true"

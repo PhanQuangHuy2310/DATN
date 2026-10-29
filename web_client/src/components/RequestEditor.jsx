@@ -3,15 +3,81 @@ import { api, idempotencyKey } from "../api.js";
 import { fields, types, errorText } from "../domain.js";
 import { Badge, command } from "./ui.jsx";
 import { AiRequestAssist } from "./AiAssist.jsx";
+import RequestTypeMenu from "./RequestTypeMenu.jsx";
+
+// String properties representing evidence are stored as sanitized filenames in
+// the published schema, while the actual file bytes go through Attachment API.
+const isEvidenceField = (name) => /(?:_file|_files|_pdf|_doc|_images|photo_evidence|board_resolution|handover_doc)$/.test(name);
 export default function RequestEditor({ initial, onDone, onCancel }) {
-  const [type, setType] = useState(initial?.type_code || "LEAVE"),
+  const [type, setType] = useState(initial?.type_code || ""),
     [record, setRecord] = useState(initial),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [files, setFiles] = useState([]),
     [notice, setNotice] = useState("");
-  const createKey = useRef(idempotencyKey());
+  const [catalog, setCatalog] = useState([]);
+  const [menu, setMenu] = useState([]);
+  const [chosenLabel, setChosenLabel] = useState("");
+  const [stage, setStage] = useState(initial?.id ? "form" : "choose");
+  const [colleagues, setColleagues] = useState([]);
+  const [evidenceNames, setEvidenceNames] = useState({});
   const formRef = useRef(null);
+  const formElementRef = useRef(null);
+  const menuRef = useRef(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
+  const createKey = useRef(idempotencyKey());
+  useEffect(() => {
+    let active = true;
+    api("/api/v1/meta/request-type-forms")
+      .then((result) => {
+        if (active) {
+          const items = result.items || [];
+          setCatalog(items);
+          const choices = result.approval_menu || items.map((item) => ({
+            group: "Biểu mẫu đang hoạt động", label: item.name || item.code,
+            code: item.code, lifecycle: item.lifecycle, description: "Quy trình được công bố",
+            available: true,
+          }));
+          setMenu(choices);
+          if (initial?.id && items.some((item) => item.code === initial.type_code))
+            setChosenLabel(items.find((item) => item.code === initial.type_code).name);
+          setCatalogError("");
+        }
+      })
+      .catch((err) => {
+        if (active) setCatalogError(errorText(err));
+      })
+      .finally(() => { if (active) setCatalogLoading(false); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (stage !== "form") return;
+    const handle = requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({behavior: "smooth", block: "start"});
+      formRef.current?.querySelector("input:not([type=hidden]),select,textarea")?.focus({preventScroll:true});
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [stage, type]);
+  useEffect(() => {
+    let alive = true;
+    api("/api/v1/meta/colleagues").then((result) => {
+      if (alive) setColleagues(result.items || []);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const current = catalog.find((entry) => entry.code === type);
+  const schema = current?.form_schema;
+  const formFields = schema?.properties
+    ? Object.entries(schema.properties).filter(([name]) => name !== "title" && name !== "department_id").map(([name, spec]) => {
+        const legacy = fields[type]?.find(([field]) => field === name);
+        const label = current?.field_labels?.[name] || legacy?.[1] || name.replaceAll("_", " ");
+        const inputType = spec.type === "integer" ? "number"
+          : spec.format === "date" ? "date" : "text";
+        return [name, label, isEvidenceField(name) && spec.type === "string" ? "evidence" :
+          (legacy?.[2] === "textarea" ? "textarea" : inputType), spec];
+      })
+    : (fields[type] || []).filter(([name]) => name !== "title" && name !== "department_id").map(([name, label, kind]) => [name, label, kind, {}]);
   useEffect(() => {
     if (!initial?.id) return;
     let active = true;
@@ -49,11 +115,28 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     const send = e.nativeEvent.submitter?.value === "send";
     const payload = Object.fromEntries(new FormData(form));
     delete payload.file;
-    for (const [name, , kind] of fields[type]) {
+    for (const [name, , kind] of formFields) if (kind === "evidence") {
+      delete payload[`evidence_${name}`];
+      delete payload[name];
+      const previous = evidenceNames[name] || initial?.payload?.[name];
+      if (previous) payload[name] = previous;
+    }
+    // Technical fields are server-owned. Only business information is editable.
+    if (schema?.properties?.title) {
+      const generated = chosenLabel || current?.name || types[type] || type;
+      payload.title = initial?.payload?.title || `${generated} - ${new Date().toLocaleDateString("vi-VN")}`;
+    }
+    if (schema?.properties?.department_id && current?.department_id)
+      payload.department_id = current.department_id;
+    for (const [name, , kind] of formFields) {
       if (kind === "number") {
         if (payload[name] === "") delete payload[name];
         else payload[name] = Number(payload[name]);
       } else if (!payload[name]) delete payload[name];
+    }
+    if (!current || !type) {
+      setError("Loại yêu cầu chưa có cấu hình đã công bố hoặc bạn chưa được cấp quyền tạo loại này.");
+      return;
     }
     setBusy(true);
     setError("");
@@ -71,21 +154,31 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
         ).request;
         setRecord(r);
       }
-      let uploaded = files;
-      const file = form.elements.file.files[0];
-      if (file) {
-        if (file.size > 10485760)
-          throw new Error("Tệp không được vượt quá 10 MB.");
+      let uploaded = [...files];
+      const incoming = [];
+      for (const [name, , kind] of formFields) {
+        if (kind === "evidence") {
+          const field = form.elements[`evidence_${name}`];
+          if (field?.files?.length) incoming.push({name, file:field.files[0], element:field});
+        }
+      }
+      const general = form.elements.file;
+      if (general?.files?.length) incoming.push({name:null,file:general.files[0],element:general});
+      if (uploaded.length + incoming.length > 5) throw new Error("Mỗi hồ sơ có tối đa 5 tệp đính kèm.");
+      for (const {name,file,element} of incoming) {
+        if (file.size > 10485760) throw new Error("Mỗi tệp không được vượt quá 10 MB.");
         const body = new FormData();
         body.append("file", file);
-        const result = await api(`/api/v1/request-drafts/${r.id}/attachments`, {
-          method: "POST",
-          body,
-        });
-        uploaded = [...files, result.attachment];
-        setFiles(uploaded);
-        form.elements.file.value = "";
+        const result = await api(`/api/v1/request-drafts/${r.id}/attachments`, {method:"POST",body});
+        uploaded.push(result.attachment);
+        if (name) {
+          const filename = result.attachment.original_name || file.name;
+          payload[name] = filename;
+          setEvidenceNames((previous) => ({...previous, [name]:filename}));
+        }
+        element.value = "";
       }
+      setFiles(uploaded);
       if (uploaded.some((f) => f.scan_state !== "CLEAN"))
         throw new Error(
           "Tệp đang chờ kiểm tra hoặc chưa hợp lệ. Nhấn Kiểm tra tệp rồi thử lại.",
@@ -102,6 +195,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           request_id: r.id,
           expected_version: r.lock_version,
           type_code: type,
+          viewed_release_id: current.release_id,
           payload,
         });
         onDone(r.id);
@@ -145,40 +239,72 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           Quay lại
         </button>
       </div>
-      <div className="type-picker">
-        {Object.entries(types).map(([key, label]) => (
-          <button
-            key={key}
-            disabled={!!record || busy}
-            className={type === key ? "selected" : "secondary"}
-            onClick={() => setType(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <form ref={formRef} onSubmit={save}>
-        <fieldset disabled={busy}>
+      {catalogLoading && <p role="status">Đang tải danh mục biểu mẫu và quyền tạo đơn…</p>}
+      {catalogError && <p role="alert" className="error">Không tải được danh mục: {catalogError}</p>}
+      {!catalogLoading && !catalogError && stage === "choose" && (
+        <div ref={menuRef}><RequestTypeMenu options={menu} disabled={busy} onSelect={(choice) => {
+          setType(choice.code);
+          setChosenLabel(choice.label);
+          setStage("form");
+          setError("");
+        }}/></div>
+      )}
+      {stage === "form" && <div ref={formRef} id="request-business-form">
+        <div className="request-form-heading">
+          <div>
+            <p className="eyebrow">BƯỚC 2 / THÔNG TIN NGHIỆP VỤ</p>
+            <strong>{chosenLabel || current?.name || types[type] || type}</strong>
+            <small>Mẫu {current?.lifecycle || "?"} · Quy trình theo cấu hình đã công bố</small>
+          </div>
+          {!record && <button type="button" className="secondary" onClick={() => {
+            setStage("choose");setType("");setError("");
+            requestAnimationFrame(() => menuRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
+          }}>← Đổi loại yêu cầu</button>}
+        </div>
+        {record?.code ? <p className="request-generated-code" role="status">Mã yêu cầu tự động: <strong>{record.code}</strong></p>
+          : <p className="request-requester-note">Mã hồ sơ sẽ được hệ thống tự tạo khi lưu bản nháp hoặc gửi yêu cầu. Người yêu cầu, phòng ban, ngày tạo và người duyệt được xác định tự động. Bạn chỉ nhập các trường nghiệp vụ bên dưới.</p>}
+      </div>}
+      {stage === "form" && <form ref={formElementRef} onSubmit={save} key={type}>
+        <fieldset disabled={busy || catalogLoading || !!catalogError || !current}>
           <div className="form-grid">
-            {fields[type].map(([name, label, kind]) => (
+            {formFields.map(([name, label, kind, spec]) => (
               <label
                 key={type + name}
                 className={kind === "textarea" ? "wide" : ""}
               >
                 {label}
-                {kind === "textarea" ? (
-                  <textarea
-                    name={name}
-                    defaultValue={initial?.payload?.[name] || ""}
-                    rows={3}
-                  />
+                {kind === "evidence" ? (
+                  <>
+                    <input name={`evidence_${name}`} type="file"
+                      accept="application/pdf,image/jpeg,image/png" />
+                    {(evidenceNames[name] || initial?.payload?.[name]) &&
+                      <small>Đã gắn: {evidenceNames[name] || initial?.payload?.[name]}</small>}
+                    <small>PDF/JPG/PNG, tối đa 10MB. {schema?.required?.includes(name) ? "Bắt buộc khi gửi." : "Không bắt buộc."}</small>
+                  </>
+                ) : spec.format === "uuid" && name.endsWith("user_id") ? (
+                  <select name={name} defaultValue={initial?.payload?.[name] ?? ""}
+                    required={schema?.required?.includes(name)}>
+                    <option value="">— Chọn người trong phòng ban —</option>
+                    {colleagues.map((person) => <option key={person.id} value={person.id}>{person.display_name}</option>)}
+                  </select>
+                ) : Array.isArray(spec.enum) ? (
+                  <select name={name} defaultValue={initial?.payload?.[name] ?? ""}
+                    required={schema?.required?.includes(name)}>
+                    <option value="">— Chọn —</option>
+                    {spec.enum.map((value) => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                ) : kind === "textarea" ? (
+                  <textarea name={name} defaultValue={initial?.payload?.[name] || ""}
+                    required={schema?.required?.includes(name)} rows={3} maxLength={spec.maxLength} />
                 ) : (
-                  <input
-                    name={name}
-                    type={kind}
-                    min={kind === "number" ? 1 : undefined}
-                    defaultValue={initial?.payload?.[name] ?? ""}
-                  />
+                  <input name={name} type={kind}
+                    required={schema?.required?.includes(name)}
+                    min={kind === "number" ? spec.minimum : undefined}
+                    max={kind === "number" ? spec.maximum : undefined}
+                    minLength={kind === "text" ? spec.minLength : undefined}
+                    maxLength={kind === "text" ? spec.maxLength : undefined}
+                    step={kind === "number" ? 1 : undefined}
+                    defaultValue={initial?.payload?.[name] ?? ""} />
                 )}
               </label>
             ))}
@@ -217,8 +343,8 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           <AiRequestAssist
             type={type}
             getValues={() =>
-              formRef.current
-                ? Object.fromEntries(new FormData(formRef.current))
+              formElementRef.current
+                ? Object.fromEntries(new FormData(formElementRef.current))
                 : {}
             }
             onSuggestType={record ? undefined : setType}
@@ -246,7 +372,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
             </button>
           </div>
         </fieldset>
-      </form>
+      </form>}
     </section>
   );
 }

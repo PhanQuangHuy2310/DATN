@@ -321,10 +321,26 @@ def list_admin_events(actor: Actor, query_params: dict[str, str]) -> dict[str, A
                    e.type_id::text, e.details, e.reason, e.correlation_id::text,
                    e.occurred_at, e.hash_version, e.prev_hash, e.hash
             FROM eas.admin_event e
+            WHERE EXISTS (
+                SELECT 1 FROM eas.role_membership rm
+                WHERE rm.user_id = %s
+                  AND rm.role IN ('AUDITOR', 'POLICY_ADMIN', 'OPS_ADMIN')
+                  AND rm.revoked_at IS NULL
+                  AND rm.valid_from <= statement_timestamp()
+                  AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                  AND (
+                      rm.scope_kind = 'GLOBAL'
+                      OR (e.department_id IS NOT NULL AND rm.department_id = e.department_id)
+                  )
+                  AND (
+                      rm.type_scope = 'ALL'
+                      OR (e.type_id IS NOT NULL AND rm.type_id = e.type_id)
+                  )
+            )
             ORDER BY e.seq DESC
             LIMIT %s OFFSET %s
             """,
-            [limit + 1, offset],
+            [actor.id, limit + 1, offset],
         )
         rows = cursor.fetchall()
 

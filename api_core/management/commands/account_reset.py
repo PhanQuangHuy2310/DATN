@@ -11,6 +11,7 @@ from django.core.management.base import BaseCommand
 from django.db import connection, transaction
 
 from api_core.workflow.service import _append_admin_audit
+from api_core.authn.service import validate_new_password, PasswordChangeError
 
 
 class Command(BaseCommand):
@@ -46,9 +47,11 @@ class Command(BaseCommand):
         temp_password = None
         if mode == "reset-password":
             temp_password = os.getenv("EAS_TEMP_PASSWORD", "")
-            if len(temp_password) < 12:
+            try:
+                validate_new_password(temp_password, username)
+            except PasswordChangeError:
                 self.stderr.write(
-                    "ERROR: EAS_TEMP_PASSWORD environment variable must have at least 12 characters."
+                    "ERROR: EAS_TEMP_PASSWORD must meet the 15–128 character SRS password policy."
                 )
                 sys.exit(2)
 

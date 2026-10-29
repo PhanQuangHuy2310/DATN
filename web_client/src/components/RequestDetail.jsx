@@ -1,5 +1,6 @@
 import FullHistory from "./FullHistory.jsx";
 import { AiSummary } from "./AiAssist.jsx";
+import { requestActionPayload } from "../actionPayload.js";
 import { useState } from "react";
 import { api, API_BASE } from "../api.js";
 import { date, fields, permissions, types } from "../domain.js";
@@ -50,9 +51,9 @@ function Audit({ id }) {
     </ResourceState>
   );
 }
-export default function RequestDetail({ id, user, onBack, onEdit, onChanged }) {
+export default function RequestDetail({ id, user, onBack, onEdit, onChanged, initialTab = "info" }) {
   const resource = useResource(`/api/v1/requests/${id}`),
-    [tab, setTab] = useState("info"),
+    [tab, setTab] = useState(initialTab),
     [action, setAction] = useState(null),
     [verify, setVerify] = useState(null);
   const r = resource.data?.request,
@@ -73,12 +74,9 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged }) {
     issue: ["Báo vướng mắc", "issues"],
   };
   async function decide(values) {
-    const [, path, outcome] = actions[action];
-    await command(`requests/${id}/${path}`, {
-      expected_version: r.lock_version,
-      ...(outcome ? { outcome } : {}),
-      ...values,
-    });
+    const [, path] = actions[action];
+    await command(`requests/${id}/${path}`,
+      requestActionPayload(action, r.lock_version, values));
     await done();
   }
   async function execute(values) {
@@ -148,10 +146,10 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged }) {
                   <>
                     <h2>Nội dung đề nghị</h2>
                     <dl className="data-list">
-                      {fields[r.type_code]?.map(([name, label]) => (
+                      {Object.entries(r.payload || {}).map(([name, value]) => (
                         <div key={name}>
-                          <dt>{label}</dt>
-                          <dd>{String(r.payload?.[name] ?? "—")}</dd>
+                          <dt>{fields[r.type_code]?.find(([field]) => field === name)?.[1] || name.replaceAll("_", " ")}</dt>
+                          <dd>{typeof value === "object" ? JSON.stringify(value) : String(value ?? "—")}</dd>
                         </div>
                       ))}
                     </dl>

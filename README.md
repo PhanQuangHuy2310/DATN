@@ -1,3 +1,5 @@
+> **Cập nhật 27/10/2026:** đọc [README bản cập nhật](README_CAP_NHAT_20261027.md), [phân tích nghiệp vụ](docs/PHAN_TICH_NGHIEP_VU_VA_KET_QUA_CODE_20261027.md) và [kiểm thử](KIEM_THU_BAN_CAP_NHAT_20261027.md). Bản này đã sửa một số lỗi nhưng **chưa đạt nghiệm thu E2E**.
+
 > **Bản tích hợp 24/10/2026:** bắt đầu tại [START_HERE.md](START_HERE.md). Kết quả kiểm tra tại [VALIDATION_24_10.md](VALIDATION_24_10.md).
 
 # Enterprise Approval System (EAS)

@@ -8,10 +8,14 @@ from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from .plan_constraints import plan_business_errors
+from .routing import ACCEPTOR_SLOTS, APPROVER_SLOTS, EXECUTOR_SLOTS
+
 SCHEMA_ERROR_KEY = "$schema"
 HTML_TAG = re.compile(r"<[^>]+>")
 SUPPORTED_TYPES = {"integer", "string"}
 SUPPORTED_P0_TYPES = {"ACCESS", "EQUIPMENT", "LEAVE"}
+TYPE_CODE_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,29}$")
 COMMON_PROPERTY_KEYS = {"type"}
 STRING_PROPERTY_KEYS = COMMON_PROPERTY_KEYS | {
     "enum",
@@ -162,7 +166,9 @@ def _validate_leave_rules(
         try:
             start = date.fromisoformat(normalized["start_date"])
             end = date.fromisoformat(normalized["end_date"])
-            business_today = today or datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+            business_today = (
+                today or datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+            )
             if start < business_today:
                 _add(errors, "start_date", "DATE_IN_PAST")
             if end < start:
@@ -210,7 +216,7 @@ def validate_payload(
     requester_id: str,
     today: date | None = None,
 ) -> dict[str, Any]:
-    """Validate and normalize one submitted P0 payload.
+    """Validate and normalize a submitted payload from a published configuration.
 
     This is a deliberately small JSON-schema profile. Unknown keywords and
     unsupported field types fail closed during config publication; this
@@ -219,8 +225,8 @@ def validate_payload(
     errors: dict[str, list[str]] = {}
     if not isinstance(payload, dict):
         raise PayloadValidationError({"$": ["OBJECT_REQUIRED"]})
-    if type_code not in SUPPORTED_P0_TYPES:
-        raise PayloadValidationError({"type_code": ["UNSUPPORTED_REQUEST_TYPE"]})
+    if not isinstance(type_code, str) or not TYPE_CODE_RE.fullmatch(type_code):
+        raise PayloadValidationError({"type_code": ["INVALID_REQUEST_TYPE"]})
 
     properties, required = _validate_schema_structure(form_schema)
 
@@ -238,6 +244,8 @@ def validate_payload(
     if type_code == "EQUIPMENT" and "amount_vnd" not in normalized:
         _add(errors, "amount_vnd", "REQUIRED")
 
+    for field, messages in plan_business_errors(type_code, normalized).items():
+        errors.setdefault(field, []).extend(messages)
     if errors:
         raise PayloadValidationError(errors)
     return normalized
@@ -251,11 +259,13 @@ def validate_draft_payload(
     requester_id: str,
     today: date | None = None,
 ) -> dict[str, Any]:
+    """Validate partial draft payload without enforcing 'required' fields."""
+
     errors: dict[str, list[str]] = {}
     if not isinstance(payload, dict):
         raise PayloadValidationError({"$": ["OBJECT_REQUIRED"]})
-    if type_code not in SUPPORTED_P0_TYPES:
-        raise PayloadValidationError({"type_code": ["UNSUPPORTED_REQUEST_TYPE"]})
+    if not isinstance(type_code, str) or not TYPE_CODE_RE.fullmatch(type_code):
+        raise PayloadValidationError({"type_code": ["INVALID_REQUEST_TYPE"]})
 
     properties = form_schema.get("properties")
     if (
@@ -307,7 +317,7 @@ def _validate_route_rules_config(
             errs.append(f"route_rules:rules[{idx}]:approvers must be 1..3 items")
         else:
             for app in approvers:
-                if app not in {"DIRECT_MANAGER", "FINANCE", "DIRECTOR"}:
+                if app not in APPROVER_SLOTS:
                     errs.append(f"route_rules:unknown approver {app}")
 
         is_default = rule.get("default") is True
@@ -370,11 +380,20 @@ def _validate_route_rules_config(
     acceptor = route_rules.get("acceptor")
     if lifecycle == "A" and (executor is not None or acceptor is not None):
         errs.append("route_rules:lifecycle A requires null executor and acceptor")
-    elif lifecycle == "B" and (executor != "EXECUTOR_IT" or acceptor is not None):
-        errs.append("route_rules:lifecycle B requires EXECUTOR_IT and null acceptor")
-    elif lifecycle == "C" and (executor != "EXECUTOR_ASSET" or acceptor != "REQUESTER"):
+    elif lifecycle == "B" and (
+        executor not in EXECUTOR_SLOTS or executor is None or acceptor is not None
+    ):
         errs.append(
-            "route_rules:lifecycle C requires EXECUTOR_ASSET and REQUESTER acceptor"
+            "route_rules:lifecycle B requires a valid executor and null acceptor"
+        )
+    elif lifecycle == "C" and (
+        executor not in EXECUTOR_SLOTS
+        or executor is None
+        or acceptor not in ACCEPTOR_SLOTS
+        or acceptor is None
+    ):
+        errs.append(
+            "route_rules:lifecycle C requires valid executor and acceptor"
         )
 
 
@@ -385,52 +404,44 @@ def _validate_sla_profile_config(
     reminder_fraction = sla_profile.get("reminder_fraction")
     if clock != "CALENDAR_UTC":
         errs.append("sla_profile:clock must be CALENDAR_UTC")
-    if (
-        not isinstance(reminder_fraction, (int, float))
-        or abs(float(reminder_fraction) - 0.5) > 1e-9
-    ):
+    if reminder_fraction != 0.5:
         errs.append("sla_profile:reminder_fraction must be 0.5")
 
-    app_hours = sla_profile.get("approval_hours")
-    exec_hours = sla_profile.get("execution_hours")
-    acc_hours = sla_profile.get("acceptance_hours")
+    app_h = sla_profile.get("approval_hours")
+    exec_h = sla_profile.get("execution_hours")
+    acc_h = sla_profile.get("acceptance_hours")
 
-    if (
-        isinstance(app_hours, bool)
-        or not isinstance(app_hours, int)
-        or not (1 <= app_hours <= 720)
-    ):
+    if isinstance(app_h, bool) or not isinstance(app_h, int) or not (1 <= app_h <= 720):
         errs.append("sla_profile:approval_hours must be integer 1..720")
 
     if lifecycle == "A":
-        if exec_hours is not None or acc_hours is not None:
+        if exec_h is not None or acc_h is not None:
             errs.append(
-                "sla_profile:lifecycle A requires null execution and acceptance hours"
+                "sla_profile:lifecycle A requires null execution_hours and acceptance_hours"
             )
     elif lifecycle == "B":
         if (
-            isinstance(exec_hours, bool)
-            or not isinstance(exec_hours, int)
-            or not (1 <= exec_hours <= 720)
+            isinstance(exec_h, bool)
+            or not isinstance(exec_h, int)
+            or not (1 <= exec_h <= 720)
+            or acc_h is not None
         ):
             errs.append(
-                "sla_profile:lifecycle B requires execution_hours integer 1..720"
+                "sla_profile:lifecycle B requires execution_hours 1..720 and null acceptance_hours"
             )
-        if acc_hours is not None:
-            errs.append("sla_profile:lifecycle B requires null acceptance_hours")
     elif lifecycle == "C":
         if (
-            isinstance(exec_hours, bool)
-            or not isinstance(exec_hours, int)
-            or not (1 <= exec_hours <= 720)
+            isinstance(exec_h, bool)
+            or not isinstance(exec_h, int)
+            or not (1 <= exec_h <= 720)
         ):
             errs.append(
                 "sla_profile:lifecycle C requires execution_hours integer 1..720"
             )
         if (
-            isinstance(acc_hours, bool)
-            or not isinstance(acc_hours, int)
-            or not (1 <= acc_hours <= 720)
+            isinstance(acc_h, bool)
+            or not isinstance(acc_h, int)
+            or not (1 <= acc_h <= 720)
         ):
             errs.append(
                 "sla_profile:lifecycle C requires acceptance_hours integer 1..720"

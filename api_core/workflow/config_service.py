@@ -11,6 +11,7 @@ from api_core.audit import canonical_sha256
 from api_core.authn.service import Actor
 from api_core.domain.validation import validate_config_release_payload
 from api_core.workflow.constants import ERR_VERSION_CONFLICT
+from api_core.workflow.policy_helpers import initial_policy_draft, role_grant_errors
 from api_core.workflow.service import (
     CommandError,
     CommandResult,
@@ -168,6 +169,109 @@ def get_config_release(actor: Actor, release_id: str) -> dict[str, Any]:
     }
 
 
+def policy_actor_options(actor: Actor, type_code: str) -> dict[str, Any]:
+    """Only scoped POLICY_ADMIN may see candidates already granted a workflow role.
+
+    This is an editor convenience, never evidence that a future grant remains valid.
+    """
+    if not re.fullmatch(r"[A-Z][A-Z0-9_]{1,29}", type_code):
+        raise CommandError("UNKNOWN_TYPE_CODE", status=422)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id::text FROM eas.request_type WHERE code=%s", [type_code])
+        row = cursor.fetchone()
+        if not row:
+            raise CommandError("UNKNOWN_TYPE_CODE", status=404)
+        type_id = row[0]
+        _check_policy_admin(cursor, actor.id, type_id)
+        cursor.execute("""
+            SELECT d.id::text, d.name FROM eas.department d
+            WHERE d.is_active AND EXISTS (
+                SELECT 1 FROM eas.role_membership pm
+                WHERE pm.user_id=%s AND pm.role='POLICY_ADMIN'
+                  AND pm.revoked_at IS NULL
+                  AND pm.valid_from<=statement_timestamp()
+                  AND (pm.valid_to IS NULL OR pm.valid_to>statement_timestamp())
+                  AND (pm.type_scope='ALL' OR (pm.type_scope='ONE' AND pm.type_id=%s))
+                  AND (pm.scope_kind='GLOBAL' OR
+                       (pm.scope_kind='DEPARTMENT' AND pm.department_id=d.id)))
+            ORDER BY d.name, d.id LIMIT 50
+        """, [actor.id, type_id])
+        departments = cursor.fetchall()
+        items = []
+        for dept_id, dept_name in departments:
+            cursor.execute("""
+                SELECT u.id::text,u.display_name, m.role
+                FROM eas.role_membership m
+                JOIN eas.app_user u ON u.id=m.user_id AND u.is_active
+                WHERE m.role IN ('APPROVER','EXECUTOR','ACCEPTOR')
+                  AND m.revoked_at IS NULL
+                  AND m.valid_from<=statement_timestamp()
+                  AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
+                  AND (m.type_scope='ALL' OR (m.type_scope='ONE' AND m.type_id=%s))
+                  AND (m.scope_kind='GLOBAL' OR
+                       (m.scope_kind='DEPARTMENT' AND m.department_id=%s))
+                ORDER BY u.display_name,u.id,m.role LIMIT 400
+            """, [type_id, dept_id])
+            candidate_map = {}
+            for user_id, name, role in cursor.fetchall():
+                value = candidate_map.setdefault(user_id, {'id':user_id,'name':name,'roles':[]})
+                if role not in value['roles']:
+                    value['roles'].append(role)
+            items.append({'id':dept_id,'name':dept_name,'candidates':list(candidate_map.values())})
+    return {'type_code':type_code, 'departments':items}
+
+
+def list_policy_type_status(actor: Actor) -> dict[str, Any]:
+    """POLICY_ADMIN-only, scoped overview of release and requester access.
+
+    No passwords, staff identities or raw role records are returned.
+    """
+    with connection.cursor() as cursor:
+        _check_policy_admin(cursor, actor.id)
+        cursor.execute(
+            """
+            SELECT rt.code, rt.name, rt.lifecycle, rt.is_active,
+                   cr.id::text, cr.state,
+                   (cr.id IS NOT NULL AND cr.state='PUBLISHED'
+                    AND cr.type_id=rt.id AND cr.lifecycle=rt.lifecycle) AS valid_release,
+                   (SELECT count(DISTINCT m.user_id)
+                    FROM eas.role_membership m
+                    JOIN eas.app_user u ON u.id=m.user_id AND u.is_active
+                    WHERE m.role='REQUESTER' AND m.revoked_at IS NULL
+                      AND m.valid_from<=statement_timestamp()
+                      AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
+                      AND (m.type_scope='ALL' OR (m.type_scope='ONE' AND m.type_id=rt.id))
+                      AND (m.scope_kind='GLOBAL' OR
+                           (m.scope_kind='DEPARTMENT' AND m.department_id=u.department_id)))
+                      AS requester_count,
+                   (SELECT count(*) FROM eas.config_release d
+                    WHERE d.type_id=rt.id AND d.state='DRAFT') AS draft_count
+            FROM eas.request_type rt
+            LEFT JOIN eas.config_release cr ON cr.id=rt.active_release_id
+            WHERE EXISTS (
+                SELECT 1 FROM eas.role_membership m
+                WHERE m.user_id=%s AND m.role='POLICY_ADMIN'
+                  AND m.revoked_at IS NULL AND m.valid_from<=statement_timestamp()
+                  AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
+                  AND (m.type_scope='ALL' OR (m.type_scope='ONE' AND m.type_id=rt.id)))
+            ORDER BY rt.code
+            """, [actor.id]
+        )
+        rows = cursor.fetchall()
+    items = []
+    for code, name, lifecycle, is_active, release_id, state, valid, count, drafts in rows:
+        blockers = []
+        if not is_active: blockers.append('TYPE_INACTIVE')
+        if not valid: blockers.append('NO_PUBLISHED_RELEASE')
+        if not count: blockers.append('NO_REQUESTER_MEMBERSHIP')
+        items.append({"code": code, "name": name, "lifecycle": lifecycle,
+                      "is_active": is_active, "active_release_id": release_id if valid else None,
+                      "release_state": state, "has_published_release": bool(valid),
+                      "requester_count": int(count), "draft_count": int(drafts),
+                      "visible_to_some_requesters": not blockers, "route_verified_only_on_submit": True, "blockers": blockers})
+    return {"items": items}
+
+
 def create_or_clone_release(
     *,
     actor: Actor,
@@ -176,7 +280,7 @@ def create_or_clone_release(
     correlation_id: str,
 ) -> CommandResult:
     type_code = body.get("type_code")
-    if type_code not in ("LEAVE", "ACCESS", "EQUIPMENT"):
+    if not isinstance(type_code, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,29}", type_code):
         raise CommandError("UNKNOWN_TYPE_CODE", status=422)
 
     clone_from_id = body.get("clone_from_release_id")
@@ -203,53 +307,27 @@ def create_or_clone_release(
         _check_policy_admin(cursor, actor.id, type_id=type_id)
 
         source_id = clone_from_id or active_rel_id
+        source_kind = "CLONED_RELEASE" if source_id else "SAFE_STARTER"
         if source_id:
             cursor.execute(
                 """
                 SELECT form_schema, route_rules, actor_bindings, sla_profile, lifecycle
                 FROM eas.config_release
-                WHERE id = %s
+                WHERE id = %s AND type_id = %s
                 """,
-                [source_id],
+                [source_id, type_id],
             )
             src = cursor.fetchone()
             if not src:
-                raise CommandError("SOURCE_RELEASE_NOT_FOUND", status=404)
+                raise CommandError("SOURCE_RELEASE_NOT_FOUND_FOR_TYPE", status=404)
             form_schema, route_rules, actor_bindings, sla_profile, lifecycle = src
         else:
-            form_schema = {
-                "schema_version": 1,
-                "type": "object",
-                "additionalProperties": False,
-                "properties": {
-                    "title": {"type": "string", "minLength": 5, "maxLength": 150},
-                    "reason": {"type": "string", "minLength": 10, "maxLength": 2000},
-                },
-                "required": ["title", "reason"],
-            }
-            default_rule = {
-                "id": f"{type_code}-DEFAULT",
-                "default": True,
-                "approvers": ["DIRECT_MANAGER"],
-            }
-            if rt_lifecycle in ("B", "C"):
-                default_rule["executor"] = "IT_EXEC"
-            if rt_lifecycle == "C":
-                default_rule["acceptor"] = "REQUESTER"
-
-            route_rules = {
-                "schema_version": 1,
-                "rules": [default_rule],
-            }
-            actor_bindings = {"schema_version": 1, "departments": {}}
-            sla_profile = {
-                "schema_version": 1,
-                "clock": "CALENDAR_UTC",
-                "reminder_fraction": 0.5,
-                "approval_hours": 24,
-                "execution_hours": 48 if rt_lifecycle in ("B", "C") else None,
-                "acceptance_hours": 24 if rt_lifecycle == "C" else None,
-            }
+            starter = initial_policy_draft(type_code, rt_lifecycle)
+            source_kind = starter["source"]
+            form_schema = starter["form_schema"]
+            route_rules = starter["route_rules"]
+            actor_bindings = starter["actor_bindings"]
+            sla_profile = starter["sla_profile"]
             lifecycle = rt_lifecycle
 
         cursor.execute(
@@ -304,6 +382,7 @@ def create_or_clone_release(
                     "version": next_version,
                     "state": "DRAFT",
                     "lock_version": 0,
+                    "draft_source": source_kind,
                 }
             },
             201,
@@ -472,6 +551,13 @@ def validate_release_candidate(*, actor: Actor, release_id: str) -> dict[str, An
         actor_bindings=actor_bindings,
         sla_profile=sla_profile,
     )
+    if _type_code == "RESIGNATION":
+        errors.append("RESIGNATION:parallel execution requires workflow engine support before publish")
+    if _type_code in {"ACCESS_FACILITY","BUSINESS_TRIP","EQUIPMENT_BORROW", "EXPENSE_CLAIM", "IT_SUPPORT", "LEAVE_SPECIAL", "ROOM_BOOKING"} and isinstance(form_schema.get("properties"), dict) and set(form_schema["properties"]) <= {"title","reason"}:
+        errors.append("form_schema:define business-specific fields for this request type before publishing")
+    if not errors:
+        with connection.cursor() as cursor:
+            errors.extend(role_grant_errors(cursor, type_id, route_rules, actor_bindings))
     if errors:
         raise CommandError("CONFIG_INVALID", status=422, fields=errors)
 
@@ -558,6 +644,12 @@ def publish_config_release(
             actor_bindings=actor_bindings,
             sla_profile=sla_profile,
         )
+        if type_code == "RESIGNATION":
+            errors.append("RESIGNATION:parallel execution requires workflow engine support before publish")
+        if type_code in {"ACCESS_FACILITY","BUSINESS_TRIP","EQUIPMENT_BORROW", "EXPENSE_CLAIM", "IT_SUPPORT", "LEAVE_SPECIAL", "ROOM_BOOKING"} and isinstance(form_schema.get("properties"), dict) and set(form_schema["properties"]) <= {"title","reason"}:
+            errors.append("form_schema:define business-specific fields for this request type before publishing")
+        if not errors:
+            errors.extend(role_grant_errors(cursor, type_id, route_rules, actor_bindings))
         if errors:
             raise CommandError("CONFIG_INVALID", status=422, fields=errors)
 

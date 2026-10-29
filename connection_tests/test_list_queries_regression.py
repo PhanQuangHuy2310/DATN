@@ -15,9 +15,12 @@ class ListQueryRegression(unittest.TestCase):
 
     def test_json_database_failure_for_api(self):
         source = (ROOT / "api_core/middleware.py").read_text(encoding="utf-8")
-        self.assertIn("DATABASE_QUERY_FAILED", source)
-        self.assertIn("status=500", source)
+        mapping = (ROOT / "api_core/db_diagnostics.py").read_text(encoding="utf-8")
+        self.assertIn("api_db_failure(exception)", source)
+        self.assertIn('return "DATABASE_QUERY_FAILED", 500', mapping)
+        self.assertIn('return "DATABASE_TEMPORARILY_UNAVAILABLE", 503', mapping)
         self.assertNotIn("str(exception)", source)
+        self.assertNotIn("str(exc)", mapping)
 
     def test_frontend_does_not_label_html_500_invalid_response(self):
         source = (ROOT / "web_client/src/api.js").read_text(encoding="utf-8")

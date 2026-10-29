@@ -20,6 +20,8 @@ from api_core.workflow.config_service import (
     create_or_clone_release,
     get_config_release,
     list_config_releases,
+    list_policy_type_status,
+    policy_actor_options,
     publish_config_release,
     update_draft_release,
     validate_release_candidate,
@@ -138,18 +140,60 @@ def request_list(request: HttpRequest) -> JsonResponse:
             (%s::text = 'mine' AND r.requester_id = %s)
             OR (%s::text = 'approval' AND EXISTS (
               SELECT 1 FROM eas.approval_step ast
-              WHERE ast.request_id = r.id AND ast.state = 'ACTIVE' AND ast.assignee_id = %s
+              JOIN eas.workflow_instance wi ON wi.id = ast.instance_id
+              WHERE ast.request_id = r.id AND ast.state = 'ACTIVE'
+                AND ast.assignee_id = %s
+                AND wi.state = 'ACTIVE' AND wi.revision_id = r.current_revision_id
+                AND r.status = 'PENDING_APPROVAL'
+                AND EXISTS (
+                  SELECT 1 FROM eas.role_membership grant_approver
+                  WHERE grant_approver.user_id = %s AND grant_approver.role = 'APPROVER'
+                    AND grant_approver.revoked_at IS NULL
+                    AND grant_approver.valid_from <= statement_timestamp()
+                    AND (grant_approver.valid_to IS NULL OR grant_approver.valid_to > statement_timestamp())
+                    AND (grant_approver.scope_kind = 'GLOBAL' OR
+                         (grant_approver.scope_kind = 'DEPARTMENT' AND grant_approver.department_id = v.department_id))
+                    AND (grant_approver.type_scope = 'ALL' OR
+                         (grant_approver.type_scope = 'ONE' AND grant_approver.type_id = r.type_id))
+                )
             ))
             OR (%s::text = 'execution' AND EXISTS (
               SELECT 1 FROM eas.workflow_instance wi
               JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
-              WHERE wi.request_id = r.id AND ea.state IN ('READY', 'RUNNING') AND ea.executor_id = %s
+              WHERE wi.request_id = r.id AND wi.state = 'ACTIVE'
+                AND wi.revision_id = r.current_revision_id AND ea.executor_id = %s
+                AND ((r.status = 'READY_FOR_EXECUTION' AND ea.state = 'READY')
+                     OR (r.status = 'IN_PROGRESS' AND ea.state = 'RUNNING'))
+                AND EXISTS (
+                  SELECT 1 FROM eas.role_membership grant_executor
+                  WHERE grant_executor.user_id = %s AND grant_executor.role = 'EXECUTOR'
+                    AND grant_executor.revoked_at IS NULL
+                    AND grant_executor.valid_from <= statement_timestamp()
+                    AND (grant_executor.valid_to IS NULL OR grant_executor.valid_to > statement_timestamp())
+                    AND (grant_executor.scope_kind = 'GLOBAL' OR
+                         (grant_executor.scope_kind = 'DEPARTMENT' AND grant_executor.department_id = v.department_id))
+                    AND (grant_executor.type_scope = 'ALL' OR
+                         (grant_executor.type_scope = 'ONE' AND grant_executor.type_id = r.type_id))
+                )
             ))
             OR (%s::text = 'acceptance' AND EXISTS (
               SELECT 1 FROM eas.workflow_instance wi
               JOIN eas.execution_attempt ea ON ea.instance_id = wi.id
               WHERE wi.request_id = r.id AND wi.state = 'ACTIVE' AND wi.lifecycle = 'C'
+                AND wi.revision_id = r.current_revision_id
+                AND r.status = 'WAITING_FOR_ACCEPTANCE'
                 AND wi.acceptor_id = %s AND ea.state = 'SUBMITTED'
+                AND EXISTS (
+                  SELECT 1 FROM eas.role_membership grant_acceptor
+                  WHERE grant_acceptor.user_id = %s AND grant_acceptor.role = 'ACCEPTOR'
+                    AND grant_acceptor.revoked_at IS NULL
+                    AND grant_acceptor.valid_from <= statement_timestamp()
+                    AND (grant_acceptor.valid_to IS NULL OR grant_acceptor.valid_to > statement_timestamp())
+                    AND (grant_acceptor.scope_kind = 'GLOBAL' OR
+                         (grant_acceptor.scope_kind = 'DEPARTMENT' AND grant_acceptor.department_id = v.department_id))
+                    AND (grant_acceptor.type_scope = 'ALL' OR
+                         (grant_acceptor.type_scope = 'ONE' AND grant_acceptor.type_id = r.type_id))
+                )
             ))
             OR (%s::text IS NULL AND (
                 r.requester_id = %s
@@ -174,10 +218,31 @@ def request_list(request: HttpRequest) -> JsonResponse:
                 )
             ))
           )
+          AND (
+            r.requester_id = %s
+            OR (r.status != 'DRAFT' AND EXISTS (
+              SELECT 1 FROM eas.request_participant rp
+              WHERE rp.request_id = r.id AND rp.user_id = %s AND rp.read_revoked_at IS NULL
+            ))
+            OR (r.status != 'DRAFT' AND EXISTS (
+              SELECT 1 FROM eas.role_membership aud
+              WHERE aud.user_id = %s AND aud.role = 'AUDITOR'
+                AND aud.revoked_at IS NULL
+                AND aud.valid_from <= statement_timestamp()
+                AND (aud.valid_to IS NULL OR aud.valid_to > statement_timestamp())
+                AND (aud.scope_kind = 'GLOBAL' OR aud.department_id = COALESCE(v.department_id, u.department_id))
+                AND (aud.type_scope = 'ALL' OR aud.type_id = r.type_id)
+            ))
+          )
         ORDER BY r.updated_at DESC, r.id DESC
         LIMIT %s OFFSET %s
     """
     valid_tab = tab if tab in ("mine", "approval", "execution", "acceptance") else None
+    tab_roles = {"approval": "APPROVER", "execution": "EXECUTOR", "acceptance": "ACCEPTOR"}
+    required_role = tab_roles.get(valid_tab)
+    if required_role and required_role not in request.actor.roles:
+        return JsonResponse({"items": [], "next_offset": None,
+                             "correlation_id": correlation_id(request)})
     params = [
         status_filter,
         status_filter,
@@ -194,12 +259,18 @@ def request_list(request: HttpRequest) -> JsonResponse:
         valid_tab,
         request.actor.id,
         valid_tab,
-        request.actor.id,
+        request.actor.id, # approval step actor
+        request.actor.id, # approval grant
+        valid_tab,
+        request.actor.id, # execution attempt actor
+        request.actor.id, # execution grant
+        valid_tab,
+        request.actor.id, # acceptor actor
+        request.actor.id, # acceptance grant
         valid_tab,
         request.actor.id,
-        valid_tab,
         request.actor.id,
-        valid_tab,
+        request.actor.id,
         request.actor.id,
         request.actor.id,
         request.actor.id,
@@ -290,8 +361,12 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
 
         cursor.execute(
             """
-            SELECT step_no, assignee_id::text, state, activated_at, closed_at
-            FROM eas.approval_step WHERE request_id = %s ORDER BY step_no
+            SELECT s.step_no, s.assignee_id::text, s.state, s.activated_at, s.closed_at
+            FROM eas.approval_step s
+            JOIN eas.workflow_instance i ON i.id = s.instance_id
+            JOIN eas.request r ON r.id = i.request_id
+            WHERE r.id = %s AND i.revision_id = r.current_revision_id
+            ORDER BY s.step_no
             """,
             [req_uuid],
         )
@@ -817,6 +892,28 @@ def config_releases_view(request: HttpRequest) -> JsonResponse:
 
         return _post(request)
     return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+
+
+@require_GET
+@require_actor("POLICY_ADMIN")
+def policy_actor_options_view(request: HttpRequest) -> JsonResponse:
+    try:
+        data = policy_actor_options(request.actor, request.GET.get("type_code", ""))
+        data["correlation_id"] = correlation_id(request)
+        return JsonResponse(data)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+
+
+@require_GET
+@require_actor("POLICY_ADMIN")
+def policy_type_status_view(request: HttpRequest) -> JsonResponse:
+    try:
+        data = list_policy_type_status(request.actor)
+        data["correlation_id"] = correlation_id(request)
+        return JsonResponse(data)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
 
 
 def config_release_detail_view(request: HttpRequest, release_id: str) -> JsonResponse:

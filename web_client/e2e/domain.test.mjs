@@ -1,60 +1,44 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { permissions, statuses } from "../src/domain.js";
-const u = {
-  id: "me",
-  roles: ["REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR"],
-};
-const r = {
-  requester_id: "me",
-  approval_steps: [{ state: "ACTIVE", assignee_id: "me" }],
-  workflow: { acceptor_id: "me", attempt: { executor_id: "me" } },
-};
+const me = { id: "me", roles: ["REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR"] };
+const activeApproval = { requester_id: "requester", status:"PENDING_APPROVAL", approval_steps: [{state:"ACTIVE",assignee_id:"me"}] };
+const executionReady = { requester_id:"requester", approval_steps: [{state:"APPROVED",assignee_id:"approver"}], workflow:{ lifecycle:"C",acceptor_id:"acceptor",attempt:{executor_id:"me",state:"READY"}}, status:"READY_FOR_EXECUTION"};
+const executionRunning = {...executionReady, status:"IN_PROGRESS", workflow:{...executionReady.workflow,attempt:{executor_id:"me",state:"RUNNING"}}};
+const submitted = {...executionReady, status:"WAITING_FOR_ACCEPTANCE", workflow:{...executionReady.workflow,acceptor_id:"me",attempt:{executor_id:"other",state:"SUBMITTED"}}};
 test("terminal states allow no mutations", () => {
   for (const status of ["COMPLETED", "CANCELLED", "REJECTED"])
-    assert.ok(Object.values(permissions(u, { ...r, status })).every((v) => !v));
+    assert.ok(Object.values(permissions(me, { ...submitted, status })).every((v) => !v));
 });
-test("cancel is limited to owner before execution", () => {
+test("cancel limited to owner before final approval", () => {
+  const own = {...activeApproval, requester_id:"me"};
   for (const status of Object.keys(statuses))
-    assert.equal(
-      permissions(u, { ...r, status }).cancel,
-      ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(status),
-    );
-  assert.equal(
-    permissions({ ...u, id: "other" }, { ...r, status: "DRAFT" }).cancel,
-    false,
-  );
+    assert.equal(permissions(me, {...own,status}).cancel,["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(status));
+  assert.equal(permissions({...me,id:"other"}, {...own,status:"DRAFT"}).cancel,false);
 });
-test("role alone cannot approve or execute another assignment", () => {
-  const other = { ...u, id: "other" };
-  assert.equal(
-    permissions(other, { ...r, status: "PENDING_APPROVAL" }).approve,
-    false,
-  );
-  assert.equal(
-    permissions(other, { ...r, status: "READY_FOR_EXECUTION" }).claim,
-    false,
-  );
-  assert.equal(
-    permissions(other, { ...r, status: "WAITING_FOR_ACCEPTANCE" }).accept,
-    false,
-  );
+test("role alone cannot act on another assignment", () => {
+  const other = {...me,id:"different"};
+  assert.equal(permissions(other,activeApproval).approve,false);
+  assert.equal(permissions(other,executionReady).claim,false);
+  assert.equal(permissions(other,submitted).accept,false);
 });
-test("claim, execute and accept occur in separate phases", () => {
-  assert.equal(
-    permissions(u, { ...r, status: "READY_FOR_EXECUTION" }).claim,
-    true,
-  );
-  assert.equal(permissions(u, { ...r, status: "IN_PROGRESS" }).execute, true);
-  assert.equal(
-    permissions(u, { ...r, status: "WAITING_FOR_ACCEPTANCE" }).accept,
-    true,
-  );
-  assert.equal(permissions(u, { ...r, status: "IN_PROGRESS" }).accept, false);
+test("claim, execute and accept have different FSM guards", () => {
+  assert.equal(permissions(me,executionReady).claim,true);
+  assert.equal(permissions(me,executionRunning).execute,true);
+  assert.equal(permissions(me,submitted).accept,true);
+  assert.equal(permissions(me,executionRunning).accept,false);
 });
-test("revoked role cannot mutate own request", () => {
-  assert.equal(
-    permissions({ id: "me", roles: [] }, { ...r, status: "DRAFT" }).edit,
-    false,
-  );
+test("role revoked cannot mutate own request", () => {
+  assert.equal(permissions({id:"me",roles:[]}, {...activeApproval,requester_id:"me",status:"DRAFT"}).edit,false);
+});
+test("SoD: requester cannot approve own request even if assigned", () => {
+  assert.equal(permissions(me,{...activeApproval,requester_id:"me"}).approve,false);
+});
+test("SoD: executor cannot be requester or former approver", () => {
+  assert.equal(permissions(me,{...executionReady,requester_id:"me"}).claim,false);
+  assert.equal(permissions(me,{...executionRunning, approval_steps:[{state:"APPROVED",assignee_id:"me"}]}).execute,false);
+});
+test("SoD: executor cannot accept own execution attempt", () => {
+  const selfAccept = {...submitted, workflow:{...submitted.workflow, attempt:{...submitted.workflow.attempt,executor_id:"me"}}};
+  assert.equal(permissions(me,selfAccept).accept,false);
 });

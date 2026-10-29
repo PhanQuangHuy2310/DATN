@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 import socket
+import logging
 
 from django.conf import settings
 from django.core.cache import cache
 from django.db import DatabaseError, connection
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
+
+from api_core.db_diagnostics import failure_category, sqlstate
+from api_core.health.schema_contract import has_required_eas_tables
+from api_core.health.request_type_readiness import (
+    EXPECTED_TYPES, assess_request_types, catalog_readiness_summary,
+)
+from api_core.http import correlation_id
+
+log = logging.getLogger("eas.database")
 from redis.exceptions import RedisError
 
-EXPECTED_TYPES = {("ACCESS", "B"), ("EQUIPMENT", "C"), ("LEAVE", "A")}
 EXPECTED_MOCK_RELATIONS = {
     "mock_hr.department",
     "mock_hr.employee_directory",
@@ -65,17 +74,6 @@ def assess_runtime_role(
     }
 
 
-def assess_request_types(
-    rows: list[tuple[str, str, bool]], *, require_active_releases: bool
-) -> dict[str, bool]:
-    return {
-        "request_types_match_p0": {(code, lifecycle) for code, lifecycle, _ in rows}
-        == EXPECTED_TYPES,
-        "all_active_types_configured": (not require_active_releases)
-        or (len(rows) == 3 and all(valid for _, _, valid in rows)),
-    }
-
-
 def assess_mock_sources(
     rows: list[tuple[str, bool]], versions: set[str]
 ) -> dict[str, bool]:
@@ -107,8 +105,9 @@ def storage_readiness() -> dict[str, bool]:
     }
 
 
-def database_readiness() -> tuple[bool, dict[str, object]]:
+def database_readiness() -> tuple[bool, dict[str, object], dict[str, object]]:
     checks: dict[str, object] = {}
+    catalog: dict[str, object] = {}
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -130,14 +129,19 @@ def database_readiness() -> tuple[bool, dict[str, object]]:
             role_checks["runtime_role_is_api_only"] = True
         checks.update(role_checks)
 
+        # Allow additive catalog tables (eas.lifecycle, eas.role, future tables).
+        # Count-only validation could conceal a missing mandatory table.
         cursor.execute(
             """
-            SELECT count(*)
-            FROM information_schema.tables
-            WHERE table_schema = 'eas' AND table_type = 'BASE TABLE'
+            SELECT c.relname
+            FROM pg_catalog.pg_class c
+            JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'eas' AND c.relkind IN ('r', 'p')
             """
         )
-        checks["schema_has_30_tables"] = cursor.fetchone()[0] == 30
+        checks["schema_has_30_tables"] = has_required_eas_tables(
+            {row[0] for row in cursor.fetchall()}
+        )
 
         cursor.execute(
             """
@@ -154,12 +158,18 @@ def database_readiness() -> tuple[bool, dict[str, object]]:
             """
         )
         rows = cursor.fetchall()
-        checks.update(
-            assess_request_types(
-                rows,
-                require_active_releases=settings.EAS_REQUIRE_ACTIVE_RELEASES,
-            )
+        type_assessment = assess_request_types(
+            rows, require_active_releases=settings.EAS_REQUIRE_ACTIVE_RELEASES
         )
+        # Core readiness needs P0 availability, not publication of every draft
+        # request type seeded by newer plans. Missing optional releases remain
+        # visible as catalog diagnostics and impossible to submit via workflow API.
+        checks["request_types_match_p0"] = type_assessment["request_types_match_p0"]
+        checks["p0_active_types_configured"] = type_assessment["p0_active_types_configured"]
+        catalog = catalog_readiness_summary(rows)
+        if getattr(settings, "EAS_REQUIRE_FULL_CATALOG_READY", False):
+            # Opt-in hard gating for deployments which need every active type live.
+            checks["all_active_types_configured"] = type_assessment["all_active_types_configured"]
 
         if settings.EAS_REQUIRE_MOCK_SOURCES:
             cursor.execute(
@@ -178,7 +188,7 @@ def database_readiness() -> tuple[bool, dict[str, object]]:
                 assess_mock_sources(mock_rows, {row[0] for row in cursor.fetchall()})
             )
 
-    return all(bool(value) for value in checks.values()), checks
+    return all(bool(value) for value in checks.values()), checks, catalog
 
 
 @require_GET
@@ -191,8 +201,15 @@ def live(request):
 @require_GET
 def ready(request):
     try:
-        is_ready, checks = database_readiness()
-    except DatabaseError:
+        is_ready, checks, catalog = database_readiness()
+    except DatabaseError as exc:
+        request_id = correlation_id(request)
+        log.error(
+            "Readiness database failure: category=%s exception_type=%s "
+            "SQLSTATE=%s correlation_id=%s",
+            failure_category(exc), type(exc).__name__, sqlstate(exc), request_id,
+            extra={"correlation_id": request_id},
+        )
         return JsonResponse(
             {
                 "status": "not_ready",
@@ -214,6 +231,7 @@ def ready(request):
             "status": "ready" if is_ready else "not_ready",
             "service": "eas-api",
             "checks": checks,
+            "catalog": catalog,
         },
         status=200 if is_ready else 503,
     )
