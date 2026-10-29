@@ -3,6 +3,7 @@
 Logs only a redacted SQLSTATE, exception class and correlation ID. These
 are sufficient for diagnosis without exposing credentials or SQL payloads.
 """
+
 from __future__ import annotations
 
 import logging
@@ -23,7 +24,9 @@ class ApiDatabaseErrorMiddleware:
         return self.get_response(request)
 
     def process_exception(self, request, exception):
-        if not request.path.startswith("/api/v1/") or not isinstance(exception, DatabaseError):
+        if not request.path.startswith("/api/v1/") or not isinstance(
+            exception, DatabaseError
+        ):
             return None
         request_id = correlation_id(request)
         state = sqlstate(exception)
@@ -32,7 +35,11 @@ class ApiDatabaseErrorMiddleware:
         log.error(
             "API database failure: path=%s category=%s exception_type=%s "
             "SQLSTATE=%s correlation_id=%s",
-            request.path, category, type(exception).__name__, state, request_id,
+            request.path,
+            category,
+            type(exception).__name__,
+            state,
+            request_id,
             extra={"correlation_id": request_id},
         )
         # No raw driver message, SQL, credentials, host or user info in response.

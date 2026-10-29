@@ -177,13 +177,16 @@ def policy_actor_options(actor: Actor, type_code: str) -> dict[str, Any]:
     if not re.fullmatch(r"[A-Z][A-Z0-9_]{1,29}", type_code):
         raise CommandError("UNKNOWN_TYPE_CODE", status=422)
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id::text FROM eas.request_type WHERE code=%s", [type_code])
+        cursor.execute(
+            "SELECT id::text FROM eas.request_type WHERE code=%s", [type_code]
+        )
         row = cursor.fetchone()
         if not row:
             raise CommandError("UNKNOWN_TYPE_CODE", status=404)
         type_id = row[0]
         _check_policy_admin(cursor, actor.id, type_id)
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT d.id::text, d.name FROM eas.department d
             WHERE d.is_active AND EXISTS (
                 SELECT 1 FROM eas.role_membership pm
@@ -195,11 +198,14 @@ def policy_actor_options(actor: Actor, type_code: str) -> dict[str, Any]:
                   AND (pm.scope_kind='GLOBAL' OR
                        (pm.scope_kind='DEPARTMENT' AND pm.department_id=d.id)))
             ORDER BY d.name, d.id LIMIT 50
-        """, [actor.id, type_id])
+        """,
+            [actor.id, type_id],
+        )
         departments = cursor.fetchall()
         items = []
         for dept_id, dept_name in departments:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT u.id::text,u.display_name, m.role
                 FROM eas.role_membership m
                 JOIN eas.app_user u ON u.id=m.user_id AND u.is_active
@@ -211,14 +217,24 @@ def policy_actor_options(actor: Actor, type_code: str) -> dict[str, Any]:
                   AND (m.scope_kind='GLOBAL' OR
                        (m.scope_kind='DEPARTMENT' AND m.department_id=%s))
                 ORDER BY u.display_name,u.id,m.role LIMIT 400
-            """, [type_id, dept_id])
+            """,
+                [type_id, dept_id],
+            )
             candidate_map = {}
             for user_id, name, role in cursor.fetchall():
-                value = candidate_map.setdefault(user_id, {'id':user_id,'name':name,'roles':[]})
-                if role not in value['roles']:
-                    value['roles'].append(role)
-            items.append({'id':dept_id,'name':dept_name,'candidates':list(candidate_map.values())})
-    return {'type_code':type_code, 'departments':items}
+                value = candidate_map.setdefault(
+                    user_id, {"id": user_id, "name": name, "roles": []}
+                )
+                if role not in value["roles"]:
+                    value["roles"].append(role)
+            items.append(
+                {
+                    "id": dept_id,
+                    "name": dept_name,
+                    "candidates": list(candidate_map.values()),
+                }
+            )
+    return {"type_code": type_code, "departments": items}
 
 
 def list_policy_type_status(actor: Actor) -> dict[str, Any]:
@@ -255,20 +271,45 @@ def list_policy_type_status(actor: Actor) -> dict[str, Any]:
                   AND (m.valid_to IS NULL OR m.valid_to>statement_timestamp())
                   AND (m.type_scope='ALL' OR (m.type_scope='ONE' AND m.type_id=rt.id)))
             ORDER BY rt.code
-            """, [actor.id]
+            """,
+            [actor.id],
         )
         rows = cursor.fetchall()
     items = []
-    for code, name, lifecycle, is_active, release_id, state, valid, count, drafts in rows:
+    for (
+        code,
+        name,
+        lifecycle,
+        is_active,
+        release_id,
+        state,
+        valid,
+        count,
+        drafts,
+    ) in rows:
         blockers = []
-        if not is_active: blockers.append('TYPE_INACTIVE')
-        if not valid: blockers.append('NO_PUBLISHED_RELEASE')
-        if not count: blockers.append('NO_REQUESTER_MEMBERSHIP')
-        items.append({"code": code, "name": name, "lifecycle": lifecycle,
-                      "is_active": is_active, "active_release_id": release_id if valid else None,
-                      "release_state": state, "has_published_release": bool(valid),
-                      "requester_count": int(count), "draft_count": int(drafts),
-                      "visible_to_some_requesters": not blockers, "route_verified_only_on_submit": True, "blockers": blockers})
+        if not is_active:
+            blockers.append("TYPE_INACTIVE")
+        if not valid:
+            blockers.append("NO_PUBLISHED_RELEASE")
+        if not count:
+            blockers.append("NO_REQUESTER_MEMBERSHIP")
+        items.append(
+            {
+                "code": code,
+                "name": name,
+                "lifecycle": lifecycle,
+                "is_active": is_active,
+                "active_release_id": release_id if valid else None,
+                "release_state": state,
+                "has_published_release": bool(valid),
+                "requester_count": int(count),
+                "draft_count": int(drafts),
+                "visible_to_some_requesters": not blockers,
+                "route_verified_only_on_submit": True,
+                "blockers": blockers,
+            }
+        )
     return {"items": items}
 
 
@@ -280,7 +321,9 @@ def create_or_clone_release(
     correlation_id: str,
 ) -> CommandResult:
     type_code = body.get("type_code")
-    if not isinstance(type_code, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,29}", type_code):
+    if not isinstance(type_code, str) or not re.fullmatch(
+        r"[A-Z][A-Z0-9_]{1,29}", type_code
+    ):
         raise CommandError("UNKNOWN_TYPE_CODE", status=422)
 
     clone_from_id = body.get("clone_from_release_id")
@@ -552,12 +595,31 @@ def validate_release_candidate(*, actor: Actor, release_id: str) -> dict[str, An
         sla_profile=sla_profile,
     )
     if _type_code == "RESIGNATION" and not route_rules.get("executor"):
-        errors.append("RESIGNATION:executor must be configured for offboarding checklist")
-    if _type_code in {"ACCESS_FACILITY","BUSINESS_TRIP","EQUIPMENT_BORROW", "EXPENSE_CLAIM", "IT_SUPPORT", "LEAVE_SPECIAL", "ROOM_BOOKING"} and isinstance(form_schema.get("properties"), dict) and set(form_schema["properties"]) <= {"title","reason"}:
-        errors.append("form_schema:define business-specific fields for this request type before publishing")
+        errors.append(
+            "RESIGNATION:executor must be configured for offboarding checklist"
+        )
+    if (
+        _type_code
+        in {
+            "ACCESS_FACILITY",
+            "BUSINESS_TRIP",
+            "EQUIPMENT_BORROW",
+            "EXPENSE_CLAIM",
+            "IT_SUPPORT",
+            "LEAVE_SPECIAL",
+            "ROOM_BOOKING",
+        }
+        and isinstance(form_schema.get("properties"), dict)
+        and set(form_schema["properties"]) <= {"title", "reason"}
+    ):
+        errors.append(
+            "form_schema:define business-specific fields for this request type before publishing"
+        )
     if not errors:
         with connection.cursor() as cursor:
-            errors.extend(role_grant_errors(cursor, type_id, route_rules, actor_bindings))
+            errors.extend(
+                role_grant_errors(cursor, type_id, route_rules, actor_bindings)
+            )
     if errors:
         raise CommandError("CONFIG_INVALID", status=422, fields=errors)
 
@@ -645,11 +707,30 @@ def publish_config_release(
             sla_profile=sla_profile,
         )
         if type_code == "RESIGNATION" and not route_rules.get("executor"):
-            errors.append("RESIGNATION:executor must be configured for offboarding checklist")
-        if type_code in {"ACCESS_FACILITY","BUSINESS_TRIP","EQUIPMENT_BORROW", "EXPENSE_CLAIM", "IT_SUPPORT", "LEAVE_SPECIAL", "ROOM_BOOKING"} and isinstance(form_schema.get("properties"), dict) and set(form_schema["properties"]) <= {"title","reason"}:
-            errors.append("form_schema:define business-specific fields for this request type before publishing")
+            errors.append(
+                "RESIGNATION:executor must be configured for offboarding checklist"
+            )
+        if (
+            type_code
+            in {
+                "ACCESS_FACILITY",
+                "BUSINESS_TRIP",
+                "EQUIPMENT_BORROW",
+                "EXPENSE_CLAIM",
+                "IT_SUPPORT",
+                "LEAVE_SPECIAL",
+                "ROOM_BOOKING",
+            }
+            and isinstance(form_schema.get("properties"), dict)
+            and set(form_schema["properties"]) <= {"title", "reason"}
+        ):
+            errors.append(
+                "form_schema:define business-specific fields for this request type before publishing"
+            )
         if not errors:
-            errors.extend(role_grant_errors(cursor, type_id, route_rules, actor_bindings))
+            errors.extend(
+                role_grant_errors(cursor, type_id, route_rules, actor_bindings)
+            )
         if errors:
             raise CommandError("CONFIG_INVALID", status=422, fields=errors)
 

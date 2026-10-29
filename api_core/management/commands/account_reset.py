@@ -10,8 +10,8 @@ from django.core.cache import cache
 from django.core.management.base import BaseCommand
 from django.db import connection, transaction
 
+from api_core.authn.service import PasswordChangeError, validate_new_password
 from api_core.workflow.service import _append_admin_audit
-from api_core.authn.service import validate_new_password, PasswordChangeError
 
 
 class Command(BaseCommand):

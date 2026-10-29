@@ -3,6 +3,7 @@
 The request form is *not* a security boundary: create/submit still rechecks
 role membership, request type, published release and state under DB locks.
 """
+
 import json
 from functools import lru_cache
 from pathlib import Path
@@ -10,25 +11,32 @@ from pathlib import Path
 from django.db import connection
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
+
 from api_core.authn.service import require_actor
+from api_core.catalog.availability import request_option_blocker
 from api_core.catalog.plan_catalog import (
-    plan_items,
-    plan_item,
-    enterprise_items,
     enterprise_item,
+    enterprise_items,
     enterprise_options,
     five_level_framework,
+    plan_item,
+    plan_items,
     resolve_five_level_metadata,
-    safe_display_name,
 )
-from api_core.catalog.availability import request_option_blocker
+
 
 @lru_cache(maxsize=1)
 def approval_menu_blueprint():
     """The 20 display rows supplied by the plan, mapped to 18 distinct codes."""
-    data = json.loads(Path(__file__).with_name("approval_menu.json").read_text(encoding="utf-8"))
-    if (data.get("display_rows") != 20 or data.get("unique_types") != 18
-        or len(data["options"]) != 20 or len({row["code"] for row in data["options"]}) != 18):
+    data = json.loads(
+        Path(__file__).with_name("approval_menu.json").read_text(encoding="utf-8")
+    )
+    if (
+        data.get("display_rows") != 20
+        or data.get("unique_types") != 18
+        or len(data["options"]) != 20
+        or len({row["code"] for row in data["options"]}) != 18
+    ):
         raise RuntimeError("INVALID_APPROVAL_MENU")
     return data
 
@@ -89,14 +97,21 @@ def resolve_field_labels(code: str) -> dict[str, str]:
     specific = (
         plan_item(code)
         or enterprise_item(code)
-        or next((x for x in approval_menu_blueprint()["types"] if x["code"] == code), {})
+        or next(
+            (x for x in approval_menu_blueprint()["types"] if x["code"] == code), {}
+        )
     ).get("field_labels", {})
     return {**CORE_FIELD_LABELS, **specific}
 
 
 def approval_type_name(code):
-    matched = next((item for item in approval_menu_blueprint()["types"] if item["code"] == code), None)
-    return (matched or plan_item(code) or enterprise_item(code) or {}).get("name", CORE_TYPE_NAMES.get(code, code))
+    matched = next(
+        (item for item in approval_menu_blueprint()["types"] if item["code"] == code),
+        None,
+    )
+    return (matched or plan_item(code) or enterprise_item(code) or {}).get(
+        "name", CORE_TYPE_NAMES.get(code, code)
+    )
 
 
 @require_GET
@@ -118,17 +133,21 @@ def request_types(request):
             db_rw = row[6] if len(row) > 6 else None
             db_al = row[7] if len(row) > 7 else None
             risk_w, app_lvl = resolve_five_level_metadata(code, db_rw, db_al)
-            items.append({
-                "code": code,
-                "name": name.strip() or approval_type_name(code),
-                "description": description,
-                "category": category,
-                "lifecycle": lifecycle,
-                "configured": configured,
-                "risk_weight": risk_w,
-                "approval_level": app_lvl,
-            })
-    return JsonResponse({"items": items, "five_level_framework": five_level_framework()})
+            items.append(
+                {
+                    "code": code,
+                    "name": name.strip() or approval_type_name(code),
+                    "description": description,
+                    "category": category,
+                    "lifecycle": lifecycle,
+                    "configured": configured,
+                    "risk_weight": risk_w,
+                    "approval_level": app_lvl,
+                }
+            )
+    return JsonResponse(
+        {"items": items, "five_level_framework": five_level_framework()}
+    )
 
 
 @require_GET
@@ -141,7 +160,8 @@ def request_type_forms(request):
     """
     actor = request.actor
     with connection.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT rt.code, rt.lifecycle, cr.id::text, cr.form_schema,
                    rt.name, rt.description, rt.category,
                    rt.risk_weight, rt.approval_level
@@ -161,30 +181,37 @@ def request_type_forms(request):
                        (m.type_scope='ONE' AND m.type_id=rt.id))
               )
             ORDER BY rt.code
-        """, [actor.id, actor.department_id])
+        """,
+            [actor.id, actor.department_id],
+        )
         items = []
         for row in cursor.fetchall():
-            code, lifecycle, release_id, form_schema, name, description, category = row[:7]
+            code, lifecycle, release_id, form_schema, name, description, category = row[
+                :7
+            ]
             db_rw = row[7] if len(row) > 7 else None
             db_al = row[8] if len(row) > 8 else None
             risk_w, app_lvl = resolve_five_level_metadata(code, db_rw, db_al)
-            items.append({
-                "code": code,
-                "name": name.strip() or approval_type_name(code),
-                "description": description,
-                "category": category,
-                "lifecycle": lifecycle,
-                "release_id": release_id,
-                "form_schema": form_schema,
-                "field_labels": resolve_field_labels(code),
-                "department_id": actor.department_id,
-                "risk_weight": risk_w,
-                "approval_level": app_lvl,
-            })
+            items.append(
+                {
+                    "code": code,
+                    "name": name.strip() or approval_type_name(code),
+                    "description": description,
+                    "category": category,
+                    "lifecycle": lifecycle,
+                    "release_id": release_id,
+                    "form_schema": form_schema,
+                    "field_labels": resolve_field_labels(code),
+                    "department_id": actor.department_id,
+                    "risk_weight": risk_w,
+                    "approval_level": app_lvl,
+                }
+            )
     # Distinguish real publication blockers from scoped REQUESTER permission
     # without returning private policy JSON, memberships or assignee identities.
     with connection.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT rt.code, rt.lifecycle, rt.is_active,
                    (cr.id IS NOT NULL AND cr.state='PUBLISHED'
                     AND cr.type_id=rt.id AND cr.lifecycle=rt.lifecycle) AS has_release,
@@ -200,8 +227,13 @@ def request_type_forms(request):
                    ) AS scoped
             FROM eas.request_type rt
             LEFT JOIN eas.config_release cr ON cr.id=rt.active_release_id
-        """, [actor.id, actor.department_id])
-        states = {code: (lc, active, published, scoped) for code, lc, active, published, scoped in cursor.fetchall()}
+        """,
+            [actor.id, actor.department_id],
+        )
+        states = {
+            code: (lc, active, published, scoped)
+            for code, lc, active, published, scoped in cursor.fetchall()
+        }
 
     available = {item["code"]: item for item in items}
     menu = []
@@ -216,34 +248,41 @@ def request_type_forms(request):
             match["risk_weight"] if match else row.get("risk_weight"),
             match["approval_level"] if match else row.get("approval_level"),
         )
-        menu.append({
-            **row,
-            "risk_weight": risk_w,
-            "approval_level": app_lvl,
-            "available": valid,
-            "blocker_code": blocker if not valid else None,
-            "disabled_reason": reason if not valid else None,
-        })
+        menu.append(
+            {
+                **row,
+                "risk_weight": risk_w,
+                "approval_level": app_lvl,
+                "available": valid,
+                "blocker_code": blocker if not valid else None,
+                "disabled_reason": reason if not valid else None,
+            }
+        )
     for item in items:
         if not any(row["code"] == item["code"] for row in menu):
-            menu.append({
-                "group": "Biểu mẫu hệ thống đang hoạt động",
-                "label": item["name"],
-                "code": item["code"],
-                "lifecycle": item["lifecycle"],
-                "risk_weight": item["risk_weight"],
-                "approval_level": item["approval_level"],
-                "description": item["description"] or "Theo cấu hình hiện hành",
-                "available": True,
-                "blocker_code": None,
-                "disabled_reason": None,
-            })
-    return JsonResponse({
-        "items": items,
-        "approval_menu": menu,
-        "five_level_framework": five_level_framework(),
-        "request_code_generated_by_server": True,
-    })
+            menu.append(
+                {
+                    "group": "Biểu mẫu hệ thống đang hoạt động",
+                    "label": item["name"],
+                    "code": item["code"],
+                    "lifecycle": item["lifecycle"],
+                    "risk_weight": item["risk_weight"],
+                    "approval_level": item["approval_level"],
+                    "description": item["description"] or "Theo cấu hình hiện hành",
+                    "available": True,
+                    "blocker_code": None,
+                    "disabled_reason": None,
+                }
+            )
+    return JsonResponse(
+        {
+            "items": items,
+            "approval_menu": menu,
+            "five_level_framework": five_level_framework(),
+            "request_code_generated_by_server": True,
+        }
+    )
+
 
 @require_GET
 @require_actor("POLICY_ADMIN", "OPS_ADMIN")
@@ -252,15 +291,18 @@ def plan_request_type_blueprints(request):
 
     Membership scope + SoD are independently rechecked by write services.
     """
-    return JsonResponse({
-        "source": "plan.docx",
-        "count": len(plan_items()),
-        "deployment_state": "BLUEPRINT_ONLY",
-        "items": plan_items(),
-        "enterprise_items": enterprise_items(),
-        "five_level_framework": five_level_framework(),
-        "approval_menu": approval_menu_blueprint(),
-    })
+    return JsonResponse(
+        {
+            "source": "plan.docx",
+            "count": len(plan_items()),
+            "deployment_state": "BLUEPRINT_ONLY",
+            "items": plan_items(),
+            "enterprise_items": enterprise_items(),
+            "five_level_framework": five_level_framework(),
+            "approval_menu": approval_menu_blueprint(),
+        }
+    )
+
 
 @require_GET
 @require_actor("REQUESTER")
@@ -271,10 +313,13 @@ def colleague_choices(request):
     This is only a convenience list, NOT authorization for approval assignment.
     """
     with connection.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT id::text, display_name FROM eas.app_user
             WHERE is_active AND department_id=%s AND id<>%s
             ORDER BY display_name, id LIMIT 300
-        """, [request.actor.department_id, request.actor.id])
-        choices = [{"id": x, "display_name": y} for x,y in cursor.fetchall()]
+        """,
+            [request.actor.department_id, request.actor.id],
+        )
+        choices = [{"id": x, "display_name": y} for x, y in cursor.fetchall()]
     return JsonResponse({"items": choices})

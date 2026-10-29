@@ -53,7 +53,10 @@ MONETARY_PAYLOAD_FIELDS = (
     "refund_amount",
     "contract_value",
     "estimated_cost",
-    "estimated_price", "deal_value_vnd", "salary_budget_vnd", "residual_value_vnd",
+    "estimated_price",
+    "deal_value_vnd",
+    "salary_budget_vnd",
+    "residual_value_vnd",
 )
 
 
@@ -74,9 +77,13 @@ def extract_amount_vnd(
         return None
     for field in MONETARY_PAYLOAD_FIELDS:
         val = payload.get(field)
-        if val is not None and not isinstance(val, bool) and isinstance(val, int):
-            if (val >= 0) if allow_zero else (val > 0):
-                return val
+        if (
+            val is not None
+            and not isinstance(val, bool)
+            and isinstance(val, int)
+            and ((val >= 0) if allow_zero else (val > 0))
+        ):
+            return val
     return None
 
 

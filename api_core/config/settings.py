@@ -212,4 +212,6 @@ LOGGING = {
 }
 
 # Opt-in only after DBA review of the report-catalog migration.
-EAS_ALLOW_REPORT_CATALOG_EXPANSION = os.getenv("EAS_ALLOW_REPORT_CATALOG_EXPANSION", "false").lower() == "true"
+EAS_ALLOW_REPORT_CATALOG_EXPANSION = (
+    os.getenv("EAS_ALLOW_REPORT_CATALOG_EXPANSION", "false").lower() == "true"
+)

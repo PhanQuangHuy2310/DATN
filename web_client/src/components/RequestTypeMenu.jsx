@@ -35,7 +35,7 @@ export default function RequestTypeMenu({ options = [], onSelect, disabled = fal
         <p className="muted">Lọc theo nhóm nghiệp vụ, cấp độ phê duyệt (Cấp 1–5) hoặc tìm tên, sau đó chọn biểu mẫu. Chỉ các loại đã công bố và được cấp quyền mới có thể tạo.</p>
         <div className="request-menu-counts" aria-label="Tổng quan danh mục"><span>{options.length} lựa chọn</span><span>{available} có thể tạo</span><span>Chuẩn phân quyền 5 cấp</span></div>
       </div>
-      <div className="request-menu-category-scroll" tabIndex={0} aria-label="Nhóm nghiệp vụ, cuộn ngang để xem các nhóm khác">
+      <div className="request-menu-category-scroll" aria-label="Nhóm nghiệp vụ, cuộn ngang để xem các nhóm khác">
         <div className="request-menu-categories">
           {counts.map(([name, count]) => <button key={name} type="button" disabled={disabled}
             className={`request-menu-category ${group === name ? "is-selected" : ""}`}

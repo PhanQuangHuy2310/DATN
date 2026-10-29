@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { PageControls } from "./ux.jsx";
 import { ResourceState, useResource } from "./ui.jsx";
 import { roles } from "../domain.js";
@@ -47,7 +47,7 @@ function Matrix({ data, endpoints = [], catalogLoading = false, catalogError = "
     </div>
     {catalogLoading ? <p role="status">Đang tải danh mục API để lập biểu đồ…</p> : catalogError ?
       <p className="error" role="alert">Không tải được danh mục endpoint để lập biểu đồ: {catalogError}</p> : matrix.domains.length ? <>
-      <div className="access-matrix-scroll" tabIndex={0} aria-label="Bảng ma trận phân quyền, cuộn ngang để xem đủ cột">
+      <div className="access-matrix-scroll" aria-label="Bảng ma trận phân quyền, cuộn ngang để xem đủ cột">
         <table className="access-matrix-heatmap" style={{minWidth: `${155 + columns.length * 116}px`}}>
           <thead><tr><th scope="col">Vai trò</th>{columns.map((domain) => <th scope="col" key={domain}>{domain}</th>)}</tr></thead>
           <tbody>{rows.map((row) => <tr key={row.role}>
@@ -96,7 +96,12 @@ export default function ApiAdministration() {
       && (!domain || item.domain === domain) && (!method || item.method === method)
       && (!role || item.roles.includes(role));
   }), [items, query, domain, method, role]);
-  useEffect(() => { setOffset(0); }, [query, domain, method, role]);
+  const [prevFilterKey, setPrevFilterKey] = useState("");
+  const filterKey = `${query}|${domain}|${method}|${role}`;
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setOffset(0);
+  }
   const visible = filtered.slice(offset, offset + limit);
   const total = filtered.length;
   const verbs = methodOrder.map((name) => [name, items.filter((x) => x.method === name).length]);

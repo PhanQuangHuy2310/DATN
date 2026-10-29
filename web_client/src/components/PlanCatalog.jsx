@@ -30,12 +30,12 @@ export default function PlanCatalog() {
   const listRef = useRef(null);
   function goPage(next) { setPage(next); requestAnimationFrame(() => listRef.current?.scrollIntoView({behavior:"smooth",block:"start"})); }
   const available = useMemo(() => new Map((deployed.data?.items || []).map(x=>[x.code,x])),[deployed.data]);
-  const pool = catalogMode === "business"
-    ? (source.data?.approval_menu?.types || [])
-    : catalogMode === "enterprise"
-    ? (source.data?.enterprise_items || [])
-    : (source.data?.items || []);
-  const groups = ["Tất cả", ...new Set(pool.map((x) => x.category))];
+  const pool = useMemo(() => {
+    if (catalogMode === "business") return source.data?.approval_menu?.types || [];
+    if (catalogMode === "enterprise") return source.data?.enterprise_items || [];
+    return source.data?.items || [];
+  }, [catalogMode, source.data]);
+  const groups = useMemo(() => ["Tất cả", ...new Set(pool.map((x) => x.category))], [pool]);
   const list = useMemo(() => pool.filter(x => {
     const match = !filter || `${x.name} ${x.code} ${x.category}`.toLowerCase().includes(filter.toLowerCase().trim());
     const db = available.get(x.code);
@@ -101,7 +101,7 @@ export default function PlanCatalog() {
           </select>
         </label>
       </div>
-      <div className="plan-category-scroll" tabIndex={0} aria-label="Lọc nhóm yêu cầu, cuộn ngang để xem các nhóm khác">
+      <div className="plan-category-scroll" aria-label="Lọc nhóm yêu cầu, cuộn ngang để xem các nhóm khác">
         <div className="plan-category-row">{groups.map(name=><button type="button" key={name} className={`plan-category-pill ${group===name ? "selected" : ""}`}
           aria-pressed={group===name} onClick={()=>{setGroup(name);setPage(0);}}>{name}<small>{name==="Tất cả" ? pool.length : pool.filter(item=>item.category===name).length}</small></button>)}</div>
       </div>

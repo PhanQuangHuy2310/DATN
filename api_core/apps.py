@@ -5,7 +5,10 @@ from django.db.backends.signals import connection_created
 
 
 def _register_psycopg_json_loaders(sender, connection, **kwargs) -> None:
-    if getattr(connection, "vendor", None) != "postgresql" or getattr(connection, "connection", None) is None:
+    if (
+        getattr(connection, "vendor", None) != "postgresql"
+        or getattr(connection, "connection", None) is None
+    ):
         return
     try:
         from psycopg.types.json import (
@@ -20,8 +23,8 @@ def _register_psycopg_json_loaders(sender, connection, **kwargs) -> None:
         adapters.register_loader("jsonb", JsonbLoader)
         adapters.register_loader("json", JsonBinaryLoader)
         adapters.register_loader("jsonb", JsonbBinaryLoader)
-    except Exception:
-        pass
+    except (ImportError, AttributeError, TypeError):
+        return
 
 
 class ApiCoreConfig(AppConfig):
@@ -33,4 +36,3 @@ class ApiCoreConfig(AppConfig):
             _register_psycopg_json_loaders,
             dispatch_uid="api_core.register_psycopg_json_loaders",
         )
-

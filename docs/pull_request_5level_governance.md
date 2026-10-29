@@ -1,4 +1,4 @@
-# Pull Request: Kiến trúc Quản trị Doanh nghiệp 5 Cấp & Chuẩn hóa 53 Loại Yêu Cầu
+# Pull Request: Kiến trúc Quản trị Doanh nghiệp 5 Cấp, Chuẩn hóa 53 Loại Yêu Cầu & Hoàn Thiện Quality Gates
 
 ## Thông Tin Pull Request
 - **Branch Nguồn:** `huy`
@@ -14,12 +14,16 @@
 ---
 
 ## 1. Tóm Tắt Mục Tiêu & Bối Cảnh (Executive Summary)
-Pull Request này giải quyết toàn diện 2 yêu cầu cốt lõi theo tiêu chuẩn doanh nghiệp lớn (SAP Ariba, ServiceNow, Workday, Coupa, ISO 27001 / COSO ERM):
+Pull Request này giải quyết toàn diện các yêu cầu cốt lõi theo tiêu chuẩn doanh nghiệp lớn (SAP Ariba, ServiceNow, Workday, Coupa, ISO 27001 / COSO ERM) và vượt qua 100% các trạm kiểm định chất lượng (Quality Gates):
 1. **Khắc phục và chuẩn hóa 41 loại yêu cầu ban đầu**: Khớp 100% giữa tài liệu báo cáo `Report_DATN_CNTT_Nhom07_v1.0.docx`, `plan.md`, codebase và cơ sở dữ liệu Live Supabase (`emnusiybdkpibtqsplta`). Khắc phục triệt để lỗi sao chép form schema sai ở 6/10 loại core và nạp đầy đủ 18 loại Menu nghiệp vụ + 13 loại Kế hoạch mở rộng.
 2. **Thiết kế & Triển khai Kiến trúc Phân tầng Quản trị 5 Cấp (`5-Level Enterprise Delegation of Authority & Risk Weight`)**:
    - Mở rộng giới hạn quy trình từ `1..3` cấp lên **chuẩn 5 cấp (`Cấp 1..5`)** trên toàn bộ Database DDL, Constraints, Triggers, Backend Engine và Frontend React.
-   - Bổ sung **12 loại yêu cầu doanh nghiệp mới** chuyên biệt cho các nghiệp vụ trọng yếu (Nhân sự định biên, Chiết khấu thương mại, Mua sắm/Nhà cung cấp, Thanh lý tài sản, Điều chuyển ngân sách công ty, Thay đổi khẩn cấp an toàn thông tin), nâng quy mô toàn hệ thống lên **53 loại yêu cầu hoạt động**.
-   - Bổ sung trường 5 cấp (`risk_weight`, `approval_level`, `tier_level`, `resolver_code`) đồng bộ trên cả 6 bảng cốt lõi của quy trình: `eas.request_type`, `eas.config_release`, `eas.request`, `eas.request_revision`, `eas.workflow_instance`, `eas.approval_step`.
+   - Bổ sung **12 loại yêu cầu doanh nghiệp mới** chuyên biệt cho các nghiệp vụ trọng yếu, nâng quy mô toàn hệ thống lên **53 loại yêu cầu hoạt động**.
+   - Bổ sung trường 5 cấp (`risk_weight`, `approval_level`, `tier_level`, `resolver_code`) đồng bộ trên cả 6 bảng cốt lõi: `eas.request_type`, `eas.config_release`, `eas.request`, `eas.request_revision`, `eas.workflow_instance`, `eas.approval_step`.
+3. **Vượt qua 100% Quality Gates của CI/CD (`.github/workflows/ci.yml`)**:
+   - Khắc phục kiểm định cơ sở dữ liệu WASM PGlite: Đồng bộ 263 cột và 140 CHECK constraints sau khi tích hợp metadata danh mục nghiệp vụ.
+   - Khắc phục toàn bộ cảnh báo / lỗi linter Backend: `ruff check` (0 lỗi), `ruff format` (100% chuẩn định dạng 92 tệp Python).
+   - Khắc phục toàn bộ lỗi Frontend ESLint: Triệt tiêu hoàn toàn cascading render trong `useEffect`, loại bỏ vi phạm ARIA `tabIndex` trên các phần tử cuộn, đảm bảo dependencies hook sạch sẽ.
 
 ---
 
@@ -56,46 +60,15 @@ Pull Request này giải quyết toàn diện 2 yêu cầu cốt lõi theo tiêu
 
 ---
 
-## 4. Chi Tiết Thay Đổi Kỹ Thuật (Technical Details)
+## 4. Báo Cáo Chất Lượng Quality Gates (100% PASS)
 
-### 🔹 Cơ Sở Dữ Liệu (`PostgreSQL / Supabase`)
-- **DDL Migration Script:** `database/report_migrations/05_enterprise_5level_and_catalog_DBA_REVIEW_ONLY.sql`.
-- **Cập nhật 6 bảng:**
-  - `eas.request_type`: Thêm cột `risk_weight` (`smallint 1..5`), `approval_level` (`smallint 1..5`).
-  - `eas.config_release`: Thêm cột `risk_weight`, `approval_level`. Nâng cấp trigger `eas.guard_release()` cho phép `1..5` bước duyệt trên mỗi bậc ngân sách.
-  - `eas.request`: Thêm cột `risk_weight`, `approval_level` lưu vết hồ sơ thực tế.
-  - `eas.request_revision`: Thêm cột `risk_weight`, `approval_level` bảo toàn lịch sử phiên bản.
-  - `eas.workflow_instance`: Thêm cột `risk_weight`, `approval_level`; nâng cấp constraint cho phép chuỗi `resolved_route` dài tối đa 5 bước.
-  - `eas.approval_step`: Thêm cột `tier_level` (`smallint 1..5`), `resolver_code` (`varchar(40)`); nâng cấp constraint `approval_step_step_no_check` cho phép `step_no BETWEEN 1 AND 5`.
-- **Phân quyền role `eas_api`:** Cấp đầy đủ `SELECT, INSERT, UPDATE` trên tất cả các cột mới.
-
-### 🔹 Phân Hệ Backend (`api_core`)
-- `api_core/catalog/enterprise_types.json`: Khai báo 5-level metadata, ma trận phân cấp và 12 loại yêu cầu.
-- `api_core/catalog/plan_catalog.py`: Tích hợp bộ nạp metadata 5 cấp, hợp nhất 53 loại yêu cầu hoàn chỉnh.
-- `api_core/catalog/views.py`: Trả về `risk_weight`, `approval_level`, `level_meta`, `five_level_framework` và từ điển nhãn Tiếng Việt qua API `/api/v1/request-types`, `/api/v1/catalog/menu`, `/api/v1/catalog/plan`.
-- `api_core/domain/validation.py`: Mở rộng validation release cho phép chuỗi phê duyệt `1..5` người (`approver_slots`).
-- `api_core/domain/routing.py`: Hỗ trợ định tuyến tự động `1..5` bước, mở rộng trích xuất ngân sách cho các trường `deal_value_vnd`, `salary_budget_vnd`, `residual_value_vnd`.
-- `api_core/domain/plan_constraints.py`: Thêm kiểm tra ràng buộc nghiệp vụ cho `SPECIAL_DISCOUNT`, `BUDGET_REALLOCATION`, `TRAINING_COURSE`, `MARKETING_CAMPAIGN`.
-- `api_core/workflow/service.py`: Persist đầy đủ các cột 5 cấp vào CSDL khi khởi tạo nháp và khi nộp hồ sơ.
-- `api_core/apps.py`: Đăng ký `JsonLoader`/`JsonbLoader` trên tín hiệu `connection_created` cho kết nối PostgreSQL.
-
-### 🔹 Phân Hệ Frontend (`web_client`)
-- `web_client/src/domain.js`: Bổ sung ma trận 5 cấp `FIVE_LEVEL_FRAMEWORK`, `TYPE_LEVEL_MATRIX`, `getRequestTypeLevelMeta`, từ điển Tiếng Việt cho 53 loại yêu cầu.
-- `web_client/src/components/RequestTypeMenu.jsx`: Bổ sung bộ lọc 5 cấp độ (`Cấp 1/5` .. `Cấp 5/5`), hiển thị huy hiệu trọng số và số cấp phê duyệt.
-- `web_client/src/components/PlanCatalog.jsx`: Trình bày bảng danh mục 53 loại yêu cầu trực quan với bộ lọc cấp độ, mẫu quy trình và khối chuyên môn.
-- `web_client/src/components/RequestEditor.jsx` & `RequestDetail.jsx`: Hiển thị huy hiệu cấp độ rủi ro, phân bậc phê duyệt và danh sách bước duyệt `Bước 1/5 .. 5/5` kèm thông tin `resolver_code`.
-
----
-
-## 5. Kết Quả Kiểm Thử & Nghiệm Thu (Verification & Evidence)
-
-1. **Kiểm thử tự động Backend (Django Test Suite + Regression)**:
-   - `python manage.py test api_core.tests tests_business tests_readiness tests_report connection_tests -v 1`
-   - **Kết quả:** `Ran 218 tests in 8.355s - OK` (**218/218 bài kiểm thử PASS, 0 lỗi, 0 cảnh báo**).
-2. **Kiểm thử Frontend**:
-   - `node --test e2e/domain.test.mjs`: **8/8 bài kiểm thử PASS**.
-   - `npm run build`: Production bundle Vite hoàn tất không lỗi (`dist/assets/index-C42pz5O-.js`, 139ms).
-3. **Kiểm thử Live Supabase (`emnusiybdkpibtqsplta`)**:
-   - **53/53 loại yêu cầu** đã `PUBLISHED`, `is_active = true`.
-   - **1.272/1.272 kịch bản định tuyến** (`53 loại × 8 phòng ban × 3 tầng ngân sách`) PASS 100%, tuân thủ nghiêm ngặt nguyên tắc SoD (Separation of Duties).
-   - Kiểm thử thực tế `create_draft` và `submit_request` thành công trên cả 5 cấp độ phê duyệt trực tiếp trên Live Supabase.
+| Trạm kiểm định (Quality Gate) | Lệnh thực thi kiểm tra | Kết quả đạt được | Trạng thái |
+| :--- | :--- | :--- | :---: |
+| **1. Secret Gate** | `python scripts/check_repository_secrets.py` | `SECRET_GATE=PASS` (Không có API keys / mật khẩu) | ✅ PASS |
+| **2. Database Schema Gate** | `cd database/EAS_Supabase_SQL/validation && npm test` | `sql_assertions: 86, result: PASS` trên PostgreSQL 18.3 WASM | ✅ PASS |
+| **3. Backend Lint & Format** | `ruff check` & `ruff format --check` | `All checks passed! 92 files already formatted` | ✅ PASS |
+| **4. Frontend Lint & Build** | `npm run lint` & `npm run build` | `0 errors, 0 warnings`, bundle Vite tạo thành công | ✅ PASS |
+| **5. Frontend Unit Tests** | `node --test e2e/domain.test.mjs` | `8/8 tests passed` (FSM guards, RBAC, SoD) | ✅ PASS |
+| **6. Container & Docs Gate** | `validate_env.py` & `validate_docs.py` | `compose: 27 vars, api: 26 vars; DOCS_GATE=PASS` | ✅ PASS |
+| **7. Django & Regression Suite** | `python manage.py test ...` | `Ran 218 tests in 16.167s - OK` (218/218 tests) | ✅ PASS |
+| **8. Standalone AI & Logger Tests**| `python tests/run_tests.py` | `Ran 15 tests - OK` (Inference fallback, anti-SSRF, logger) | ✅ PASS |

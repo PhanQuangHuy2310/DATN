@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { errorText } from "../domain.js";
 import { useResource } from "./ui.jsx";
 
@@ -21,7 +21,14 @@ export default function PolicyBindings({ release, jsonText, onChange }) {
   const chosenSlot = requested.find((x) => x.slot === slotName) || requested[0];
   const validUsers = (currentDept?.candidates || []).filter((u) => chosenSlot?.role && u.roles.includes(chosenSlot.role));
   const chosenUser = validUsers.find((u) => u.id === userId) || validUsers[0];
-  useEffect(() => { setDeptId(""); setSlotName(""); setUserId(""); setMessage(""); },[release.id]);
+  const [prevReleaseId, setPrevReleaseId] = useState(release.id);
+  if (release.id !== prevReleaseId) {
+    setPrevReleaseId(release.id);
+    setDeptId("");
+    setSlotName("");
+    setUserId("");
+    setMessage("");
+  }
 
   function updateBinding(assign) {
     if (!currentDept) return;

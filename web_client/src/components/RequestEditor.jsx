@@ -50,7 +50,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       })
       .finally(() => { if (active) setCatalogLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [initial?.id, initial?.type_code]);
   useEffect(() => {
     if (stage !== "form") return;
     const handle = requestAnimationFrame(() => {

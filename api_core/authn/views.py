@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db import connection
+from django.db import DatabaseError, connection
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
@@ -210,7 +210,7 @@ def me(request: HttpRequest) -> JsonResponse:
             )
             row = cursor.fetchone()
             can_manage_identity = bool(row[0]) if row else False
-    except Exception:
+    except (DatabaseError, AttributeError):
         can_manage_identity = False
 
     payload = {

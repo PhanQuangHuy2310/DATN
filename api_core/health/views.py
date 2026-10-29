@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import socket
 import logging
+import socket
 
 from django.conf import settings
 from django.core.cache import cache
@@ -10,10 +10,11 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
 from api_core.db_diagnostics import failure_category, sqlstate
-from api_core.health.schema_contract import has_required_eas_tables
 from api_core.health.request_type_readiness import (
-    EXPECTED_TYPES, assess_request_types, catalog_readiness_summary,
+    assess_request_types,
+    catalog_readiness_summary,
 )
+from api_core.health.schema_contract import has_required_eas_tables
 from api_core.http import correlation_id
 
 log = logging.getLogger("eas.database")
@@ -165,11 +166,15 @@ def database_readiness() -> tuple[bool, dict[str, object], dict[str, object]]:
         # request type seeded by newer plans. Missing optional releases remain
         # visible as catalog diagnostics and impossible to submit via workflow API.
         checks["request_types_match_p0"] = type_assessment["request_types_match_p0"]
-        checks["p0_active_types_configured"] = type_assessment["p0_active_types_configured"]
+        checks["p0_active_types_configured"] = type_assessment[
+            "p0_active_types_configured"
+        ]
         catalog = catalog_readiness_summary(rows)
         if getattr(settings, "EAS_REQUIRE_FULL_CATALOG_READY", False):
             # Opt-in hard gating for deployments which need every active type live.
-            checks["all_active_types_configured"] = type_assessment["all_active_types_configured"]
+            checks["all_active_types_configured"] = type_assessment[
+                "all_active_types_configured"
+            ]
 
         if settings.EAS_REQUIRE_MOCK_SOURCES:
             cursor.execute(
@@ -207,7 +212,10 @@ def ready(request):
         log.error(
             "Readiness database failure: category=%s exception_type=%s "
             "SQLSTATE=%s correlation_id=%s",
-            failure_category(exc), type(exc).__name__, sqlstate(exc), request_id,
+            failure_category(exc),
+            type(exc).__name__,
+            sqlstate(exc),
+            request_id,
             extra={"correlation_id": request_id},
         )
         return JsonResponse(

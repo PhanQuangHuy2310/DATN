@@ -14,6 +14,7 @@ from psycopg.types.json import Jsonb
 
 from api_core.audit import canonical_sha256
 from api_core.authn.models import Actor
+from api_core.catalog.plan_catalog import resolve_five_level_metadata
 from api_core.domain import (
     PayloadValidationError,
     resolve_route,
@@ -21,7 +22,6 @@ from api_core.domain import (
     validate_payload,
 )
 from api_core.domain.routing import RoutingError, extract_amount_vnd
-from api_core.catalog.plan_catalog import resolve_five_level_metadata
 from api_core.workflow.constants import (
     ERR_REQUEST_NOT_FOUND,
     ERR_STATE_CONFLICT,
@@ -674,7 +674,13 @@ def update_draft(
             actor.department_id,
         )
 
-        final_amount_vnd = amount_vnd if amount_vnd is not None else extract_amount_vnd(merged_payload, existing_amount_vnd, allow_zero=False)
+        final_amount_vnd = (
+            amount_vnd
+            if amount_vnd is not None
+            else extract_amount_vnd(
+                merged_payload, existing_amount_vnd, allow_zero=False
+            )
+        )
         if type_code in {"LEAVE", "ACCESS"} and final_amount_vnd is not None:
             raise CommandError("AMOUNT_NOT_ALLOWED", status=422)
 
@@ -1182,7 +1188,9 @@ def _create_submission_workflow(
     lifecycle: str,
     actor_id: str,
     sla: dict[str, Any],
-    now: datetime, risk_weight: int = 3, approval_level: int = 1,
+    now: datetime,
+    risk_weight: int = 3,
+    approval_level: int = 1,
 ) -> str:
     instance_id = str(uuid4())
     cursor.execute(
@@ -1227,7 +1235,9 @@ def _create_submission_workflow(
             [request_id, user_id, joined_as],
         )
     first_step_id = None
-    for index, (slot, assignee_id) in enumerate(zip(decision.approver_slots, decision.approver_ids), start=1):
+    for index, (slot, assignee_id) in enumerate(
+        zip(decision.approver_slots, decision.approver_ids), start=1
+    ):
         step_id = str(uuid4())
         if index == 1:
             first_step_id = step_id
@@ -1324,7 +1334,10 @@ def submit_request(
             raise CommandError("VALIDATION_FAILED", fields=exc.errors) from exc
         # Department is derived from the current authenticated session.  A forged
         # cross-department field must never influence assignment or reporting.
-        if normalized.get("department_id") is not None and normalized["department_id"] != actor.department_id:
+        if (
+            normalized.get("department_id") is not None
+            and normalized["department_id"] != actor.department_id
+        ):
             raise CommandError("DEPARTMENT_SCOPE_VIOLATION", status=403)
         amount = extract_amount_vnd(normalized, allow_zero=False)
         decision = _resolve_and_verify_route_actors(
@@ -1408,7 +1421,16 @@ def submit_request(
               lock_version=lock_version+1,updated_at=%s
             WHERE id=%s
             """,
-            [revision_id, Jsonb(normalized), amount, release_id, eff_risk_w, eff_app_lvl, now, request_id],
+            [
+                revision_id,
+                Jsonb(normalized),
+                amount,
+                release_id,
+                eff_risk_w,
+                eff_app_lvl,
+                now,
+                request_id,
+            ],
         )
         _append_request_audit(
             cursor,
@@ -1489,7 +1511,9 @@ def _handle_approval_approved(
     executor_id: str | None,
     acceptor_id: str | None,
     sla: dict[str, Any],
-    now: datetime, risk_weight: int = 3, approval_level: int = 1,
+    now: datetime,
+    risk_weight: int = 3,
+    approval_level: int = 1,
 ) -> tuple[str, datetime | None, datetime | None, str | None]:
     cursor.execute(
         """
@@ -1584,7 +1608,9 @@ def _handle_approval_rejected_or_needs_info(
     request_id: str,
     instance_id: str,
     outcome: str,
-    now: datetime, risk_weight: int = 3, approval_level: int = 1,
+    now: datetime,
+    risk_weight: int = 3,
+    approval_level: int = 1,
 ) -> str:
     if outcome == "NEEDS_INFO":
         cursor.execute(
@@ -1936,7 +1962,9 @@ def _apply_execution_submission(
     result_note: str,
     external_reference: str,
     sla: dict[str, Any],
-    now: datetime, risk_weight: int = 3, approval_level: int = 1,
+    now: datetime,
+    risk_weight: int = 3,
+    approval_level: int = 1,
 ) -> tuple[str, datetime | None]:
     if lifecycle == "B":
         cursor.execute(
@@ -2152,7 +2180,9 @@ def _apply_acceptance_decision(
     department_id: str,
     type_id: str,
     sla: dict[str, Any],
-    now: datetime, risk_weight: int = 3, approval_level: int = 1,
+    now: datetime,
+    risk_weight: int = 3,
+    approval_level: int = 1,
 ) -> tuple[str, datetime | None, str | None]:
     if outcome == "ACCEPT":
         cursor.execute(

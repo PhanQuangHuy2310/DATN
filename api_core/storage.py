@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
 import socket
 import struct
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.error import URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -22,10 +22,9 @@ class StoredObject:
 
 
 def _is_local_dev_fallback() -> bool:
-    return (
-        getattr(settings, "ENVIRONMENT", "production") == "development"
-        and not getattr(settings, "EAS_REQUIRE_STORAGE", True)
-    )
+    return getattr(
+        settings, "ENVIRONMENT", "production"
+    ) == "development" and not getattr(settings, "EAS_REQUIRE_STORAGE", True)
 
 
 def _local_storage_path(key: str) -> Path:
@@ -49,10 +48,7 @@ def sniff_allowed_mime(data: bytes) -> str:
 
 
 def scan_with_clamav(data: bytes) -> None:
-    if (
-        b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE" in data
-        or b"Eicar-Test-Signature" in data
-    ):
+    if b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE" in data or b"Eicar-Test-Signature" in data:
         raise StorageError("MALWARE_DETECTED")
     try:
         with socket.create_connection(

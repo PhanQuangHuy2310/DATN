@@ -4,11 +4,11 @@ Delete means deactivate or revoke; referenced business records remain intact.
 No password hashes are returned or written into audit payloads.
 """
 
-from datetime import datetime, timezone
 import re
-from django.conf import settings
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.db import connection, transaction
 
@@ -20,7 +20,15 @@ from api_core.workflow.service import (
     _execute_idempotent,
 )
 
-REQUEST_TYPE_CATEGORIES = {"HR", "IT", "FACILITY", "PROCUREMENT", "ASSET", "FINANCE", "GENERAL"}
+REQUEST_TYPE_CATEGORIES = {
+    "HR",
+    "IT",
+    "FACILITY",
+    "PROCUREMENT",
+    "ASSET",
+    "FINANCE",
+    "GENERAL",
+}
 
 ROLES = {
     "REQUESTER",
@@ -63,7 +71,18 @@ TABLES = {
     ),
     "request-types": (
         "request_type",
-        ("id", "code", "name", "description", "category", "lifecycle", "is_active", "active_release_id", "risk_weight", "approval_level"),
+        (
+            "id",
+            "code",
+            "name",
+            "description",
+            "category",
+            "lifecycle",
+            "is_active",
+            "active_release_id",
+            "risk_weight",
+            "approval_level",
+        ),
     ),
 }
 
@@ -141,7 +160,9 @@ def _list_filters(kind, query):
     if role and kind not in {"users", "memberships"}:
         raise CommandError("INVALID_FILTER", status=422)
     active = query.get("active", "")
-    if active not in ("", "true", "false") or (active and kind not in {"users", "departments", "request-types"}):
+    if active not in ("", "true", "false") or (
+        active and kind not in {"users", "departments", "request-types"}
+    ):
         raise CommandError("INVALID_FILTER", status=422)
     user_id = query.get("user_id", "")
     if user_id and kind != "memberships":
@@ -150,13 +171,17 @@ def _list_filters(kind, query):
     if department_id and kind not in {"users", "memberships"}:
         raise CommandError("INVALID_FILTER", status=422)
     state = query.get("state", "")
-    if state and (kind != "memberships" or state not in {"ACTIVE", "REVOKED", "EXPIRED", "FUTURE"}):
+    if state and (
+        kind != "memberships" or state not in {"ACTIVE", "REVOKED", "EXPIRED", "FUTURE"}
+    ):
         raise CommandError("INVALID_FILTER", status=422)
     clauses, params = [], []
     if state == "REVOKED":
         clauses.append("t.revoked_at IS NOT NULL")
     elif state == "ACTIVE":
-        clauses.append("t.revoked_at IS NULL AND t.valid_from<=statement_timestamp() AND (t.valid_to IS NULL OR t.valid_to>statement_timestamp())")
+        clauses.append(
+            "t.revoked_at IS NULL AND t.valid_from<=statement_timestamp() AND (t.valid_to IS NULL OR t.valid_to>statement_timestamp())"
+        )
     elif state == "EXPIRED":
         clauses.append("t.revoked_at IS NULL AND t.valid_to<=statement_timestamp()")
     elif state == "FUTURE":
@@ -205,7 +230,12 @@ def list_records(actor, kind, query):
         raise CommandError("INVALID_PAGINATION", status=400) from None
     where, params = _list_filters(kind, query)
     fields = ",".join("t." + field for field in columns)
-    order = {"users": "t.username,t.id", "departments": "t.code,t.id", "memberships": "t.role,t.id", "request-types": "t.code,t.id"}[kind]
+    order = {
+        "users": "t.username,t.id",
+        "departments": "t.code,t.id",
+        "memberships": "t.role,t.id",
+        "request-types": "t.code,t.id",
+    }[kind]
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
         authorize(c, actor)
@@ -231,7 +261,9 @@ def read_record(actor, kind, record_id):
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
         authorize(c, actor)
-        c.execute(f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s", [record_id])
+        c.execute(
+            f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s", [record_id]
+        )
         row = c.fetchone()
         if not row:
             raise CommandError("NOT_FOUND", status=404)
@@ -268,8 +300,25 @@ def validate(kind, body, old=None):
             "valid_to",
         },
         "request-types": (
-            {"is_active", "code", "lifecycle", "name", "description", "category", "risk_weight", "approval_level"}
-            if old is None else {"is_active", "name", "description", "category", "risk_weight", "approval_level"}
+            {
+                "is_active",
+                "code",
+                "lifecycle",
+                "name",
+                "description",
+                "category",
+                "risk_weight",
+                "approval_level",
+            }
+            if old is None
+            else {
+                "is_active",
+                "name",
+                "description",
+                "category",
+                "risk_weight",
+                "approval_level",
+            }
         ),
     }[kind]
     if set(body) - allowed:
@@ -343,13 +392,19 @@ def validate(kind, body, old=None):
         v["category"] = category
         for lvl_field, default_lvl in (("risk_weight", 3), ("approval_level", 1)):
             lvl_val = v.get(lvl_field, default_lvl)
-            if isinstance(lvl_val, bool) or not isinstance(lvl_val, int) or not (1 <= lvl_val <= 5):
+            if (
+                isinstance(lvl_val, bool)
+                or not isinstance(lvl_val, int)
+                or not (1 <= lvl_val <= 5)
+            ):
                 raise CommandError("INVALID_" + lvl_field.upper(), status=422)
             v[lvl_field] = lvl_val
         if old is None:
             code = v.get("code")
             lifecycle = v.get("lifecycle")
-            if not isinstance(code, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,29}", code):
+            if not isinstance(code, str) or not re.fullmatch(
+                r"[A-Z][A-Z0-9_]{1,29}", code
+            ):
                 raise CommandError("INVALID_TYPE_CODE", status=422)
             if lifecycle not in {"A", "B", "C"}:
                 raise CommandError("INVALID_LIFECYCLE", status=422)
@@ -387,7 +442,11 @@ def check_cycle(c, table, parent_field, id, parent):
 
 def mutate(actor, kind, record_id, body, method, key, correlation_id):
     table, columns = TABLES[kind]
-    if method == "POST" and kind == "request-types" and not settings.EAS_ALLOW_REPORT_CATALOG_EXPANSION:
+    if (
+        method == "POST"
+        and kind == "request-types"
+        and not settings.EAS_ALLOW_REPORT_CATALOG_EXPANSION
+    ):
         raise CommandError("CATALOG_EXPANSION_DISABLED", status=403)
     reason = text(body.get("reason"), "reason", 2000)
     if len(reason) < 10:
@@ -433,13 +492,20 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 )
                 if c.fetchone():
                     raise CommandError("DEPARTMENT_IN_USE", status=409)
-        elif kind == "request-types" and v["is_active"] and (old is None or not old["is_active"]):
-            c.execute("""SELECT EXISTS (
+        elif (
+            kind == "request-types"
+            and v["is_active"]
+            and (old is None or not old["is_active"])
+        ):
+            c.execute(
+                """SELECT EXISTS (
                 SELECT 1 FROM eas.request_type rt
                 JOIN eas.config_release cr ON cr.id = rt.active_release_id
                 WHERE rt.id = %s AND cr.type_id = rt.id
                   AND cr.lifecycle = rt.lifecycle AND cr.state = 'PUBLISHED'
-            )""", [id])
+            )""",
+                [id],
+            )
             if not c.fetchone()[0]:
                 raise CommandError("TYPE_RELEASE_REQUIRED", status=409)
         elif kind == "memberships":
@@ -470,9 +536,27 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 "valid_from",
                 "valid_to",
             ],
+            # Required contract fields: "code", "lifecycle", "name", "description", "category", "is_active"
             "request-types": (
-                ["code", "lifecycle", "name", "description", "category", "is_active", "risk_weight", "approval_level"]
-                if method == "POST" else ["name", "description", "category", "is_active", "risk_weight", "approval_level"]
+                [
+                    "code",
+                    "lifecycle",
+                    "name",
+                    "description",
+                    "category",
+                    "is_active",
+                    "risk_weight",
+                    "approval_level",
+                ]
+                if method == "POST"
+                else [
+                    "name",
+                    "description",
+                    "category",
+                    "is_active",
+                    "risk_weight",
+                    "approval_level",
+                ]
             ),
         }[kind].copy()
         if kind == "users":

@@ -166,9 +166,7 @@ def _validate_leave_rules(
         try:
             start = date.fromisoformat(normalized["start_date"])
             end = date.fromisoformat(normalized["end_date"])
-            business_today = (
-                today or datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
-            )
+            business_today = today or datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
             if start < business_today:
                 _add(errors, "start_date", "DATE_IN_PAST")
             if end < start:
@@ -392,9 +390,7 @@ def _validate_route_rules_config(
         or acceptor not in ACCEPTOR_SLOTS
         or acceptor is None
     ):
-        errs.append(
-            "route_rules:lifecycle C requires valid executor and acceptor"
-        )
+        errs.append("route_rules:lifecycle C requires valid executor and acceptor")
 
 
 def _validate_sla_profile_config(

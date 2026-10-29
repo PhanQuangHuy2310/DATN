@@ -9,6 +9,7 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.authn.service import require_actor
+from api_core.catalog.plan_catalog import resolve_five_level_metadata
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
 from api_core.workflow.attachments import (
     download_attachment,
@@ -26,7 +27,6 @@ from api_core.workflow.config_service import (
     update_draft_release,
     validate_release_candidate,
 )
-from api_core.catalog.plan_catalog import resolve_five_level_metadata
 from api_core.workflow.constants import ERR_REQUEST_NOT_FOUND
 from api_core.workflow.ops_service import (
     list_ops_metadata,
@@ -241,11 +241,20 @@ def request_list(request: HttpRequest) -> JsonResponse:
         LIMIT %s OFFSET %s
     """
     valid_tab = tab if tab in ("mine", "approval", "execution", "acceptance") else None
-    tab_roles = {"approval": "APPROVER", "execution": "EXECUTOR", "acceptance": "ACCEPTOR"}
+    tab_roles = {
+        "approval": "APPROVER",
+        "execution": "EXECUTOR",
+        "acceptance": "ACCEPTOR",
+    }
     required_role = tab_roles.get(valid_tab)
     if required_role and required_role not in request.actor.roles:
-        return JsonResponse({"items": [], "next_offset": None,
-                             "correlation_id": correlation_id(request)})
+        return JsonResponse(
+            {
+                "items": [],
+                "next_offset": None,
+                "correlation_id": correlation_id(request),
+            }
+        )
     params = [
         status_filter,
         status_filter,
@@ -262,14 +271,14 @@ def request_list(request: HttpRequest) -> JsonResponse:
         valid_tab,
         request.actor.id,
         valid_tab,
-        request.actor.id, # approval step actor
-        request.actor.id, # approval grant
+        request.actor.id,  # approval step actor
+        request.actor.id,  # approval grant
         valid_tab,
-        request.actor.id, # execution attempt actor
-        request.actor.id, # execution grant
+        request.actor.id,  # execution attempt actor
+        request.actor.id,  # execution grant
         valid_tab,
-        request.actor.id, # acceptor actor
-        request.actor.id, # acceptance grant
+        request.actor.id,  # acceptor actor
+        request.actor.id,  # acceptance grant
         valid_tab,
         request.actor.id,
         request.actor.id,
