@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { PageControls } from "./ux.jsx";
 import { ResourceState, useResource } from "./ui.jsx";
 import { roles } from "../domain.js";
@@ -45,9 +45,9 @@ function Matrix({ data, endpoints = [], catalogLoading = false, catalogError = "
       </label>
       {(focusRole || focusDomain) && <button className="secondary" type="button" onClick={() => {setFocusRole("");setFocusDomain("");setSelection(null);}}>Đặt lại bộ lọc</button>}
     </div>
-    {catalogLoading ? <p role="status">Đang tải danh mục API để lập biểu đồ…</p> : catalogError ?
+    {catalogLoading ? <output>Đang tải danh mục API để lập biểu đồ…</output> : catalogError ?
       <p className="error" role="alert">Không tải được danh mục endpoint để lập biểu đồ: {catalogError}</p> : matrix.domains.length ? <>
-      <div className="access-matrix-scroll" tabIndex={0} aria-label="Bảng ma trận phân quyền, cuộn ngang để xem đủ cột">
+      <div className="access-matrix-scroll" aria-label="Bảng ma trận phân quyền, cuộn ngang để xem đủ cột">
         <table className="access-matrix-heatmap" style={{minWidth: `${155 + columns.length * 116}px`}}>
           <thead><tr><th scope="col">Vai trò</th>{columns.map((domain) => <th scope="col" key={domain}>{domain}</th>)}</tr></thead>
           <tbody>{rows.map((row) => <tr key={row.role}>
@@ -64,7 +64,7 @@ function Matrix({ data, endpoints = [], catalogLoading = false, catalogError = "
         </table>
       </div>
       <p className="access-matrix-disclaimer">Chỉ phản ánh hợp đồng API; <strong>không phải quyền hiệu lực của từng tài khoản</strong>. Vai trò tổng quát như PARTICIPANT/AUTHENTICATED chưa được quy thành quyền trực tiếp. Ô trống không đồng nghĩa bị cấm tuyệt đối. Backend vẫn kiểm tra phiên, scope, actor, trạng thái và SoD.</p>
-    </> : <p role="status">Chưa có endpoint gán trực tiếp cho các vai trò trong danh mục API.</p>}
+    </> : <output>Chưa có endpoint gán trực tiếp cho các vai trò trong danh mục API.</output>}
     {selectedCell && <div className="access-matrix-drilldown" role="region" aria-label="Chi tiết nhóm quyền đã chọn">
       <div className="section-head"><div><p className="eyebrow">CHI TIẾT Ô MA TRẬN</p><h3>{roles[selectedCell.role] || selectedCell.role} · {selectedCell.domain}</h3><p className="muted">{selectedCell.reads} endpoint GET · {selectedCell.writes} endpoint thao tác</p></div>
         <button className="secondary" type="button" onClick={() => setSelection(null)}>Đóng chi tiết</button></div>
@@ -75,6 +75,13 @@ function Matrix({ data, endpoints = [], catalogLoading = false, catalogError = "
     </div>}
     <div className="access-matrix-scope"><strong>Phạm vi cấp quyền: </strong>{data.scope_model}. {data.note}</div>
   </section>;
+}
+
+function getReadyStatusText(loading, status) {
+  if (loading) {
+    return "Đang kiểm tra";
+  }
+  return status === "ready" ? "READY" : "Chưa xác nhận";
 }
 
 export default function ApiAdministration() {
@@ -89,14 +96,19 @@ export default function ApiAdministration() {
   const matrix = useResource("/api/v1/admin/access-matrix");
   const ready = useResource("/health/ready");
   const items = useMemo(() => catalog.data?.items || [], [catalog.data]);
-  const domains = useMemo(() => [...new Set(items.map((i) => i.domain))].sort(), [items]);
+  const domains = useMemo(() => [...new Set(items.map((i) => i.domain))].sort((a, b) => String(a).localeCompare(String(b), "vi")), [items]);
   const filtered = useMemo(() => items.filter((item) => {
     const needle = query.trim().toLocaleLowerCase("vi");
     return (!needle || [item.path, item.purpose, item.uc, item.protection].some((part) => part.toLocaleLowerCase("vi").includes(needle)))
       && (!domain || item.domain === domain) && (!method || item.method === method)
       && (!role || item.roles.includes(role));
   }), [items, query, domain, method, role]);
-  useEffect(() => { setOffset(0); }, [query, domain, method, role]);
+  const [prevFilterKey, setPrevFilterKey] = useState("");
+  const filterKey = `${query}|${domain}|${method}|${role}`;
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setOffset(0);
+  }
   const visible = filtered.slice(offset, offset + limit);
   const total = filtered.length;
   const verbs = methodOrder.map((name) => [name, items.filter((x) => x.method === name).length]);
@@ -110,7 +122,7 @@ export default function ApiAdministration() {
       <Info name="Nhóm nghiệp vụ" value={domains.length || "—"}/>
       <Info name="Vai trò trong đặc tả" value={matrix.data?.items?.length || 7}/>
       <article className="api-overview-stat"><span>Backend readiness</span>
-        <strong className={ready.data?.status === "ready" ? "api-ok" : "api-alert"}>{ready.loading ? "Đang kiểm tra" : ready.data?.status === "ready" ? "READY" : "Chưa xác nhận"}</strong>
+        <strong className={ready.data?.status === "ready" ? "api-ok" : "api-alert"}>{getReadyStatusText(ready.loading, ready.data?.status)}</strong>
         {ready.error && <small>{ready.error}</small>}
       </article>
     </section>
@@ -147,12 +159,12 @@ export default function ApiAdministration() {
       <ResourceState resource={ready}>
         <div className="api-health-summary"><span className={ready.data?.status === "ready" ? "api-health-light success" : "api-health-light"}/><strong>{ready.data?.status === "ready" ? "Dịch vụ sẵn sàng" : "Dịch vụ chưa sẵn sàng"}</strong></div>
         <div className="api-check-grid">{Object.entries(ready.data?.checks || {}).map(([key, value]) => <div className="api-check" key={key}><span aria-hidden="true">{value ? "✓" : "!"}</span><code>{key}</code><strong>{value ? "PASS" : "FAIL"}</strong></div>)}</div>
-        {ready.data?.catalog && <div className="api-inline-note" role="status">
+        {ready.data?.catalog && <output className="api-inline-note">
           <strong>Danh mục yêu cầu:</strong> {ready.data.catalog.active_type_count} loại đang bật; <strong>{ready.data.catalog.unconfigured_active_type_count} loại thiếu quy chế PUBLISHED</strong>.
           {ready.data.catalog.unconfigured_active_type_count > 0
             ? " Các loại này sẽ chưa được phép tạo/gửi đơn cho đến khi Policy Admin công bố release hợp lệ; các loại P0 có cấu hình vẫn hoạt động."
             : " Tất cả loại đang bật đều có release hợp lệ."}
-        </div>}
+        </output>}
       </ResourceState>
     </section>}
     <div className="api-inline-note" role="note"><strong>Giới hạn theo P0:</strong> tài liệu mô tả quản lý danh tính qua công cụ vận hành được kiểm soát; giao diện này bổ sung danh mục API và ma trận quyền để vận hành/kiểm chứng. Không có API-key CRUD, proxy gọi API tùy ý hoặc chuyển quyền của người dùng bằng việc sửa catalogue.</div>

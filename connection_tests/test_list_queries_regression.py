@@ -1,6 +1,7 @@
 """Static regression checks requiring no live Supabase credentials."""
-from pathlib import Path
+
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -26,4 +27,6 @@ class ListQueryRegression(unittest.TestCase):
         self.assertIn("SERVER_ERROR", source)
         self.assertIn("response.status >= 500", source)
 
-if __name__ == "__main__": unittest.main()
+
+if __name__ == "__main__":
+    unittest.main()

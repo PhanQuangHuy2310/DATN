@@ -1,7 +1,7 @@
 {
   "generator": "scripts/mock_data_normalizer.js v2.1.0",
   "source": "sql:database/mock_enterprise_sql/01_mock_seed_DEV_ONLY.sql",
-  "generated_at": "2026-10-22T10:36:30.180Z",
+  "generated_at": "2026-10-25T15:22:02.345Z",
   "ai_department_map": {
     "HQ": "operations",
     "IT": "it",

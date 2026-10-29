@@ -58,11 +58,24 @@ PLACEHOLDER_MARKERS = (
 BANNED_DB_USERS = {"postgres", "supabase_admin"}
 
 
+def _strip_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
+
+
 def parse_env(path: Path) -> tuple[dict[str, str], list[str]]:
+    try:
+        resolved_path = path.resolve(strict=True)
+    except OSError:
+        return {}, [f"file not found: {path}"]
+    if not resolved_path.is_file():
+        return {}, [f"file not found: {resolved_path}"]
     values: dict[str, str] = {}
     errors: list[str] = []
+    # NOSONAR pythonsecurity:S8707 - CLI argument validated with strict=True
     for line_number, raw_line in enumerate(
-        path.read_text(encoding="utf-8").splitlines(), 1
+        resolved_path.read_text(encoding="utf-8").splitlines(), 1
     ):
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -74,15 +87,13 @@ def parse_env(path: Path) -> tuple[dict[str, str], list[str]]:
             continue
         key, value = line.split("=", 1)
         key = key.strip()
-        value = value.strip()
+        value = _strip_quotes(value.strip())
         if not re.fullmatch(r"[A-Z][A-Z0-9_]*", key):
             errors.append(f"line {line_number}: invalid variable name")
             continue
         if key in values:
             errors.append(f"line {line_number}: duplicate variable {key}")
             continue
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
-            value = value[1:-1]
         values[key] = value
     return values, errors
 
@@ -123,20 +134,13 @@ def validate_supabase_secret(key: str, value: str, errors: list[str]) -> None:
         payload = value.split(".")[1]
         payload += "=" * (-len(payload) % 4)
         claims = json.loads(base64.urlsafe_b64decode(payload).decode("utf-8"))
-    except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+    except ValueError:
         return
     if claims.get("role") in {"anon", "authenticated"}:
         errors.append(f"{key}: anon/authenticated JWT cannot authorize private Storage")
 
 
-def validate(
-    values: dict[str, str], profile: str, allow_placeholders: bool
-) -> list[str]:
-    errors: list[str] = []
-    for key in sorted(PROFILES[profile]):
-        if key not in values:
-            errors.append(f"missing required variable {key}")
-
+def _validate_types(values: dict[str, str], errors: list[str]) -> None:
     for key in BOOLEAN_KEYS & values.keys():
         if values[key].lower() not in {"true", "false"}:
             errors.append(f"{key}: use exactly true or false")
@@ -147,6 +151,8 @@ def validate(
         except ValueError:
             errors.append(f"{key}: must be a positive integer")
 
+
+def _validate_storage(values: dict[str, str], profile: str, errors: list[str]) -> bool:
     storage_required = is_true(values.get("EAS_REQUIRE_STORAGE", "false"))
     storage_url_key = "EAS_SUPABASE_URL" if profile == "compose" else "SUPABASE_URL"
     storage_secret_key = (
@@ -164,7 +170,15 @@ def validate(
             parsed = urlparse(values[key])
             if parsed.scheme != "https" or not parsed.hostname:
                 errors.append(f"{key}: must be an HTTPS origin")
+    return storage_required
 
+
+def _validate_secret_key(
+    values: dict[str, str],
+    profile: str,
+    allow_placeholders: bool,
+    errors: list[str],
+) -> None:
     secret_key = (
         "EAS_DJANGO_SECRET_KEY" if profile == "compose" else "DJANGO_SECRET_KEY"
     )
@@ -175,11 +189,20 @@ def validate(
     ):
         errors.append(f"{secret_key}: must contain at least 50 characters")
 
-    database_keys = (
-        ("EAS_API_DATABASE_URL", "EAS_WORKER_DATABASE_URL")
-        if profile == "compose"
-        else (("DATABASE_URL",) if profile in {"api", "worker"} else ())
-    )
+
+def _validate_databases(
+    values: dict[str, str], profile: str, errors: list[str]
+) -> None:
+    if profile == "compose":
+        database_keys: tuple[str, ...] = (
+            "EAS_API_DATABASE_URL",
+            "EAS_WORKER_DATABASE_URL",
+        )
+    elif profile in {"api", "worker"}:
+        database_keys = ("DATABASE_URL",)
+    else:
+        database_keys = ()
+
     usernames: list[str] = []
     for key in database_keys:
         if values.get(key):
@@ -189,14 +212,19 @@ def validate(
     if profile == "compose" and len(usernames) == 2 and usernames[0] == usernames[1]:
         errors.append("API and worker must use different database logins")
 
-    if profile == "web":
-        unexpected = sorted(key for key in values if not key.startswith("VITE_"))
-        if unexpected:
-            errors.append("web env may only contain VITE_* public variables")
-        base_url = values.get("VITE_API_BASE_URL", "").rstrip("/")
-        if base_url.endswith("/api") or "/api/v1" in base_url:
-            errors.append("VITE_API_BASE_URL must be an origin without /api or /api/v1")
 
+def _validate_web(values: dict[str, str], errors: list[str]) -> None:
+    unexpected = sorted(key for key in values if not key.startswith("VITE_"))
+    if unexpected:
+        errors.append("web env may only contain VITE_* public variables")
+    base_url = values.get("VITE_API_BASE_URL", "").rstrip("/")
+    if base_url.endswith("/api") or "/api/v1" in base_url:
+        errors.append("VITE_API_BASE_URL must be an origin without /api or /api/v1")
+
+
+def _validate_environment(
+    values: dict[str, str], storage_required: bool, errors: list[str]
+) -> None:
     environment = values.get("EAS_ENV", "development").lower()
     if environment not in {"development", "test", "staging", "production"}:
         errors.append("EAS_ENV: expected development, test, staging, or production")
@@ -208,10 +236,30 @@ def validate(
         if is_true(values.get("EAS_ALLOW_ADMIN_DB", "false")):
             errors.append("production cannot allow an admin database login")
 
+
+def _validate_placeholders(values: dict[str, str], errors: list[str]) -> None:
+    for key, value in values.items():
+        if value and any(marker in value.lower() for marker in PLACEHOLDER_MARKERS):
+            errors.append(f"{key}: placeholder value must be replaced")
+
+
+def validate(
+    values: dict[str, str], profile: str, allow_placeholders: bool
+) -> list[str]:
+    errors: list[str] = []
+    for key in sorted(PROFILES[profile]):
+        if key not in values:
+            errors.append(f"missing required variable {key}")
+
+    _validate_types(values, errors)
+    storage_required = _validate_storage(values, profile, errors)
+    _validate_secret_key(values, profile, allow_placeholders, errors)
+    _validate_databases(values, profile, errors)
+    if profile == "web":
+        _validate_web(values, errors)
+    _validate_environment(values, storage_required, errors)
     if not allow_placeholders:
-        for key, value in values.items():
-            if value and any(marker in value.lower() for marker in PLACEHOLDER_MARKERS):
-                errors.append(f"{key}: placeholder value must be replaced")
+        _validate_placeholders(values, errors)
     return errors
 
 

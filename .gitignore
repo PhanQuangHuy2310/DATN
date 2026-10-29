@@ -67,3 +67,5 @@ ai_service/training/data/enterprise_requests_dataset_large.csv
 # Diagnostic logs (may contain sensitive traces)
 logs/
 *.log
+.cspell.json
+

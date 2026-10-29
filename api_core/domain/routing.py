@@ -9,10 +9,82 @@ class RoutingError(ValueError):
     pass
 
 
-APPROVER_SLOTS = {"CISO", "CTO", "DIRECTOR", "DIRECT_MANAGER", "FINANCE", "HR_MANAGER", "IT_MANAGER", "LEGAL", "MARKETING_MANAGER", "OPERATIONS_MANAGER", "PROCUREMENT_MANAGER", "PROJECT_MANAGER", "SECURITY", "WAREHOUSE_MANAGER"}
-EXECUTOR_SLOTS = {None} | {"EXECUTOR_ADMIN", "EXECUTOR_ASSET", "EXECUTOR_FACILITY", "EXECUTOR_FINANCE", "EXECUTOR_HR", "EXECUTOR_IT", "EXECUTOR_LEGAL", "EXECUTOR_MARKETING", "EXECUTOR_PROCUREMENT", "EXECUTOR_TECH", "EXECUTOR_WAREHOUSE"}
-ACCEPTOR_SLOTS = {None} | {"CTO", "DIRECT_MANAGER", "LEGAL", "PROJECT_MANAGER", "REQUESTER"}
-SUPPORTED_OPERATORS = {"amount_gt", "amount_gte"}
+APPROVER_SLOTS = {
+    "CISO",
+    "CTO",
+    "DIRECTOR",
+    "DIRECT_MANAGER",
+    "FINANCE",
+    "HR_MANAGER",
+    "IT_MANAGER",
+    "LEGAL",
+    "MARKETING_MANAGER",
+    "OPERATIONS_MANAGER",
+    "PROCUREMENT_MANAGER",
+    "PROJECT_MANAGER",
+    "SECURITY",
+    "WAREHOUSE_MANAGER",
+}
+EXECUTOR_SLOTS = {None} | {
+    "EXECUTOR_ADMIN",
+    "EXECUTOR_ASSET",
+    "EXECUTOR_FACILITY",
+    "EXECUTOR_FINANCE",
+    "EXECUTOR_HR",
+    "EXECUTOR_IT",
+    "EXECUTOR_LEGAL",
+    "EXECUTOR_MARKETING",
+    "EXECUTOR_PROCUREMENT",
+    "EXECUTOR_TECH",
+    "EXECUTOR_WAREHOUSE",
+}
+ACCEPTOR_SLOTS = {None} | {
+    "CTO",
+    "DIRECT_MANAGER",
+    "LEGAL",
+    "PROJECT_MANAGER",
+    "REQUESTER",
+}
+SUPPORTED_OPERATORS = {"amount_gt", "amount_gte", "days_gt", "app_code_in"}
+MONETARY_PAYLOAD_FIELDS = (
+    "amount_vnd",
+    "amount",
+    "estimated_budget",
+    "refund_amount",
+    "contract_value",
+    "estimated_cost",
+    "estimated_price",
+    "deal_value_vnd",
+    "salary_budget_vnd",
+    "residual_value_vnd",
+)
+
+
+def extract_amount_vnd(
+    payload: dict[str, Any] | None,
+    explicit_amount: int | None = None,
+    *,
+    allow_zero: bool = False,
+) -> int | None:
+    if (
+        explicit_amount is not None
+        and not isinstance(explicit_amount, bool)
+        and isinstance(explicit_amount, int)
+        and (explicit_amount >= 0 if allow_zero else explicit_amount > 0)
+    ):
+        return explicit_amount
+    if not isinstance(payload, dict):
+        return None
+    for field in MONETARY_PAYLOAD_FIELDS:
+        val = payload.get(field)
+        if (
+            val is not None
+            and not isinstance(val, bool)
+            and isinstance(val, int)
+            and ((val >= 0) if allow_zero else (val > 0))
+        ):
+            return val
+    return None
 
 
 @dataclass(frozen=True)
@@ -40,51 +112,102 @@ def _uuid(value: object, label: str) -> str:
         raise RoutingError(f"{label} must resolve to one UUID") from None
 
 
-def _matches(when: dict[str, Any], amount_vnd: int | None) -> bool:
-    if set(when) - SUPPORTED_OPERATORS:
-        raise RoutingError("Unsupported route operator")
-    if not when:
-        return True
+def _extract_days(payload: dict[str, Any]) -> int | None:
+    for field in ("duration_days", "days", "number_of_days", "leave_days"):
+        val = payload.get(field)
+        if val is not None and not isinstance(val, bool):
+            try:
+                days_int = int(val)
+                if days_int >= 0:
+                    return days_int
+            except (ValueError, TypeError):
+                pass
+
+    start = payload.get("start_date")
+    end = payload.get("end_date")
+    if isinstance(start, str) and isinstance(end, str):
+        try:
+            from datetime import date
+
+            d_start = date.fromisoformat(start)
+            d_end = date.fromisoformat(end)
+            diff = (d_end - d_start).days + 1
+            if diff >= 0:
+                return diff
+        except (ValueError, TypeError):
+            pass
+
+    return None
+
+
+def _match_amount(key: str, value: Any, amount_vnd: int | None) -> bool:
     if (
         amount_vnd is None
         or isinstance(amount_vnd, bool)
         or not isinstance(amount_vnd, int)
     ):
         return False
-    checks = {
-        "amount_gt": lambda threshold: amount_vnd > threshold,
-        "amount_gte": lambda threshold: amount_vnd >= threshold,
-    }
-    for key, value in when.items():
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, int)
-            or not 0 <= value <= 1_000_000_000_000
-        ):
-            raise RoutingError("Route threshold must be an integer VND value")
-        if not checks[key](value):
-            return False
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or not 0 <= value <= 1_000_000_000_000
+    ):
+        raise RoutingError("Route threshold must be an integer VND value")
+    if key == "amount_gt":
+        return amount_vnd > value
+    if key == "amount_gte":
+        return amount_vnd >= value
     return True
 
 
-def resolve_route(
-    *,
-    route_rules: dict[str, Any],
-    actor_bindings: dict[str, Any],
-    department_id: str,
-    requester_id: str,
-    manager_id: str | None,
-    amount_vnd: int | None,
-) -> RouteDecision:
-    if (
-        route_rules.get("schema_version") != 1
-        or actor_bindings.get("schema_version") != 1
-    ):
-        raise RoutingError("Unsupported route or binding schema")
-    rules = route_rules.get("rules")
-    if not isinstance(rules, list) or not rules:
-        raise RoutingError("At least one route rule is required")
+def _match_days(value: Any, payload: dict[str, Any]) -> bool:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise RoutingError("Route days_gt threshold must be a non-negative integer")
+    days = _extract_days(payload)
+    return days is not None and (days > value)
 
+
+def _match_app_code(value: Any, payload: dict[str, Any]) -> bool:
+    if (
+        not isinstance(value, list)
+        or not value
+        or not all(isinstance(x, str) and x.strip() for x in value)
+    ):
+        raise RoutingError("Route app_code_in must be a non-empty list of strings")
+    app_code = (
+        payload.get("app_code") or payload.get("application") or payload.get("system")
+    )
+    return isinstance(app_code, str) and bool(app_code.strip()) and app_code in value
+
+
+def _matches(
+    when: dict[str, Any],
+    amount_vnd: int | None,
+    payload: dict[str, Any] | None = None,
+) -> bool:
+    if set(when) - SUPPORTED_OPERATORS:
+        raise RoutingError("Unsupported route operator")
+    if not when:
+        return True
+
+    payload = payload or {}
+
+    for key, value in when.items():
+        if key in ("amount_gt", "amount_gte") and not _match_amount(
+            key, value, amount_vnd
+        ):
+            return False
+        if key == "days_gt" and not _match_days(value, payload):
+            return False
+        if key == "app_code_in" and not _match_app_code(value, payload):
+            return False
+
+    return True
+
+
+def _validate_route_rules_structure(
+    rules: list[Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     defaults = [
         rule for rule in rules if isinstance(rule, dict) and rule.get("default") is True
     ]
@@ -115,13 +238,56 @@ def resolve_route(
         if set(when) - SUPPORTED_OPERATORS:
             raise RoutingError("Unsupported route operator")
 
+    return defaults[0], conditional
+
+
+def _validate_resolved_actors(
+    requester: str,
+    approvers: tuple[str, ...],
+    executor: str | None,
+    acceptor: str | None,
+) -> None:
+    if requester in approvers:
+        raise RoutingError("Requester cannot approve own request")
+    if len(set(approvers)) != len(approvers):
+        raise RoutingError("Approval actors must be different")
+    if executor is not None and executor == requester:
+        raise RoutingError("Requester cannot execute own request")
+    if executor is not None and executor in approvers:
+        raise RoutingError("Executor cannot also approve")
+    if acceptor is not None and acceptor == executor:
+        raise RoutingError("Acceptor cannot be the executor")
+
+
+def resolve_route(
+    *,
+    route_rules: dict[str, Any],
+    actor_bindings: dict[str, Any],
+    department_id: str,
+    requester_id: str,
+    manager_id: str | None,
+    amount_vnd: int | None = None,
+    payload: dict[str, Any] | None = None,
+) -> RouteDecision:
+    if (
+        route_rules.get("schema_version") != 1
+        or actor_bindings.get("schema_version") != 1
+    ):
+        raise RoutingError("Unsupported route or binding schema")
+    rules = route_rules.get("rules")
+    if not isinstance(rules, list) or not rules:
+        raise RoutingError("At least one route rule is required")
+
+    default_rule, conditional = _validate_route_rules_structure(rules)
+    effective_amount = extract_amount_vnd(payload, amount_vnd, allow_zero=True)
+
     matched = next(
         (
             rule
             for rule in sorted(conditional, key=lambda item: item["priority"])
-            if _matches(rule.get("when", {}), amount_vnd)
+            if _matches(rule.get("when", {}), effective_amount, payload)
         ),
-        defaults[0],
+        default_rule,
     )
     rule_id = matched.get("id")
     slots = matched.get("approvers")
@@ -129,10 +295,10 @@ def resolve_route(
         raise RoutingError("Matched rule requires an ID")
     if (
         not isinstance(slots, list)
-        or not 1 <= len(slots) <= 3
+        or not 1 <= len(slots) <= 5
         or not all(slot in APPROVER_SLOTS for slot in slots)
     ):
-        raise RoutingError("Approval route must contain one to three allowed slots")
+        raise RoutingError("Approval route must contain one to five allowed slots")
 
     executor_slot = route_rules.get("executor")
     acceptor_slot = route_rules.get("acceptor")
@@ -156,19 +322,10 @@ def resolve_route(
 
     approvers = tuple(actor_for(slot) for slot in slots)
     requester = _uuid(requester_id, "REQUESTER")
-    if requester in approvers:
-        raise RoutingError("Requester cannot approve own request")
-    if len(set(approvers)) != len(approvers):
-        raise RoutingError("Approval actors must be different")
-
     executor = actor_for(executor_slot)
     acceptor = actor_for(acceptor_slot)
-    if executor is not None and executor == requester:
-        raise RoutingError("Requester cannot execute own request")
-    if executor is not None and executor in approvers:
-        raise RoutingError("Executor cannot also approve")
-    if acceptor is not None and acceptor == executor:
-        raise RoutingError("Acceptor cannot be the executor")
+
+    _validate_resolved_actors(requester, approvers, executor, acceptor)
 
     return RouteDecision(
         matched_rule_id=rule_id,

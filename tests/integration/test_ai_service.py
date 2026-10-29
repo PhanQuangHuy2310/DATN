@@ -25,14 +25,22 @@ except (ImportError, ModuleNotFoundError):
     numpy = None
     HAS_ML_DEPS = False
 
+try:
+    import fastapi  # noqa: F401
+    import loguru  # noqa: F401
+    import pydantic  # noqa: F401
+
+    HAS_ROUTER_DEPS = True
+except (ImportError, ModuleNotFoundError):
+    HAS_ROUTER_DEPS = False
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 AI_SERVICE_DIR = os.path.join(REPO_ROOT, "ai_service")
-API_CORE_DIR = os.path.join(REPO_ROOT, "api_core")
 
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 if AI_SERVICE_DIR not in sys.path:
     sys.path.insert(0, AI_SERVICE_DIR)
-if API_CORE_DIR not in sys.path:
-    sys.path.insert(0, API_CORE_DIR)
 
 
 class TestAIModelArtifacts(unittest.TestCase):
@@ -114,6 +122,99 @@ class TestMockDataSnapshots(unittest.TestCase):
                 total_records += data.get("meta", {}).get("total_records", 0)
 
         self.assertGreater(total_records, 100, "Tổng số bản ghi mock phải > 100")
+
+    @unittest.skipUnless(
+        HAS_ROUTER_DEPS,
+        "Router dependencies (fastapi, pydantic, loguru) are required for mock_context lookup test",
+    )
+    def test_mock_context_lookups(self):
+        try:
+            from routers.mock_context import (
+                lookup_department_budget,
+                lookup_facility_available,
+                lookup_leave_balance,
+            )
+        except ImportError:
+            from ai_service.routers.mock_context import (
+                lookup_department_budget,
+                lookup_facility_available,
+                lookup_leave_balance,
+            )
+
+        balance = lookup_leave_balance("E0001", "ANNUAL")
+        self.assertIsNotNone(balance)
+        self.assertGreater(balance, 0)
+
+        facility = lookup_facility_available("MR-HCM-01")
+        self.assertIsNotNone(facility)
+        self.assertTrue(facility)
+
+        budget_dept = lookup_department_budget("IT")
+        self.assertIsNotNone(budget_dept)
+        self.assertIn("allocated_amount", budget_dept)
+        self.assertEqual(budget_dept["allocated_amount"], 1_000_000_000)
+
+        budget_cc = lookup_department_budget("CC-210")
+        self.assertIsNotNone(budget_cc)
+        self.assertEqual(budget_cc["allocated_amount"], 1_000_000_000)
+
+    @unittest.skipUnless(
+        HAS_ROUTER_DEPS,
+        "Router dependencies (fastapi, pydantic, loguru) are required for RiskInput schema test",
+    )
+    def test_risk_input_schema_remap(self):
+        try:
+            from routers.risk import RiskInput
+        except ImportError:
+            from ai_service.routers.risk import RiskInput
+
+        payload = {
+            "request_type": "expense_reimbursement",
+            "lifecycle_template": "A",
+            "risk_weight": 3,
+            "amount": 25_000_000,
+            "attachment_count": 2,
+            "request_count_30d": 8,
+            "reject_count_30d": 1,
+            "requester_dept_category": "finance",
+            "is_weekend_or_holiday": True,
+        }
+        item = RiskInput(**payload)
+        self.assertEqual(item.amount_vnd, 25_000_000)
+        self.assertEqual(item.num_attachments, 2)
+        self.assertEqual(item.past_requests_count, 8)
+        self.assertEqual(item.department, "finance")
+        self.assertEqual(item.is_off_hours, 1)
+        self.assertAlmostEqual(item.past_rejection_rate, 1 / 8)
+
+    @unittest.skipUnless(
+        HAS_ROUTER_DEPS,
+        "Router dependencies (fastapi, pydantic, loguru) are required for Anti-SSRF test",
+    )
+    def test_anti_ssrf_validation(self):
+        try:
+            from routers.ocr import validate_safe_image_url
+        except ImportError:
+            from ai_service.routers.ocr import validate_safe_image_url
+
+        try:
+            from fastapi import HTTPException
+        except ImportError:
+            HTTPException = Exception
+
+        blocked_urls = [
+            "http://127.0.0.1:8000/secret",
+            "http://localhost:8080/flag",
+            "http://169.254.169.254/latest/meta-data/",
+            "http://10.0.0.1/admin",
+            "http://192.168.1.1/router",
+            "file:///etc/passwd",
+            "ftp://fileserver/invoice.png",
+            "http://metadata.google.internal/computeMetadata/v1/",
+        ]
+        for url in blocked_urls:
+            with self.subTest(url=url), self.assertRaises(HTTPException):
+                validate_safe_image_url(url)
 
 
 @unittest.skipUnless(

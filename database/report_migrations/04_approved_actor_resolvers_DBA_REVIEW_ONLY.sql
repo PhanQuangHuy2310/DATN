@@ -47,7 +47,7 @@ BEGIN
        OR jsonb_typeof(r->'when') IS DISTINCT FROM 'object' OR r->'when'='{}'::jsonb THEN
      RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Conditional rule requires integer priority and condition';
     END IF;
-    IF EXISTS(SELECT 1 FROM jsonb_each(r->'when') v WHERE v.key NOT IN ('amount_gt','amount_gte') OR jsonb_typeof(v.value)<>'number') THEN
+    IF EXISTS(SELECT 1 FROM jsonb_each(r->'when') v WHERE v.key NOT IN ('amount_gt','amount_gte','days_gt','app_code_in') OR (v.key IN ('amount_gt','amount_gte','days_gt') AND jsonb_typeof(v.value)<>'number') OR (v.key='app_code_in' AND (jsonb_typeof(v.value)<>'array' OR jsonb_array_length(v.value)=0))) THEN
      RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Unknown condition/operator';
     END IF;
    END IF;
@@ -78,4 +78,82 @@ BEGIN
  END IF;
  RETURN NEW;
 END $$;
+
+
+CREATE OR REPLACE FUNCTION eas.guard_request() RETURNS trigger LANGUAGE plpgsql SET search_path TO 'pg_catalog', 'eas' AS $
+DECLARE origin_owner uuid; lc char(1); tcode varchar(30); allowed boolean;
+BEGIN
+ IF TG_OP='DELETE' THEN PERFORM eas.assert_privacy_delete(OLD.id); RETURN OLD; END IF;
+ IF TG_OP='UPDATE' THEN
+  IF current_user='eas_privacy' AND NEW.current_revision_id IS NULL
+    AND (to_jsonb(NEW)-'current_revision_id')=(to_jsonb(OLD)-'current_revision_id') THEN
+   PERFORM eas.assert_privacy_delete(OLD.id); RETURN NEW;
+  END IF;
+  IF ROW(NEW.id,NEW.code,NEW.requester_id,NEW.type_id,NEW.origin_request_id,NEW.created_at) IS DISTINCT FROM ROW(OLD.id,OLD.code,OLD.requester_id,OLD.type_id,OLD.origin_request_id,OLD.created_at) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Request identity/origin immutable';
+  END IF;
+  IF OLD.status IN ('COMPLETED','REJECTED','CANCELLED') AND NEW IS DISTINCT FROM OLD THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Terminal request cannot be reopened or edited';
+  END IF;
+  IF NEW IS DISTINCT FROM OLD AND (NEW.lock_version<>OLD.lock_version+1 OR NEW.updated_at<OLD.updated_at) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Request command requires version increment exactly once and monotonic updated_at';
+  END IF;
+  IF NEW.status<>OLD.status THEN
+   allowed:=(OLD.status IN ('DRAFT','NEEDS_INFO') AND NEW.status IN ('PENDING_APPROVAL','CANCELLED'))
+     OR (OLD.status='PENDING_APPROVAL' AND NEW.status IN ('NEEDS_INFO','REJECTED','CANCELLED','COMPLETED','READY_FOR_EXECUTION'))
+     OR (OLD.status='READY_FOR_EXECUTION' AND NEW.status='IN_PROGRESS')
+     OR (OLD.status='IN_PROGRESS' AND NEW.status IN ('READY_FOR_EXECUTION','WAITING_FOR_ACCEPTANCE','COMPLETED'))
+     OR (OLD.status='WAITING_FOR_ACCEPTANCE' AND NEW.status IN ('READY_FOR_EXECUTION','COMPLETED'));
+   IF NOT allowed THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Request transition not allowed'; END IF;
+  END IF;
+ END IF;
+ IF NEW.origin_request_id IS NOT NULL THEN
+  SELECT requester_id INTO origin_owner FROM eas.request WHERE id=NEW.origin_request_id;
+  IF FOUND AND origin_owner<>NEW.requester_id THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Origin request must have same owner'; END IF;
+ END IF;
+ SELECT lifecycle, code INTO lc, tcode FROM eas.request_type WHERE id=NEW.type_id;
+ IF FOUND AND ((tcode IN ('LEAVE','ACCESS') AND NEW.draft_amount_vnd IS NOT NULL) OR (lc='A' AND NEW.status IN ('READY_FOR_EXECUTION','IN_PROGRESS','WAITING_FOR_ACCEPTANCE')) OR (lc='B' AND NEW.status='WAITING_FOR_ACCEPTANCE')) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Request lifecycle/amount mismatch';
+ END IF;
+ IF NEW.status NOT IN ('DRAFT','CANCELLED') AND NEW.current_revision_id IS NULL THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Submitted request requires current revision';
+ END IF;
+ RETURN NEW;
+END $;
+
+CREATE OR REPLACE FUNCTION eas.guard_revision() RETURNS trigger LANGUAGE plpgsql SET search_path TO 'pg_catalog', 'eas' AS $
+DECLARE r eas.request; c eas.config_release; tcode varchar(30);
+BEGIN
+ PERFORM eas.lock_security(false);
+ SELECT * INTO r FROM eas.request WHERE id=NEW.request_id FOR UPDATE;
+ IF NOT FOUND THEN RETURN NEW; END IF;
+ SELECT * INTO c FROM eas.config_release WHERE id=NEW.release_id;
+ IF NOT FOUND THEN RETURN NEW; END IF;
+ SELECT code INTO tcode FROM eas.request_type WHERE id=r.type_id;
+ IF r.status NOT IN ('DRAFT','NEEDS_INFO') OR c.type_id<>r.type_id OR c.state<>'PUBLISHED' OR NEW.submitted_by<>r.requester_id
+   OR (tcode IN ('LEAVE','ACCESS') AND NEW.amount_vnd IS NOT NULL) OR (tcode='EQUIPMENT' AND NEW.amount_vnd IS NULL) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Revision release/owner/amount invalid';
+ END IF;
+ IF NEW.revision_no<>(SELECT coalesce(max(revision_no),0)+1 FROM eas.request_revision WHERE request_id=NEW.request_id) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Revision numbers must be consecutive per request';
+ END IF;
+ RETURN NEW;
+END $;
+
+CREATE OR REPLACE FUNCTION eas.check_submission_files() RETURNS trigger LANGUAGE plpgsql SET search_path TO 'pg_catalog', 'eas' AS $
+DECLARE a eas.execution_attempt; n integer; tcode varchar(30);
+BEGIN
+ IF TG_TABLE_NAME='execution_attempt' THEN
+  SELECT * INTO a FROM eas.execution_attempt WHERE id=NEW.id;
+  IF NOT FOUND OR a.submitted_at IS NULL THEN RETURN NULL; END IF;
+  SELECT count(*) INTO n FROM eas.execution_attachment WHERE attempt_id=a.id;
+  IF n NOT BETWEEN 1 AND 5 THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Submitted result requires 1..5 evidence files'; END IF;
+ ELSE
+  SELECT rt.code INTO tcode FROM eas.request_revision v JOIN eas.config_release c ON c.id=v.release_id JOIN eas.request_type rt ON rt.id=c.type_id WHERE v.id=NEW.id;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  SELECT count(*) INTO n FROM eas.revision_attachment WHERE revision_id=NEW.id;
+  IF n>5 OR (tcode='EQUIPMENT' AND n=0) THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Equipment revision requires quote; maximum five files'; END IF;
+ END IF;
+ RETURN NULL;
+END $;
 COMMIT;

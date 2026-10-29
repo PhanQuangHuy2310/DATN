@@ -234,6 +234,30 @@ class ReportingHttpContractTests(SimpleTestCase):
         self.assertEqual(len(response.json()["items"]), 1)
         self.assertEqual(response.json()["unread_count"], 1)
 
+    @patch("api_core.workflow.reporting.connection.cursor")
+    def test_list_notifications_direct_query(self, mock_cursor_ctx):
+        mock_cursor = MagicMock()
+        mock_cursor_ctx.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = (1,)
+        mock_cursor.fetchall.return_value = []
+
+        from api_core.workflow.reporting import list_notifications
+
+        res_false = list_notifications(
+            self.actor, {"limit": "20", "offset": "0", "unread": "false"}
+        )
+        self.assertIn("items", res_false)
+        self.assertIn("unread_count", res_false)
+        executed_sql = mock_cursor.execute.call_args[0][0]
+        self.assertNotIn("%s IS FALSE", executed_sql)
+
+        res_true = list_notifications(
+            self.actor, {"limit": "20", "offset": "0", "unread": "true"}
+        )
+        self.assertIn("items", res_true)
+        executed_sql_true = mock_cursor.execute.call_args[0][0]
+        self.assertIn("read_at IS NULL", executed_sql_true)
+
     @patch("api_core.workflow.views.get_request_metrics_report")
     @patch("api_core.authn.service.load_actor_from_session")
     def test_reports_requests_endpoint(self, load_actor, mock_report):

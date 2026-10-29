@@ -4,7 +4,7 @@ import { PasswordField, PageControls } from "./components/ux.jsx";
 import { canNavigate } from "./rolePolicy.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
-import { date, errorText, roles, statuses, types } from "./domain.js";
+import { date, errorText, roles, statuses, types, typeLevels } from "./domain.js";
 import {
   ActionForm,
   Badge,
@@ -121,7 +121,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
           </p>
         </div>
         {user.roles.includes("REQUESTER") && (
-          <button onClick={onNew}>+ Tạo yêu cầu mới</button>
+          <button type="button" onClick={onNew}>+ Tạo yêu cầu mới</button>
         )}
       </div>
       <section className="request-summary-strip" aria-label="Thống kê hồ sơ trên trang">
@@ -234,7 +234,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
             >
               Đặt lại bộ lọc
             </button>
-            <button className="secondary" onClick={r.reload}>
+            <button type="button" className="secondary" onClick={r.reload}>
               Làm mới
             </button>
           </div>
@@ -269,13 +269,14 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
                               : "▣"}
                         </span>
                         {types[i.type_code] || i.type_code}
+                        <small className="muted" style={{display: "block"}}>Trọng số Cấp {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · Duyệt {i.approval_level || typeLevels[i.type_code]?.approval_level || 1}/5 cấp</small>
                       </td>
                       <td data-label="Trạng thái">
                         <Badge value={i.status} />
                       </td>
                       <td data-label="Cập nhật">{date(i.updated_at)}</td>
                       <td data-label="Thao tác">
-                        <button className="link" onClick={() => onOpen(i.id)}>
+                        <button type="button" className="link" onClick={() => onOpen(i.id)}>
                           Xem chi tiết →
                         </button>
                       </td>
@@ -371,14 +372,14 @@ function Overview({ navigate, onOpen, user }) {
         <section className="panel" aria-label="Hồ sơ cập nhật gần đây">
           <div className="section-head">
             <div><h2>Hồ sơ mới cập nhật</h2><p className="muted">Danh sách thực tế trong phạm vi bạn được phép xem.</p></div>
-            <button className="secondary" onClick={() => navigate("history")}>Xem danh sách →</button>
+            <button type="button" className="secondary" onClick={() => navigate("history")}>Xem danh sách →</button>
           </div>
           <ResourceState resource={recent}>
             {recent.data?.items?.length ? (
               <ul className="dashboard-list">
                 {recent.data.items.map((item) => <li key={item.id}>
                   <div><strong>{item.code}</strong><small>{types[item.type_code] || item.type_code} · {date(item.updated_at)}</small><Badge value={item.status}/></div>
-                  <button className="link" onClick={() => onOpen(item.id)}>Xem chi tiết →</button>
+                  <button type="button" className="link" onClick={() => onOpen(item.id)}>Xem chi tiết →</button>
                 </li>)}
               </ul>
             ) : <p className="muted">Chưa có hồ sơ trong phạm vi quyền xem.</p>}
@@ -388,9 +389,9 @@ function Overview({ navigate, onOpen, user }) {
           <h2>Truy cập nhanh</h2>
           <p className="muted">Đi thẳng đến khu vực làm việc, hệ thống tự cuộn về phần thao tác.</p>
           <div className="dashboard-quick">
-            <button onClick={() => navigate("mine")}>▤ Yêu cầu của tôi →</button>
-            <button className="secondary" onClick={() => navigate("notifications")}>◉ Trung tâm thông báo →</button>
-            <button className="secondary" onClick={() => navigate("history")}>◷ Tra cứu hồ sơ →</button>
+            <button type="button" onClick={() => navigate("mine")}>▤ Yêu cầu của tôi →</button>
+            <button type="button" className="secondary" onClick={() => navigate("notifications")}>◉ Trung tâm thông báo →</button>
+            <button type="button" className="secondary" onClick={() => navigate("history")}>◷ Tra cứu hồ sơ →</button>
           </div>
         </aside>
       </div>
@@ -399,21 +400,94 @@ function Overview({ navigate, onOpen, user }) {
           <h2>Công việc rõ ràng. Tiến độ minh bạch.</h2>
           <p>Mỗi quyết định được lưu lại xuyên suốt vòng đời yêu cầu.</p>
         </div>
-        <button onClick={() => navigate("history")}>
+        <button type="button" onClick={() => navigate("history")}>
           Xem hồ sơ liên quan →
         </button>
       </section>
     </>
   );
 }
+function renderWorkspaceContent({
+  editor,
+  selected,
+  page,
+  user,
+  revision,
+  navigate,
+  setSelected,
+  setEditor,
+  setRevision,
+}) {
+  if (editor) {
+    return (
+      <RequestEditor
+        key={editor.id || "new"}
+        initial={editor.id ? editor : undefined}
+        onCancel={() => setEditor(null)}
+        onDone={(id) => {
+          setEditor(null);
+          setSelected(id);
+          setRevision((v) => v + 1);
+        }}
+      />
+    );
+  }
+  if (selected) {
+    return (
+      <RequestDetail
+        initialTab={page === "audit" ? "audit" : "info"}
+        key={selected}
+        id={selected}
+        user={user}
+        onBack={() => setSelected(null)}
+        onEdit={setEditor}
+        onChanged={() => setRevision((v) => v + 1)}
+      />
+    );
+  }
+  switch (page) {
+    case "home":
+      return <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+    case "audit":
+      return <AuditorWorkspace onOpen={(id) => setSelected(id)} />;
+    case "identity":
+      return <IdentityAdmin />;
+    case "api-admin":
+      return <ApiAdministration />;
+    case "plan-catalog":
+      return <PlanCatalog />;
+    case "policy":
+      return (
+        <Policy
+          canManageAccess={user.roles.includes("OPS_ADMIN")}
+          onManageAccess={() => navigate("identity")}
+        />
+      );
+    case "notifications":
+      return <Notifications onOpen={setSelected} />;
+    case "profile":
+      return <Profile user={user} />;
+    case "events":
+      return <AdminEvents />;
+    default:
+      return (
+        <RequestList
+          key={page}
+          page={page}
+          user={user}
+          revision={revision}
+          onOpen={setSelected}
+          onNew={() => setEditor({})}
+        />
+      );
+  }
+}
+
 function Workspace({ user, onLogout }) {
   const [page, setPage] = useState("home"),
     [selected, setSelected] = useState(null),
     [editor, setEditor] = useState(null),
     [revision, setRevision] = useState(0),
-    [selectedTab, setSelectedTab] = useState("info"),
-    [unreadCount, setUnreadCount] = useState(0),
-    [notificationRevision, setNotificationRevision] = useState(0),
     [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -424,38 +498,16 @@ function Workspace({ user, onLogout }) {
     });
     return () => cancelAnimationFrame(frame);
   }, [page, selected, editor]);
-  useEffect(() => {
-    let active = true;
-    async function refreshUnread() {
-      try {
-        const response = await api("/api/v1/notifications?limit=1");
-        if (active) setUnreadCount(response.unread_count || 0);
-      } catch {
-        // The inbox remains accessible. No misleading unread count on DB errors.
-        if (active) setUnreadCount(0);
-      }
-    }
-    refreshUnread();
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") refreshUnread();
-    }, 30000);
-    return () => { active = false; clearInterval(timer); };
-  }, [notificationRevision]);
-  function openRequest(id, tab = "info") {
-    setSelectedTab(tab);
-    setSelected(id);
-  }
   function navigate(next) {
     if (!canNavigate(user.roles, next, user.capabilities)) return;
     setPage(next);
     setSelected(null);
-    setSelectedTab("info");
     setEditor(null);
     setMenuOpen(false);
   }
   return (
     <div className="app-shell">
-      {menuOpen && <button className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
+      {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")}>
         <a className="brand" href="#main" onClick={() => navigate("home")}>
           <span className="brand-mark">E</span>
@@ -479,7 +531,7 @@ function Workspace({ user, onLogout }) {
           {[
             ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history"]],
             ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
-            ["QUẢN TRỊ HỆ THỐNG", ["policy", "ops", "identity", "api-admin", "audit", "events"]],
+            ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events"]],
             ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
           ].map(([group, keys]) => {
             const visible = menu.filter((m) => keys.includes(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
@@ -520,7 +572,7 @@ function Workspace({ user, onLogout }) {
               className="secondary"
               onClick={() => navigate("notifications")}
             >
-              Thông báo {unreadCount > 0 && <span className="unread-badge" aria-label={`${unreadCount} thông báo chưa đọc`}>{unreadCount > 99 ? "99+" : unreadCount}</span>}
+              Thông báo
             </button>
             <button
               className="avatar"
@@ -537,56 +589,17 @@ function Workspace({ user, onLogout }) {
           </div>
         </header>
         <main id="main" className="content" tabIndex={-1}>
-          {editor ? (
-            <RequestEditor
-              key={editor.id || "new"}
-              initial={editor.id ? editor : undefined}
-              onCancel={() => setEditor(null)}
-              onDone={(id) => {
-                setEditor(null);
-                openRequest(id, "progress");
-                setRevision((v) => v + 1);
-              }}
-            />
-          ) : selected ? (
-            <RequestDetail
-              initialTab={selectedTab === "progress" ? "progress" : page === "audit" ? "audit" : "info"}
-              key={`${selected}:${selectedTab}`}
-              id={selected}
-              user={user}
-              onBack={() => setSelected(null)}
-              onEdit={setEditor}
-              onChanged={() => setRevision((v) => v + 1)}
-            />
-          ) : page === "home" ? (
-            <Overview navigate={navigate} onOpen={(id) => openRequest(id)} user={user} />
-          ) : page === "audit" ? (
-            <AuditorWorkspace onOpen={(id) => openRequest(id)} />
-          ) : page === "identity" ? (
-            <IdentityAdmin />
-          ) : page === "api-admin" ? (
-            <ApiAdministration />
-          ) : page === "plan-catalog" ? (
-            <PlanCatalog />
-          ) : page === "policy" ? (
-            <Policy canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />
-          ) : page === "notifications" ? (
-            <Notifications onOpen={(id) => openRequest(id, "progress")}
-              onRead={() => setNotificationRevision((value) => value + 1)} />
-          ) : page === "profile" ? (
-            <Profile user={user} />
-          ) : page === "events" ? (
-            <AdminEvents />
-          ) : (
-            <RequestList
-              key={page}
-              page={page}
-              user={user}
-              revision={revision}
-              onOpen={(id) => openRequest(id)}
-              onNew={() => setEditor({})}
-            />
-          )}
+          {renderWorkspaceContent({
+            editor,
+            selected,
+            page,
+            user,
+            revision,
+            navigate,
+            setSelected,
+            setEditor,
+            setRevision,
+          })}
         </main>
         <footer className="page-footer">
           EAS · Hệ thống phê duyệt yêu cầu doanh nghiệp
@@ -595,6 +608,21 @@ function Workspace({ user, onLogout }) {
     </div>
   );
 }
+let _bootstrapSessionPromise = null;
+
+function fetchInitialSession() {
+  if (!_bootstrapSessionPromise) {
+    _bootstrapSessionPromise = initializeCsrf()
+      .then(() => api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } }))
+      .finally(() => {
+        setTimeout(() => {
+          _bootstrapSessionPromise = null;
+        }, 50);
+      });
+  }
+  return _bootstrapSessionPromise;
+}
+
 export default function App() {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
@@ -614,10 +642,9 @@ export default function App() {
   }
   useEffect(() => {
     let active = true;
-    initializeCsrf()
-      .then(() => api("/api/v1/auth/me"))
+    fetchInitialSession()
       .then((r) => {
-        if (active) setUser(r.user);
+        if (active) setUser(r?.user || null);
       })
       .catch((e) => {
         if (active) {
@@ -646,13 +673,13 @@ export default function App() {
           <p className="error" role="alert">
             {error}
           </p>
-          <button onClick={() => window.location.reload()}>Thử lại</button>
+          <button type="button" onClick={() => window.location.reload()}>Thử lại</button>
         </section>
       </main>
     );
   if (user === undefined)
     return (
-      <main id="main" className="empty" role="status">
+      <main id="main" className="empty" aria-live="polite">
         Đang khởi tạo EAS Portal…
       </main>
     );
@@ -661,7 +688,7 @@ export default function App() {
       <main id="main" className="content">
         <h1>Đổi mật khẩu để tiếp tục</h1>
         <p>Tài khoản đang sử dụng mật khẩu tạm.</p>
-        <Profile user={user} onChanged={() => load()} />
+        <Profile user={user} onChanged={() => { void load(); }} />
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );

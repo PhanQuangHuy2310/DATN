@@ -844,3 +844,36 @@ dialog code {
   padding: 12px;
   background: #eff4ff;
 }
+/* AI assistance (merged from main) */
+.ai-panel {
+  background: linear-gradient(135deg, #f0f4ff, #eef2ff);
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 14px 0;
+}
+.ai-panel h3 {
+  margin: 0;
+  color: #3730a3;
+}
+.ai-panel p:last-child {
+  margin-bottom: 0;
+}
+.ai-btn {
+  background: #4338ca;
+}
+.ai-btn:hover {
+  background: #3730a3;
+}
+.badge-low {
+  color: #15803d;
+  background: #dcfce7;
+}
+.badge-medium {
+  color: #854d0e;
+  background: #fef9c3;
+}
+.badge-high {
+  color: #b91c1c;
+  background: #fee2e2;
+}

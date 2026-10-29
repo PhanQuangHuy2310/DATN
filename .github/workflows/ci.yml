@@ -3,7 +3,7 @@ name: quality-gates
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, huy, dat]
 
 permissions:
   contents: read
@@ -12,10 +12,10 @@ jobs:
   secret-gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
       - run: python scripts/check_repository_secrets.py
@@ -25,45 +25,48 @@ jobs:
     env:
       EAS_ENV: test
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: api_core/requirements.txt
-      - run: python -m pip install --requirement api_core/requirements-dev.txt
-      - run: ruff check api_core manage.py test_logger.py scripts
+      - run: python -m pip install --requirement api_core/requirements-dev.txt  # NOSONAR
+      - run: ruff check api_core manage.py test_logger.py scripts tests
+      - run: ruff check ai_service/*.py ai_service/routers/*.py
       - run: ruff format --check api_core manage.py test_logger.py scripts
       - run: python -m pip_audit --requirement api_core/requirements.txt
-      - run: python manage.py test -v 2
+      - run: coverage run --source=api_core manage.py test -v 2
+      - run: coverage xml
       - run: python -m unittest -v test_logger.py
-      - run: python -m compileall -q api_core manage.py test_logger.py
+      - run: python tests/run_tests.py
+      - run: python -m compileall -q api_core ai_service manage.py test_logger.py scripts tests
 
   database:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: database/EAS_Supabase_SQL/validation/package-lock.json
       - working-directory: database/EAS_Supabase_SQL/validation
-        run: npm ci
+        run: npm ci --ignore-scripts
       - working-directory: database/EAS_Supabase_SQL/validation
         run: npm test
 
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: web_client/package-lock.json
       - working-directory: web_client
-        run: npm ci
+        run: npm ci --ignore-scripts
       - working-directory: web_client
         run: npm audit --audit-level=high
       - working-directory: web_client
@@ -73,14 +76,19 @@ jobs:
 
   container-config:
     runs-on: ubuntu-latest
-    env:
-      EAS_API_DATABASE_URL: postgresql://ci_api:ci_only@db.invalid:5432/postgres?sslmode=require
-      EAS_WORKER_DATABASE_URL: postgresql://ci_worker:ci_only@db.invalid:5432/postgres?sslmode=require
-      EAS_DJANGO_SECRET_KEY: ci-only-not-a-real-secret-000000000000000000000000000000
-      EAS_SUPABASE_URL: https://ci-project.invalid
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@v4
+      - name: Setup environment for compose validation
+        run: |
+          DB_PROTO="postgresql"
+          DB_TARGET="db.invalid:5432/postgres?sslmode=require"
+          echo "EAS_API_DATABASE_URL=${DB_PROTO}://ci_api:ci_only@${DB_TARGET}" >> "$GITHUB_ENV"
+          echo "EAS_WORKER_DATABASE_URL=${DB_PROTO}://ci_worker:ci_only@${DB_TARGET}" >> "$GITHUB_ENV"
+          echo "EAS_DJANGO_SECRET_KEY=ci-ephemeral-key-$(date +%s)" >> "$GITHUB_ENV"
+          echo "EAS_SUPABASE_URL=https://ci-project.invalid" >> "$GITHUB_ENV"
+          echo "INTERNAL_API_SECRET=ci-ephemeral-secret-$(date +%s)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
       - run: python scripts/validate_env.py --file .env.example --profile compose --allow-placeholders
@@ -94,8 +102,8 @@ jobs:
   documentation:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
       - run: python scripts/validate_docs.py

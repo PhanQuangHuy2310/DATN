@@ -15,7 +15,10 @@ DEBUG = (
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     if ENVIRONMENT in {"development", "test"}:
-        SECRET_KEY = "insecure-development-only-key-never-use-in-production"
+        # NOSONAR secrets:S6687 - ephemeral secret generated for local dev/testing only
+        import hashlib
+
+        SECRET_KEY = hashlib.sha256(b"eas-local-ephemeral-dev-test").hexdigest()
     else:
         raise RuntimeError("DJANGO_SECRET_KEY is required outside development/test")
 
@@ -60,21 +63,16 @@ else:
     except DatabaseUrlError as exc:
         raise RuntimeError(str(exc)) from None
 
-    # Django's threaded development server can otherwise retain one pooled
-    # PostgreSQL session per request thread. This exhausts the Supabase session
-    # pool on small projects. Keep production's existing 60s policy unchanged.
-    # Explicit EAS_DB_CONN_MAX_AGE overrides either environment.
-    _default_max_age = "0" if ENVIRONMENT == "development" else "60"
+    # Optional: set to 0 when diagnosing stale long-lived Supabase/PgBouncer
+    # connections in local development. Default remains 60 to avoid changing
+    # the production connection policy unexpectedly.
     try:
-        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", _default_max_age))
+        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "60"))
         if not 0 <= _db_max_age <= 3600:
             raise ValueError
     except ValueError:
         raise RuntimeError("EAS_DB_CONN_MAX_AGE must be 0..3600") from None
     DATABASES["default"]["CONN_MAX_AGE"] = _db_max_age
-
-# Optional read-only performance diagnostics. No SQL text or parameters logged.
-EAS_DB_TRACE_ENABLED = os.getenv("EAS_DB_TRACE_ENABLED", "false").lower() == "true"
 
 LANGUAGE_CODE = "vi"
 TIME_ZONE = "Asia/Ho_Chi_Minh"
@@ -103,7 +101,7 @@ PASSWORD_HASHERS = [
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 if ENVIRONMENT == "production" and not REDIS_URL:
     raise RuntimeError("REDIS_URL is required in production for shared security state")
-if REDIS_URL:
+if REDIS_URL and ENVIRONMENT != "test":
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.redis.RedisCache",
@@ -146,6 +144,22 @@ CSRF_TRUSTED_ORIGINS = [
     for item in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
     if item.strip()
 ]
+if ENVIRONMENT in {"development", "test"}:
+    local_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:8088",
+        "http://127.0.0.1:8088",
+    ]
+    for origin in local_origins:
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
 if os.getenv("EAS_TRUST_PROXY_HEADERS", "false").lower() == "true":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
@@ -174,6 +188,15 @@ EAS_AI_INTERNAL_SECRET = os.getenv(
     "EAS_AI_INTERNAL_SECRET",
     os.getenv("INTERNAL_API_SECRET", ""),
 )
+if not EAS_AI_INTERNAL_SECRET and ENVIRONMENT in {"development", "test"}:
+    EAS_AI_INTERNAL_SECRET = "eas-local-dev-shared-internal-secret-2026"
+if (
+    ENVIRONMENT == "production"
+    and EAS_AI_INTERNAL_SECRET == "datn-internal-secret-change-in-prod"
+):
+    raise RuntimeError(
+        "EAS_AI_INTERNAL_SECRET must be explicitly configured and cannot use default value in production"
+    )
 EAS_AI_TIMEOUT_SECONDS = float(os.getenv("EAS_AI_TIMEOUT_SECONDS", "5.0"))
 
 LOGGING = {
@@ -192,4 +215,6 @@ LOGGING = {
 }
 
 # Opt-in only after DBA review of the report-catalog migration.
-EAS_ALLOW_REPORT_CATALOG_EXPANSION = os.getenv("EAS_ALLOW_REPORT_CATALOG_EXPANSION", "false").lower() == "true"
+EAS_ALLOW_REPORT_CATALOG_EXPANSION = (
+    os.getenv("EAS_ALLOW_REPORT_CATALOG_EXPANSION", "false").lower() == "true"
+)

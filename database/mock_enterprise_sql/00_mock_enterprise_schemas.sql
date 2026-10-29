@@ -200,7 +200,7 @@ CREATE TABLE mock_crm.customer (
   segment text NOT NULL CHECK (segment IN ('SMB','MID_MARKET','ENTERPRISE','PUBLIC_SECTOR')),
   account_status text NOT NULL CHECK (account_status IN ('PROSPECT','ACTIVE','SUSPENDED','CLOSED')),
   account_owner_employee_id uuid REFERENCES mock_hr.employee(id),
-  tax_country char(2) NOT NULL,
+  tax_country varchar(2) NOT NULL,
   updated_at timestamptz NOT NULL DEFAULT statement_timestamp()
 );
 
@@ -210,7 +210,7 @@ CREATE TABLE mock_crm.contract (
   customer_id uuid NOT NULL REFERENCES mock_crm.customer(id),
   starts_on date NOT NULL,
   ends_on date NOT NULL,
-  currency char(3) NOT NULL,
+  currency varchar(3) NOT NULL,
   value_minor bigint NOT NULL CHECK (value_minor >= 0),
   status text NOT NULL CHECK (status IN ('DRAFT','ACTIVE','EXPIRED','TERMINATED')),
   updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
@@ -250,7 +250,7 @@ CREATE TABLE mock_procurement.catalog_item (
   name varchar(200) NOT NULL,
   category varchar(80) NOT NULL,
   supplier_id uuid NOT NULL REFERENCES mock_procurement.supplier(id),
-  currency char(3) NOT NULL,
+  currency varchar(3) NOT NULL,
   unit_price_minor bigint NOT NULL CHECK (unit_price_minor >= 0),
   status text NOT NULL CHECK (status IN ('ACTIVE','OUT_OF_STOCK','DISCONTINUED')),
   updated_at timestamptz NOT NULL DEFAULT statement_timestamp()
@@ -262,7 +262,7 @@ CREATE TABLE mock_procurement.purchase_order (
   supplier_id uuid NOT NULL REFERENCES mock_procurement.supplier(id),
   requester_employee_id uuid NOT NULL REFERENCES mock_hr.employee(id),
   source_request_id uuid,
-  currency char(3) NOT NULL,
+  currency varchar(3) NOT NULL,
   total_minor bigint NOT NULL CHECK (total_minor >= 0),
   status text NOT NULL CHECK (status IN ('DRAFT','APPROVED','SENT','PARTIALLY_RECEIVED','RECEIVED','CANCELLED')),
   issued_at timestamptz,
@@ -330,7 +330,7 @@ CREATE TABLE mock_finance.cost_center_budget (
   id uuid PRIMARY KEY,
   cost_center varchar(30) NOT NULL,
   fiscal_year smallint NOT NULL CHECK (fiscal_year BETWEEN 2020 AND 2100),
-  currency char(3) NOT NULL,
+  currency varchar(3) NOT NULL,
   approved_minor bigint NOT NULL CHECK (approved_minor >= 0),
   committed_minor bigint NOT NULL DEFAULT 0 CHECK (committed_minor >= 0),
   spent_minor bigint NOT NULL DEFAULT 0 CHECK (spent_minor >= 0),
@@ -345,7 +345,7 @@ CREATE TABLE mock_finance.expense_category (
   name varchar(160) NOT NULL,
   receipt_required_above_minor bigint NOT NULL CHECK (receipt_required_above_minor >= 0),
   daily_limit_minor bigint CHECK (daily_limit_minor >= 0),
-  currency char(3) NOT NULL,
+  currency varchar(3) NOT NULL,
   status mock_hr.entity_status NOT NULL DEFAULT 'ACTIVE',
   updated_at timestamptz NOT NULL DEFAULT statement_timestamp()
 );
@@ -356,7 +356,7 @@ CREATE TABLE mock_travel.travel_policy (
   travel_mode text NOT NULL CHECK (travel_mode IN ('AIR','RAIL','ROAD','HOTEL')),
   cabin_or_class varchar(40) NOT NULL,
   max_amount_minor bigint NOT NULL CHECK (max_amount_minor >= 0),
-  currency char(3) NOT NULL,
+  currency varchar(3) NOT NULL,
   requires_quote_count smallint NOT NULL DEFAULT 1 CHECK (requires_quote_count BETWEEN 1 AND 5),
   status mock_hr.entity_status NOT NULL DEFAULT 'ACTIVE',
   updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
@@ -372,7 +372,7 @@ CREATE TABLE mock_travel.travel_option (
   departs_at timestamptz NOT NULL,
   arrives_at timestamptz NOT NULL,
   supplier_id uuid REFERENCES mock_procurement.supplier(id),
-  currency char(3) NOT NULL,
+  currency varchar(3) NOT NULL,
   price_minor bigint NOT NULL CHECK (price_minor >= 0),
   refundable boolean NOT NULL DEFAULT false,
   availability_status text NOT NULL CHECK (availability_status IN ('AVAILABLE','LIMITED','SOLD_OUT','EXPIRED')),

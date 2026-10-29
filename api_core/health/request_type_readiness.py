@@ -4,6 +4,7 @@ Unpublished optional templates do not make valid P0 workflows unavailable.
 This module does not authorize request creation. The workflow/catalog APIs must
 still require a published, type-matched, active release for every request.
 """
+
 from __future__ import annotations
 
 EXPECTED_TYPES = frozenset({("ACCESS", "B"), ("EQUIPMENT", "C"), ("LEAVE", "A")})
@@ -18,7 +19,9 @@ def assess_request_types(rows, *, require_active_releases: bool):
     """
     active = {(code, lifecycle): bool(valid) for code, lifecycle, valid in rows}
     required_present = EXPECTED_TYPES.issubset(active)
-    p0_ready = required_present and all(active.get(key, False) for key in EXPECTED_TYPES)
+    p0_ready = required_present and all(
+        active.get(key, False) for key in EXPECTED_TYPES
+    )
     return {
         "request_types_match_p0": required_present,
         "p0_active_types_configured": not require_active_releases or p0_ready,

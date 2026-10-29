@@ -1,0 +1,6 @@
+@echo off
+cd /d "%~dp0"
+set "PY_EXE=.venv\Scripts\python.exe"
+if not exist "%PY_EXE%" set "PY_EXE=python"
+"%PY_EXE%" collect_eas_logs.py %*
+exit /b %ERRORLEVEL%

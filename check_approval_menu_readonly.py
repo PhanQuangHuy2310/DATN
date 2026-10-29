@@ -10,6 +10,17 @@ ROOT = Path(__file__).resolve().parent
 TYPES = json.loads((ROOT / 'api_core/catalog/approval_menu.json').read_text(encoding='utf-8'))['types']
 
 
+def _evaluate_type_status(got, life: str) -> str:
+    if got is None:
+        return 'CHƯA ĐĂNG KÝ'
+    if got[0] != life:
+        return 'SAI MẪU VÒNG ĐỜI'
+    if not got[1]:
+        return 'CHƯA KÍCH HOẠT'
+    if got[2] != 'PUBLISHED':
+        return 'CHƯA CÓ BẢN PHÁT HÀNH'
+    return 'ĐÃ CÔNG BỐ'
+
 def main() -> int:
     load_environment(ROOT / '.env.database')
     try:
@@ -18,8 +29,7 @@ def main() -> int:
         print('Thiếu psycopg. Cài dependencies Backend bằng api_core/requirements.txt.')
         return 2
     try:
-        with psycopg.connect(database_url(), connect_timeout=10, prepare_threshold=None) as conn:
-            with conn.cursor() as cursor:
+        with psycopg.connect(database_url(), connect_timeout=10, prepare_threshold=None) as conn, conn.cursor() as cursor:
                 cursor.execute('SET TRANSACTION READ ONLY')
                 codes = [t['code'] for t in TYPES]
                 cursor.execute('''
@@ -35,11 +45,7 @@ def main() -> int:
                 for t in TYPES:
                     code, life = t['code'], t['lifecycle']
                     got = actual.get(code)
-                    status = ('CHƯA ĐĂNG KÝ' if got is None else
-                              'SAI MẪU VÒNG ĐỜI' if got[0] != life else
-                              'CHƯA KÍCH HOẠT' if not got[1] else
-                              'CHƯA CÓ BẢN PHÁT HÀNH' if got[2] != 'PUBLISHED' else
-                              'ĐÃ CÔNG BỐ')
+                    status = _evaluate_type_status(got, life)
                     count += status == 'ĐÃ CÔNG BỐ'
                     print(f'{code:<28} | {life} | {status}')
                 print(f'Kết quả: {count}/{len(TYPES)} mã có bản phát hành đang hoạt động.')

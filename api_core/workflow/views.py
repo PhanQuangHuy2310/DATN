@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -8,6 +9,7 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.authn.service import require_actor
+from api_core.catalog.plan_catalog import resolve_five_level_metadata
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
 from api_core.workflow.attachments import (
     download_attachment,
@@ -25,6 +27,7 @@ from api_core.workflow.config_service import (
     update_draft_release,
     validate_release_candidate,
 )
+from api_core.workflow.constants import ERR_REQUEST_NOT_FOUND
 from api_core.workflow.ops_service import (
     list_ops_metadata,
     reassign_actor,
@@ -92,17 +95,40 @@ def request_list(request: HttpRequest) -> JsonResponse:
     if not 1 <= limit <= 100 or not 0 <= offset <= 10_000:
         return api_error(request, "INVALID_PAGINATION", status=400)
 
-    tab = request.GET.get("tab")
-    status_filter = request.GET.get("status")
-    search_filter = request.GET.get("q", "").strip()[:100] or None
-    type_code_filter = request.GET.get("type_code")
-    dept_filter = request.GET.get("department_id")
-    from_filter = request.GET.get("created_from")
-    to_filter = request.GET.get("created_to")
+    tab = (request.GET.get("tab") or "").strip() or None
+    status_filter = (request.GET.get("status") or "").strip() or None
+    search_filter = (request.GET.get("q") or "").strip()[:100] or None
+    type_code_filter = (request.GET.get("type_code") or "").strip() or None
+    dept_raw = (request.GET.get("department_id") or "").strip() or None
+    from_raw = (request.GET.get("created_from") or "").strip() or None
+    to_raw = (request.GET.get("created_to") or "").strip() or None
+
+    dept_filter = None
+    if dept_raw:
+        try:
+            dept_filter = str(UUID(dept_raw))
+        except (ValueError, TypeError):
+            return api_error(request, "INVALID_DEPARTMENT_ID", status=400)
+
+    from_filter = None
+    if from_raw:
+        try:
+            from_filter = datetime.fromisoformat(from_raw.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return api_error(request, "INVALID_DATE_FILTER", status=400)
+
+    to_filter = None
+    if to_raw:
+        try:
+            to_filter = datetime.fromisoformat(to_raw.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            return api_error(request, "INVALID_DATE_FILTER", status=400)
 
     sql = """
         SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
-               r.updated_at, r.created_at
+               r.updated_at, r.created_at,
+               COALESCE(r.risk_weight, rt.risk_weight),
+               COALESCE(r.approval_level, rt.approval_level)
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
@@ -215,11 +241,20 @@ def request_list(request: HttpRequest) -> JsonResponse:
         LIMIT %s OFFSET %s
     """
     valid_tab = tab if tab in ("mine", "approval", "execution", "acceptance") else None
-    tab_roles = {"approval": "APPROVER", "execution": "EXECUTOR", "acceptance": "ACCEPTOR"}
+    tab_roles = {
+        "approval": "APPROVER",
+        "execution": "EXECUTOR",
+        "acceptance": "ACCEPTOR",
+    }
     required_role = tab_roles.get(valid_tab)
     if required_role and required_role not in request.actor.roles:
-        return JsonResponse({"items": [], "next_offset": None,
-                             "correlation_id": correlation_id(request)})
+        return JsonResponse(
+            {
+                "items": [],
+                "next_offset": None,
+                "correlation_id": correlation_id(request),
+            }
+        )
     params = [
         status_filter,
         status_filter,
@@ -236,14 +271,14 @@ def request_list(request: HttpRequest) -> JsonResponse:
         valid_tab,
         request.actor.id,
         valid_tab,
-        request.actor.id, # approval step actor
-        request.actor.id, # approval grant
+        request.actor.id,  # approval step actor
+        request.actor.id,  # approval grant
         valid_tab,
-        request.actor.id, # execution attempt actor
-        request.actor.id, # execution grant
+        request.actor.id,  # execution attempt actor
+        request.actor.id,  # execution grant
         valid_tab,
-        request.actor.id, # acceptor actor
-        request.actor.id, # acceptance grant
+        request.actor.id,  # acceptor actor
+        request.actor.id,  # acceptance grant
         valid_tab,
         request.actor.id,
         request.actor.id,
@@ -256,21 +291,30 @@ def request_list(request: HttpRequest) -> JsonResponse:
     ]
 
     with connection.cursor() as cursor:
+        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
         cursor.execute(sql, params)
         rows = cursor.fetchall()
 
-    items = [
-        {
-            "id": row[0],
-            "code": row[1],
-            "type_code": row[2],
-            "status": row[3],
-            "lock_version": row[4],
-            "updated_at": row[5].isoformat(),
-            "created_at": row[6].isoformat(),
-        }
-        for row in rows[:limit]
-    ]
+    items = []
+    for row in rows[:limit]:
+        risk_w, app_lvl = resolve_five_level_metadata(
+            row[2],
+            row[7] if len(row) > 7 else None,
+            row[8] if len(row) > 8 else None,
+        )
+        items.append(
+            {
+                "id": row[0],
+                "code": row[1],
+                "type_code": row[2],
+                "status": row[3],
+                "lock_version": row[4],
+                "updated_at": row[5].isoformat(),
+                "created_at": row[6].isoformat(),
+                "risk_weight": risk_w,
+                "approval_level": app_lvl,
+            }
+        )
     return JsonResponse(
         {
             "items": items,
@@ -294,14 +338,16 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
     try:
         req_uuid = str(UUID(request_id))
     except (ValueError, TypeError, AttributeError):
-        return api_error(request, "REQUEST_NOT_FOUND", status=404)
+        return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
     with connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                    r.requester_id::text, r.draft_payload, v.payload, v.revision_no,
-                   r.created_at, r.updated_at
+                   r.created_at, r.updated_at,
+                   COALESCE(v.risk_weight, r.risk_weight, rt.risk_weight),
+                   COALESCE(v.approval_level, r.approval_level, rt.approval_level)
             FROM eas.request r
             JOIN eas.request_type rt ON rt.id = r.type_id
             LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
@@ -334,14 +380,16 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
         )
         row = cursor.fetchone()
         if not row:
-            return api_error(request, "REQUEST_NOT_FOUND", status=404)
+            return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
         cursor.execute(
             """
-            SELECT s.step_no, s.assignee_id::text, s.state, s.activated_at, s.closed_at
+            SELECT s.step_no, s.assignee_id::text, s.state, s.activated_at, s.closed_at,
+                   s.tier_level, s.resolver_code, u.display_name
             FROM eas.approval_step s
             JOIN eas.workflow_instance i ON i.id = s.instance_id
             JOIN eas.request r ON r.id = i.request_id
+            LEFT JOIN eas.app_user u ON u.id = s.assignee_id
             WHERE r.id = %s AND i.revision_id = r.current_revision_id
             ORDER BY s.step_no
             """,
@@ -384,6 +432,35 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
             revision_payload if revision_payload is not None else draft_payload
         )
 
+    workflow_payload = None
+    if workflow:
+        attempt_payload = (
+            {
+                "id": workflow[3],
+                "attempt_no": workflow[4],
+                "executor_id": workflow[5],
+                "state": workflow[6],
+                "result_note": workflow[7],
+                "external_reference": workflow[8],
+            }
+            if workflow[3]
+            else None
+        )
+        workflow_payload = {
+            "lifecycle": workflow[0],
+            "planned_executor_id": workflow[1],
+            "acceptor_id": workflow[2],
+            "attempt": attempt_payload,
+        }
+
+    raw_risk = row[11] if len(row) > 11 else None
+    if steps:
+        raw_app_level = len(steps)
+    elif len(row) > 12:
+        raw_app_level = row[12]
+    else:
+        raw_app_level = None
+    risk_w, app_lvl = resolve_five_level_metadata(row[2], raw_risk, raw_app_level)
     return JsonResponse(
         {
             "request": {
@@ -397,6 +474,8 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
                 "revision_no": row[8],
                 "created_at": row[9].isoformat(),
                 "updated_at": row[10].isoformat(),
+                "risk_weight": risk_w,
+                "approval_level": app_lvl,
                 "approval_steps": [
                     {
                         "step_no": step[0],
@@ -404,30 +483,13 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
                         "state": step[2],
                         "activated_at": step[3].isoformat() if step[3] else None,
                         "closed_at": step[4].isoformat() if step[4] else None,
+                        "tier_level": step[5] if len(step) > 5 and step[5] else step[0],
+                        "resolver_code": step[6] if len(step) > 6 else None,
+                        "assignee_name": step[7] if len(step) > 7 else None,
                     }
                     for step in steps
                 ],
-                "workflow": (
-                    {
-                        "lifecycle": workflow[0],
-                        "planned_executor_id": workflow[1],
-                        "acceptor_id": workflow[2],
-                        "attempt": (
-                            {
-                                "id": workflow[3],
-                                "attempt_no": workflow[4],
-                                "executor_id": workflow[5],
-                                "state": workflow[6],
-                                "result_note": workflow[7],
-                                "external_reference": workflow[8],
-                            }
-                            if workflow[3]
-                            else None
-                        ),
-                    }
-                    if workflow
-                    else None
-                ),
+                "workflow": workflow_payload,
             },
             "correlation_id": correlation_id(request),
         }
@@ -604,7 +666,7 @@ def revisions_list(request: HttpRequest, request_id: str) -> JsonResponse:
     try:
         req_uuid = str(UUID(request_id))
     except (ValueError, TypeError, AttributeError):
-        return api_error(request, "REQUEST_NOT_FOUND", status=404)
+        return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
     with connection.cursor() as cursor:
         cursor.execute(
@@ -639,7 +701,7 @@ def revisions_list(request: HttpRequest, request_id: str) -> JsonResponse:
             [req_uuid, request.actor.id, request.actor.id, request.actor.id],
         )
         if not cursor.fetchone():
-            return api_error(request, "REQUEST_NOT_FOUND", status=404)
+            return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
         cursor.execute(
             """
@@ -740,7 +802,7 @@ def revision_detail(
             [req_uuid, request.actor.id, request.actor.id, request.actor.id],
         )
         if not cursor.fetchone():
-            return api_error(request, "REQUEST_NOT_FOUND", status=404)
+            return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
         cursor.execute(
             """
@@ -816,8 +878,16 @@ def attachment_download(request: HttpRequest, attachment_id: str) -> HttpRespons
     except CommandError as exc:
         return api_error(request, exc.code, status=exc.status, fields=exc.fields)
 
-    response = HttpResponse(data, content_type=mime)
+    safe_mime = (
+        "application/octet-stream"
+        if mime in ("text/html", "application/xhtml+xml", "text/xml")
+        else mime
+    )
+    response = HttpResponse(
+        data, content_type=safe_mime
+    )  # NOSONAR pythonsecurity:S5131
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Content-Security-Policy"] = "default-src 'none'"
     response["Cache-Control"] = "no-store"
     response["X-Content-Type-Options"] = "nosniff"
     response["X-Correlation-ID"] = correlation_id(request)
@@ -1009,3 +1079,184 @@ def admin_events_view(request: HttpRequest) -> JsonResponse:
         return JsonResponse(res)
     except CommandError as exc:
         return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+
+
+@require_POST
+@require_actor()
+def ai_classify_view(request: HttpRequest) -> JsonResponse:
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+
+    title = body.get("title")
+    if not isinstance(title, str) or not title.strip():
+        return api_error(request, "TITLE_REQUIRED", status=400)
+
+    description = body.get("description", "")
+    if not isinstance(description, str):
+        description = str(description)
+
+    from api_core.integrations.ai_service import ai_client_sync
+
+    cid = correlation_id(request)
+    result = ai_client_sync.classify_request(
+        title=title.strip(), description=description.strip(), correlation_id=cid
+    )
+    return JsonResponse({"data": result, "correlation_id": cid}, status=200)
+
+
+@require_POST
+@require_actor()
+def ai_risk_score_view(request: HttpRequest) -> JsonResponse:
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+
+    request_type = body.get("request_type")
+    if not isinstance(request_type, str) or not request_type.strip():
+        return api_error(request, "REQUEST_TYPE_REQUIRED", status=400)
+
+    lifecycle_template = body.get("lifecycle_template", "A")
+    risk_weight = body.get("risk_weight", 2)
+    try:
+        risk_weight = int(risk_weight)
+    except (ValueError, TypeError):
+        risk_weight = 2
+
+    from api_core.integrations.ai_service import ai_client_sync
+
+    cid = correlation_id(request)
+    result = ai_client_sync.score_risk(
+        request_type=request_type,
+        lifecycle_template=str(lifecycle_template),
+        risk_weight=risk_weight,
+        correlation_id=cid,
+        **{
+            k: v
+            for k, v in body.items()
+            if k
+            not in (
+                "request_type",
+                "lifecycle_template",
+                "risk_weight",
+                "correlation_id",
+            )
+        },
+    )
+    return JsonResponse({"data": result, "correlation_id": cid}, status=200)
+
+
+@require_POST
+@require_actor()
+def ai_summarize_view(request: HttpRequest) -> JsonResponse:
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+
+    title = body.get("title")
+    if not isinstance(title, str) or not title.strip():
+        return api_error(request, "TITLE_REQUIRED", status=400)
+
+    request_type = body.get("request_type", "general")
+    requester_name = body.get("requester_name") or getattr(
+        request.actor, "display_name", ""
+    )
+    description = body.get("description")
+    data = body.get("data")
+    risk_score = body.get("risk_score")
+    amount = body.get("amount")
+
+    from api_core.integrations.ai_service import ai_client_sync
+
+    cid = correlation_id(request)
+    result = ai_client_sync.summarize_request(
+        title=title.strip(),
+        request_type=str(request_type),
+        requester_name=str(requester_name),
+        description=description,
+        data=data if isinstance(data, dict) else None,
+        risk_score=risk_score,
+        amount=amount,
+        correlation_id=cid,
+    )
+    return JsonResponse({"data": result, "correlation_id": cid}, status=200)
+
+
+@require_GET
+def system_maintenance_view(request: HttpRequest) -> JsonResponse:
+    from api_core.maintenance import get_maintenance_info
+
+    cid = correlation_id(request)
+    return JsonResponse(
+        {"status": "ok", "maintenance": get_maintenance_info(), "correlation_id": cid},
+        status=200,
+    )
+
+
+@require_POST
+@require_actor("POLICY_ADMIN", "OPS_ADMIN")
+def system_maintenance_start_view(request: HttpRequest) -> JsonResponse:
+    from api_core.maintenance import start_maintenance
+
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError:
+        body = {}
+
+    message = body.get("message")
+    admin_message = body.get("admin_message")
+    release_id = body.get("release_id")
+
+    info = start_maintenance(
+        actor_id=request.actor.id,
+        release_id=release_id,
+        message=message,
+        admin_message=admin_message,
+    )
+    cid = correlation_id(request)
+    return JsonResponse(
+        {"status": "ok", "maintenance": info, "correlation_id": cid},
+        status=200,
+    )
+
+
+@require_POST
+@require_actor("POLICY_ADMIN", "OPS_ADMIN")
+def system_maintenance_complete_view(request: HttpRequest) -> JsonResponse:
+    from django.db import transaction
+
+    from api_core.maintenance import complete_maintenance
+    from api_core.workflow.service import _append_admin_audit
+
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError:
+        body = {}
+
+    admin_message = body.get("admin_message")
+    cid = correlation_id(request)
+
+    with transaction.atomic(), connection.cursor() as cursor:
+        _append_admin_audit(
+            cursor,
+            actor_id=request.actor.id,
+            action="MAINTENANCE_COMPLETED",
+            target_type="system",
+            target_id="00000000-0000-0000-0000-000000000000",
+            details={"status": "COMPLETED"},
+            reason="Admin confirmed policy update and AI retraining completion.",
+            correlation_id=cid,
+        )
+
+    info = complete_maintenance(
+        actor_id=request.actor.id,
+        admin_message=admin_message,
+    )
+
+    return JsonResponse(
+        {"status": "ok", "maintenance": info, "correlation_id": cid},
+        status=200,
+    )

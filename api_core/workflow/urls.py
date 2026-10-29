@@ -136,8 +136,16 @@ urlpatterns = [
     ),
     # Policy & Config Release
     path("config-releases", views.config_releases_view, name="config-releases"),
-    path("config-releases/status", views.policy_type_status_view, name="policy-type-status"),
-    path("config-releases/actor-options", views.policy_actor_options_view, name="policy-actor-options"),
+    path(
+        "config-releases/status",
+        views.policy_type_status_view,
+        name="policy-type-status",
+    ),
+    path(
+        "config-releases/actor-options",
+        views.policy_actor_options_view,
+        name="policy-actor-options",
+    ),
     path(
         "config-releases/<uuid:release_id>",
         views.config_release_detail_view,
@@ -177,4 +185,24 @@ urlpatterns = [
         name="request-audit-verify",
     ),
     path("admin-events", views.admin_events_view, name="admin-events"),
+    # System Maintenance
+    path(
+        "system/maintenance",
+        views.system_maintenance_view,
+        name="system-maintenance",
+    ),
+    path(
+        "system/maintenance/start",
+        views.system_maintenance_start_view,
+        name="system-maintenance-start",
+    ),
+    path(
+        "system/maintenance/complete",
+        views.system_maintenance_complete_view,
+        name="system-maintenance-complete",
+    ),
+    # AI Assistance Proxy
+    path("ai/classify", views.ai_classify_view, name="ai-classify"),
+    path("ai/risk-score", views.ai_risk_score_view, name="ai-risk-score"),
+    path("ai/summarize", views.ai_summarize_view, name="ai-summarize"),
 ]

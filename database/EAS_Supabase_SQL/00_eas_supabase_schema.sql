@@ -737,7 +737,7 @@ BEGIN
        OR jsonb_typeof(r->'when') IS DISTINCT FROM 'object' OR r->'when'='{}'::jsonb THEN
      RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Conditional rule requires integer priority and condition';
     END IF;
-    IF EXISTS(SELECT 1 FROM jsonb_each(r->'when') v WHERE v.key NOT IN ('amount_gt','amount_gte') OR jsonb_typeof(v.value)<>'number') THEN
+    IF EXISTS(SELECT 1 FROM jsonb_each(r->'when') v WHERE (v.key IN ('amount_gt','amount_gte','days_gt') AND jsonb_typeof(v.value)<>'number') OR (v.key='app_code_in' AND (jsonb_typeof(v.value)<>'array' OR jsonb_array_length(v.value)=0)) OR v.key NOT IN ('amount_gt','amount_gte','days_gt','app_code_in')) THEN
      RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Unknown condition/operator';
     END IF;
    END IF;

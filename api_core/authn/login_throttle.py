@@ -5,6 +5,7 @@ usernames. Only the trusted socket address is used: client-provided XFF must
 not be trusted unless middleware has already established a trusted peer.
 Keys never contain raw usernames or IP addresses; TTL is a fixed window.
 """
+
 from __future__ import annotations
 
 from hashlib import sha256
@@ -18,11 +19,18 @@ def throttle_keys(username: str, remote_addr: str) -> tuple[str, str]:
     return f"eas:login:account:{user_digest}", f"eas:login:ip:{ip_digest}"
 
 
-def is_throttled(store, keys: tuple[str, str], *, account_limit: int, ip_limit: int) -> bool:
-    return int(store.get(keys[0], 0) or 0) >= account_limit or int(store.get(keys[1], 0) or 0) >= ip_limit
+def is_throttled(
+    store, keys: tuple[str, str], *, account_limit: int, ip_limit: int
+) -> bool:
+    return (
+        int(store.get(keys[0], 0) or 0) >= account_limit
+        or int(store.get(keys[1], 0) or 0) >= ip_limit
+    )
 
 
-def register_login_failure(store, keys: tuple[str, str], *, window_seconds: int) -> None:
+def register_login_failure(
+    store, keys: tuple[str, str], *, window_seconds: int
+) -> None:
     """Atomic counter increment on Redis/Django cache, fixed window for each key."""
     for key in keys:
         if store.add(key, 1, timeout=window_seconds):

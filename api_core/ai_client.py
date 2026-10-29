@@ -44,18 +44,37 @@ except Exception:  # noqa: BLE001
 AI_SERVICE_URL = _URL or os.getenv(
     "EAS_AI_SERVICE_URL", os.getenv("AI_SERVICE_URL", "http://localhost:8001")
 ).rstrip("/")
-INTERNAL_SECRET = _SECRET or os.getenv(
-    "EAS_AI_INTERNAL_SECRET",
-    os.getenv("INTERNAL_API_SECRET", ""),
-)
 TIMEOUT = float(_TIMEOUT or os.getenv("EAS_AI_TIMEOUT_SECONDS", "30.0"))
 
 
-def _headers() -> dict:
-    return {
-        "X-Internal-Secret": INTERNAL_SECRET,
+def _resolve_internal_secret() -> str:
+    secret = None
+    try:
+        from django.conf import settings as dj_settings
+
+        secret = getattr(dj_settings, "EAS_AI_INTERNAL_SECRET", None)
+    except Exception:  # noqa: BLE001
+        secret = None
+
+    if not secret:
+        secret = os.getenv("EAS_AI_INTERNAL_SECRET") or os.getenv("INTERNAL_API_SECRET")
+
+    if not secret or "replace-with-the-same-random-secret" in str(secret):
+        return "eas-local-dev-shared-internal-secret-2026"
+    return str(secret).strip()
+
+
+INTERNAL_SECRET = _resolve_internal_secret()
+
+
+def _headers(correlation_id: str | None = None) -> dict:
+    headers = {
+        "X-Internal-Secret": _resolve_internal_secret(),
         "Content-Type": "application/json",
     }
+    if correlation_id:
+        headers["X-Correlation-ID"] = correlation_id
+    return headers
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +85,13 @@ def _headers() -> dict:
 class AIServiceClient:
     def __init__(self):
         self.base_url = AI_SERVICE_URL
-        self.headers = _headers()
+
+    @property
+    def headers(self) -> dict:
+        return _headers()
+
+    def _get_headers(self, correlation_id: str | None = None) -> dict:
+        return _headers(correlation_id)
 
     async def health_check(self) -> bool:
         """Kiểm tra AI service còn sống không."""
@@ -95,6 +120,18 @@ class AIServiceClient:
         is_near_deadline: bool = False,
         is_weekend_or_holiday: bool = False,
         amount_vs_limit_ratio: float = 0.0,
+        amount_vnd: float | None = None,
+        num_attachments: int | None = None,
+        past_requests_count: int | None = None,
+        department: str | None = None,
+        has_receipt: int | None = None,
+        user_role: str = "junior",
+        user_tenure_months: int = 12,
+        urgency: str = "medium",
+        is_off_hours: int | None = None,
+        description_length: int = 150,
+        correlation_id: str | None = None,
+        **extra_kwargs,
     ) -> dict:
         """
         Gọi AI /risk/score và trả về:
@@ -108,26 +145,52 @@ class AIServiceClient:
         }
         Fallback về risk_weight nếu AI service lỗi.
         """
-        # FastAPI RiskInput accepts these canonical names. Never send obsolete
-        # amount/attachment_count fields: Pydantic silently ignores them and
-        # would score using zero/default values instead of the request data.
-        # Unknown business facts (receipt, budget, tenure) are deliberately not
-        # invented here; use the AI input defaults until real data is mapped.
-        rejection_rate = min(1.0, max(0.0, reject_count_30d / max(request_count_30d, 1)))
-        dept = requester_dept_category.lower().strip()
+        actual_amount = amount_vnd if amount_vnd is not None else amount
+        actual_attachments = (
+            num_attachments if num_attachments is not None else attachment_count
+        )
+        actual_past_requests = (
+            past_requests_count
+            if past_requests_count is not None
+            else request_count_30d
+        )
+        actual_dept = department if department is not None else requester_dept_category
+        if has_receipt is not None:
+            actual_receipt = has_receipt
+        else:
+            actual_receipt = 1 if (actual_attachments > 0 or actual_amount == 0) else 0
+
+        if is_off_hours is not None:
+            actual_off_hours = is_off_hours
+        else:
+            actual_off_hours = 1 if is_weekend_or_holiday else 0
+        past_rej_rate = min(
+            1.0, max(0.0, float(reject_count_30d) / max(1, actual_past_requests))
+        )
+
         payload = {
             "request_type": request_type,
             "lifecycle_template": lifecycle_template,
             "risk_weight": risk_weight,
-            "amount_vnd": max(0.0, float(amount)),
-            "num_attachments": max(0, int(attachment_count)),
-            "past_requests_count": max(0, int(request_count_30d)),
-            "past_rejection_rate": rejection_rate,
-            "is_off_hours": int(bool(is_weekend_or_holiday)),
-            "urgency": "high" if is_near_deadline else "medium",
-            "department": dept if dept in {
-                "it", "hr", "finance", "marketing", "sales", "operations", "legal"
-            } else "operations",
+            "amount_vnd": actual_amount,
+            "num_attachments": actual_attachments,
+            "department": actual_dept,
+            "requester_dept_category": actual_dept,
+            "has_receipt": actual_receipt,
+            "past_requests_count": actual_past_requests,
+            "past_rejection_rate": past_rej_rate,
+            "is_off_hours": actual_off_hours,
+            "is_weekend_or_holiday": bool(actual_off_hours),
+            "days_requested": days_requested,
+            "requester_level": requester_level,
+            "leave_balance_remaining": leave_balance_remaining,
+            "is_near_deadline": is_near_deadline,
+            "amount_vs_limit_ratio": amount_vs_limit_ratio,
+            "user_role": user_role,
+            "user_tenure_months": user_tenure_months,
+            "urgency": urgency,
+            "description_length": description_length,
+            **extra_kwargs,
         }
 
         if httpx is None:
@@ -148,7 +211,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/risk/score",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -177,6 +240,7 @@ class AIServiceClient:
         days_requested: int = 0,
         leave_balance_remaining: int = 0,
         room_available: bool | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         """
         Gọi AI /auto-approve/evaluate và trả về:
@@ -217,7 +281,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/auto-approve/evaluate",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -242,6 +306,7 @@ class AIServiceClient:
         data: dict | None = None,
         risk_score: int | None = None,
         amount: float | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         """
         Gọi AI /summarize/request và trả về:
@@ -276,7 +341,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/summarize/request",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -290,7 +355,10 @@ class AIServiceClient:
             }
 
     async def extract_ocr_from_url(
-        self, image_url: str, request_type: str | None = None
+        self,
+        image_url: str,
+        request_type: str | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         """
         Gọi AI /ocr/extract-url và trả về:
@@ -318,7 +386,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/ocr/extract-url",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -331,7 +399,12 @@ class AIServiceClient:
                 "engine": "error",
             }
 
-    async def classify_request(self, title: str, description: str = "") -> dict:
+    async def classify_request(
+        self,
+        title: str,
+        description: str = "",
+        correlation_id: str | None = None,
+    ) -> dict:
         """
         Gọi AI /classify/request và trả về:
         {
@@ -363,7 +436,7 @@ class AIServiceClient:
                 resp = await client.post(
                     f"{self.base_url}/ai/classify/request",
                     json=payload,
-                    headers=self.headers,
+                    headers=self._get_headers(correlation_id),
                 )
                 resp.raise_for_status()
                 return resp.json()
@@ -407,8 +480,17 @@ class SyncAIServiceClient:
         except RuntimeError:
             return asyncio.run(coro)
 
-    def classify_request(self, title: str, description: str = "") -> dict:
-        return self._run(self._async_client.classify_request(title, description))
+    def classify_request(
+        self,
+        title: str,
+        description: str = "",
+        correlation_id: str | None = None,
+    ) -> dict:
+        return self._run(
+            self._async_client.classify_request(
+                title, description, correlation_id=correlation_id
+            )
+        )
 
     def score_risk(self, **kwargs) -> dict:
         return self._run(self._async_client.score_risk(**kwargs))
@@ -420,10 +502,15 @@ class SyncAIServiceClient:
         return self._run(self._async_client.summarize_request(**kwargs))
 
     def extract_ocr_from_url(
-        self, image_url: str, request_type: str | None = None
+        self,
+        image_url: str,
+        request_type: str | None = None,
+        correlation_id: str | None = None,
     ) -> dict:
         return self._run(
-            self._async_client.extract_ocr_from_url(image_url, request_type)
+            self._async_client.extract_ocr_from_url(
+                image_url, request_type, correlation_id=correlation_id
+            )
         )
 
 

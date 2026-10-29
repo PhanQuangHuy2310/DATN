@@ -59,7 +59,7 @@ export function Policy({onManageAccess, canManageAccess=false}) {
             Soạn thảo, kiểm tra và công bố quy trình nghiệp vụ.
           </p>
         </div>
-        <button onClick={() => setModal("create")}>＋ Tạo bản nháp</button>
+        <button type="button" onClick={() => setModal("create")}>＋ Tạo bản nháp</button>
       </div>
       <section className="panel" aria-label="Kiểm tra công bố và quyền tạo đơn">
         <div className="section-head"><h2>Tình trạng công bố & quyền tạo đơn</h2>
@@ -69,7 +69,7 @@ export function Policy({onManageAccess, canManageAccess=false}) {
         </div>
         <p className="muted">POLICY_ADMIN tạo bản nháp, cập nhật biểu mẫu và công bố. OPS_ADMIN cấp quyền REQUESTER theo loại đơn/phòng ban trong mục Danh tính & phân quyền. Hai thao tác độc lập.</p>
         {canManageAccess && <button className="secondary" type="button" onClick={onManageAccess}>Mở quản lý quyền REQUESTER</button>}
-        {workflowMessage && <p role="status" className="muted">{workflowMessage}</p>}
+        {workflowMessage && <output className="muted">{workflowMessage}</output>}
         <ResourceState resource={statusResource}>
           <div className="table-wrap"><table className="responsive-records"><thead><tr>
             <th>Loại yêu cầu</th><th>Mẫu</th><th>Quy chế</th><th>Người có quyền tạo</th><th>Hành động</th>
@@ -422,57 +422,61 @@ export function Operations({ items, onRefresh }) {
     </>
   );
 }
-export function Notifications({ onOpen, onRead }) {
+export function Notifications({ onOpen }) {
   const [offset, setOffset] = useState(0),
     [limit, setLimit] = useState(20),
-    [unread, setUnread] = useState(false),
-    [actionError, setActionError] = useState("");
+    [unread, setUnread] = useState(false);
   const r = useResource(
     `/api/v1/notifications?limit=${limit}&offset=${offset}&unread=${unread}`,
   );
-  async function openNotification(item) {
-    setActionError("");
-    // Marking read is not allowed to block viewing a request; permissions
-    // for its detail and audit are checked again by the Django API.
-    if (!item.read_at) {
-      try {
-        await api(`/api/v1/notifications/${item.id}/read`, {method: "POST"});
-        onRead?.();
-        r.reload();
-      } catch (error) {
-        setActionError(errorText(error));
-      }
-    }
-    if (item.request_id) onOpen(item.request_id);
-  }
   return (
-    <section className="panel notification-center">
+    <section className="panel">
       <div className="section-head">
-        <div><h2>Trung tâm thông báo</h2>
-          <p className="muted">Chọn một thông báo để xem dòng thời gian đang xử lý của hồ sơ.</p></div>
+        <h2>Trung tâm thông báo</h2>
         <label className="inline">
-          <input type="checkbox" checked={unread}
-            onChange={(e) => { setUnread(e.target.checked); setOffset(0); }} />
+          <input
+            type="checkbox"
+            checked={unread}
+            onChange={(e) => {
+              setUnread(e.target.checked);
+              setOffset(0);
+            }}
+          />{" "}
           Chỉ chưa đọc
         </label>
       </div>
-      {actionError && <p role="alert" className="error">Không thể đánh dấu đã đọc: {actionError}</p>}
       <ResourceState resource={r}>
-        <div className="notification-list">
-          {r.data?.items?.map((n) => (
-            <button type="button" className={`notification-row ${n.read_at ? "" : "unread"}`}
-              key={n.id} onClick={() => openNotification(n)}
-              disabled={!n.request_id}
-              aria-label={`${n.label}. ${n.read_at ? "Đã đọc" : "Chưa đọc"}. Xem tiến trình xử lý`}>
-              <span className="notification-dot" aria-hidden="true" />
-              <span className="notification-main">
-                <strong>{n.label}</strong>
-                <small>{date(n.created_at)} · {n.read_at ? "Đã đọc" : "Chưa đọc"}</small>
-              </span>
-              <span className="notification-open" aria-hidden="true">Xem tiến trình →</span>
-            </button>
-          ))}
-        </div>
+        {r.data?.items?.map((n) => (
+          <article className="notification" key={n.id}>
+            <div>
+              <strong>{n.label}</strong>
+              <p className="muted">
+                {date(n.created_at)} · {n.read_at ? "Đã đọc" : "Chưa đọc"}
+              </p>
+            </div>
+            <div className="actions">
+              {n.request_id && (
+                <button
+                  className="secondary"
+                  onClick={() => onOpen(n.request_id)}
+                >
+                  Mở hồ sơ
+                </button>
+              )}
+              {!n.read_at && (
+                <ActionForm
+                  submitLabel="Đánh dấu đã đọc"
+                  onSubmit={async () => {
+                    await api(`/api/v1/notifications/${n.id}/read`, {
+                      method: "POST",
+                    });
+                    r.reload();
+                  }}
+                />
+              )}
+            </div>
+          </article>
+        ))}
         {!r.data?.items?.length && <p className="empty">Không có thông báo.</p>}
         <PageControls offset={offset} limit={limit} nextOffset={r.data?.next_offset}
           count={r.data?.items?.length || 0} title="thông báo"

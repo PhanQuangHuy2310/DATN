@@ -1,12 +1,16 @@
-import joblib, json, os
-import numpy as np
+import json
+import os
+from pathlib import Path
 
-models_dir = 'D:/GitHub/DATN/ai_service/models'
+import joblib
+
+ai_service_dir = Path(__file__).resolve().parents[1]
+models_dir = str(ai_service_dir / "models")
 configs = {
-    'finance': ('risk_model_finance.pkl', 'feature_cols_finance.json'),
-    'hr':      ('risk_model_hr.pkl',      'feature_cols_hr.json'),
-    'it':      ('risk_model_it.pkl',      'feature_cols_it.json'),
-    'master':  ('risk_model.pkl',         'feature_columns.json'),
+    "finance": ("risk_model_finance.pkl", "feature_cols_finance.json"),
+    "hr": ("risk_model_hr.pkl", "feature_cols_hr.json"),
+    "it": ("risk_model_it.pkl", "feature_cols_it.json"),
+    "master": ("risk_model.pkl", "feature_columns.json"),
 }
 for domain, (mf, ff) in configs.items():
     mp = os.path.join(models_dir, mf)
@@ -16,9 +20,9 @@ for domain, (mf, ff) in configs.items():
         continue
     m = joblib.load(mp)
     size_mb = os.path.getsize(mp) / 1024 / 1024
-    with open(fp, encoding='utf-8') as f:
+    with open(fp, encoding="utf-8") as f:
         meta = json.load(f)
-    feat_cols = meta['feature_cols'] if isinstance(meta, dict) else meta
+    feat_cols = meta["feature_cols"] if isinstance(meta, dict) else meta
     p = m.get_params()
     print(f"=== {domain.upper()} MODEL ===")
     print(f"  File size        : {size_mb:.1f} MB")
@@ -36,5 +40,5 @@ for domain, (mf, ff) in configs.items():
     print("  Top 5 Feature Importance:")
     for name, val in top5:
         bar = "#" * int(val * 200)
-        print(f"    {name:<30} {val*100:5.2f}%  {bar}")
+        print(f"    {name:<30} {val * 100:5.2f}%  {bar}")
     print()

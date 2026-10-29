@@ -1,9 +1,13 @@
+from django.http import HttpResponse
 from django.urls import include, path
 
 from api_core.authn import views as authn_views
 from api_core.catalog import views as catalog_views
+from api_core.health import views as health_views
 
 urlpatterns = [
+    path("", health_views.live, name="root-live"),
+    path("favicon.ico", lambda _: HttpResponse(status=204), name="favicon"),
     path("api/v1/admin/", include("api_core.administration.urls")),
     path("health/", include("api_core.health.urls")),
     path("api/v1/auth/", include("api_core.authn.urls")),

@@ -12,16 +12,21 @@ POST /ai/classify/request
 Mô hình:
   - TF-IDF Vectorizer + Calibrated Classifier (huấn luyện trên 50.000 mẫu tiếng Việt)
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
-from loguru import logger
-import os
+
 import json
+import os
+
 import joblib
 import numpy as np
 
-from config import get_settings
+try:
+    from config import get_settings
+except (ImportError, AttributeError):
+    from ai_service.config import get_settings
+
+from fastapi import APIRouter, HTTPException
+from loguru import logger
+from pydantic import BaseModel, Field
 
 settings = get_settings()
 router = APIRouter()
@@ -34,11 +39,17 @@ _clf_req_type = None
 _clf_dept = None
 _clf_template = None
 _nlp_labels = None
-_load_error: Optional[str] = None
+_load_error: str | None = None
 
 
 def get_nlp_models():
-    global _vectorizer, _clf_req_type, _clf_dept, _clf_template, _nlp_labels, _load_error
+    global \
+        _vectorizer, \
+        _clf_req_type, \
+        _clf_dept, \
+        _clf_template, \
+        _nlp_labels, \
+        _load_error
     if _vectorizer is not None and _clf_req_type is not None:
         return _vectorizer, _clf_req_type, _clf_dept, _clf_template, _nlp_labels
 
@@ -63,7 +74,7 @@ def get_nlp_models():
 
         logger.success("Loaded NLP classification models successfully!")
         return _vectorizer, _clf_req_type, _clf_dept, _clf_template, _nlp_labels
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _load_error = str(e)
         logger.warning(f"Chưa load được NLP models: {e}")
         return None, None, None, None, None
@@ -73,18 +84,33 @@ def get_nlp_models():
 # Schemas
 # ---------------------------------------------------------------------------
 
+
 class ClassifyRequestInput(BaseModel):
-    title: str = Field(..., example="Đề xuất mua màn hình Dell 27 inch cho team Dev", description="Tiêu đề yêu cầu")
-    description: str = Field("", example="Màn hình cũ bị sọc hình, cần mua màn hình mới để làm việc đồ họa.", description="Nội dung chi tiết")
+    title: str = Field(
+        ...,
+        example="Đề xuất mua màn hình Dell 27 inch cho team Dev",
+        description="Tiêu đề yêu cầu",
+    )
+    description: str = Field(
+        "",
+        example="Màn hình cũ bị sọc hình, cần mua màn hình mới để làm việc đồ họa.",
+        description="Nội dung chi tiết",
+    )
 
 
 class ClassifyRequestResult(BaseModel):
     predicted_request_type: str = Field(..., description="Loại yêu cầu dự đoán")
     predicted_department: str = Field(..., description="Phòng ban dự đoán")
     predicted_template: str = Field(..., description="Biểu mẫu phê duyệt A, B hoặc C")
-    confidence_request_type: float = Field(..., description="Độ tin cậy dự đoán loại yêu cầu (0-1)")
-    confidence_department: float = Field(..., description="Độ tin cậy dự đoán phòng ban (0-1)")
-    confidence_template: float = Field(..., description="Độ tin cậy dự đoán template (0-1)")
+    confidence_request_type: float = Field(
+        ..., description="Độ tin cậy dự đoán loại yêu cầu (0-1)"
+    )
+    confidence_department: float = Field(
+        ..., description="Độ tin cậy dự đoán phòng ban (0-1)"
+    )
+    confidence_template: float = Field(
+        ..., description="Độ tin cậy dự đoán template (0-1)"
+    )
     workflow_suggestion: str = Field(..., description="Gợi ý quy trình xử lý")
 
 
@@ -92,16 +118,30 @@ class ClassifyRequestResult(BaseModel):
 # Heuristic fallback khi model chưa train
 # ---------------------------------------------------------------------------
 
+
 def heuristic_classify(text: str) -> dict:
     t = text.lower()
     if any(k in t for k in ["nghỉ phép", "phép năm", "nghỉ việc", "ốm", "kết hôn"]):
         return {"type": "leave_annual", "dept": "hr", "template": "A"}
     elif any(k in t for k in ["tăng ca", "làm thêm", "overtime", "ngoài giờ"]):
         return {"type": "overtime", "dept": "hr", "template": "B"}
-    elif any(k in t for k in ["vpn", "truy cập", "mật khẩu", "phần mềm", "máy tính", "laptop"]):
-        return {"type": "equipment_new" if "mua" in t else "access_permission", "dept": "it", "template": "B"}
-    elif any(k in t for k in ["hợp đồng", "ngân sách", "tạm ứng", "hoàn ứng", "thanh toán"]):
-        return {"type": "contract_payment" if "hợp đồng" in t else "advance_payment", "dept": "finance", "template": "C"}
+    elif any(
+        k in t
+        for k in ["vpn", "truy cập", "mật khẩu", "phần mềm", "máy tính", "laptop"]
+    ):
+        return {
+            "type": "equipment_new" if "mua" in t else "access_permission",
+            "dept": "it",
+            "template": "B",
+        }
+    elif any(
+        k in t for k in ["hợp đồng", "ngân sách", "tạm ứng", "hoàn ứng", "thanh toán"]
+    ):
+        return {
+            "type": "contract_payment" if "hợp đồng" in t else "advance_payment",
+            "dept": "finance",
+            "template": "C",
+        }
     elif any(k in t for k in ["phòng họp", "đặt phòng"]):
         return {"type": "meeting_room", "dept": "operations", "template": "A"}
     elif any(k in t for k in ["xe công tác", "đặt xe"]):
@@ -113,17 +153,20 @@ def heuristic_classify(text: str) -> dict:
 # Endpoint
 # ---------------------------------------------------------------------------
 
+
 @router.post("/classify", include_in_schema=False)  # Backward-compatible old endpoint
-@router.post("/request", response_model=ClassifyRequestResult, summary="Phân loại yêu cầu tự động (NLP)")
+@router.post("/request", response_model=ClassifyRequestResult, summary="Phân loại yêu cầu tự động (NLP)")  # fmt: skip
 async def classify_request(body: ClassifyRequestInput):
     """
     Tự động nhận diện loại yêu cầu, phòng ban và quy trình phê duyệt dựa trên tiêu đề và nội dung tiếng Việt.
     """
-    vectorizer, clf_req, clf_dept, clf_tpl, labels = get_nlp_models()
+    vectorizer, clf_req, clf_dept, clf_tpl, _labels = get_nlp_models()
     full_text = f"{body.title} {body.description}".strip()
 
     if not full_text:
-        raise HTTPException(status_code=400, detail="Tiêu đề hoặc mô tả không được để trống")
+        raise HTTPException(
+            status_code=400, detail="Tiêu đề hoặc mô tả không được để trống"
+        )
 
     if vectorizer is not None and clf_req is not None:
         try:
@@ -157,9 +200,11 @@ async def classify_request(body: ClassifyRequestInput):
                 confidence_request_type=round(req_conf, 4),
                 confidence_department=round(dept_conf, 4),
                 confidence_template=round(tpl_conf, 4),
-                workflow_suggestion=workflow_map.get(tpl_pred, "Quy trình phê duyệt tiêu chuẩn"),
+                workflow_suggestion=workflow_map.get(
+                    tpl_pred, "Quy trình phê duyệt tiêu chuẩn"
+                ),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Lỗi suy luận NLP: {e}")
 
     # Fallback nếu model lỗi

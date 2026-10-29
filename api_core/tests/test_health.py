@@ -84,7 +84,11 @@ class HealthEndpointTests(SimpleTestCase):
 
     @patch(
         "api_core.health.views.database_readiness",
-        return_value=(False, {"runtime_role_is_non_admin": False}, {"unconfigured_active_type_count": 7}),
+        return_value=(
+            False,
+            {"runtime_role_is_non_admin": False},
+            {"unconfigured_active_type_count": 7},
+        ),
     )
     @override_settings(EAS_REQUIRE_STORAGE=False)
     def test_ready_fails_closed(self, _probe):
@@ -96,8 +100,10 @@ class HealthEndpointTests(SimpleTestCase):
 class OptionalCatalogReadinessTests(SimpleTestCase):
     def test_optional_types_do_not_break_p0_gates(self):
         rows = [
-            ("LEAVE", "A", True), ("ACCESS", "B", True),
-            ("EQUIPMENT", "C", True), ("BUSINESS_TRIP", "B", False),
+            ("LEAVE", "A", True),
+            ("ACCESS", "B", True),
+            ("EQUIPMENT", "C", True),
+            ("BUSINESS_TRIP", "B", False),
             ("ROOM_BOOKING", "A", False),
         ]
         result = assess_request_types(rows, require_active_releases=True)
@@ -106,7 +112,6 @@ class OptionalCatalogReadinessTests(SimpleTestCase):
         self.assertFalse(result["all_active_types_configured"])
 
     def test_missing_p0_release_still_blocks_core_readiness(self):
-        rows = [("LEAVE", "A", True), ("ACCESS", "B", False),
-                ("EQUIPMENT", "C", True)]
+        rows = [("LEAVE", "A", True), ("ACCESS", "B", False), ("EQUIPMENT", "C", True)]
         result = assess_request_types(rows, require_active_releases=True)
         self.assertFalse(result["p0_active_types_configured"])

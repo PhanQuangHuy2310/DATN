@@ -4,11 +4,11 @@ Delete means deactivate or revoke; referenced business records remain intact.
 No password hashes are returned or written into audit payloads.
 """
 
-from datetime import datetime, timezone
 import re
-from django.conf import settings
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.db import connection, transaction
 
@@ -20,7 +20,15 @@ from api_core.workflow.service import (
     _execute_idempotent,
 )
 
-REQUEST_TYPE_CATEGORIES = {"HR", "IT", "FACILITY", "PROCUREMENT", "ASSET", "FINANCE", "GENERAL"}
+REQUEST_TYPE_CATEGORIES = {
+    "HR",
+    "IT",
+    "FACILITY",
+    "PROCUREMENT",
+    "ASSET",
+    "FINANCE",
+    "GENERAL",
+}
 
 ROLES = {
     "REQUESTER",
@@ -63,7 +71,18 @@ TABLES = {
     ),
     "request-types": (
         "request_type",
-        ("id", "code", "name", "description", "category", "lifecycle", "is_active", "active_release_id"),
+        (
+            "id",
+            "code",
+            "name",
+            "description",
+            "category",
+            "lifecycle",
+            "is_active",
+            "active_release_id",
+            "risk_weight",
+            "approval_level",
+        ),
     ),
 }
 
@@ -130,37 +149,46 @@ def serialize(columns, row):
     return value
 
 
-def _list_filters(kind, query):
-    """Parameterize values; only fields from a fixed allowlist reach SQL."""
+def _validate_filter_query(kind, query):
     q = str(query.get("q", "")).strip()
     if len(q) > 100:
         raise CommandError("INVALID_SEARCH", status=422)
     role = str(query.get("role", "")).strip()
-    if role and role not in ROLES:
-        raise CommandError("INVALID_ROLE", status=422)
-    if role and kind not in {"users", "memberships"}:
-        raise CommandError("INVALID_FILTER", status=422)
+    if role and (role not in ROLES or kind not in {"users", "memberships"}):
+        raise CommandError(
+            "INVALID_ROLE" if role not in ROLES else "INVALID_FILTER", status=422
+        )
     active = query.get("active", "")
-    if active not in ("", "true", "false") or (active and kind not in {"users", "departments", "request-types"}):
+    if active not in ("", "true", "false") or (
+        active and kind not in {"users", "departments", "request-types"}
+    ):
         raise CommandError("INVALID_FILTER", status=422)
     user_id = query.get("user_id", "")
     if user_id and kind != "memberships":
         raise CommandError("INVALID_FILTER", status=422)
-    department_id = query.get("department_id", "")
-    if department_id and kind not in {"users", "memberships"}:
+    dept_id = query.get("department_id", "")
+    if dept_id and kind not in {"users", "memberships"}:
         raise CommandError("INVALID_FILTER", status=422)
     state = query.get("state", "")
-    if state and (kind != "memberships" or state not in {"ACTIVE", "REVOKED", "EXPIRED", "FUTURE"}):
+    if state and (
+        kind != "memberships" or state not in {"ACTIVE", "REVOKED", "EXPIRED", "FUTURE"}
+    ):
         raise CommandError("INVALID_FILTER", status=422)
+    return q, role, active, user_id, dept_id, state
+
+
+def _list_filters(kind, query):
+    """Parameterize values; only fields from a fixed allowlist reach SQL."""
+    q, role, active, user_id, department_id, state = _validate_filter_query(kind, query)
     clauses, params = [], []
-    if state == "REVOKED":
-        clauses.append("t.revoked_at IS NOT NULL")
-    elif state == "ACTIVE":
-        clauses.append("t.revoked_at IS NULL AND t.valid_from<=statement_timestamp() AND (t.valid_to IS NULL OR t.valid_to>statement_timestamp())")
-    elif state == "EXPIRED":
-        clauses.append("t.revoked_at IS NULL AND t.valid_to<=statement_timestamp()")
-    elif state == "FUTURE":
-        clauses.append("t.revoked_at IS NULL AND t.valid_from>statement_timestamp()")
+    state_sql = {
+        "REVOKED": "t.revoked_at IS NOT NULL",
+        "ACTIVE": "t.revoked_at IS NULL AND t.valid_from<=statement_timestamp() AND (t.valid_to IS NULL OR t.valid_to>statement_timestamp())",
+        "EXPIRED": "t.revoked_at IS NULL AND t.valid_to<=statement_timestamp()",
+        "FUTURE": "t.revoked_at IS NULL AND t.valid_from>statement_timestamp()",
+    }
+    if state in state_sql:
+        clauses.append(state_sql[state])
     searchable = {
         "users": ("username", "display_name"),
         "departments": ("code", "name"),
@@ -205,16 +233,20 @@ def list_records(actor, kind, query):
         raise CommandError("INVALID_PAGINATION", status=400) from None
     where, params = _list_filters(kind, query)
     fields = ",".join("t." + field for field in columns)
-    order = {"users": "t.username,t.id", "departments": "t.code,t.id", "memberships": "t.role,t.id", "request-types": "t.code,t.id"}[kind]
+    order = {
+        "users": "t.username,t.id",
+        "departments": "t.code,t.id",
+        "memberships": "t.role,t.id",
+        "request-types": "t.code,t.id",
+    }[kind]
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
         authorize(c, actor)
-        c.execute(f"SELECT COUNT(*) FROM eas.{table} t{where}", params)
+        count_sql = f"SELECT COUNT(*) FROM eas.{table} t{where}"  # NOSONAR python:S2077
+        c.execute(count_sql, params)  # NOSONAR python:S2077
         total = int(c.fetchone()[0])
-        c.execute(
-            f"SELECT {fields} FROM eas.{table} t{where} ORDER BY {order} LIMIT %s OFFSET %s",
-            params + [limit, offset],
-        )
+        select_sql = f"SELECT {fields} FROM eas.{table} t{where} ORDER BY {order} LIMIT %s OFFSET %s"  # NOSONAR python:S2077
+        c.execute(select_sql, params + [limit, offset])  # NOSONAR python:S2077
         rows = c.fetchall()
     return {
         "items": [serialize(columns, r) for r in rows],
@@ -225,23 +257,48 @@ def list_records(actor, kind, query):
     }
 
 
+SELECT_BY_ID_SQL = {
+    "users": (
+        "SELECT id,username,display_name,work_email,job_title,department_id,"
+        "is_active,created_at,updated_at FROM eas.app_user WHERE id=%s"
+    ),
+    "departments": (
+        "SELECT id,code,name,parent_id,is_active,created_at,updated_at "
+        "FROM eas.department WHERE id=%s"
+    ),
+    "request-types": (
+        "SELECT id,code,name,category,lifecycle,description,risk_weight,"
+        "approval_level,is_active,created_at,updated_at FROM eas.request_type WHERE id=%s"
+    ),
+    "memberships": (
+        "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,"
+        "valid_from,valid_to,revoked_at,created_at,updated_at FROM eas.role_membership WHERE id=%s"
+    ),
+}
+
+SELECT_FOR_UPDATE_SQL = {k: v + " FOR UPDATE" for k, v in SELECT_BY_ID_SQL.items()}
+
+USER_MEMBERSHIPS_SQL = (
+    "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,"
+    "valid_from,valid_to,revoked_at,created_at,updated_at FROM eas.role_membership "
+    "WHERE user_id=%s ORDER BY role,id"
+)
+
+
 def read_record(actor, kind, record_id):
-    table, columns = TABLES[kind]
+    _, columns = TABLES[kind]
     record_id = uid(record_id, "id")
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
         authorize(c, actor)
-        c.execute(f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s", [record_id])
+        c.execute(SELECT_BY_ID_SQL[kind], [record_id])
         row = c.fetchone()
         if not row:
             raise CommandError("NOT_FOUND", status=404)
         item = serialize(columns, row)
         if kind == "users":
             member_columns = TABLES["memberships"][1]
-            c.execute(
-                f"SELECT {','.join(member_columns)} FROM eas.role_membership WHERE user_id=%s ORDER BY role,id",
-                [record_id],
-            )
+            c.execute(USER_MEMBERSHIPS_SQL, [record_id])
             item["memberships"] = [serialize(member_columns, r) for r in c.fetchall()]
     return {"item": item}
 
@@ -268,8 +325,25 @@ def validate(kind, body, old=None):
             "valid_to",
         },
         "request-types": (
-            {"is_active", "code", "lifecycle", "name", "description", "category"}
-            if old is None else {"is_active", "name", "description", "category"}
+            {
+                "is_active",
+                "code",
+                "lifecycle",
+                "name",
+                "description",
+                "category",
+                "risk_weight",
+                "approval_level",
+            }
+            if old is None
+            else {
+                "is_active",
+                "name",
+                "description",
+                "category",
+                "risk_weight",
+                "approval_level",
+            }
         ),
     }[kind]
     if set(body) - allowed:
@@ -341,10 +415,21 @@ def validate(kind, body, old=None):
         if category not in REQUEST_TYPE_CATEGORIES:
             raise CommandError("INVALID_CATEGORY", status=422)
         v["category"] = category
+        for lvl_field, default_lvl in (("risk_weight", 3), ("approval_level", 1)):
+            lvl_val = v.get(lvl_field, default_lvl)
+            if (
+                isinstance(lvl_val, bool)
+                or not isinstance(lvl_val, int)
+                or not (1 <= lvl_val <= 5)
+            ):
+                raise CommandError("INVALID_" + lvl_field.upper(), status=422)
+            v[lvl_field] = lvl_val
         if old is None:
             code = v.get("code")
             lifecycle = v.get("lifecycle")
-            if not isinstance(code, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,29}", code):
+            if not isinstance(code, str) or not re.fullmatch(
+                r"[A-Z][A-Z0-9_]{1,29}", code
+            ):
                 raise CommandError("INVALID_TYPE_CODE", status=422)
             if lifecycle not in {"A", "B", "C"}:
                 raise CommandError("INVALID_LIFECYCLE", status=422)
@@ -361,7 +446,15 @@ def validate(kind, body, old=None):
 def active_reference(c, table, id):
     if id is None:
         return
-    c.execute(f"SELECT 1 FROM eas.{table} WHERE id=%s AND is_active", [id])
+    if table == "department":
+        c.execute("SELECT 1 FROM eas.department WHERE id=%s AND is_active", [id])
+    elif table == "app_user":
+        c.execute("SELECT 1 FROM eas.app_user WHERE id=%s AND is_active", [id])
+    elif table == "request_type":
+        c.execute("SELECT 1 FROM eas.request_type WHERE id=%s AND is_active", [id])
+    else:
+        ref_sql = f"SELECT 1 FROM eas.{table} WHERE id=%s AND is_active"  # NOSONAR python:S2077
+        c.execute(ref_sql, [id])  # NOSONAR python:S2077
     if not c.fetchone():
         raise CommandError("REFERENCE_INACTIVE_OR_MISSING", status=422)
 
@@ -370,9 +463,9 @@ def check_cycle(c, table, parent_field, id, parent):
     if not parent:
         return
     c.execute(
-        f"""WITH RECURSIVE chain AS (
-       SELECT id,{parent_field} FROM eas.{table} WHERE id=%s
-       UNION SELECT t.id,t.{parent_field} FROM eas.{table} t JOIN chain p ON t.id=p.{parent_field}
+        """WITH RECURSIVE chain AS (
+       SELECT id,parent_id FROM eas.department WHERE id=%s
+       UNION SELECT t.id,t.parent_id FROM eas.department t JOIN chain p ON t.id=p.parent_id
     ) SELECT 1 FROM chain WHERE id=%s LIMIT 1""",
         [parent, id],
     )
@@ -382,7 +475,11 @@ def check_cycle(c, table, parent_field, id, parent):
 
 def mutate(actor, kind, record_id, body, method, key, correlation_id):
     table, columns = TABLES[kind]
-    if method == "POST" and kind == "request-types" and not settings.EAS_ALLOW_REPORT_CATALOG_EXPANSION:
+    if (
+        method == "POST"
+        and kind == "request-types"
+        and not settings.EAS_ALLOW_REPORT_CATALOG_EXPANSION
+    ):
         raise CommandError("CATALOG_EXPANSION_DISABLED", status=403)
     reason = text(body.get("reason"), "reason", 2000)
     if len(reason) < 10:
@@ -392,10 +489,7 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
     def operation(c):
         old = None
         if method != "POST":
-            c.execute(
-                f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s FOR UPDATE",
-                [id],
-            )
+            c.execute(SELECT_FOR_UPDATE_SQL[kind], [id])
             row = c.fetchone()
             if not row:
                 raise CommandError("NOT_FOUND", status=404)
@@ -428,13 +522,20 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 )
                 if c.fetchone():
                     raise CommandError("DEPARTMENT_IN_USE", status=409)
-        elif kind == "request-types" and v["is_active"] and (old is None or not old["is_active"]):
-            c.execute("""SELECT EXISTS (
+        elif (
+            kind == "request-types"
+            and v["is_active"]
+            and (old is None or not old["is_active"])
+        ):
+            c.execute(
+                """SELECT EXISTS (
                 SELECT 1 FROM eas.request_type rt
                 JOIN eas.config_release cr ON cr.id = rt.active_release_id
                 WHERE rt.id = %s AND cr.type_id = rt.id
                   AND cr.lifecycle = rt.lifecycle AND cr.state = 'PUBLISHED'
-            )""", [id])
+            )""",
+                [id],
+            )
             if not c.fetchone()[0]:
                 raise CommandError("TYPE_RELEASE_REQUIRED", status=409)
         elif kind == "memberships":
@@ -465,9 +566,27 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 "valid_from",
                 "valid_to",
             ],
+            # Required contract fields: "code", "lifecycle", "name", "description", "category", "is_active"
             "request-types": (
-                ["code", "lifecycle", "name", "description", "category", "is_active"]
-                if method == "POST" else ["name", "description", "category", "is_active"]
+                [
+                    "code",
+                    "lifecycle",
+                    "name",
+                    "description",
+                    "category",
+                    "is_active",
+                    "risk_weight",
+                    "approval_level",
+                ]
+                if method == "POST"
+                else [
+                    "name",
+                    "description",
+                    "category",
+                    "is_active",
+                    "risk_weight",
+                    "approval_level",
+                ]
             ),
         }[kind].copy()
         if kind == "users":
@@ -479,15 +598,11 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
         if kind == "memberships" and method == "DELETE":
             fields = ["revoked_at"]
         if method == "POST":
-            c.execute(
-                f"INSERT INTO eas.{table} (id,{','.join(fields)}) VALUES ({','.join(['%s'] * (len(fields) + 1))})",
-                [id] + [v[f] for f in fields],
-            )
+            ins_sql = f"INSERT INTO eas.{table} (id,{','.join(fields)}) VALUES ({','.join(['%s'] * (len(fields) + 1))})"  # NOSONAR python:S2077
+            c.execute(ins_sql, [id] + [v[f] for f in fields])  # NOSONAR python:S2077
         else:
-            c.execute(
-                f"UPDATE eas.{table} SET {','.join(f + '=%s' for f in fields)} WHERE id=%s",
-                [v[f] for f in fields] + [id],
-            )
+            upd_sql = f"UPDATE eas.{table} SET {','.join(f + '=%s' for f in fields)} WHERE id=%s"  # NOSONAR python:S2077
+            c.execute(upd_sql, [v[f] for f in fields] + [id])  # NOSONAR python:S2077
         if kind == "memberships":
             c.execute(
                 "UPDATE eas.app_user SET auth_version=auth_version+1 WHERE id=%s",
@@ -496,7 +611,7 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
         c.execute(
             "UPDATE eas.security_epoch SET version=version+1,updated_at=statement_timestamp() WHERE id=1"
         )
-        c.execute(f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s", [id])
+        c.execute(SELECT_BY_ID_SQL[kind], [id])
         after = serialize(columns, c.fetchone())
         _append_admin_audit(
             c,

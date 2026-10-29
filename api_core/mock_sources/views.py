@@ -28,17 +28,13 @@ def resource_list(request, resource: str):
         data = list_resource(resource, request.GET, roles=request.actor.roles)
     except QueryValidationError as exc:
         code = str(exc)
-        return api_error(
-            request,
-            code,
-            status=(
-                404
-                if code == "RESOURCE_NOT_FOUND"
-                else 403
-                if code == "RESOURCE_FORBIDDEN"
-                else 400
-            ),
-        )
+        if code == "RESOURCE_NOT_FOUND":
+            status = 404
+        elif code == "RESOURCE_FORBIDDEN":
+            status = 403
+        else:
+            status = 400
+        return api_error(request, code, status=status)
     except DatabaseError:
         logger.error(
             "mock_source_unavailable",

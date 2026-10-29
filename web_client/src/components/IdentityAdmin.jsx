@@ -120,6 +120,10 @@ function Editor({ kind, record }) {
       </label>
     </div>
     <label>Mô tả nghiệp vụ<textarea name="description" defaultValue={record?.description || ""} maxLength={2000} rows={3} placeholder="Nêu mục đích và trường hợp áp dụng" /></label>
+    <div className="form-grid">
+      <label>Trọng số rủi ro (5 cấp)<select name="risk_weight" defaultValue={String(record?.risk_weight || 3)}><option value="1">Cấp 1 — Rất thấp</option><option value="2">Cấp 2 — Thấp</option><option value="3">Cấp 3 — Trung bình</option><option value="4">Cấp 4 — Cao</option><option value="5">Cấp 5 — Trọng yếu</option></select></label>
+      <label>Cấp độ phê duyệt (5 cấp)<select name="approval_level" defaultValue={String(record?.approval_level || 1)}><option value="1">Cấp 1 — Duyệt 1 cấp</option><option value="2">Cấp 2 — Duyệt 2 cấp</option><option value="3">Cấp 3 — Duyệt 3 cấp</option><option value="4">Cấp 4 — Duyệt 4 cấp</option><option value="5">Cấp 5 — Duyệt 5 cấp</option></select></label>
+    </div>
     <Active value={record?.is_active ?? false}/>
     {!record && <p className="muted">Loại mới được đăng ký ở trạng thái Ngừng hoạt động. Chỉ kích hoạt sau khi Policy Admin công bố release hợp lệ.</p>}
     <p className="muted">Việc tạo thêm loại chỉ khả dụng khi quản trị CSDL đã áp dụng migration mở rộng và bật EAS_ALLOW_REPORT_CATALOG_EXPANSION. Loại mới phải được Policy Admin công bố bản cấu hình và cấp quyền REQUESTER trước khi sử dụng.</p>
@@ -193,6 +197,8 @@ export default function IdentityAdmin() {
   async function save(v) {
     const body = { ...v };
     if ("is_active" in body) body.is_active = body.is_active === "true";
+    if ("risk_weight" in body) body.risk_weight = Number(body.risk_weight);
+    if ("approval_level" in body) body.approval_level = Number(body.approval_level);
     if (!body.password) delete body.password;
     if (modal.record) body.expected_revision = modal.record.revision;
     await command(`admin/${kind}${modal.record ? "/" + modal.record.id : ""}`, body, modal.record ? "PATCH" : "POST");
@@ -208,10 +214,10 @@ export default function IdentityAdmin() {
     <div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ DANH TÍNH / UC17</p><h1>Người dùng & ma trận phân quyền</h1><p className="muted">Quản trị tài khoản, quan hệ quản lý, phòng ban, vai trò có thời hạn và phạm vi áp dụng; không xóa user có dữ liệu lịch sử.</p></div>
       <button type="button" onClick={() => setModal({mode: "edit", record: null})}>+ {kind === "users" ? "Tạo người dùng" : kind === "memberships" ? "Cấp quyền" : kind === "request-types" ? "Tạo loại yêu cầu" : "Thêm phòng ban"}</button>
     </div>
-    {kind === "request-types" && <p className="muted" role="status">Báo cáo v1.0 đặt mục tiêu 16 loại yêu cầu. Hệ thống hiện có {total} loại theo bộ lọc đang chọn; loại mới cần được cấp quyền, cấu hình và công bố trước khi tạo hồ sơ.</p>}
+    {kind === "request-types" && <output className="muted">Báo cáo v1.0 đặt mục tiêu 16 loại yêu cầu. Hệ thống hiện có {total} loại theo bộ lọc đang chọn; loại mới cần được cấp quyền, cấu hình và công bố trước khi tạo hồ sơ.</output>}
     <div className="identity-explain" role="note"><strong>Bảo mật UC17:</strong> chỉ OPS_ADMIN với role membership <code>GLOBAL + ALL</code> mới được gọi API quản lý. Không suy quyền từ chức danh; mọi hành động cần lý do, idempotency và audit; không tự cấp/sửa role của chính mình.</div>
     <div className="tabs" aria-label="Mục quản trị danh tính">{Object.entries(entities).map(([k, v]) => <button type="button" className={kind === k ? "active" : "secondary"} key={k} onClick={() => switchKind(k)}>{v}</button>)}</div>
-    {notice && <p className="success" role="status">{notice}</p>}
+    {notice && <output className="success">{notice}</output>}
     <section className="panel identity-filter-panel" aria-label="Lọc dữ liệu">
       <div className="identity-filter-grid">
         <label>Tìm kiếm {entities[kind].toLowerCase()}
@@ -232,7 +238,7 @@ export default function IdentityAdmin() {
         {kind === "memberships" && <MembershipOverview items={r.data?.items || []}/>}
         <div className="table-wrap"><table className="responsive-records identity-table"><thead><tr><th>Thông tin</th><th>Phòng ban / scope</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
           {r.data?.items?.map((item) => <tr key={item.id}>
-            <td data-label="Thông tin"><div className="identity-primary"><span className="identity-avatar" aria-hidden="true">{(item.display_name || item.name || item.role || item.code || "E").slice(0, 1).toLocaleUpperCase("vi")}</span><span><strong>{item.display_name || item.name || roles[item.role] || item.code || "—"}</strong><small>{item.username || item.code || item.user_id || item.role || ""}</small>{kind === "request-types" && <small>{item.category} · {item.lifecycle} · {item.description || "Chưa có mô tả"}</small>}<small className="identity-id">ID {item.id}</small></span></div></td>
+            <td data-label="Thông tin"><div className="identity-primary"><span className="identity-avatar" aria-hidden="true">{(item.display_name || item.name || item.role || item.code || "E").slice(0, 1).toLocaleUpperCase("vi")}</span><span><strong>{item.display_name || item.name || roles[item.role] || item.code || "—"}</strong><small>{item.username || item.code || item.user_id || item.role || ""}</small>{kind === "request-types" && <small>{item.category} · Mẫu {item.lifecycle} · Trọng số Cấp {item.risk_weight || 3}/5 · Duyệt {item.approval_level || 1}/5 cấp · {item.description || "Chưa có mô tả"}</small>}<small className="identity-id">ID {item.id}</small></span></div></td>
             <td data-label="Phạm vi"><small>{item.scope_kind ? `${item.scope_kind} · ${item.type_scope}` : item.department_id ? `Phòng: ${item.department_id}` : "—"}</small></td>
             <td data-label="Trạng thái"><span className={`identity-status ${kind === "memberships" ? (item.revoked_at ? "off" : item.valid_to && new Date(item.valid_to) <= new Date() ? "off" : new Date(item.valid_from) > new Date() ? "future" : "on") : item.is_active ? "on" : "off"}`}>{kind === "memberships" ? item.revoked_at ? "Đã thu hồi" : item.valid_to && new Date(item.valid_to) <= new Date() ? "Hết hiệu lực" : new Date(item.valid_from) > new Date() ? "Chưa hiệu lực" : "Đang hiệu lực" : item.is_active ? "Hoạt động" : "Ngừng hoạt động"}</span></td>
             <td data-label="Thao tác"><div className="actions"><button type="button" className="secondary" onClick={() => setModal({mode:"view",record:item})}>Chi tiết</button><button type="button" className="secondary" disabled={!!item.revoked_at} onClick={() => setModal({mode:"edit",record:item})}>Sửa</button><button type="button" className="danger" disabled={kind === "memberships" ? !!item.revoked_at : !item.is_active} onClick={() => setModal({mode:"delete",record:item})}>{kind === "memberships" ? "Thu hồi" : "Vô hiệu hóa"}</button></div></td>

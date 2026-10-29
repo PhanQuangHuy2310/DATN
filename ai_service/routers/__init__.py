@@ -1,4 +1,4 @@
 # routers/__init__.py
-from . import ocr, summarize, risk, auto_approve, classify
+from . import auto_approve, classify, ocr, risk, summarize
 
-__all__ = ["ocr", "summarize", "risk", "auto_approve", "classify"]
+__all__ = ["auto_approve", "classify", "ocr", "risk", "summarize"]

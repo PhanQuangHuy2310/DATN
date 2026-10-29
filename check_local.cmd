@@ -1,5 +1,6 @@
 @echo off
 cd /d "%~dp0"
-if not exist ".venv\Scripts\python.exe" (echo Backend venv missing. & exit /b 2)
-".venv\Scripts\python.exe" check_eas_connections_local.py %*
+set "PY_EXE=.venv\Scripts\python.exe"
+if not exist "%PY_EXE%" set "PY_EXE=python"
+"%PY_EXE%" check_eas_connections_local.py %*
 exit /b %ERRORLEVEL%

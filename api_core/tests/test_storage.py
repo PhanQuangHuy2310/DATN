@@ -32,6 +32,7 @@ class SupabaseKeyHeaderTests(SimpleTestCase):
     @override_settings(SUPABASE_SECRET_KEY="sb_secret_example_only")
     def test_new_secret_key_never_sent_as_bearer(self):
         from api_core.storage import _headers
+
         headers = _headers("application/pdf")
         self.assertEqual(headers["apikey"], "sb_secret_example_only")
         self.assertNotIn("Authorization", headers)
@@ -40,6 +41,7 @@ class SupabaseKeyHeaderTests(SimpleTestCase):
     @override_settings(SUPABASE_SECRET_KEY="legacy-jwt-only")
     def test_legacy_key_supports_bearer(self):
         from api_core.storage import _headers
+
         headers = _headers()
         self.assertEqual(headers["apikey"], "legacy-jwt-only")
         self.assertEqual(headers["Authorization"], "Bearer legacy-jwt-only")

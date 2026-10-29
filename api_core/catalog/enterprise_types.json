@@ -1,0 +1,1410 @@
+{
+  "schema_version": 1,
+  "origin": "Enterprise 5-Level Governance & 8-Department Audit (BOD, TECH, FIN, HR, BIZ, MKT, OPS, LEGAL)",
+  "count": 12,
+  "five_level_framework": {
+    "risk_levels": [
+      {
+        "level": 1,
+        "code": "LEVEL_1_MINIMAL",
+        "label": "Cấp 1 — Rủi ro rất thấp (Tác vụ thường nhật)",
+        "sla_hours_default": 12
+      },
+      {
+        "level": 2,
+        "code": "LEVEL_2_LOW",
+        "label": "Cấp 2 — Rủi ro thấp (Nghiệp vụ phòng ban)",
+        "sla_hours_default": 24
+      },
+      {
+        "level": 3,
+        "code": "LEVEL_3_MEDIUM",
+        "label": "Cấp 3 — Rủi ro trung bình (Kiểm soát liên phòng ban)",
+        "sla_hours_default": 36
+      },
+      {
+        "level": 4,
+        "code": "LEVEL_4_HIGH",
+        "label": "Cấp 4 — Rủi ro cao (Thẩm định Tài chính / Khối)",
+        "sla_hours_default": 48
+      },
+      {
+        "level": 5,
+        "code": "LEVEL_5_CRITICAL",
+        "label": "Cấp 5 — Trọng yếu / Đặc biệt nghiêm trọng (Hội đồng / C-Level)",
+        "sla_hours_default": 72
+      }
+    ],
+    "approval_levels": [
+      {
+        "level": 1,
+        "code": "TIER_1_LINE_MANAGER",
+        "label": "Cấp 1: Quản lý trực tiếp / Chuyên trách",
+        "resolvers": [
+          "DIRECT_MANAGER",
+          "PROJECT_MANAGER",
+          "FINANCE",
+          "WAREHOUSE_MANAGER"
+        ]
+      },
+      {
+        "level": 2,
+        "code": "TIER_2_DEPT_HEAD",
+        "label": "Cấp 2: Trưởng bộ phận nghiệp vụ (HR / IT / Legal / Procurement / Marketing)",
+        "resolvers": [
+          "HR_MANAGER",
+          "IT_MANAGER",
+          "LEGAL",
+          "PROCUREMENT_MANAGER",
+          "MARKETING_MANAGER",
+          "OPERATIONS_MANAGER"
+        ]
+      },
+      {
+        "level": 3,
+        "code": "TIER_3_CROSS_CONTROL",
+        "label": "Cấp 3: Kiểm soát chuyên môn / Tài chính / Bảo mật",
+        "resolvers": [
+          "FINANCE",
+          "SECURITY",
+          "LEGAL",
+          "OPERATIONS_MANAGER"
+        ]
+      },
+      {
+        "level": 4,
+        "code": "TIER_4_DIVISION_EXEC",
+        "label": "Cấp 4: Giám đốc Khối / Giám đốc An ninh (CISO) / Tài chính cấp cao",
+        "resolvers": [
+          "CISO",
+          "FINANCE",
+          "DIRECTOR"
+        ]
+      },
+      {
+        "level": 5,
+        "code": "TIER_5_BOARD_CLEVEL",
+        "label": "Cấp 5: Tổng Giám đốc (CEO / DIRECTOR) / Giám đốc Công nghệ (CTO)",
+        "resolvers": [
+          "DIRECTOR",
+          "CTO"
+        ]
+      }
+    ]
+  },
+  "type_level_matrix": {
+    "ACCESS": {
+      "risk_weight": 3,
+      "approval_level": 2
+    },
+    "ACCESS_FACILITY": {
+      "risk_weight": 2,
+      "approval_level": 2
+    },
+    "ADVANCE_LARGE": {
+      "risk_weight": 4,
+      "approval_level": 3
+    },
+    "ADVANCE_MEDIUM": {
+      "risk_weight": 3,
+      "approval_level": 2
+    },
+    "ADVANCE_SMALL": {
+      "risk_weight": 2,
+      "approval_level": 2
+    },
+    "ASSET_DISPOSAL": {
+      "risk_weight": 4,
+      "approval_level": 4
+    },
+    "ASSET_PURCHASE": {
+      "risk_weight": 4,
+      "approval_level": 3
+    },
+    "ATTENDANCE_ADJUSTMENT": {
+      "risk_weight": 3,
+      "approval_level": 1
+    },
+    "BUDGET_REALLOCATION": {
+      "risk_weight": 5,
+      "approval_level": 5
+    },
+    "BUSINESS_TRIP": {
+      "risk_weight": 3,
+      "approval_level": 3
+    },
+    "CONTRACT_APPROVAL": {
+      "risk_weight": 5,
+      "approval_level": 3
+    },
+    "DATA_UAT_EXPORT": {
+      "risk_weight": 3,
+      "approval_level": 2
+    },
+    "EMPLOYEE_ONBOARDING": {
+      "risk_weight": 3,
+      "approval_level": 2
+    },
+    "EQUIPMENT": {
+      "risk_weight": 3,
+      "approval_level": 3
+    },
+    "EQUIPMENT_BORROW": {
+      "risk_weight": 2,
+      "approval_level": 2
+    },
+    "EXPENSE_CLAIM": {
+      "risk_weight": 3,
+      "approval_level": 3
+    },
+    "FACILITY_MAINTENANCE": {
+      "risk_weight": 2,
+      "approval_level": 1
+    },
+    "FACILITY_REPAIR": {
+      "risk_weight": 2,
+      "approval_level": 1
+    },
+    "FEATURE_RELEASE": {
+      "risk_weight": 3,
+      "approval_level": 2
+    },
+    "FLASH_SALE_VOUCHER": {
+      "risk_weight": 4,
+      "approval_level": 2
+    },
+    "INTERNAL_TRANSFER": {
+      "risk_weight": 3,
+      "approval_level": 3
+    },
+    "IT_SUPPORT": {
+      "risk_weight": 1,
+      "approval_level": 1
+    },
+    "LAPTOP_PROVISION": {
+      "risk_weight": 3,
+      "approval_level": 1
+    },
+    "LEAVE": {
+      "risk_weight": 1,
+      "approval_level": 2
+    },
+    "LEAVE_ANNUAL": {
+      "risk_weight": 1,
+      "approval_level": 1
+    },
+    "LEAVE_LONG": {
+      "risk_weight": 3,
+      "approval_level": 2
+    },
+    "LEAVE_SPECIAL": {
+      "risk_weight": 2,
+      "approval_level": 3
+    },
+    "MARKETING_CAMPAIGN": {
+      "risk_weight": 4,
+      "approval_level": 4
+    },
+    "NDA_PRIVACY_CLEARANCE": {
+      "risk_weight": 2,
+      "approval_level": 2
+    },
+    "OFFICE_SUPPLIES": {
+      "risk_weight": 1,
+      "approval_level": 1
+    },
+    "OVERTIME_APPROVAL": {
+      "risk_weight": 2,
+      "approval_level": 1
+    },
+    "OVERTIME_REQ": {
+      "risk_weight": 2,
+      "approval_level": 1
+    },
+    "PROD_DATA_ACCESS": {
+      "risk_weight": 5,
+      "approval_level": 3
+    },
+    "PURCHASE_REQUEST": {
+      "risk_weight": 5,
+      "approval_level": 3
+    },
+    "RECRUITMENT_REQ": {
+      "risk_weight": 4,
+      "approval_level": 4
+    },
+    "REFUND_COMPENSATION": {
+      "risk_weight": 2,
+      "approval_level": 1
+    },
+    "REIMBURSEMENT": {
+      "risk_weight": 2,
+      "approval_level": 2
+    },
+    "RESIGNATION": {
+      "risk_weight": 4,
+      "approval_level": 3
+    },
+    "ROOM_BOOKING": {
+      "risk_weight": 1,
+      "approval_level": 1
+    },
+    "ROOM_STUDIO": {
+      "risk_weight": 1,
+      "approval_level": 1
+    },
+    "ROOM_VEHICLE": {
+      "risk_weight": 1,
+      "approval_level": 1
+    },
+    "SAAS_LICENSE_BUY": {
+      "risk_weight": 3,
+      "approval_level": 3
+    },
+    "SECURITY_INCIDENT_HOTFIX": {
+      "risk_weight": 5,
+      "approval_level": 5
+    },
+    "SERVER_FIREWALL": {
+      "risk_weight": 3,
+      "approval_level": 3
+    },
+    "SOFTWARE_ACCESS": {
+      "risk_weight": 2,
+      "approval_level": 2
+    },
+    "SPECIAL_DISCOUNT": {
+      "risk_weight": 3,
+      "approval_level": 3
+    },
+    "SUPPLIER_ONBOARDING": {
+      "risk_weight": 3,
+      "approval_level": 3
+    },
+    "TAX_INVOICE_ISSUE": {
+      "risk_weight": 1,
+      "approval_level": 1
+    },
+    "TRAINING_COURSE": {
+      "risk_weight": 2,
+      "approval_level": 2
+    },
+    "VENDOR_PAYMENT": {
+      "risk_weight": 5,
+      "approval_level": 3
+    },
+    "VISITOR_SECURITY_PASS": {
+      "risk_weight": 1,
+      "approval_level": 1
+    },
+    "WAREHOUSE_TRANSFER": {
+      "risk_weight": 3,
+      "approval_level": 1
+    },
+    "WFH_REQ": {
+      "risk_weight": 1,
+      "approval_level": 1
+    }
+  },
+  "options": [
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Thẻ an ninh khách & đối tác ra vào",
+      "code": "VISITOR_SECURITY_PASS",
+      "risk_weight": 1,
+      "approval_level": 1,
+      "lifecycle": "A",
+      "description": "Cấp 1 (Duyệt 1 cấp): Quản lý trực tiếp phê duyệt thẻ ra vào tòa nhà/phòng LAB"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Phát hành / điều chỉnh hóa đơn VAT",
+      "code": "TAX_INVOICE_ISSUE",
+      "risk_weight": 1,
+      "approval_level": 1,
+      "lifecycle": "B",
+      "description": "Cấp 1 (Duyệt 1 cấp): Kế toán trưởng duyệt, bộ phận Tài chính xuất hóa đơn GTGT"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Đăng ký đào tạo & chứng chỉ nghề nghiệp",
+      "code": "TRAINING_COURSE",
+      "risk_weight": 2,
+      "approval_level": 2,
+      "lifecycle": "B",
+      "description": "Cấp 2 (Duyệt 2 cấp): Trưởng phòng -> Trưởng phòng HR; HR đăng ký khóa học"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Thẩm định NDA & chia sẻ dữ liệu đối tác",
+      "code": "NDA_PRIVACY_CLEARANCE",
+      "risk_weight": 2,
+      "approval_level": 2,
+      "lifecycle": "B",
+      "description": "Cấp 2 (Duyệt 2 cấp): Trưởng phòng -> Pháp chế; Pháp chế cấp hồ sơ NDA chuẩn"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Điều chuyển nội bộ & bổ nhiệm nhân sự",
+      "code": "INTERNAL_TRANSFER",
+      "risk_weight": 3,
+      "approval_level": 3,
+      "lifecycle": "B",
+      "description": "Cấp 3 (Duyệt 3 cấp): Quản lý trực tiếp -> Trưởng phòng HR -> Ban Giám đốc; HR thực thi"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Phê duyệt chiết khấu thương mại đặc biệt",
+      "code": "SPECIAL_DISCOUNT",
+      "risk_weight": 3,
+      "approval_level": 3,
+      "lifecycle": "A",
+      "description": "Cấp 3 (Duyệt 3 cấp): Quản lý trực tiếp -> Trưởng phòng Marketing -> Tài chính"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Thẩm định & phê duyệt nhà cung cấp mới",
+      "code": "SUPPLIER_ONBOARDING",
+      "risk_weight": 3,
+      "approval_level": 3,
+      "lifecycle": "B",
+      "description": "Cấp 3 (Duyệt 3 cấp): Quản lý trực tiếp -> Trưởng phòng Mua sắm -> Tài chính; Mua sắm mở mã NCC"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Yêu cầu tuyển dụng nhân sự (Headcount)",
+      "code": "RECRUITMENT_REQ",
+      "risk_weight": 4,
+      "approval_level": 4,
+      "lifecycle": "C",
+      "description": "Cấp 4 (Duyệt 4 cấp): Quản lý -> HR -> Tài chính -> Ban Giám đốc; HR tuyển dụng, Quản lý nghiệm thu"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Ngân sách chiến dịch Marketing & Sự kiện",
+      "code": "MARKETING_CAMPAIGN",
+      "risk_weight": 4,
+      "approval_level": 4,
+      "lifecycle": "C",
+      "description": "Cấp 4 (Duyệt 4 cấp): Quản lý -> Marketing -> Tài chính -> Ban Giám đốc; Marketing thực thi & nghiệm thu"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Thanh lý & hủy tài sản cố định",
+      "code": "ASSET_DISPOSAL",
+      "risk_weight": 4,
+      "approval_level": 4,
+      "lifecycle": "C",
+      "description": "Cấp 4 (Duyệt 4 cấp): Quản lý -> Thủ kho -> Tài chính -> Ban Giám đốc; Bộ phận Tài sản xử lý"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Điều chuyển & bổ sung ngân sách liên bộ phận",
+      "code": "BUDGET_REALLOCATION",
+      "risk_weight": 5,
+      "approval_level": 5,
+      "lifecycle": "C",
+      "description": "Cấp 5 (Duyệt 5 cấp): Quản lý -> PM -> Vận hành -> Tài chính -> Tổng Giám đốc; Tài chính hạch toán"
+    },
+    {
+      "group": "Quản trị Doanh nghiệp & Bảo mật 5 Cấp",
+      "label": "Khắc phục sự cố bảo mật & Hotfix khẩn cấp",
+      "code": "SECURITY_INCIDENT_HOTFIX",
+      "risk_weight": 5,
+      "approval_level": 5,
+      "lifecycle": "C",
+      "description": "Cấp 5 (Duyệt 5 cấp): Quản lý -> IT -> Security -> CISO -> CTO; Kỹ thuật triển khai, CTO nghiệm thu"
+    }
+  ],
+  "items": [
+    {
+      "code": "VISITOR_SECURITY_PASS",
+      "name": "Thẻ an ninh khách & đối tác ra vào",
+      "category": "Hành chính & Cơ sở vật chất",
+      "db_category": "FACILITY",
+      "lifecycle": "A",
+      "risk_weight": 1,
+      "approval_level": 1,
+      "required_fields": [
+        "visitor_name",
+        "visitor_org",
+        "visit_date",
+        "facility_zone",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp",
+      "approver_resolvers": [
+        "DIRECT_MANAGER"
+      ],
+      "executor": "Không cần",
+      "executor_resolver": null,
+      "acceptor": "Không cần",
+      "acceptor_resolver": null,
+      "sla_hours": 12,
+      "ai_hook": "Đối chiếu danh sách đen an ninh và kiểm tra sức chứa khu vực phòng máy/văn phòng",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 1)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "visitor_name": "Họ tên khách / đối tác",
+        "visitor_org": "Đơn vị / Công ty đối tác",
+        "visit_date": "Ngày ra vào",
+        "facility_zone": "Khu vực đăng ký ra vào",
+        "reason": "Mục đích làm việc"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "visitor_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "visitor_org": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "visit_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "facility_zone": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "visitor_name",
+          "visitor_org",
+          "visit_date",
+          "facility_zone",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "TAX_INVOICE_ISSUE",
+      "name": "Phát hành / điều chỉnh hóa đơn VAT",
+      "category": "Tài chính & Kế toán",
+      "db_category": "FINANCE",
+      "lifecycle": "B",
+      "risk_weight": 1,
+      "approval_level": 1,
+      "required_fields": [
+        "customer_name",
+        "tax_code",
+        "contract_code",
+        "amount_vnd",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Kế toán trưởng (FINANCE)",
+      "approver_resolvers": [
+        "FINANCE"
+      ],
+      "executor": "Kế toán thuế phát hành hóa đơn (EXECUTOR_FINANCE)",
+      "executor_resolver": "EXECUTOR_FINANCE",
+      "acceptor": "Không cần",
+      "acceptor_resolver": null,
+      "sla_hours": 16,
+      "ai_hook": "Kiểm tra tính hợp lệ của mã số thuế doanh nghiệp và đối khớp giá trị hợp đồng CRM",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 1)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "customer_name": "Tên pháp nhân khách hàng",
+        "tax_code": "Mã số thuế",
+        "contract_code": "Mã hợp đồng / đơn hàng",
+        "amount_vnd": "Giá trị xuất hóa đơn (VNĐ)",
+        "reason": "Nội dung xuất / điều chỉnh hóa đơn"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "customer_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "tax_code": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 20
+          },
+          "contract_code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000000000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "customer_name",
+          "tax_code",
+          "contract_code",
+          "amount_vnd",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "TRAINING_COURSE",
+      "name": "Đăng ký đào tạo & chứng chỉ nghề nghiệp",
+      "category": "Nhân sự",
+      "db_category": "HR",
+      "lifecycle": "B",
+      "risk_weight": 2,
+      "approval_level": 2,
+      "required_fields": [
+        "course_name",
+        "provider",
+        "start_date",
+        "end_date",
+        "amount_vnd",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp -> Cấp 2: Trưởng phòng Nhân sự",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "HR_MANAGER"
+      ],
+      "executor": "Nhân sự đăng ký & ghi nhận cam kết đào tạo (EXECUTOR_HR)",
+      "executor_resolver": "EXECUTOR_HR",
+      "acceptor": "Không cần",
+      "acceptor_resolver": null,
+      "sla_hours": 24,
+      "ai_hook": "Kiểm tra ngân sách đào tạo năm của phòng ban và lịch sử chứng chỉ nhân viên",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 2)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "course_name": "Tên khóa học / chứng chỉ",
+        "provider": "Đơn vị đào tạo / Tổ chức cấp",
+        "start_date": "Ngày bắt đầu",
+        "end_date": "Ngày kết thúc",
+        "amount_vnd": "Học phí / lệ phí thi (VNĐ)",
+        "reason": "Mục tiêu áp dụng vào công việc"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "course_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500000000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "course_name",
+          "provider",
+          "start_date",
+          "end_date",
+          "amount_vnd",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "NDA_PRIVACY_CLEARANCE",
+      "name": "Thẩm định NDA & chia sẻ dữ liệu đối tác",
+      "category": "Pháp chế & Tuân thủ",
+      "db_category": "GENERAL",
+      "lifecycle": "B",
+      "risk_weight": 2,
+      "approval_level": 2,
+      "required_fields": [
+        "partner_name",
+        "data_scope",
+        "effective_date",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp -> Cấp 2: Trưởng bộ phận Pháp chế (LEGAL)",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "LEGAL"
+      ],
+      "executor": "Pháp chế ban hành hồ sơ NDA chuẩn (EXECUTOR_LEGAL)",
+      "executor_resolver": "EXECUTOR_LEGAL",
+      "acceptor": "Không cần",
+      "acceptor_resolver": null,
+      "sla_hours": 24,
+      "ai_hook": "Rà soát phạm vi dữ liệu PII/nhạy cảm theo Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 2)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "partner_name": "Tên đối tác tiếp nhận dữ liệu",
+        "data_scope": "Phạm vi dữ liệu & phân loại bảo mật",
+        "effective_date": "Ngày hiệu lực NDA",
+        "reason": "Mục đích hợp tác & chia sẻ thông tin"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "partner_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "data_scope": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "partner_name",
+          "data_scope",
+          "effective_date",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "INTERNAL_TRANSFER",
+      "name": "Điều chuyển nội bộ & bổ nhiệm nhân sự",
+      "category": "Nhân sự",
+      "db_category": "HR",
+      "lifecycle": "B",
+      "risk_weight": 3,
+      "approval_level": 3,
+      "required_fields": [
+        "employee_code",
+        "target_department",
+        "new_position",
+        "effective_date",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp -> Cấp 2: Trưởng phòng HR -> Cấp 3: Ban Giám đốc (DIRECTOR)",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "HR_MANAGER",
+        "DIRECTOR"
+      ],
+      "executor": "Nhân sự cập nhật quyết định & phân quyền phòng ban (EXECUTOR_HR)",
+      "executor_resolver": "EXECUTOR_HR",
+      "acceptor": "Không cần",
+      "acceptor_resolver": null,
+      "sla_hours": 36,
+      "ai_hook": "Kiểm tra định biên nhân sự (Headcount) phòng tiếp nhận và xung đột quyền truy cập cũ",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 3)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "employee_code": "Mã nhân viên điều chuyển",
+        "target_department": "Phòng ban tiếp nhận",
+        "new_position": "Chức danh / Vị trí mới",
+        "effective_date": "Ngày hiệu lực điều chuyển",
+        "reason": "Lý do điều chuyển & đánh giá năng lực"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "employee_code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          },
+          "target_department": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "new_position": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "employee_code",
+          "target_department",
+          "new_position",
+          "effective_date",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "SPECIAL_DISCOUNT",
+      "name": "Phê duyệt chiết khấu thương mại đặc biệt",
+      "category": "Kinh doanh & Marketing",
+      "db_category": "GENERAL",
+      "lifecycle": "A",
+      "risk_weight": 3,
+      "approval_level": 3,
+      "required_fields": [
+        "customer_name",
+        "deal_value_vnd",
+        "discount_percent",
+        "amount_vnd",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp -> Cấp 2: Trưởng phòng Marketing -> Cấp 3: Kế toán trưởng (FINANCE)",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "MARKETING_MANAGER",
+        "FINANCE"
+      ],
+      "executor": "Không cần",
+      "executor_resolver": null,
+      "acceptor": "Không cần",
+      "acceptor_resolver": null,
+      "sla_hours": 24,
+      "ai_hook": "Phân tích biên lợi nhuận gộp (Gross Margin) sau chiết khấu và lịch sử doanh số khách hàng",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 3)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "customer_name": "Tên khách hàng / Đối tác B2B",
+        "deal_value_vnd": "Tổng giá trị đơn hàng gốc (VNĐ)",
+        "discount_percent": "Tỷ lệ chiết khấu đề xuất (%)",
+        "amount_vnd": "Giá trị chiết khấu quy đổi (VNĐ)",
+        "reason": "Cơ sở đề xuất & cam kết doanh số"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "customer_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "deal_value_vnd": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000000000
+          },
+          "discount_percent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 70
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 35000000000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "customer_name",
+          "deal_value_vnd",
+          "discount_percent",
+          "amount_vnd",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "SUPPLIER_ONBOARDING",
+      "name": "Thẩm định & phê duyệt nhà cung cấp mới",
+      "category": "Mua sắm & Tài sản",
+      "db_category": "PROCUREMENT",
+      "lifecycle": "B",
+      "risk_weight": 3,
+      "approval_level": 3,
+      "required_fields": [
+        "supplier_name",
+        "tax_code",
+        "supply_category",
+        "estimated_budget",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý trực tiếp -> Cấp 2: Trưởng phòng Mua sắm -> Cấp 3: Kế toán trưởng (FINANCE)",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "PROCUREMENT_MANAGER",
+        "FINANCE"
+      ],
+      "executor": "Bộ phận Mua sắm kích hoạt mã NCC trên ERP (EXECUTOR_PROCUREMENT)",
+      "executor_resolver": "EXECUTOR_PROCUREMENT",
+      "acceptor": "Không cần",
+      "acceptor_resolver": null,
+      "sla_hours": 36,
+      "ai_hook": "Kiểm tra KYB (Know Your Business), đối chiếu danh sách đen nhà cung cấp và xung đột lợi ích",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 3)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "supplier_name": "Tên pháp nhân nhà cung cấp",
+        "tax_code": "Mã số thuế ĐKKD",
+        "supply_category": "Nhóm hàng hóa / dịch vụ cung ứng",
+        "estimated_budget": "Hạn mức giao dịch dự kiến năm (VNĐ)",
+        "reason": "Đánh giá năng lực & báo giá so sánh"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "supplier_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "tax_code": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 20
+          },
+          "supply_category": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "estimated_budget": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000000000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "supplier_name",
+          "tax_code",
+          "supply_category",
+          "estimated_budget",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "RECRUITMENT_REQ",
+      "name": "Yêu cầu tuyển dụng nhân sự (Headcount)",
+      "category": "Nhân sự",
+      "db_category": "HR",
+      "lifecycle": "C",
+      "risk_weight": 4,
+      "approval_level": 4,
+      "required_fields": [
+        "job_title",
+        "headcount",
+        "salary_budget_vnd",
+        "start_date",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý -> Cấp 2: Trưởng phòng HR -> Cấp 3: Tài chính -> Cấp 4: Ban Giám đốc (DIRECTOR)",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "HR_MANAGER",
+        "FINANCE",
+        "DIRECTOR"
+      ],
+      "executor": "Bộ phận Tuyển dụng HR đăng tuyển & phỏng vấn (EXECUTOR_HR)",
+      "executor_resolver": "EXECUTOR_HR",
+      "acceptor": "Quản lý trực tiếp nghiệm thu ứng viên onboard (DIRECT_MANAGER)",
+      "acceptor_resolver": "DIRECT_MANAGER",
+      "sla_hours": 48,
+      "ai_hook": "Đối chiếu quỹ lương năm (Payroll Budget) và định biên nhân sự của khối",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 4)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "job_title": "Vị trí / Chức danh tuyển dụng",
+        "headcount": "Số lượng cần tuyển",
+        "salary_budget_vnd": "Quỹ lương dự kiến / tháng (VNĐ)",
+        "start_date": "Ngày dự kiến nhận việc",
+        "reason": "Mô tả yêu cầu công việc & lý do mở định biên"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "job_title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "headcount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "salary_budget_vnd": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000000000
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "job_title",
+          "headcount",
+          "salary_budget_vnd",
+          "start_date",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "MARKETING_CAMPAIGN",
+      "name": "Ngân sách chiến dịch Marketing & Sự kiện",
+      "category": "Kinh doanh & Marketing",
+      "db_category": "GENERAL",
+      "lifecycle": "C",
+      "risk_weight": 4,
+      "approval_level": 4,
+      "required_fields": [
+        "campaign_name",
+        "target_channel",
+        "start_date",
+        "end_date",
+        "estimated_budget",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý -> Cấp 2: Trưởng phòng Marketing -> Cấp 3: Tài chính -> Cấp 4: Ban Giám đốc (DIRECTOR)",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "MARKETING_MANAGER",
+        "FINANCE",
+        "DIRECTOR"
+      ],
+      "executor": "Đội ngũ Marketing triển khai chiến dịch (EXECUTOR_MARKETING)",
+      "executor_resolver": "EXECUTOR_MARKETING",
+      "acceptor": "Người đề xuất nghiệm thu báo cáo KPI chiến dịch (REQUESTER)",
+      "acceptor_resolver": "REQUESTER",
+      "sla_hours": 48,
+      "ai_hook": "Đánh giá chỉ số ROAS/CPA kỳ vọng và kiểm tra hạn mức ngân sách truyền thông quý",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 4)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "campaign_name": "Tên chiến dịch / Sự kiện",
+        "target_channel": "Kênh triển khai chính",
+        "start_date": "Ngày bắt đầu chiến dịch",
+        "end_date": "Ngày kết thúc chiến dịch",
+        "estimated_budget": "Tổng ngân sách đề xuất (VNĐ)",
+        "reason": "Mục tiêu KPI (Leads/Doanh thu) & kế hoạch phân bổ"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "campaign_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          },
+          "target_channel": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "estimated_budget": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000000000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "campaign_name",
+          "target_channel",
+          "start_date",
+          "end_date",
+          "estimated_budget",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "ASSET_DISPOSAL",
+      "name": "Thanh lý & hủy tài sản cố định",
+      "category": "Mua sắm & Tài sản",
+      "db_category": "ASSET",
+      "lifecycle": "C",
+      "risk_weight": 4,
+      "approval_level": 4,
+      "required_fields": [
+        "asset_code",
+        "disposal_method",
+        "residual_value_vnd",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý -> Cấp 2: Thủ kho -> Cấp 3: Tài chính -> Cấp 4: Ban Giám đốc (DIRECTOR)",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "WAREHOUSE_MANAGER",
+        "FINANCE",
+        "DIRECTOR"
+      ],
+      "executor": "Bộ phận Quản lý tài sản lập biên bản thanh lý/xuất kho (EXECUTOR_ASSET)",
+      "executor_resolver": "EXECUTOR_ASSET",
+      "acceptor": "Quản lý trực tiếp xác nhận hoàn tất thanh lý (DIRECT_MANAGER)",
+      "acceptor_resolver": "DIRECT_MANAGER",
+      "sla_hours": 48,
+      "ai_hook": "Kiểm tra thời gian khấu hao còn lại trên sổ cái tài sản và lịch sử bảo trì thiết bị",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 4)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "asset_code": "Mã tài sản cố định",
+        "disposal_method": "Hình thức xử lý (Thanh lý / Tiêu hủy)",
+        "residual_value_vnd": "Giá trị thu hồi / Giá trị còn lại (VNĐ)",
+        "reason": "Tình trạng hư hỏng / Lý do thanh lý"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "asset_code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "disposal_method": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "residual_value_vnd": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000000000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "asset_code",
+          "disposal_method",
+          "residual_value_vnd",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "BUDGET_REALLOCATION",
+      "name": "Điều chuyển & bổ sung ngân sách liên bộ phận",
+      "category": "Tài chính & Kế toán",
+      "db_category": "FINANCE",
+      "lifecycle": "C",
+      "risk_weight": 5,
+      "approval_level": 5,
+      "required_fields": [
+        "fiscal_quarter",
+        "source_budget_code",
+        "target_budget_code",
+        "amount_vnd",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý -> Cấp 2: PM -> Cấp 3: Vận hành -> Cấp 4: Tài chính -> Cấp 5: Tổng Giám đốc (DIRECTOR)",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "PROJECT_MANAGER",
+        "OPERATIONS_MANAGER",
+        "FINANCE",
+        "DIRECTOR"
+      ],
+      "executor": "Bộ phận Tài chính điều chỉnh hạn mức ngân sách ERP (EXECUTOR_FINANCE)",
+      "executor_resolver": "EXECUTOR_FINANCE",
+      "acceptor": "Người đề xuất xác nhận hạn mức mới đã kích hoạt (REQUESTER)",
+      "acceptor_resolver": "REQUESTER",
+      "sla_hours": 72,
+      "ai_hook": "Kiểm tra số dư khả dụng của mã ngân sách nguồn và cảnh báo tác động dòng tiền quý",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 5)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "fiscal_quarter": "Kỳ ngân sách (Quý / Năm)",
+        "source_budget_code": "Mã ngân sách nguồn (Điều giảm)",
+        "target_budget_code": "Mã ngân sách đích (Bổ sung)",
+        "amount_vnd": "Giá trị điều chuyển ngân sách (VNĐ)",
+        "reason": "Thuyết minh phương án điều chuyển & tác động KPI"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "fiscal_quarter": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50
+          },
+          "source_budget_code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "target_budget_code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "amount_vnd": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000000000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "fiscal_quarter",
+          "source_budget_code",
+          "target_budget_code",
+          "amount_vnd",
+          "reason"
+        ]
+      }
+    },
+    {
+      "code": "SECURITY_INCIDENT_HOTFIX",
+      "name": "Khắc phục sự cố bảo mật & Hotfix khẩn cấp",
+      "category": "CNTT & Bảo mật",
+      "db_category": "IT",
+      "lifecycle": "C",
+      "risk_weight": 5,
+      "approval_level": 5,
+      "required_fields": [
+        "system_affected",
+        "severity_level",
+        "hotfix_version",
+        "rollback_plan",
+        "reason"
+      ],
+      "approval_route": "Cấp 1: Quản lý -> Cấp 2: Trưởng phòng IT -> Cấp 3: Security -> Cấp 4: CISO -> Cấp 5: CTO",
+      "approver_resolvers": [
+        "DIRECT_MANAGER",
+        "IT_MANAGER",
+        "SECURITY",
+        "CISO",
+        "CTO"
+      ],
+      "executor": "Kỹ sư hệ thống triển khai bản vá khẩn cấp (EXECUTOR_TECH)",
+      "executor_resolver": "EXECUTOR_TECH",
+      "acceptor": "Giám đốc Công nghệ (CTO) nghiệm thu an toàn sau vá lỗi",
+      "acceptor_resolver": "CTO",
+      "sla_hours": 12,
+      "ai_hook": "Đánh giá điểm lỗ hổng CVSS, kiểm tra kịch bản Rollback và phạm vi ảnh hưởng Production",
+      "source_table": 30,
+      "source": "Enterprise 5-Level Governance Catalog (Cấp 5)",
+      "field_labels": {
+        "title": "Tiêu đề",
+        "system_affected": "Hệ thống / Dịch vụ bị ảnh hưởng",
+        "severity_level": "Mức độ nghiêm trọng (CVSS / P0-P1)",
+        "hotfix_version": "Phiên bản bản vá / Commit tag",
+        "rollback_plan": "Phương án khôi phục (Rollback Plan)",
+        "reason": "Phân tích nguyên nhân gốc rễ (RCA) & biện pháp khắc phục"
+      },
+      "form_schema": {
+        "schema_version": 1,
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150
+          },
+          "system_affected": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150
+          },
+          "severity_level": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "hotfix_version": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "rollback_plan": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 1000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "title",
+          "system_affected",
+          "severity_level",
+          "hotfix_version",
+          "rollback_plan",
+          "reason"
+        ]
+      }
+    }
+  ]
+}

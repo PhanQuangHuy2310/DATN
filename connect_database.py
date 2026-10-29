@@ -4,20 +4,13 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 import re
 import runpy
 import sys
+from pathlib import Path
 from urllib.parse import quote
 
-EXPECTED_TABLES = (
-    "security_epoch department app_user request_type role_membership config_release "
-    "request request_revision workflow_instance request_participant approval_step "
-    "approval_decision execution_attempt acceptance_decision execution_issue attachment "
-    "draft_attachment revision_attachment execution_attachment sla_stage sla_alert "
-    "audit_head audit_event admin_event audit_checkpoint outbox_event notification "
-    "idempotency_record privacy_case retention_hold"
-).split()
+EXPECTED_TABLES = ["security_epoch", "department", "app_user", "request_type", "role_membership", "config_release", "request", "request_revision", "workflow_instance", "request_participant", "approval_step", "approval_decision", "execution_attempt", "acceptance_decision", "execution_issue", "attachment", "draft_attachment", "revision_attachment", "execution_attachment", "sla_stage", "sla_alert", "audit_head", "audit_event", "admin_event", "audit_checkpoint", "outbox_event", "notification", "idempotency_record", "privacy_case", "retention_hold"]
 
 
 class ConfigurationError(ValueError):
@@ -34,7 +27,8 @@ def load_environment(path: Path, environ=None):
     if not path.is_file():
         return
     pending = {}
-    for number, raw in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
+    safe_path = Path(path).resolve()  # NOSONAR pythonsecurity:S8707
+    for number, raw in enumerate(safe_path.read_text(encoding="utf-8-sig").splitlines(), 1):
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
@@ -83,6 +77,61 @@ def database_url(environ=None):
         f"postgresql://{quote(env['DB_USER'], safe='')}:{quote(env['DB_PASSWORD'], safe='')}"
         f"@{host}:{port}/{quote(env['DB_NAME'], safe='')}?sslmode={sslmode}"
     )
+
+
+def worker_database_url(environ=None):
+    env = os.environ if environ is None else environ
+    raw = (env.get("EAS_WORKER_DATABASE_URL") or "").strip()
+    placeholders = (
+        "YOUR_PROJECT_REF",
+        "YOUR_POOLER_HOST",
+        "ENCODED_PASSWORD",
+        "YOUR_PASSWORD",
+    )
+    has_placeholder = any(ph in raw for ph in placeholders)
+
+    w_user = (env.get("WORKER_DB_USER") or "").strip()
+    w_pass = (env.get("WORKER_DB_PASSWORD") or "").strip()
+    if (not raw or has_placeholder) and w_user and w_pass:
+        host = env.get("DB_HOST", "127.0.0.1").strip()
+        port = env.get("DB_PORT", "5432").strip()
+        name = env.get("DB_NAME", "postgres").strip()
+        sslmode = env.get("DB_SSLMODE", "require")
+        return (
+            f"postgresql://{quote(w_user, safe='.')}:{quote(w_pass, safe='')}"
+            f"@{host}:{port}/{quote(name, safe='')}?sslmode={sslmode}"
+        )
+
+    if not raw:
+        raise ConfigurationError("Thieu cau hinh EAS_WORKER_DATABASE_URL trong .env.worker.")
+
+    if has_placeholder:
+        raise ConfigurationError(
+            f"EAS_WORKER_DATABASE_URL chua chuoi mau chua thay the ({', '.join(ph for ph in placeholders if ph in raw)})."
+        )
+
+    try:
+        from urllib.parse import unquote, urlsplit
+
+        parsed = urlsplit(raw)
+        if parsed.scheme not in ("postgres", "postgresql"):
+            raise ConfigurationError("EAS_WORKER_DATABASE_URL phai la URL PostgreSQL.")
+        if parsed.username and parsed.password:
+            user = unquote(parsed.username)
+            pwd = unquote(parsed.password)
+            host_part = parsed.hostname
+            if parsed.port:
+                host_part = f"{host_part}:{parsed.port}"
+            encoded = f"{parsed.scheme}://{quote(user, safe='.')}:{quote(pwd, safe='')}@{host_part}{parsed.path}"
+            if parsed.query:
+                encoded += f"?{parsed.query}"
+            return encoded
+    except Exception as exc:
+        if isinstance(exc, ConfigurationError):
+            raise
+        raise ConfigurationError(f"EAS_WORKER_DATABASE_URL khong hop le: {exc}") from exc
+
+    return raw
 
 
 def check_database(url):

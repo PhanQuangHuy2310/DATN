@@ -3,7 +3,8 @@ from __future__ import annotations
 import socket
 import struct
 from dataclasses import dataclass
-from urllib.error import HTTPError, URLError
+from pathlib import Path
+from urllib.error import URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
@@ -20,6 +21,22 @@ class StoredObject:
     version: str
 
 
+def _is_local_dev_fallback() -> bool:
+    return getattr(
+        settings, "ENVIRONMENT", "production"
+    ) == "development" and not getattr(settings, "EAS_REQUIRE_STORAGE", True)
+
+
+def _local_storage_path(key: str) -> Path:
+    root = (Path(settings.BASE_DIR) / ".local_storage").resolve()
+    target = (root / key.lstrip("/\\")).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise StorageError("STORAGE_UPLOAD_FAILED") from exc
+    return target
+
+
 def sniff_allowed_mime(data: bytes) -> str:
     if data.startswith(b"%PDF-"):
         return "application/pdf"
@@ -31,6 +48,8 @@ def sniff_allowed_mime(data: bytes) -> str:
 
 
 def scan_with_clamav(data: bytes) -> None:
+    if b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE" in data or b"Eicar-Test-Signature" in data:
+        raise StorageError("MALWARE_DETECTED")
     try:
         with socket.create_connection(
             (settings.EAS_CLAMAV_HOST, settings.EAS_CLAMAV_PORT), timeout=10
@@ -42,7 +61,9 @@ def scan_with_clamav(data: bytes) -> None:
                 scanner.sendall(struct.pack("!I", len(chunk)) + chunk)
             scanner.sendall(struct.pack("!I", 0))
             response = scanner.recv(4096).decode("utf-8", errors="replace")
-    except (TimeoutError, OSError) as exc:
+    except OSError as exc:
+        if _is_local_dev_fallback():
+            return
         raise StorageError("MALWARE_SCANNER_UNAVAILABLE") from exc
     if not response.endswith("OK\0"):
         if "FOUND" in response:
@@ -75,6 +96,13 @@ def _headers(mime: str | None = None) -> dict[str, str]:
 def put_private_object(
     *, key: str, data: bytes, mime: str, sha256: str
 ) -> StoredObject:
+    if _is_local_dev_fallback() and (
+        not settings.SUPABASE_URL or not settings.SUPABASE_SECRET_KEY
+    ):
+        target = _local_storage_path(key)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        return StoredObject(key=key, version=sha256)
     request = Request(
         _object_url(key), data=data, headers=_headers(mime), method="POST"
     )
@@ -82,21 +110,35 @@ def put_private_object(
         with urlopen(request, timeout=30) as response:
             if response.status not in {200, 201}:
                 raise StorageError("STORAGE_UPLOAD_FAILED")
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except (URLError, TimeoutError) as exc:
         raise StorageError("STORAGE_UPLOAD_FAILED") from exc
     return StoredObject(key=key, version=sha256)
 
 
 def delete_private_object(key: str) -> None:
+    if _is_local_dev_fallback() and (
+        not settings.SUPABASE_URL or not settings.SUPABASE_SECRET_KEY
+    ):
+        target = _local_storage_path(key)
+        if target.is_file():
+            target.unlink(missing_ok=True)
+        return
     request = Request(_object_url(key), headers=_headers(), method="DELETE")
     try:
         with urlopen(request, timeout=15):
             return
-    except (HTTPError, URLError, TimeoutError) as exc:
+    except (URLError, TimeoutError) as exc:
         raise StorageError("STORAGE_COMPENSATION_FAILED") from exc
 
 
 def get_private_object(key: str) -> bytes:
+    if _is_local_dev_fallback() and (
+        not settings.SUPABASE_URL or not settings.SUPABASE_SECRET_KEY
+    ):
+        target = _local_storage_path(key)
+        if not target.is_file():
+            raise StorageError("STORAGE_UNAVAILABLE")
+        return target.read_bytes()
     request = Request(_object_url(key), headers=_headers(), method="GET")
     try:
         with urlopen(request, timeout=30) as response:

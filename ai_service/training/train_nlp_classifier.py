@@ -24,24 +24,27 @@ Output files:
 Cách chạy:
   python training/train_nlp_classifier.py
 """
-import os
+
 import json
+import os
+from datetime import datetime, timezone
+
 import joblib
 import numpy as np
 import pandas as pd
-from datetime import datetime
-
-from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, classification_report, f1_score
+from sklearn.model_selection import train_test_split
 
 # ---------------------------------------------------------------------------
 # Cấu hình đường dẫn
 # ---------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
-DATA_PATH = os.path.join(BASE_DIR, "training", "data", "enterprise_requests_dataset_large.csv")
+DATA_PATH = os.path.join(
+    BASE_DIR, "training", "data", "enterprise_requests_dataset_large.csv"
+)
 REPORT_PATH = os.path.join(BASE_DIR, "training", "data", "nlp_evaluation_report.txt")
 
 os.makedirs(MODELS_DIR, exist_ok=True)
@@ -90,8 +93,10 @@ def train_nlp_models():
     print(f"[+] Kích thước ma trận TF-IDF: {X_train_vec.shape}")
 
     reports = []
-    reports.append(f"BÁO CÁO ĐÁNH GIÁ MÔ HÌNH NLP PHÂN LOẠI YÊU CẦU")
-    reports.append(f"Thời gian: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    reports.append("BÁO CÁO ĐÁNH GIÁ MÔ HÌNH NLP PHÂN LOẠI YÊU CẦU")
+    reports.append(
+        f"Thời gian: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
+    )
     reports.append(f"Tổng số mẫu: {len(df):,} | Test: {len(X_test_text):,}\n")
 
     # -----------------------------------------------------------------------
@@ -104,12 +109,14 @@ def train_nlp_models():
 
     acc_req = accuracy_score(y_req_type[idx_test], y_pred_req)
     f1_req = f1_score(y_req_type[idx_test], y_pred_req, average="weighted")
-    print(f"    -> Request Type Accuracy: {acc_req*100:.2f}% | F1-Score: {f1_req:.4f}")
+    print(
+        f"    -> Request Type Accuracy: {acc_req * 100:.2f}% | F1-Score: {f1_req:.4f}"
+    )
     rep_req = classification_report(y_req_type[idx_test], y_pred_req, digits=4)
 
     reports.append("=" * 60)
     reports.append("1. REQUEST TYPE CLASSIFICATION REPORT")
-    reports.append(f"Accuracy: {acc_req*100:.2f}% | Weighted F1: {f1_req:.4f}")
+    reports.append(f"Accuracy: {acc_req * 100:.2f}% | Weighted F1: {f1_req:.4f}")
     reports.append(rep_req)
 
     # -----------------------------------------------------------------------
@@ -122,12 +129,14 @@ def train_nlp_models():
 
     acc_dept = accuracy_score(y_dept[idx_test], y_pred_dept)
     f1_dept = f1_score(y_dept[idx_test], y_pred_dept, average="weighted")
-    print(f"    -> Department Accuracy:   {acc_dept*100:.2f}% | F1-Score: {f1_dept:.4f}")
+    print(
+        f"    -> Department Accuracy:   {acc_dept * 100:.2f}% | F1-Score: {f1_dept:.4f}"
+    )
     rep_dept = classification_report(y_dept[idx_test], y_pred_dept, digits=4)
 
     reports.append("=" * 60)
     reports.append("2. DEPARTMENT CLASSIFICATION REPORT")
-    reports.append(f"Accuracy: {acc_dept*100:.2f}% | Weighted F1: {f1_dept:.4f}")
+    reports.append(f"Accuracy: {acc_dept * 100:.2f}% | Weighted F1: {f1_dept:.4f}")
     reports.append(rep_dept)
 
     # -----------------------------------------------------------------------
@@ -140,12 +149,14 @@ def train_nlp_models():
 
     acc_tpl = accuracy_score(y_template[idx_test], y_pred_template)
     f1_tpl = f1_score(y_template[idx_test], y_pred_template, average="weighted")
-    print(f"    -> Template Accuracy:     {acc_tpl*100:.2f}% | F1-Score: {f1_tpl:.4f}")
+    print(
+        f"    -> Template Accuracy:     {acc_tpl * 100:.2f}% | F1-Score: {f1_tpl:.4f}"
+    )
     rep_tpl = classification_report(y_template[idx_test], y_pred_template, digits=4)
 
     reports.append("=" * 60)
     reports.append("3. LIFECYCLE TEMPLATE CLASSIFICATION REPORT")
-    reports.append(f"Accuracy: {acc_tpl*100:.2f}% | Weighted F1: {f1_tpl:.4f}")
+    reports.append(f"Accuracy: {acc_tpl * 100:.2f}% | Weighted F1: {f1_tpl:.4f}")
     reports.append(rep_tpl)
 
     # -----------------------------------------------------------------------
@@ -158,9 +169,9 @@ def train_nlp_models():
     joblib.dump(clf_template, os.path.join(MODELS_DIR, "nlp_template_model.pkl"))
 
     labels_meta = {
-        "request_types": sorted(list(set(y_req_type))),
-        "departments": sorted(list(set(y_dept))),
-        "templates": sorted(list(set(y_template))),
+        "request_types": sorted(set(y_req_type)),
+        "departments": sorted(set(y_dept)),
+        "templates": sorted(set(y_template)),
     }
     with open(os.path.join(MODELS_DIR, "nlp_labels.json"), "w", encoding="utf-8") as f:
         json.dump(labels_meta, f, indent=2, ensure_ascii=False)

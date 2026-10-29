@@ -17,13 +17,39 @@ REQUIRED = {
 ALLOWED_CATEGORIES = {"HR", "IT", "FACILITY", "PROCUREMENT", "ASSET", "FINANCE", "GENERAL"}
 
 
+def _verify_tables(cur) -> bool:
+    cur.execute("SET TRANSACTION READ ONLY")
+    cur.execute("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema='eas'")
+    rows = cur.fetchall()
+    names = {}
+    for table, col in rows:
+        names.setdefault(table, set()).add(col)
+    ok = True
+    for table, required in REQUIRED.items():
+        missing = required - names.get(table, set())
+        print(f"[{ 'PASS' if not missing else 'FAIL' }] eas.{table}: " +
+              ("các cột cần thiết tồn tại" if not missing else "thiếu " + ', '.join(sorted(missing))))
+        ok &= not missing
+    return ok
+
+
+def _verify_categories(cur) -> bool:
+    cur.execute("SELECT category, COUNT(*) FROM eas.request_type GROUP BY category ORDER BY category")
+    ok = True
+    for category, count in cur.fetchall():
+        if category not in ALLOWED_CATEGORIES:
+            ok = False
+            print("[FAIL] category không hợp lệ")
+        else:
+            print(f"[PASS] category '{category}' có {count} loại yêu cầu")
+    return ok
+
 def main():
     load_environment(Path(__file__).with_name(".env.database"))
     import psycopg
     try:
         with psycopg.connect(database_url(), connect_timeout=8, prepare_threshold=None,
-                             options="-c statement_timeout=8000 -c lock_timeout=2500") as conn:
-            with conn.cursor() as cur:
+                             options="-c statement_timeout=8000 -c lock_timeout=2500") as conn, conn.cursor() as cur:
                 cur.execute("SET TRANSACTION READ ONLY")
                 cur.execute("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema='eas'")
                 rows = cur.fetchall()

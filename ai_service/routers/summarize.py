@@ -7,13 +7,18 @@ POST /ai/summarize/request
 
 Không train model — dùng Gemini 1.5 Flash với prompt engineering.
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Any
-from loguru import logger
-import json
 
-from config import get_settings
+import json
+from typing import Any
+
+try:
+    from config import get_settings
+except (ImportError, AttributeError):
+    from ai_service.config import get_settings
+
+from fastapi import APIRouter
+from loguru import logger
+from pydantic import BaseModel
 
 settings = get_settings()
 router = APIRouter()
@@ -23,20 +28,21 @@ router = APIRouter()
 # Schemas
 # ---------------------------------------------------------------------------
 
+
 class SummarizeRequest(BaseModel):
     title: str
-    description: Optional[str] = None
-    request_type: str                    # "purchase", "leave", "expense_claim"...
+    description: str | None = None
+    request_type: str  # "purchase", "leave", "expense_claim"...
     requester_name: str
-    data: Optional[dict[str, Any]] = None  # JSONB data từ requests.data
-    risk_score: Optional[int] = None
-    amount: Optional[float] = None       # Rút ra từ data để dễ đưa vào prompt
+    data: dict[str, Any] | None = None  # JSONB data từ requests.data
+    risk_score: int | None = None
+    amount: float | None = None  # Rút ra từ data để dễ đưa vào prompt
 
 
 class SummarizeResult(BaseModel):
-    summary: str          # 2-3 câu tóm tắt
-    key_points: list[str] # Bullet points quan trọng
-    sentiment: str        # "normal" | "urgent" | "high_risk"
+    summary: str  # 2-3 câu tóm tắt
+    key_points: list[str]  # Bullet points quan trọng
+    sentiment: str  # "normal" | "urgent" | "high_risk"
     tokens_used: int
 
 
@@ -99,15 +105,70 @@ Lưu ý: "urgent" nếu có từ khẩn cấp/gấp/ngay. "high_risk" nếu risk
 """
 
 
+def _local_extractive_summarize(req: SummarizeRequest) -> SummarizeResult:
+    """Tóm tắt trích xuất cục bộ khi không có Gemini API key hoặc khi LLM lỗi."""
+    type_label = REQUEST_TYPE_LABELS.get(req.request_type, req.request_type)
+
+    desc_lower = (req.description or "").lower()
+    title_lower = (req.title or "").lower()
+    text_corpus = f"{title_lower} {desc_lower}"
+    is_urgent = any(kw in text_corpus for kw in ("khẩn cấp", "gấp", "ngay", "urgent"))
+    is_high_risk = (req.risk_score is not None and req.risk_score >= 4) or (
+        req.amount is not None and req.amount > 50_000_000
+    )
+
+    if is_high_risk:
+        sentiment = "high_risk"
+    elif is_urgent:
+        sentiment = "urgent"
+    else:
+        sentiment = "normal"
+
+    key_points = [
+        f"Người yêu cầu: {req.requester_name} ({type_label})",
+    ]
+    if req.amount:
+        key_points.append(f"Số tiền: {req.amount:,.0f} VNĐ")
+    if req.risk_score:
+        key_points.append(f"Điểm rủi ro: {req.risk_score}/5")
+
+    if req.data and isinstance(req.data, dict):
+        for k in ("reason", "department", "vendor", "period", "purpose", "item_name"):
+            if req.data.get(k):
+                key_points.append(f"{k.capitalize()}: {req.data[k]}")
+
+    details = []
+    if req.amount:
+        details.append(f"số tiền {req.amount:,.0f} VNĐ")
+    if req.description:
+        clean_desc = req.description.strip()
+        if len(clean_desc) > 120:
+            clean_desc = clean_desc[:117] + "..."
+        details.append(f"nội dung: {clean_desc}")
+
+    details_str = f" ({'; '.join(details)})" if details else ""
+    summary = f"{req.requester_name} đề xuất '{req.title}' thuộc quy trình {type_label}{details_str}."
+
+    return SummarizeResult(
+        summary=summary,
+        key_points=key_points[:5],
+        sentiment=sentiment,
+        tokens_used=0,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Endpoint
 # ---------------------------------------------------------------------------
 
-@router.post("/request", response_model=SummarizeResult, summary="Tóm tắt nội dung yêu cầu")
+
+@router.post(
+    "/request", response_model=SummarizeResult, summary="Tóm tắt nội dung yêu cầu"
+)
 async def summarize_request(body: SummarizeRequest):
     """
-    Tóm tắt yêu cầu bằng Gemini 1.5 Flash.
-    
+    Tóm tắt yêu cầu bằng Gemini 1.5 Flash (fallback về trích xuất cục bộ nếu thiếu API key hoặc lỗi).
+
     Trả về:
     - **summary**: 2-3 câu tóm tắt
     - **key_points**: bullet points quan trọng
@@ -115,11 +176,12 @@ async def summarize_request(body: SummarizeRequest):
     - **tokens_used**: số token Gemini đã dùng
     """
     if not settings.gemini_api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="GEMINI_API_KEY chưa cấu hình. Xem .env.example",
+        logger.info(
+            f"Gemini API key chưa cấu hình, dùng tóm tắt trích xuất cục bộ: {body.title}"
         )
+        return _local_extractive_summarize(body)
 
+    response = None
     try:
         import google.generativeai as genai
 
@@ -130,21 +192,21 @@ async def summarize_request(body: SummarizeRequest):
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
-                temperature=0.3,    # Thấp để output ổn định, không sáng tạo quá
+                temperature=0.3,
                 max_output_tokens=512,
             ),
         )
 
         raw = response.text.strip()
-        # Strip markdown code block nếu Gemini trả về ```json ... ```
         if raw.startswith("```"):
             raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
+            raw = raw.removeprefix("json")
         raw = raw.strip()
 
         parsed = json.loads(raw)
-        tokens = response.usage_metadata.total_token_count if response.usage_metadata else 0
+        tokens = (
+            response.usage_metadata.total_token_count if response.usage_metadata else 0
+        )
 
         logger.info(f"Summarize OK | type={body.request_type} | tokens={tokens}")
 
@@ -157,13 +219,7 @@ async def summarize_request(body: SummarizeRequest):
 
     except json.JSONDecodeError as e:
         logger.error(f"Gemini trả về không phải JSON: {e}")
-        # Fallback: trả về raw text như summary
-        return SummarizeResult(
-            summary=response.text[:300] if response else "Không tóm tắt được.",
-            key_points=[],
-            sentiment="normal",
-            tokens_used=0,
-        )
-    except Exception as e:
-        logger.error(f"Summarize error: {e}")
-        raise HTTPException(status_code=500, detail=f"Lỗi LLM: {e}")
+        return _local_extractive_summarize(body)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Summarize fallback to local extractive due to error: {e}")
+        return _local_extractive_summarize(body)

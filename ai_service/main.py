@@ -3,14 +3,19 @@ AI Service — FastAPI Application Entry Point (main.py)
 
 Khởi động: uvicorn main:app --reload --host 0.0.0.0 --port 8001
 """
-from fastapi import FastAPI, Request, HTTPException
+
+import time
+
+try:
+    from config import get_settings
+except (ImportError, AttributeError):
+    from ai_service.config import get_settings
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
-import time
-
-from config import get_settings
-from routers import ocr, summarize, risk, auto_approve, classify, mock_context
+from routers import auto_approve, classify, mock_context, ocr, risk, summarize
 
 settings = get_settings()
 
@@ -36,47 +41,81 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 # Middleware
 # ---------------------------------------------------------------------------
+allowed_origins = [
+    origin.strip()
+    for origin in settings.cors_allowed_origins.split(",")
+    if origin.strip()
+] or ["http://localhost:3000", "http://localhost:5173", "http://localhost:8000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    corr_id = (
+        request.headers.get("X-Correlation-ID")
+        or request.headers.get("x-correlation-id")
+        or ""
+    )
     start = time.time()
     response = await call_next(request)
     duration = round((time.time() - start) * 1000, 2)
-    logger.info(f"{request.method} {request.url.path} -> {response.status_code} ({duration}ms)")
+    if corr_id:
+        response.headers["X-Correlation-ID"] = corr_id
+    cid_str = f" [cid={corr_id}]" if corr_id else ""
+    logger.info(
+        f"{request.method} {request.url.path} -> {response.status_code} ({duration}ms){cid_str}"
+    )
     return response
 
 
 @app.middleware("http")
 async def verify_internal_secret(request: Request, call_next):
-    public_paths = {"/docs", "/redoc", "/openapi.json", "/health", "/"}
+    public_paths = {"/docs", "/redoc", "/openapi.json", "/health", "/metrics", "/"}
     if request.url.path in public_paths:
         return await call_next(request)
 
     if not settings.internal_api_secret:
-        return JSONResponse(status_code=503, content={"detail": "AI internal authentication is not configured"})
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "AI internal authentication is not configured"},
+        )
     secret = request.headers.get("X-Internal-Secret")
     if secret != settings.internal_api_secret:
-        return JSONResponse(status_code=401, content={"detail": "Unauthorized: invalid internal secret"})
+        return JSONResponse(
+            status_code=401, content={"detail": "Unauthorized: invalid internal secret"}
+        )
 
     return await call_next(request)
+
+
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+
+    Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+except ImportError:
+    pass
 
 
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
-app.include_router(classify.router,     prefix="/ai/classify",     tags=["Smart Classification"])
-app.include_router(risk.router,         prefix="/ai/risk",         tags=["Risk & Fraud Scoring"])
-app.include_router(auto_approve.router, prefix="/ai/auto-approve", tags=["Auto Approve"])
-app.include_router(ocr.router,          prefix="/ai/ocr",          tags=["OCR"])
-app.include_router(summarize.router,    prefix="/ai/summarize",    tags=["Summarize"])
-app.include_router(mock_context.router, prefix="/ai/mock",         tags=["Mock Data Context"])
+app.include_router(
+    classify.router, prefix="/ai/classify", tags=["Smart Classification"]
+)
+app.include_router(risk.router, prefix="/ai/risk", tags=["Risk & Fraud Scoring"])
+app.include_router(
+    auto_approve.router, prefix="/ai/auto-approve", tags=["Auto Approve"]
+)
+app.include_router(ocr.router, prefix="/ai/ocr", tags=["OCR"])
+app.include_router(summarize.router, prefix="/ai/summarize", tags=["Summarize"])
+app.include_router(mock_context.router, prefix="/ai/mock", tags=["Mock Data Context"])
 
 
 # ---------------------------------------------------------------------------
@@ -89,4 +128,6 @@ async def health_check():
 
 @app.get("/", tags=["Health"])
 async def root():
-    return {"message": "Enterprise AI Service đang hoạt động. Truy cập /docs để xem chi tiết API."}
+    return {
+        "message": "Enterprise AI Service đang hoạt động. Truy cập /docs để xem chi tiết API."
+    }

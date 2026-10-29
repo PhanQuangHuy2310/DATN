@@ -9,7 +9,7 @@ BEGIN
  SELECT count(*) INTO n FROM pg_tables WHERE schemaname='eas';
  IF n<>30 THEN RAISE EXCEPTION 'Expected 30 EAS domain tables, found %',n; END IF;
  SELECT count(*) INTO n FROM information_schema.columns WHERE table_schema='eas';
- IF n<>260 THEN RAISE EXCEPTION 'Expected 260 EAS columns, found %',n; END IF;
+ IF n<>263 THEN RAISE EXCEPTION 'Expected 263 EAS columns, found %',n; END IF;
  IF EXISTS(SELECT 1 FROM unnest(ARRAY[
   'security_epoch','department','app_user','role_membership','request_type','config_release',
   'request','request_revision','workflow_instance','request_participant','approval_step',
@@ -29,7 +29,7 @@ BEGIN
  SELECT count(*) INTO n FROM pg_constraint c JOIN pg_namespace s ON s.oid=c.connamespace WHERE s.nspname='eas' AND c.contype='f';
  IF n<>72 THEN RAISE EXCEPTION 'Expected 72 foreign keys, found %',n; END IF;
  SELECT count(*) INTO n FROM pg_constraint c JOIN pg_namespace s ON s.oid=c.connamespace WHERE s.nspname='eas' AND c.contype='c';
- IF n<>139 THEN RAISE EXCEPTION 'Expected 139 CHECK constraints, found %',n; END IF;
+ IF n<>140 THEN RAISE EXCEPTION 'Expected 140 CHECK constraints, found %',n; END IF;
  SELECT count(*) INTO n FROM pg_policies WHERE schemaname='eas';
  IF n<>60 THEN RAISE EXCEPTION 'Expected 60 service-role RLS policies, found %',n; END IF;
  SELECT count(*) INTO n FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace s ON s.oid=c.relnamespace WHERE s.nspname='eas' AND NOT t.tgisinternal;

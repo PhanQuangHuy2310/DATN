@@ -2,9 +2,14 @@
 AI Service — Cấu hình chung (config.py)
 Đọc biến môi trường từ .env và expose qua Settings singleton.
 """
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from functools import lru_cache
-import os
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_AI_SERVICE_DIR = Path(__file__).resolve().parent
+_AI_ENV_PATH = _AI_SERVICE_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -27,6 +32,7 @@ class Settings(BaseSettings):
 
     # --- Security ---
     internal_api_secret: str = ""
+    cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000"
 
     # --- OCR ---
     ocr_lang: str = "vi"
@@ -37,13 +43,47 @@ class Settings(BaseSettings):
     auto_approve_only_template_a: bool = True
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
+        env_file=(
+            _AI_ENV_PATH if _AI_ENV_PATH.exists() else ".env",
+            ".env",
+        ),
+        env_file_encoding="utf-8-sig",
         case_sensitive=False,
         extra="ignore",
     )
 
+    def model_post_init(self, context: object, /) -> None:
+        import os
 
-@lru_cache()
+        env = (
+            os.getenv("EAS_ENV", os.getenv("ENVIRONMENT", "development"))
+            .lower()
+            .strip()
+        )
+        if env != "production" and (
+            not self.internal_api_secret
+            or self.internal_api_secret.startswith("replace-with-the-same-random-secret-as-")
+        ):
+            db_env = _AI_SERVICE_DIR.parent / ".env.database"
+            if db_env.is_file():
+                for line in db_env.read_text(encoding="utf-8-sig").splitlines():
+                    if line.strip().startswith("EAS_AI_INTERNAL_SECRET="):
+                        val = line.split("=", 1)[1].strip().strip('"\'')
+                        if val and not val.startswith("replace-with-"):
+                            self.internal_api_secret = val
+                            break
+            if not self.internal_api_secret or self.internal_api_secret.startswith("replace-with-"):
+                self.internal_api_secret = "eas-local-dev-shared-internal-secret-2026"
+
+        if env == "production" and self.internal_api_secret in {
+            "",
+            "datn-internal-secret-change-in-prod",
+        }:
+            raise ValueError(
+                "INTERNAL_API_SECRET must be configured with a secure secret in production"
+            )
+
+
+@lru_cache
 def get_settings() -> Settings:
     return Settings()

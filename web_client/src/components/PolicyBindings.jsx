@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { errorText } from "../domain.js";
 import { useResource } from "./ui.jsx";
 
@@ -21,7 +21,14 @@ export default function PolicyBindings({ release, jsonText, onChange }) {
   const chosenSlot = requested.find((x) => x.slot === slotName) || requested[0];
   const validUsers = (currentDept?.candidates || []).filter((u) => chosenSlot?.role && u.roles.includes(chosenSlot.role));
   const chosenUser = validUsers.find((u) => u.id === userId) || validUsers[0];
-  useEffect(() => { setDeptId(""); setSlotName(""); setUserId(""); setMessage(""); },[release.id]);
+  const [prevReleaseId, setPrevReleaseId] = useState(release.id);
+  if (release.id !== prevReleaseId) {
+    setPrevReleaseId(release.id);
+    setDeptId("");
+    setSlotName("");
+    setUserId("");
+    setMessage("");
+  }
 
   function updateBinding(assign) {
     if (!currentDept) return;
@@ -68,7 +75,7 @@ export default function PolicyBindings({ release, jsonText, onChange }) {
         <button type="button" className="secondary" onClick={()=>updateBinding(false)}>Thêm phòng ban</button>
         {requested.length>0 && <button type="button" className="secondary" disabled={!chosenUser} onClick={()=>updateBinding(true)}>Gán người vào JSON</button>}
       </div>
-      {!!message && <p role="status" className="muted">{message}</p>}
+      {!!message && <output className="muted">{message}</output>}
     </>}
     {!candidates.loading && departments.length===0 && !candidates.error && <p className="muted">Không có phòng ban trong phạm vi POLICY_ADMIN. Kiểm tra role membership trước khi công bố.</p>}
   </div>;

@@ -16,7 +16,8 @@ def records(request, kind, record_id=None):
     try:
         if request.method == "GET":
             return JsonResponse(
-                read_record(request.actor, kind, str(record_id)) if record_id is not None
+                read_record(request.actor, kind, str(record_id))
+                if record_id is not None
                 else list_records(request.actor, kind, request.GET)
             )
         if (request.method == "POST" and record_id is None) or (

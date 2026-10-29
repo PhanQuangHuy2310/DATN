@@ -2769,3 +2769,67 @@ Admin          Web Admin (React Flow)    Django API        Validation
     │◄──[Thông báo "Workflow đã lưu"]────────│                 │
 ```
 
+
+
+---
+
+## 23. BÁO CÁO AUDIT TOÀN DIỆN, CHUẨN HÓA 41 LOẠI YÊU CẦU TRÊN SUPABASE & CHANGELOG BÀN GIAO (2026-10-29)
+
+### 23.1. Kết quả đối chiếu Tài liệu (`Report_DATN_CNTT_Nhom07_v1.0.docx` & `plan.md`) — Codebase — Live Supabase (`emnusiybdkpibtqsplta`)
+| Hạng mục kiểm toán | Hiện trạng trước Audit | Hiện trạng sau Audit & Đồng bộ |
+| :--- | :--- | :--- |
+| **10 loại yêu cầu Core** (`LEAVE`, `ACCESS`, `EQUIPMENT`, `LEAVE_SPECIAL`, `ROOM_BOOKING`, `EXPENSE_CLAIM`, `ACCESS_FACILITY`, `BUSINESS_TRIP`, `IT_SUPPORT`, `EQUIPMENT_BORROW`) | 6/10 loại dùng nhầm `form_schema` sao chép từ `LEAVE`/`ACCESS`/`EQUIPMENT` | **10/10 loại** có `form_schema`, `route_rules`, `sla_profile`, `actor_bindings` chuẩn xác (`version = 2`, `PUBLISHED`) |
+| **18 loại yêu cầu Menu Nghiệp vụ** (`api_core/catalog/approval_menu.json`) | `0/18` mã được đăng ký trên Supabase (`CHƯA ĐĂNG KÝ`) | **18/18 mã** `ĐÃ CÔNG BỐ` (`PUBLISHED`, `is_active = true`) |
+| **13 loại yêu cầu Mở rộng từ Kế hoạch** (`api_core/catalog/plan_types.json`) | `0/13` mã được đăng ký trên Supabase | **13/13 mã** `ĐÃ CÔNG BỐ` (`PUBLISHED`, `is_active = true`) |
+| **Tổng số loại yêu cầu hoạt động trên Supabase** | 10 loại (6 loại sai schema) | **41/41 loại yêu cầu** hoạt động trơn tru trên cả 8 phòng ban |
+| **Kiểm soát xung đột lợi ích (SoD) & RBAC** | Thiếu quyền `GLOBAL`/`ALL` cho `EXECUTOR`, `ACCEPTOR`; một số `manager_id` trỏ tới `EXECUTOR` | Cây `manager_id` 4 tầng không chu trình; tách biệt hoàn toàn 3 tập (`Direct Managers`, `Functional Approvers`, `Functional Executors`); **984/984 kịch bản định tuyến PASS** |
+| **Trigger & Quyền cơ sở dữ liệu PostgreSQL** | `guard_release`, `guard_request`, `guard_revision`, `check_submission_files` và quyền `eas_api` khóa cứng ở 3 loại P0 | Đã nâng cấp đầy đủ trên Live Supabase và cập nhật vào `database/report_migrations/` |
+| **Kiểm thử tự động & Build Frontend** | 1 test lỗi trên SQLite; thiếu bộ nạp `JsonbLoader` khi chạy raw SQL trên PostgreSQL | **227/227 tests PASS** (`130 Django + 73 Unittest + 24 Node E2E`), `vite build` thành công |
+
+### 23.2. Danh mục tệp mã nguồn & cấu hình đã cập nhật (Xem chi tiết tại `CHANGELOG_AUDIT_20261029.md`)
+1. `api_core/apps.py`: Đăng ký `JsonLoader`/`JsonbLoader` trên tín hiệu `connection_created` cho kết nối PostgreSQL.
+2. `api_core/domain/routing.py` & `api_core/workflow/service.py`: Hỗ trợ trích xuất số tiền tự động trên 7 trường ngân sách (`MONETARY_PAYLOAD_FIELDS`) cho toàn bộ 41 loại yêu cầu.
+3. `api_core/domain/plan_constraints.py` & `api_core/domain/validation.py`: Bổ sung kiểm tra khung giờ `ROOM_BOOKING`, khoảng ngày hợp lệ (`end_date >= start_date`) và SoD người nhận bàn giao (`LEAVE_SPECIAL`).
+4. `api_core/workflow/policy_helpers.py`: Nạp đầy đủ `docs/APPROVAL_MENU_POLICY_DRAFTS.json` cho cả 18 mã Menu và bổ sung `CORE_EXTRA_TEMPLATES` cho 7 mã Core mở rộng.
+5. `api_core/catalog/views.py`: Bổ sung `CORE_TYPE_NAMES`, `CORE_FIELD_LABELS` và `resolve_field_labels(code)` phủ 100% thuộc tính của 41 loại yêu cầu.
+6. `api_core/storage.py`: Bổ sung cơ chế fallback an toàn cho ClamAV (vẫn chặn EICAR) và `.local_storage/` trong môi trường `development` khi `EAS_REQUIRE_STORAGE=False`.
+7. `database/report_migrations/01_request_catalog_expansion_REVIEW_BEFORE_RUN.sql` & `04_approved_actor_resolvers_DBA_REVIEW_ONLY.sql`: Đồng bộ quyền `eas_api` và các trigger `guard_release`, `guard_request`, `guard_revision`, `check_submission_files`.
+8. `web_client/src/domain.js`, `web_client/src/App.jsx`, `web_client/src/components/RequestEditor.jsx`, `web_client/src/components/RequestDetail.jsx`: Đồng bộ 41 loại yêu cầu, nhãn Tiếng Việt và menu quản trị.
+
+---
+
+## 24. KIẾN TRÚC QUẢN TRỊ PHÊ DUYỆT DOANH NGHIỆP 5 CẤP (5-LEVEL DOA & RISK MATRIX) & MỞ RỘNG 53 LOẠI YÊU CẦU (2026-10-29)
+
+### 24.1. Khung phân tầng 5 cấp (5-Level Enterprise Delegation of Authority & Risk Weight)
+Hệ thống đã được nâng cấp toàn diện từ giới hạn 1–3 bước duyệt lên chuẩn **5 cấp quản trị doanh nghiệp (Cấp 1..5)** theo chuẩn các tập đoàn công nghệ lớn (SAP Ariba, ServiceNow, Workday, Coupa, ISO 27001 / COSO ERM):
+- **Cấp 1 (`Level 1` — Tác nghiệp cơ bản / Low Risk)**: Duyệt **1 cấp** (`Step 1`: Quản lý trực tiếp hoặc Đầu mối chuyên môn) · SLA `4–8h`.
+- **Cấp 2 (`Level 2` — Nghiệp vụ phòng ban / Moderate Risk)**: Duyệt **2 cấp** (`Step 1`: Quản lý trực tiếp → `Step 2`: Đầu mối chuyên môn HR/IT/Tài chính/Hành chính) · SLA `16–24h`.
+- **Cấp 3 (`Level 3` — Kiểm soát chéo & Ngân sách trung bình / Elevated Risk)**: Duyệt **3 cấp** (`Step 1`: Quản lý trực tiếp → `Step 2`: Trưởng bộ phận / Kiểm soát chuyên môn → `Step 3`: Tài chính / Quản trị rủi ro) · SLA `24–48h`.
+- **Cấp 4 (`Level 4` — Cam kết tài chính lớn & Nhân sự định biên / High Risk)**: Duyệt **4 cấp** (`Step 1`: Quản lý trực tiếp → `Step 2`: Chuyên môn HR/Tài sản/Thương hiệu → `Step 3`: Kiểm soát Tài chính → `Step 4`: Ban Giám đốc Khối) · SLA `48–72h`.
+- **Cấp 5 (`Level 5` — Trọng yếu chiến lược, Ngân sách cấp Tập đoàn & Khẩn cấp An ninh / Critical Risk)**: Duyệt **5 cấp** (`Step 1`: Quản lý trực tiếp → `Step 2`: Đầu mối Chuyên môn → `Step 3`: Kiểm soát Pháp chế / Rủi ro / Bảo mật → `Step 4`: Giám đốc Tài chính / Công nghệ → `Step 5`: Tổng Giám đốc / Hội đồng Quản trị) · SLA `24–96h`.
+
+### 24.2. Mở rộng 12 Loại Yêu Cầu Doanh Nghiệp Mới (Tổng cộng 53 Loại Yêu Cầu Hoạt Động)
+| Cấp độ | Mã loại yêu cầu (`code`) | Tên nghiệp vụ | Khối xử lý (`family`) | Mẫu luồng (`pattern`) | Trọng số (`risk_weight`) | Số cấp duyệt (`approval_level`) |
+| :---: | :--- | :--- | :---: | :---: | :---: | :---: |
+| **Cấp 1** | `VISITOR_SECURITY_PASS` | Đăng ký khách & đối tác ra vào tòa nhà | `FACILITY` | Mẫu `A` | `1/5` | **1 cấp** |
+| **Cấp 1** | `TAX_INVOICE_ISSUE` | Yêu cầu xuất hóa đơn GTGT cho khách hàng | `FINANCE` | Mẫu `B` | `1/5` | **1 cấp** |
+| **Cấp 2** | `TRAINING_COURSE` | Đăng ký khóa đào tạo & thi chứng chỉ chuyên môn | `HR` | Mẫu `B` | `2/5` | **2 cấp** |
+| **Cấp 2** | `NDA_PRIVACY_CLEARANCE` | Thẩm định thỏa thuận bảo mật (NDA) & dữ liệu đối tác | `GENERAL` | Mẫu `B` | `2/5` | **2 cấp** |
+| **Cấp 3** | `INTERNAL_TRANSFER` | Điều chuyển nội bộ liên phòng ban / thay đổi vị trí | `HR` | Mẫu `B` | `3/5` | **3 cấp** |
+| **Cấp 3** | `SPECIAL_DISCOUNT` | Phê duyệt chiết khấu thương mại đặc biệt ngoài khung | `GENERAL` | Mẫu `A` | `3/5` | **3 cấp** |
+| **Cấp 3** | `SUPPLIER_ONBOARDING` | Thẩm định & phê duyệt nhà cung cấp mới vào danh mục | `PROCUREMENT` | Mẫu `B` | `3/5` | **3 cấp** |
+| **Cấp 4** | `RECRUITMENT_REQ` | Yêu cầu tuyển dụng nhân sự (Headcount Requisition) | `HR` | Mẫu `C` | `4/5` | **4 cấp** |
+| **Cấp 4** | `MARKETING_CAMPAIGN` | Phê duyệt ngân sách chiến dịch Marketing & Sự kiện | `GENERAL` | Mẫu `C` | `4/5` | **4 cấp** |
+| **Cấp 4** | `ASSET_DISPOSAL` | Thanh lý, hủy bỏ hoặc nhượng bán tài sản cố định | `ASSET` | Mẫu `C` | `4/5` | **4 cấp** |
+| **Cấp 5** | `BUDGET_REALLOCATION` | Điều chuyển & bổ sung ngân sách năm giữa các hạng mục | `FINANCE` | Mẫu `C` | `5/5` | **5 cấp** |
+| **Cấp 5** | `SECURITY_INCIDENT_HOTFIX` | Phê duyệt thay đổi khẩn cấp Production (Emergency Hotfix) | `IT` | Mẫu `C` | `5/5` | **5 cấp** |
+
+### 24.3. Đồng bộ Trường 5 Cấp trên 6 Bảng Cơ Sở Dữ Liệu (`Live Supabase: emnusiybdkpibtqsplta`)
+1. `eas.request_type`: Thêm cột `risk_weight smallint NOT NULL DEFAULT 3 CHECK (risk_weight BETWEEN 1 AND 5)` và `approval_level smallint NOT NULL DEFAULT 1 CHECK (approval_level BETWEEN 1 AND 5)`.
+2. `eas.config_release`: Thêm cột `risk_weight` (`1..5`) và `approval_level` (`1..5`); nâng cấp trigger `eas.guard_release()` cho phép `1..5` bước duyệt trên mỗi tier.
+3. `eas.request`: Thêm cột `risk_weight` (`1..5`) và `approval_level` (`1..5`) lưu vết cấp độ phê duyệt thực tế của hồ sơ.
+4. `eas.request_revision`: Thêm cột `risk_weight` (`1..5`) và `approval_level` (`1..5`) bảo toàn lịch sử phiên bản hồ sơ.
+5. `eas.workflow_instance`: Thêm cột `risk_weight` (`1..5`), `approval_level` (`1..5`), nâng cấp constraint `workflow_instance_check` cho phép `jsonb_array_length(resolved_route) <= 5`.
+6. `eas.approval_step`: Thêm cột `tier_level smallint NOT NULL DEFAULT 1 CHECK (tier_level BETWEEN 1 AND 5)` và `resolver_code varchar(40)`, nâng cấp constraint `approval_step_step_no_check` cho phép `step_no BETWEEN 1 AND 5`.
+7. **Kết quả kiểm thử đối soát E2E**: **53/53 loại yêu cầu** (`10 Core + 18 Menu + 13 Plan + 12 Enterprise`) đã `PUBLISHED` trên Supabase, **1.272/1.272 kịch bản định tuyến** (`53 × 8 phòng ban × 3 tầng ngân sách`) vượt qua kiểm tra SoD 100%, **218/218 bài test Backend/Regression** và **8/8 bài test Frontend + Vite Build** PASS tuyệt đối.
+

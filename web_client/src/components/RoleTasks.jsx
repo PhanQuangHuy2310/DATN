@@ -17,7 +17,7 @@ export default function RoleTasks({ user, navigate }) {
         {user.roles.map((role) => <span key={role} className="role-pill">{roles[role] || role}</span>)}
       </div>
       <div className="role-task-grid">
-        {tasks.map((task) => <button type="button" key={task.role + task.page} className="role-task" title={`${task.description} · ${task.uc}`} onClick={() => navigate(task.page)}>
+        {tasks.map((task) => <button type="button" key={task.role + task.page} className="role-task" onClick={() => navigate(task.page)}>
           <span className="role-task-icon" aria-hidden="true">{task.icon}</span>
           <span className="role-task-content"><strong>{task.title}</strong><small>{task.description}</small><em>{task.uc}</em></span>
           <span className="role-task-arrow" aria-hidden="true">→</span>

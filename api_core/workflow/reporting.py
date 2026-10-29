@@ -8,6 +8,7 @@ from django.db import connection, transaction
 
 from api_core.audit import canonical_sha256
 from api_core.authn.service import Actor
+from api_core.workflow.constants import ERR_REQUEST_NOT_FOUND
 from api_core.workflow.service import CommandError, _utc_text
 
 
@@ -131,8 +132,8 @@ def get_request_metrics_report(
     if duration.total_seconds() > 366 * 86400:
         raise CommandError("PERIOD_INVALID", status=422)
 
-    type_code_filter = query_params.get("type_code")
-    dept_filter = query_params.get("department_id")
+    type_code_filter = (query_params.get("type_code") or "").strip() or None
+    dept_filter = (query_params.get("department_id") or "").strip() or None
 
     dept_uuid = None
     if dept_filter:
@@ -174,6 +175,7 @@ def get_request_metrics_report(
               )
             )
           )
+        LIMIT 100000
     """
     params = [
         dt_from,
@@ -188,6 +190,7 @@ def get_request_metrics_report(
     ]
 
     with connection.cursor() as cursor:
+        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
         cursor.execute(sql, params)
         rows = cursor.fetchall()
 
@@ -248,9 +251,10 @@ def get_request_audit_events(actor: Actor, request_id: str) -> dict[str, Any]:
           )
     """
     with connection.cursor() as cursor:
+        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
         cursor.execute(sql, [norm_id, actor.id, actor.id, actor.id])
         if not cursor.fetchone():
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
 
         cursor.execute(
             """
@@ -394,7 +398,6 @@ def verify_audit_chain(scope_key: str) -> dict[str, Any]:
                        type_id::text, details, reason, correlation_id::text,
                        occurred_at, prev_hash, hash
                 FROM eas.admin_event
-                WHERE scope_key = 'ADMIN'
                 ORDER BY seq ASC
                 """
             )
@@ -568,7 +571,7 @@ def get_request_audit_verify(actor: Actor, request_id: str) -> dict[str, Any]:
         )
         row = cursor.fetchone()
         if not row:
-            raise CommandError("REQUEST_NOT_FOUND", status=404)
+            raise CommandError(ERR_REQUEST_NOT_FOUND, status=404)
 
         _r_id, dept_id, type_id = row
         cursor.execute(
