@@ -37,18 +37,33 @@ export function Data({ value }) {
   return <span>{String(value)}</span>;
 }
 export function useResource(url) {
-  const [state, setState] = useState(() => ({ data: peekResource(url), error: "", loading: !peekResource(url), refreshing: false }));
+  const [state, setState] = useState(() => ({
+    url,
+    data: peekResource(url),
+    error: "",
+    loading: !peekResource(url),
+    refreshing: false,
+  }));
   const [version, setVersion] = useState(0);
   const [mutationVersion, setMutationVersion] = useState(0);
-  useEffect(() => onDataChanged(() => setMutationVersion((v) => v + 1)), []);
-  useEffect(() => {
-    let active = true;
+
+  const syncKey = `${url}:${version}:${mutationVersion}`;
+  const [prevSyncKey, setPrevSyncKey] = useState(syncKey);
+  if (prevSyncKey !== syncKey) {
+    setPrevSyncKey(syncKey);
     const stale = peekResource(url);
     setState((s) => ({
       data: stale ?? (s.data && s.url === url ? s.data : null),
-      url, error: "", loading: !stale && s.url !== url,
-      refreshing: !!stale || (s.url === url && !!s.data),
+      url,
+      error: "",
+      loading: !stale && s.url !== url,
+      refreshing: Boolean(stale) || (s.url === url && Boolean(s.data)),
     }));
+  }
+
+  useEffect(() => onDataChanged(() => setMutationVersion((v) => v + 1)), []);
+  useEffect(() => {
+    let active = true;
     getResource(url).then((data) => {
       if (active) setState({ url, data, error: "", loading: false, refreshing: false });
     }).catch((e) => {

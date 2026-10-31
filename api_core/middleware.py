@@ -28,8 +28,12 @@ class ApiDatabaseErrorMiddleware:
         if request.path.startswith("/api/v1/"):
             response["Server-Timing"] = f"app;dur={duration_ms}"
             if duration_ms >= 1200:
-                log.warning("Slow API request: path=%s duration_ms=%s status=%s",
-                            request.path, duration_ms, response.status_code)
+                log.warning(
+                    "Slow API request: path=%s duration_ms=%s status=%s",
+                    request.path,
+                    duration_ms,
+                    response.status_code,
+                )
         return response
 
     def process_exception(self, request, exception):

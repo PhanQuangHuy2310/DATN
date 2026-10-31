@@ -276,7 +276,7 @@ test("all statuses, filter, draft update and cancellation with reason", async ({
     .getByLabel("Tiêu đề", { exact: true })
     .fill("Đăng ký nghỉ phép đã cập nhật");
   await page.getByRole("button", { name: "Lưu bản nháp", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Đã lưu");
+  await expect(page.getByRole("status").filter({ hasText: "Đã lưu" })).toBeVisible();
   await page
     .getByRole("button", { name: "Gửi phê duyệt", exact: true })
     .click();

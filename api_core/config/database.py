@@ -51,7 +51,9 @@ def parse_database_url(url: str) -> dict[str, object]:
             "CONN_HEALTH_CHECKS": True,
             "OPTIONS": {
                 "sslmode": sslmode,
-                "connect_timeout": int(os.getenv("EAS_DB_CONNECT_TIMEOUT_SECONDS", "8")),
+                "connect_timeout": int(
+                    os.getenv("EAS_DB_CONNECT_TIMEOUT_SECONDS", "8")
+                ),
                 "prepare_threshold": None,
                 "options": f"-c statement_timeout={int(os.getenv('EAS_DB_STATEMENT_TIMEOUT_MS', '20000'))} -c lock_timeout=5000",
             },

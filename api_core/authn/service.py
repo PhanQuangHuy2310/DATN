@@ -280,7 +280,11 @@ def require_actor(*required_roles: str) -> Callable:
             # also include REQUESTER/APPROVER/EXECUTOR/ACCEPTOR. Enforce on API.
             operational = {"REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR"}
             administrator = {"OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"}
-            if required_roles and set(required_roles).issubset(operational) and actor.roles.intersection(administrator):
+            if (
+                required_roles
+                and set(required_roles).issubset(operational)
+                and actor.roles.intersection(administrator)
+            ):
                 return api_error(request, "ADMIN_PORTAL_ONLY", status=403)
             from api_core.maintenance import (
                 MAINTENANCE_MSG_USER,

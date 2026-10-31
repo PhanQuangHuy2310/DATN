@@ -19,8 +19,25 @@ function ImageViewer({ diagram, onClose }) {
     };
   }, [onClose]);
   return (
-    <div className="flow-lightbox-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="flow-lightbox" role="dialog" aria-modal="true" aria-label={`Xem toàn màn hình: ${diagram.title}`}>
+    <div className="flow-lightbox-backdrop">
+      <button
+        type="button"
+        className="flow-lightbox-dismiss"
+        aria-label="Đóng toàn màn hình"
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          margin: 0,
+          cursor: "default",
+        }}
+      />
+      <section className="flow-lightbox" role="dialog" aria-modal="true" aria-label={`Xem toàn màn hình: ${diagram.title}`} style={{ position: "relative", zIndex: 1 }}>
         <header className="flow-lightbox-toolbar">
           <div><strong>{diagram.title}</strong><small>Sơ đồ luồng công việc</small></div>
           <div className="flow-viewer-actions">
@@ -54,8 +71,14 @@ export default function WorkflowDiagrams({ request = null, lifecycle = null, emb
   ), [baseList, category, query]);
   const preferred = inContext && effectiveLifecycle ? `lifecycle-${effectiveLifecycle.toLowerCase()}` : "create-submit";
   const selected = visible.find((diagram) => diagram.id === selectedId) || visible.find((diagram) => diagram.id === preferred) || visible[0] || null;
-  useEffect(() => { setSelectedId(null); setCategory("Tất cả"); setQuery(""); }, [request?.id, lifecycle]);
-  useEffect(() => { if (!selected && fullscreen) setFullscreen(false); }, [selected, fullscreen]);
+  const resetKey = `${request?.id || ""}:${lifecycle || ""}`;
+  const [prevResetKey, setPrevResetKey] = useState(resetKey);
+  if (prevResetKey !== resetKey) {
+    setPrevResetKey(resetKey);
+    setSelectedId(null);
+    setCategory("Tất cả");
+    setQuery("");
+  }
   const closeFullscreen = () => setFullscreen(false);
   return (
     <section className={`flow-library ${embedded ? "flow-library-embedded" : ""}`} aria-label="Sơ đồ luồng">

@@ -3,8 +3,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from .database import DatabaseUrlError, parse_database_url
 from project_env import load_project_env
+
+from .database import DatabaseUrlError, parse_database_url
 
 load_project_env()
 
@@ -184,9 +185,12 @@ if ENVIRONMENT == "production" and EAS_ALLOW_ADMIN_DB:
     raise RuntimeError("EAS_ALLOW_ADMIN_DB cannot be enabled in production")
 
 # ── AI Service Integration ──
-EAS_AI_SERVICE_URL = os.getenv("EAS_AI_SERVICE_URL", "http://127.0.0.1:8001" if ENVIRONMENT == "development" else "http://ai-service:8001").rstrip(
-    "/"
-)
+EAS_AI_SERVICE_URL = os.getenv(
+    "EAS_AI_SERVICE_URL",
+    "http://127.0.0.1:8001"
+    if ENVIRONMENT == "development"
+    else "http://ai-service:8001",
+).rstrip("/")
 EAS_AI_INTERNAL_SECRET = os.getenv(
     "EAS_AI_INTERNAL_SECRET",
     os.getenv("INTERNAL_API_SECRET", ""),

@@ -19,7 +19,7 @@ export default function ToastCenter() {
   return (
     <div className="toast-stack" aria-live="polite" aria-relevant="additions">
       {items.map(({ id, message, type }) => (
-        <div className={`toast toast-${type}`} key={id} role="status">
+        <div className={`toast toast-${type}`} key={id}>
           <span className="toast-symbol" aria-hidden="true">{type === "error" ? "!" : "✓"}</span>
           <span>{message}</span>
           <button type="button" aria-label="Đóng thông báo" onClick={() => setItems((a) => a.filter((x) => x.id !== id))}>×</button>

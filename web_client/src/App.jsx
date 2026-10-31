@@ -519,7 +519,8 @@ function Workspace({ user, onLogout, portal = "client" }) {
   }, [page, selected, editor]);
   function navigate(next) {
     if (!canNavigate(user.roles, next, user.capabilities)) return;
-    if (!(portal === "admin" ? ADMIN_PAGES : CLIENT_PAGES).has(next)) return;
+    const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
+    if (!allowedPages.has(next)) return;
     setPage(next);
     setSelected(null);
     setEditor(null);
@@ -554,7 +555,8 @@ function Workspace({ user, onLogout, portal = "client" }) {
             ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events"]],
             ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
           ].map(([group, keys]) => {
-            const visible = menu.filter((m) => keys.includes(m[0]) && (portal === "admin" ? ADMIN_PAGES : CLIENT_PAGES).has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
+            const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
+            const visible = menu.filter((m) => keys.includes(m[0]) && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
             return visible.length ? (
               <div key={group} className="nav-group">
                 <p className="nav-caption">{group}</p>
@@ -644,7 +646,7 @@ function fetchInitialSession() {
   return _bootstrapSessionPromise;
 }
 
-export default function App({ portal = "client" }) {
+export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unified") }) {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
   async function load(loginUser) {
@@ -724,7 +726,7 @@ export default function App({ portal = "client" }) {
   if (user && portal === "admin" && !user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
     return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
-  if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
+  if (user && portal === "client" && user.roles?.every((role) => ADMIN_ROLES.includes(role))) {
     return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
   return user ? (
