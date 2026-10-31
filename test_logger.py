@@ -19,6 +19,12 @@ class LoggerSecurityTests(unittest.TestCase):
         self.assertNotIn("\n", cleaned)
         self.assertIn("\\n", cleaned)
 
+    def test_redacts_credit_card_and_national_id(self):
+        cleaned = redact("card=4111-2222-3333-4444 cccd=012345678901")
+        self.assertNotIn("4111-2222-3333-4444", cleaned)
+        self.assertNotIn("012345678901", cleaned)
+        self.assertIn("[REDACTED]", cleaned)
+
     def test_filter_removes_sensitive_args(self):
         record = logging.LogRecord(
             "test", logging.INFO, __file__, 1, "token=%s", ("abc",), None

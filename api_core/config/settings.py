@@ -46,10 +46,12 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "api_core.middleware.ApiSecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "api_core.middleware.ApiRateLimitMiddleware",
     "api_core.middleware.ApiDatabaseErrorMiddleware",
 ]
 
