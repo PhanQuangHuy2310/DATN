@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+from io import StringIO
 from typing import ClassVar
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+from django.core.management import call_command
 from django.test import RequestFactory, SimpleTestCase
 
 from api_core.administration.service import (
@@ -302,3 +304,36 @@ class AdministrationTests(SimpleTestCase):
             cursor.fetchone.return_value = (False,)
             response = api_catalog_view(req)
         self.assertEqual(response.status_code, 403)
+
+    def test_enforce_initial_passwords_command(self):
+        out = StringIO()
+        with (
+            patch(
+                "api_core.management.commands.enforce_initial_passwords.connection"
+            ) as conn,
+            patch(
+                "api_core.management.commands.enforce_initial_passwords.transaction.atomic"
+            ),
+            patch(
+                "api_core.management.commands.enforce_initial_passwords._append_admin_audit"
+            ) as audit,
+        ):
+            cursor = MagicMock()
+            conn.cursor.return_value.__enter__.return_value = cursor
+            conn.vendor = "postgresql"
+            cursor.fetchall.return_value = [
+                ("u1", "seeded_user", "d1", 1),
+                ("u2", "admin", "d1", 2),
+            ]
+            cursor.fetchone.return_value = ("op-uuid",)
+            call_command(
+                "enforce_initial_passwords",
+                operator="operator_user",
+                approval="CHG-001",
+                exclude="admin",
+                stdout=out,
+            )
+            self.assertIn(
+                "Successfully enforced password rotation on 1 accounts", out.getvalue()
+            )
+            audit.assert_called_once()

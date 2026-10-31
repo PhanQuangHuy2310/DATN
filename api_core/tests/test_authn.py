@@ -68,6 +68,39 @@ class AuthenticationEndpointTests(SimpleTestCase):
         self.assertEqual(limited.status_code, 429)
         self.assertEqual(limited.headers["Retry-After"], "60")
 
+    @override_settings(
+        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+        EAS_LOGIN_MAX_IP_ATTEMPTS=2,
+        EAS_LOGIN_MAX_ATTEMPTS=10,
+    )
+    @patch("api_core.authn.views.find_user", return_value=None)
+    def test_login_rate_limit_uses_client_ip_behind_trusted_proxy(self, _find_user):
+        for _ in range(2):
+            self.client.post(
+                "/api/v1/auth/login",
+                data=json.dumps({"username": "user1", "password": "wrong"}),
+                content_type="application/json",
+                REMOTE_ADDR="10.0.0.1",
+                HTTP_X_FORWARDED_FOR="198.51.100.1",
+            )
+        throttled_ip1 = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({"username": "user1", "password": "wrong"}),
+            content_type="application/json",
+            REMOTE_ADDR="10.0.0.1",
+            HTTP_X_FORWARDED_FOR="198.51.100.1",
+        )
+        self.assertEqual(throttled_ip1.status_code, 429)
+
+        different_ip = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({"username": "user2", "password": "wrong"}),
+            content_type="application/json",
+            REMOTE_ADDR="10.0.0.1",
+            HTTP_X_FORWARDED_FOR="198.51.100.2",
+        )
+        self.assertEqual(different_ip.status_code, 401)
+
     def test_login_requires_csrf_in_real_client_mode(self):
         client = Client(enforce_csrf_checks=True)
         rejected = client.post(

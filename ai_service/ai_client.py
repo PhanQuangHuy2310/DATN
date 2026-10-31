@@ -480,17 +480,21 @@ class SyncAIServiceClient:
 
     def _run(self, coro):
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Trong context async (Celery, ASGI) — dùng asyncio.ensure_future
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop is not None and loop.is_running():
+                # Trong context async (Celery, ASGI) — dùng ThreadPoolExecutor
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     future = pool.submit(asyncio.run, coro)
                     return future.result(timeout=35)
             else:
-                return loop.run_until_complete(coro)
-        except RuntimeError:
+                return asyncio.run(coro)
+        except Exception:  # noqa: BLE001
             return asyncio.run(coro)
 
     def classify_request(

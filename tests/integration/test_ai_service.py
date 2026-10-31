@@ -379,5 +379,27 @@ class TestAIServiceClientFallback(unittest.TestCase):
         self.assertTrue(res.get("fallback_used", False))
 
 
+class TestPromptSanitization(unittest.TestCase):
+    """Kiểm tra che chắn PII và Secret trước khi gửi LLM (ISO 27001 / SOC 2 Privacy)."""
+
+    def test_sanitize_prompt_text_masks_sensitive_data(self):
+        try:
+            from ai_service.routers.summarize import sanitize_prompt_text
+        except ImportError:
+            from routers.summarize import sanitize_prompt_text
+
+        raw = (
+            "Thanh toan the 4111 2222 3333 4444 cho khach hang co CCCD 012345678901 "
+            "kem Bearer ya29.a0AfH6SMD_very_secret_oauth_token_here va api_key='sk-test-secret-12345'"
+        )
+        cleaned = sanitize_prompt_text(raw)
+        self.assertNotIn("4111 2222 3333 4444", cleaned)
+        self.assertNotIn("012345678901", cleaned)
+        self.assertNotIn("ya29.a0AfH6SMD_very_secret_oauth_token_here", cleaned)
+        self.assertIn("[REDACTED_PAN]", cleaned)
+        self.assertIn("[REDACTED_ID]", cleaned)
+        self.assertIn("[REDACTED_SECRET]", cleaned)
+
+
 if __name__ == "__main__":
     unittest.main()

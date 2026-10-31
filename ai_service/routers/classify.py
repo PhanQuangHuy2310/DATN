@@ -88,12 +88,12 @@ def get_nlp_models():
 class ClassifyRequestInput(BaseModel):
     title: str = Field(
         ...,
-        example="Đề xuất mua màn hình Dell 27 inch cho team Dev",
+        examples=["Đề xuất mua màn hình Dell 27 inch cho team Dev"],
         description="Tiêu đề yêu cầu",
     )
     description: str = Field(
         "",
-        example="Màn hình cũ bị sọc hình, cần mua màn hình mới để làm việc đồ họa.",
+        examples=["Màn hình cũ bị sọc hình, cần mua màn hình mới để làm việc đồ họa."],
         description="Nội dung chi tiết",
     )
 

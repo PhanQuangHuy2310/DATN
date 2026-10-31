@@ -96,6 +96,24 @@ async def verify_internal_secret(request: Request, call_next):
     return await call_next(request)
 
 
+MAX_REQUEST_BYTES = 20 * 1024 * 1024  # 20 MB max payload for OCR documents/images
+
+
+@app.middleware("http")
+async def limit_request_size(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_REQUEST_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": "Payload too large (max 20MB allowed)"},
+                )
+        except ValueError:
+            pass
+    return await call_next(request)
+
+
 try:
     from prometheus_fastapi_instrumentator import Instrumentator
 

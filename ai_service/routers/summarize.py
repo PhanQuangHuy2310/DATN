@@ -9,6 +9,7 @@ Không train model — dùng Gemini 1.5 Flash với prompt engineering.
 """
 
 import json
+import re
 from typing import Any
 
 try:
@@ -70,6 +71,23 @@ REQUEST_TYPE_LABELS = {
 }
 
 
+_PAN_REGEX = re.compile(r"\b(?:\d[ -]*?){13,16}\b")
+_CCCD_REGEX = re.compile(r"\b0\d{11}\b")
+_SECRET_KEY_REGEX = re.compile(
+    r"(?i)(bearer\s+[a-z0-9_\-\.]{20,}|(api[_-]?key|secret|password|token)\s*[:=]\s*['\"]?[^\s,'\"]+['\"]?)"
+)
+
+
+def sanitize_prompt_text(text: str) -> str:
+    """Mask PII and secrets before dispatching to external LLM (ISO 27001 / SOC 2 Privacy)."""
+    if not text:
+        return text
+    text = _SECRET_KEY_REGEX.sub("[REDACTED_SECRET]", text)
+    text = _PAN_REGEX.sub("[REDACTED_PAN]", text)
+    text = _CCCD_REGEX.sub("[REDACTED_ID]", text)
+    return text
+
+
 def build_summarize_prompt(req: SummarizeRequest) -> str:
     type_label = REQUEST_TYPE_LABELS.get(req.request_type, req.request_type)
 
@@ -78,10 +96,14 @@ def build_summarize_prompt(req: SummarizeRequest) -> str:
         # Chỉ lấy các key quan trọng, bỏ qua field kỹ thuật
         ignore_keys = {"id", "created_at", "updated_at", "requester_id", "status"}
         important_data = {k: v for k, v in req.data.items() if k not in ignore_keys}
-        data_str = f"\nDữ liệu bổ sung: {json.dumps(important_data, ensure_ascii=False, indent=2)}"
+        raw_json = json.dumps(important_data, ensure_ascii=False, indent=2)
+        sanitized_json = sanitize_prompt_text(raw_json)
+        data_str = f"\nDữ liệu bổ sung: {sanitized_json}"
 
     amount_str = f"\nSố tiền: {req.amount:,.0f} VNĐ" if req.amount else ""
     risk_str = f"\nĐiểm rủi ro AI: {req.risk_score}/5" if req.risk_score else ""
+    title_sanitized = sanitize_prompt_text(req.title)
+    desc_sanitized = sanitize_prompt_text(req.description or "(không có)")
 
     return f"""Bạn là trợ lý tóm tắt yêu cầu nội bộ doanh nghiệp. 
 Hãy tóm tắt yêu cầu sau bằng tiếng Việt, NGẮN GỌN, RÕ RÀNG để người phê duyệt có thể đọc trong 10 giây.
@@ -89,8 +111,8 @@ Hãy tóm tắt yêu cầu sau bằng tiếng Việt, NGẮN GỌN, RÕ RÀNG đ
 === THÔNG TIN YÊU CẦU ===
 Loại: {type_label}
 Người yêu cầu: {req.requester_name}
-Tiêu đề: {req.title}
-Mô tả: {req.description or "(không có)"}
+Tiêu đề: {title_sanitized}
+Mô tả: {desc_sanitized}
 {amount_str}{risk_str}{data_str}
 
 === YÊU CẦU ĐẦU RA (JSON) ===

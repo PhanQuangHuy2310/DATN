@@ -11,6 +11,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
+from api_core.middleware import client_ip
 
 from .login_throttle import (
     clear_account_failures,
@@ -115,7 +116,7 @@ def login(request: HttpRequest) -> JsonResponse:
         return parsed
     username, password = parsed
 
-    keys = throttle_keys(username, request.META.get("REMOTE_ADDR", "unknown"))
+    keys = throttle_keys(username, client_ip(request))
     if is_throttled(
         cache,
         keys,
