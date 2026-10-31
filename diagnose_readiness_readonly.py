@@ -1,7 +1,7 @@
 """Read-only diagnosis for EAS /health/ready 503 (Windows: python diagnose_readiness_readonly.py).
 
 Never writes to database and never prints DB credentials or full error messages.
-Uses the same .env.database as connect_database.py. All checks are independent
+Uses the same .env as connect_database.py. All checks are independent
 of a browser session and require no admin privileges beyond SELECT/metadata.
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ def _invalid_release_reason(has_release: bool, state: str) -> str:
     return 'release khong khop type_id/lifecycle'
 
 def run() -> int:
-    load_environment(Path(__file__).with_name('.env.database'))
+    load_environment(Path(__file__).with_name('.env'))
     try:
         import psycopg
     except ImportError:

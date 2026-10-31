@@ -2,16 +2,16 @@
  * Authorization always remains enforced on the Django API with role + scope + SoD.
  */
 export const ROLE_NAVIGATION = Object.freeze({
-  REQUESTER: ["home", "mine", "history", "notifications", "profile"],
-  APPROVER: ["home", "approval", "history", "notifications", "profile"],
-  EXECUTOR: ["home", "execution", "history", "notifications", "profile"],
-  ACCEPTOR: ["home", "acceptance", "history", "notifications", "profile"],
-  POLICY_ADMIN: ["home", "policy", "plan-catalog", "notifications", "profile"],
-  OPS_ADMIN: ["home", "ops", "identity", "api-admin", "plan-catalog", "notifications", "profile"],
-  AUDITOR: ["home", "audit", "events", "notifications", "profile"],
+  REQUESTER: ["home", "flow-diagrams", "mine", "history", "notifications", "profile"],
+  APPROVER: ["home", "flow-diagrams", "approval", "history", "notifications", "profile"],
+  EXECUTOR: ["home", "flow-diagrams", "execution", "history", "notifications", "profile"],
+  ACCEPTOR: ["home", "flow-diagrams", "acceptance", "history", "notifications", "profile"],
+  POLICY_ADMIN: ["home", "flow-diagrams", "policy", "plan-catalog", "notifications", "profile"],
+  OPS_ADMIN: ["home", "flow-diagrams", "ops", "identity", "api-admin", "plan-catalog", "notifications", "profile"],
+  AUDITOR: ["home", "flow-diagrams", "audit", "events", "notifications", "profile"],
 });
 
-const NAV_ORDER = ["home", "mine", "approval", "execution", "acceptance", "history", "policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events", "notifications", "profile"];
+const NAV_ORDER = ["home", "flow-diagrams", "mine", "approval", "execution", "acceptance", "history", "policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events", "notifications", "profile"];
 
 export function visiblePages(roles = [], capabilities = {}) {
   const enabled = new Set(["home", "notifications", "profile"]);

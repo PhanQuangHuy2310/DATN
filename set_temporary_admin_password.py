@@ -7,7 +7,7 @@ Run in the EAS project root (same directory as manage.py):
 
 Requirements:
 - Run only as an authorized operator with appropriate access to this database.
-- .env.database (or existing DB environment variables) must target the intended EAS DB.
+- .env (or existing DB environment variables) must target the intended EAS DB.
 - Relies on the project's api_core management command `account_reset`.
 - The plaintext temporary password is printed ONCE after a confirmed DB commit.
 """
@@ -70,7 +70,7 @@ def main() -> int:
     try:
         from connect_database import database_url, load_environment
 
-        load_environment(root / ".env.database")
+        load_environment(root / ".env")
         os.environ["DATABASE_URL"] = database_url()
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "api_core.config.settings")
         import django

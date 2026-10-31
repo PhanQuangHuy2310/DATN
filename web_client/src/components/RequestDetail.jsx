@@ -1,4 +1,5 @@
 import FullHistory from "./FullHistory.jsx";
+import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { AiSummary } from "./AiAssist.jsx";
 import { requestActionPayload } from "../actionPayload.js";
 import { useState } from "react";
@@ -125,6 +126,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
               {[
                 ["info", "Thông tin yêu cầu"],
                 ["progress", "Tiến trình"],
+                ["diagrams", "Sơ đồ luồng"],
                 ["history", "Phiên bản & tài liệu"],
                 ["audit", "Nhật ký"],
               ].map(([key, title]) => (
@@ -140,7 +142,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                 </button>
               ))}
             </div>
-            <div className="detail-grid" id="request-detail-content">
+            <div className={tab === "diagrams" ? "detail-grid flow-detail-grid" : "detail-grid"} id="request-detail-content">
               <div className="panel">
                 {tab === "info" && (
                   <>
@@ -190,6 +192,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                     )}
                   </>
                 )}
+                {tab === "diagrams" && <WorkflowDiagrams request={r} embedded />}
                 {tab === "history" && <History id={id} />}
                 {tab === "progress" && <FullHistory id={id} />}
                 {tab === "audit" && <Audit id={id} />}

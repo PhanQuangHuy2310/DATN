@@ -374,6 +374,8 @@ export function errorText(e) {
     DATABASE_TEMPORARILY_UNAVAILABLE: "Kết nối cơ sở dữ liệu đang gián đoạn hoặc quá thời gian chờ. Vui lòng thử lại sau vài giây; nếu còn lỗi hãy gửi mã lỗi cho quản trị viên.",
     SERVER_ERROR: "Máy chủ đang gặp lỗi (HTTP 500). Vui lòng thử lại sau.",
     INVALID_RESPONSE: "Máy chủ trả về dữ liệu không đúng định dạng. Hãy kiểm tra log Backend.",
+    ADMIN_PORTAL_ONLY: "Tài khoản quản trị chỉ được phép sử dụng chức năng quản lý hệ thống.",
+    REQUEST_TIMEOUT_UNKNOWN: "Kết nối quá thời gian xử lý. Kiểm tra trạng thái trước khi thực hiện lại để tránh trùng lặp.",
     CATALOG_EXPANSION_DISABLED: "Chức năng thêm loại yêu cầu chưa được DBA phê duyệt/mở khóa migration. Danh mục P0 vẫn hoạt động bình thường.",
     REQUEST_TYPE_NOT_CONFIGURED: "Loại yêu cầu này chưa có phiên bản quy chế đã công bố.",
     ROUTE_CONFIGURATION_INVALID: "Quy trình chưa gán đủ người duyệt/thực hiện/nghiệm thu hợp lệ. Liên hệ quản trị viên quy chế.",

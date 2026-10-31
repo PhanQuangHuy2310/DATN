@@ -36,7 +36,7 @@ def mask_url(url: str) -> str:
 
 def run_diagnostics() -> int:
     root = Path(__file__).resolve().parent
-    env_file = root / ".env.database"
+    env_file = root / ".env"
 
     print("=== CHẨN ĐOÁN LỖI EAS-002 & EAS-003 (READ ONLY) ===")
 
@@ -46,9 +46,9 @@ def run_diagnostics() -> int:
         and not os.getenv("EAS_API_DATABASE_URL")
     ):
         print(
-            "[SKIP] Không tìm thấy file .env.database hoặc biến môi trường DATABASE_URL."
+            "[SKIP] Không tìm thấy file .env hoặc biến môi trường DATABASE_URL."
         )
-        print("       Vui lòng cấu hình .env.database trước khi chạy chẩn đoán SQL.")
+        print("       Vui lòng cấu hình .env trước khi chạy chẩn đoán SQL.")
         return 0
 
     try:

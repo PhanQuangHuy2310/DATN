@@ -1,85 +1,48 @@
-> **Cập nhật 27/10/2026:** đọc [README bản cập nhật](README_CAP_NHAT_20261027.md), [phân tích nghiệp vụ](docs/PHAN_TICH_NGHIEP_VU_VA_KET_QUA_CODE_20261027.md) và [kiểm thử](KIEM_THU_BAN_CAP_NHAT_20261027.md). Bản này đã sửa một số lỗi nhưng **chưa đạt nghiệm thu E2E**.
-
-> **Bản tích hợp 24/10/2026:** bắt đầu tại [START_HERE.md](START_HERE.md). Kết quả kiểm tra tại [VALIDATION_24_10.md](VALIDATION_24_10.md).
-
 # Enterprise Approval System (EAS)
 
-EAS là hệ thống quản lý phê duyệt nội bộ cho một doanh nghiệp. Baseline P0 gồm ba loại hồ sơ:
+Hệ thống phê duyệt yêu cầu nội bộ, gồm **web_client** (nhân viên), **web_admin** (quản trị), **api_core** (Django + Supabase PostgreSQL), **ai_service** (FastAPI AI) và worker. Các API nghiệp vụ, schema dữ liệu và hồ sơ lịch sử hiện có được giữ nguyên. Các cấu hình và thao tác triển khai tập trung trong README này; tài liệu thiết kế nghiệp vụ vẫn thuộc thư mục `docs/`.
 
-- `LEAVE` — vòng đời A: gửi và phê duyệt.
-- `ACCESS` — vòng đời B: phê duyệt và ghi nhận thực hiện.
-- `EQUIPMENT` — vòng đời C: phê duyệt, thực hiện và nghiệm thu.
+## Khởi động trên Windows (không dùng Docker)
 
-## Trạng thái trung thực
+Yêu cầu: Python 3.12 cho Django, Python 3.11 cho AI, Node.js 22.12+, PostgreSQL/Supabase đã thiết lập schema và runtime role, Redis nếu muốn kiểm tra sát môi trường production.
 
-| Thành phần | Trạng thái |
-|---|---|
-| SRS/thiết kế/API/test plan | Có baseline v2.0; KD01–KD08 còn cần người có thẩm quyền ký |
-| Database | SQL v2.0.1, 30 bảng; verification PASS trên PGlite và Supabase thật bằng read-only check |
-| Backend | Đang triển khai foundation Django; chưa hoàn tất toàn bộ command A/B/C |
-| Frontend/worker/storage/scanner | Chưa đủ để UAT end-to-end |
-| Acceptance test TC001–TC100 | `NOT RUN` trừ bằng chứng DB riêng được ghi rõ |
-| Production readiness | `NO-GO` |
+1. Tại thư mục gốc DATN: `copy .env.example .env`; chỉnh **một file `.env` duy nhất**. Truy cập trực tiếp Supabase từ `EAS_API_DATABASE_URL`, `EAS_WORKER_DATABASE_URL` (nên là hai PostgreSQL login phân quyền khác nhau), sử dụng pooler endpoint/port của đúng project, `sslmode=require`. Đặt `EAS_DJANGO_SECRET_KEY`, `INTERNAL_API_SECRET` ngẫu nhiên và giống nhau giữa API/AI. Cấu hình `EAS_SUPABASE_URL`, `EAS_SUPABASE_SECRET_KEY` chỉ trên server nếu cần Storage. Không đặt secret trong `VITE_*`.
+2. Cài backend: `py -3.12 -m venv .venv`, rồi `.venv\Scripts\python.exe -m pip install -r api_core\requirements.txt`.
+3. Cài AI: `py -3.11 -m venv ai_service\.venv-ai`, rồi `ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-local.txt`.
+4. Cài frontend: `cd web_client && npm ci`; tiếp đó `cd ..\web_admin && npm ci`.
+5. Mở **năm terminal** tại thư mục gốc và chạy: `start_backend_local.cmd`, `start_ai_local.cmd`, `start_worker_local.cmd`, `start_frontend_local.cmd`, `start_admin_local.cmd`. Worker chạy riêng để xử lý outbox/thông báo.
+6. Cổng nhân viên: http://127.0.0.1:5173; quản trị riêng: http://127.0.0.1:5174; API: http://127.0.0.1:8000; AI health: http://127.0.0.1:8001/health.
 
-Không dùng số lượng tài liệu hoặc sơ đồ để suy ra hệ thống đã triển khai. Xem [chỉ mục hồ sơ](docs/README.md) và [báo cáo thẩm định](docs/08_Bao_cao_tham_dinh_va_lo_trinh_thuong_mai.md).
+**Lưu ý Windows:** nếu cài AI trên Python 3.11 không thành công vì các thư viện ML/OCR, phải xử lý yêu cầu hệ điều hành, đúng wheel và phiên bản của `requirements-local.txt` trước khi chạy. Không được đánh dấu AI sẵn sàng khi thiếu model. Nếu kết nối Supabase báo `AUTH_FAILED`, kiểm tra lại mật khẩu, user pooler, host/port, reset credential và xác nhận runtime role có quyền; chỉ sửa timeout không thể chữa sai mật khẩu.
 
-## Kiến trúc P0
+## Docker Compose
 
-> Cập nhật thực thi 09/10/2026: stack development năm container, runtime role, active release, browser E2E và logical restore đã PASS. Xem [biên bản runtime/E2E/DR](docs/13_Bien_ban_kiem_chung_runtime_E2E_DR.md). Production vẫn `NO-GO` do credential/Git containment, Storage private và các acceptance/UAT còn mở.
+Cùng một file `.env` gốc: `docker compose --env-file .env up --build`. Web nhân viên tại http://127.0.0.1:8080; quản trị tại http://127.0.0.1:8081. Docker dùng `EAS_API_DATABASE_URL` và `EAS_WORKER_DATABASE_URL` tách quyền truy cập. Django tự chọn URL AI mặc định theo cách chạy: `127.0.0.1:8001` khi chạy local; Docker Compose truyền `http://ai-service:8001` cho API. Không cần thay `.env` khi chuyển giữa hai cách chạy (trừ khi bạn tự định nghĩa `EAS_AI_SERVICE_URL` để override). Cả hai dùng duy nhất `.env` gốc. `REDIS_URL` được Compose cấp trực tiếp cho backend và worker.
 
-P0 dùng modular monolith:
+## Phản hồi và đồng bộ dữ liệu
 
-```text
-React Web -> Django API/domain -> PostgreSQL (Supabase)
-                            \-> private object storage + scanner
-                            \-> worker dùng cùng domain code
-```
+- UI có toast cho thao tác thành công/thất bại, animation có hỗ trợ `prefers-reduced-motion`, thanh tải và đồng bộ dữ liệu sau hành động **không cần F5**.
+- Các GET được gộp khi trùng nhau, cache tối đa 20 giây để chuyển trang mượt. Mọi lệnh ghi hoàn tất sẽ xóa cache và kích hoạt nạp lại các khối đang hiển thị. Dữ liệu cũ được giữ trên màn hình trong lúc truy vấn. GET có retry giới hạn trên lỗi mạng/503; lệnh ghi **không tự retry** nhằm tránh ghi trùng khi timeout.
+- AI hiển thị trạng thái thật theo từng tác vụ: chờ xử lý, phân loại xong, đánh giá rủi ro xong, lỗi hoặc fallback. Chưa có streaming phần trăm từ mô hình; hiển thị các mốc phản hồi thực từ backend thay vì tiến độ giả. AI fallback không được coi là mô hình đã chạy thành công.
+- `web_admin` và `web_client` là hai ứng dụng triển khai độc lập, tái sử dụng chung module UI để không sao chép code. Backend chặn lệnh nghiệp vụ dành cho REQUESTER/APPROVER/EXECUTOR/ACCEPTOR nếu phiên đăng nhập đang giữ role quản trị OPS_ADMIN/POLICY_ADMIN/AUDITOR; admin chỉ dùng hệ thống quản lý, kiểm toán và vận hành. Quyền API tiếp tục được kiểm tra tại Django; ẩn menu không thay cho kiểm tra quyền.
 
-AI auto-approve, OCR/risk scoring, Drools, Elasticsearch, mobile native, OPA, workflow builder tổng quát, approval song song và tích hợp ERP tự động không thuộc P0. Chúng chỉ được đưa vào roadmap bằng change request có business case và test tương ứng.
+## Kiểm tra nhanh và tình trạng nghiệm thu
 
-## Chạy backend foundation
+- `python -m compileall -q api_core ai_service project_env.py manage.py connect_database.py`
+- `cd web_client && npm run build && cd ..\web_admin && npm run build`
+- `python scripts/validate_env.py --file .env --profile compose`
+- `python connect_database.py` kiểm tra Supabase và role; `curl http://127.0.0.1:8000/health/ready` kiểm tra schema, Redis, Storage/scanner theo cấu hình; `curl http://127.0.0.1:8001/health` kiểm tra AI process.
+- Bộ regression tests đang nằm trong `api_core/tests`, `tests`, và `connection_tests`; giữ lại vì cần chống lỗi khi triển khai production. Các script test thử nghiệm rời rạc đã được dọn.
 
-1. Khi chạy độc lập, sao chép `api_core/.env.example` thành `api_core/.env`, thay toàn bộ placeholder và nạp file bằng process manager; Django không tự đọc file `.env`.
-2. Dùng database login runtime chỉ thuộc nhóm `eas_api`; không dùng `postgres`, owner hoặc service-role key.
-3. Kiểm tra cấu hình trước khi khởi động: `python scripts/validate_env.py --file api_core/.env --profile api`.
-4. Cài và kiểm tra:
+**Trạng thái:** đây là bản cập nhật mã nguồn, **chưa được chứng nhận production-ready**. Không có credential Supabase hoặc dịch vụ chạy cùng phiên kiểm tra nên chưa đo p95/p99 query, kiểm tra connection pool, RLS, lỗi auth, worker real-time hay end-to-end qua tất cả vai trò. Trước production cần test UAT, kiểm tra Supabase pooler/SSL/RLS/role, dùng Redis, đảm bảo Storage private + malware scanner, cấu hình HTTPS và secret manager, kiểm tra load test, observability, backup/restore. Không đưa file `.env` có mật khẩu lên Git hoặc trong ZIP.
 
-```bash
-python -m venv .venv
-.venv/Scripts/pip install -r api_core/requirements.txt
-set EAS_ENV=test
-.venv/Scripts/python manage.py test
-```
+## Cập nhật lần này
 
-Chạy local bằng Docker sau khi Docker daemon hoạt động. Docker Compose chỉ đọc `.env` ở thư mục gốc, không đọc `api_core/.env`:
+31/10/2026: tách cổng quản trị, thêm toast và cập nhật dữ liệu không reload, hiển thị trạng thái AI có phân biệt fallback, dùng một `.env` gốc cho local/Docker, bổ sung retry GET an toàn và thời gian phản hồi `Server-Timing`, chuẩn hóa script chạy và gộp hướng dẫn trong README. Các tài liệu nghiệp vụ gốc trong `docs` không bị thay thế.
 
-```bash
-./scripts/manage_env.ps1 init
-# Thay mọi placeholder trong .env bằng credential đã rotate, sau đó:
-./scripts/manage_env.ps1 validate
-docker compose --env-file .env up --build
-```
+### Tab sơ đồ luồng (cập nhật 31/10/2026)
 
-Kiểm tra nhanh mà không hiển thị secret: `./scripts/manage_env.ps1 status`. Kiểm tra toàn bộ template trong CI: `./scripts/manage_env.ps1 validate-templates`.
-
-Hai frontend mặc định gọi API cùng origin qua Nginx. Khi chạy Vite riêng, đặt `VITE_API_BASE_URL=http://127.0.0.1:8000`; không thêm hậu tố `/api` hoặc `/api/v1` vì client đã truyền đường dẫn API đầy đủ.
-
-Endpoints nền tảng:
-
-- `GET /health/live` — process liveness, không truy cập database.
-- `GET /health/ready` — kiểm schema EAS, ba request type, active release và runtime DB role.
-- `GET /api/v1/meta/request-types` — metadata ba loại hồ sơ, không trả policy JSON hoặc dữ liệu cá nhân.
-
-## An toàn credential
-
-- Không commit `.env`, database password, `sb_secret_*`, service-role key hoặc personal access token.
-- Frontend chỉ gọi Django API trong P0; không chứa privileged Supabase key.
-- Các `.env` cũ đã từng xuất hiện trong Git history phải được rotate. Việc thêm `.gitignore` không vô hiệu credential cũ.
-- Chỉ rewrite Git history sau khi có backup, nhánh được chỉ định và kế hoạch phối hợp với mọi clone.
-
-## Nguồn tài liệu
-
-- [Hồ sơ dự án](docs/README.md)
-- [Database package](database/EAS_Supabase_SQL/README_VI.md)
-- [Biên bản kiểm chứng Supabase](docs/09_Bien_ban_kiem_chung_Supabase.md)
-- [Test case và RTM](docs/testing/01_test_case_and_rtm.md)
+- Cổng nhân viên và cổng quản trị đều có menu **Sơ đồ luồng** (chỉ đọc); gồm 9 sơ đồ: tạo/gửi, vòng đời A/B/C, bổ sung/gửi lại, hủy/rút, quản trị, AI, đồng bộ UI. Có tìm kiếm, lọc, xem lớn, phóng to/thu nhỏ, tải ảnh WebP; không gọi API hay thao tác thay đổi dữ liệu.
+- Trong **chi tiết hồ sơ**, tab **Sơ đồ luồng** nằm cạnh **Tiến trình**, tự chọn vòng đời A/B/C từ `request.workflow.lifecycle` trả về bởi Django. Nếu hồ sơ chưa có workflow, fallback theo đúng 18 mã trong `api_core/catalog/plan_types.json`; không phỏng đoán vòng đời nếu thiếu thông tin. Thư viện chung vẫn hiển thị.
+- Tệp ảnh được tối ưu tại `web_client/public/flow-diagrams/`. `web_admin/vite.config.js` dùng `web_client/public` làm nguồn public chung để hai app dùng một bộ ảnh. Mọi sơ đồ chỉ là **hình minh họa tổng quan**, không thay thế chính sách đã công bố hoặc trạng thái xử lý hiện thời từ Supabase.
+- Kiểm tra sau khi giải nén: `cd web_client && npm ci && npm run build && npm test`, sau đó `cd ..\web_admin && npm ci && npm run build`; mở một hồ sơ, chuyển sang **Sơ đồ luồng**, thử phóng to và tải ảnh.

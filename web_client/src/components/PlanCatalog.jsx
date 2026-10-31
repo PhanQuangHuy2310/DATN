@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api.js";
+import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { errorText, riskLevels, approvalLevels, typeLevels } from "../domain.js";
 
 const perPage = 8;
@@ -31,6 +32,7 @@ export default function PlanCatalog() {
   const [levelFilter,setLevelFilter] = useState("all");
   const [page,setPage] = useState(0);
   const [selected,setSelected] = useState(null);
+  const [detailTab,setDetailTab] = useState("spec");
   const [notice,setNotice] = useState("");
   const detailRef = useRef(null);
   const listRef = useRef(null);
@@ -54,6 +56,7 @@ export default function PlanCatalog() {
   const pageItems = list.slice(page*perPage,(page+1)*perPage);
   function open(type) {
     setSelected(type);
+    setDetailTab("spec");
     setNotice("");
     requestAnimationFrame(()=>detailRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
   }
@@ -153,6 +156,11 @@ export default function PlanCatalog() {
         </div>
         <button type="button" className="secondary" onClick={()=>setSelected(null)}>Đóng</button>
       </div>
+      <div className="tabs" aria-label="Nội dung loại yêu cầu">
+        <button type="button" className={detailTab === "spec" ? "active" : "secondary"} onClick={() => setDetailTab("spec")}>Thông tin quy trình</button>
+        <button type="button" className={detailTab === "diagram" ? "active" : "secondary"} onClick={() => setDetailTab("diagram")}>Sơ đồ luồng</button>
+      </div>
+      {detailTab === "spec" && <>
       <div className="plan-detail-grid">
         <div><h3>Luồng phê duyệt (1–5 cấp)</h3><p>{selected.approval_route || "Được xác định từ bản quy chế đã công bố"}</p></div>
         <div><h3>Người thực hiện</h3><p>{selected.executor || (selected.lifecycle === "A" ? "Không cần" : "Được gán khi gửi")}</p></div>
@@ -166,6 +174,8 @@ export default function PlanCatalog() {
       <button type="button" onClick={copySchema}>Sao chép JSON Schema</button>
       {notice && <output className="success">{notice}</output>}
       <details><summary>JSON Schema để cấu hình biểu mẫu</summary><pre className="plan-code">{JSON.stringify(selected.form_schema,null,2)}</pre></details>
+      </>}
+      {detailTab === "diagram" && <WorkflowDiagrams lifecycle={selected.lifecycle} embedded />}
     </section>}
   </>;
 }

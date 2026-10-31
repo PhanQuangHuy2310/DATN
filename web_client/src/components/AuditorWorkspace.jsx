@@ -31,7 +31,7 @@ export default function AuditorWorkspace({ onOpen }) {
     <>
       <header className="page-heading">
         <div>
-          <p className="eyebrow">AUDITOR · UC05 / UC15</p>
+          <p className="eyebrow">KIỂM TOÁN HỆ THỐNG</p>
           <h1>Tra cứu và xác minh kiểm toán</h1>
           <p className="muted">Chế độ chỉ đọc; danh sách được Backend giới hạn theo vai trò, loại hồ sơ và phòng ban có hiệu lực.</p>
         </div>

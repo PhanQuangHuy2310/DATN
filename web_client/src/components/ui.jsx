@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, idempotencyKey } from "../api.js";
+import { api, getResource, peekResource, invalidateResource, onDataChanged, idempotencyKey } from "../api.js";
 import { labels, errorText } from "../domain.js";
 export function Badge({ value }) {
   return (
@@ -37,49 +37,40 @@ export function Data({ value }) {
   return <span>{String(value)}</span>;
 }
 export function useResource(url) {
-  const [state, setState] = useState({ data: null, error: "", loading: true });
+  const [state, setState] = useState(() => ({ data: peekResource(url), error: "", loading: !peekResource(url), refreshing: false }));
   const [version, setVersion] = useState(0);
+  const [mutationVersion, setMutationVersion] = useState(0);
+  useEffect(() => onDataChanged(() => setMutationVersion((v) => v + 1)), []);
   useEffect(() => {
     let active = true;
-    const controller = new AbortController();
-    api(url, { signal: controller.signal })
-      .then((data) => {
-        if (active) setState({ data, error: "", loading: false });
-      })
-      .catch((e) => {
-        if (active)
-          setState({ data: null, error: errorText(e), loading: false });
-      });
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [url, version]);
+    const stale = peekResource(url);
+    setState((s) => ({
+      data: stale ?? (s.data && s.url === url ? s.data : null),
+      url, error: "", loading: !stale && s.url !== url,
+      refreshing: !!stale || (s.url === url && !!s.data),
+    }));
+    getResource(url).then((data) => {
+      if (active) setState({ url, data, error: "", loading: false, refreshing: false });
+    }).catch((e) => {
+      if (active) setState((s) => ({ ...s, loading: false, refreshing: false, error: errorText(e) }));
+    });
+    return () => { active = false; };
+  }, [url, version, mutationVersion]);
   return {
     ...state,
     reload: () => {
-      setState((s) => ({ ...s, loading: true, error: "" }));
+      invalidateResource(url);
+      setState((s) => ({ ...s, refreshing: true, error: "" }));
       setVersion((v) => v + 1);
     },
   };
 }
 export function ResourceState({ resource, children }) {
-  if (resource.loading)
-    return (
-      <output className="empty">
-        Đang tải dữ liệu…
-      </output>
-    );
-  if (resource.error)
-    return (
-      <div role="alert" className="error">
-        {resource.error}{" "}
-        <button type="button" className="secondary" onClick={resource.reload}>
-          Thử lại
-        </button>
-      </div>
-    );
-  return children;
+  if (resource.loading && !resource.data) return <output className="empty" aria-live="polite"><span className="loading-spinner" /> Đang tải dữ liệu…</output>;
+  if (resource.error && !resource.data) return <div role="alert" className="error">
+    {resource.error} <button type="button" className="secondary" onClick={resource.reload}>Thử lại</button>
+  </div>;
+  return <>{resource.refreshing && <div className="resource-refresh" role="status">Đang đồng bộ dữ liệu mới…</div>}{children}{resource.error && <div role="status" className="muted">Dữ liệu đang hiển thị có thể chưa mới nhất. <button className="link" type="button" onClick={resource.reload}>Thử lại</button></div>}</>;
 }
 export function Modal({ title, onClose, children }) {
   const ref = useRef(null);

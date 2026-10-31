@@ -7,6 +7,7 @@ are sufficient for diagnosis without exposing credentials or SQL payloads.
 from __future__ import annotations
 
 import logging
+import time
 
 from django.db import DatabaseError
 
@@ -21,7 +22,15 @@ class ApiDatabaseErrorMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        return self.get_response(request)
+        start = time.perf_counter()
+        response = self.get_response(request)
+        duration_ms = round((time.perf_counter() - start) * 1000, 1)
+        if request.path.startswith("/api/v1/"):
+            response["Server-Timing"] = f"app;dur={duration_ms}"
+            if duration_ms >= 1200:
+                log.warning("Slow API request: path=%s duration_ms=%s status=%s",
+                            request.path, duration_ms, response.status_code)
+        return response
 
     def process_exception(self, request, exception):
         if not request.path.startswith("/api/v1/") or not isinstance(

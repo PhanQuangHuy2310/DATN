@@ -8,8 +8,16 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+try:
+    from project_env import load_project_env
+except ModuleNotFoundError:  # Separate AI Docker image receives settings as environment variables.
+    load_project_env = None
+
+if load_project_env is not None:
+    load_project_env()
+
 _AI_SERVICE_DIR = Path(__file__).resolve().parent
-_AI_ENV_PATH = _AI_SERVICE_DIR / ".env"
+_AI_ENV_PATH = _AI_SERVICE_DIR.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -43,10 +51,7 @@ class Settings(BaseSettings):
     auto_approve_only_template_a: bool = True
 
     model_config = SettingsConfigDict(
-        env_file=(
-            _AI_ENV_PATH if _AI_ENV_PATH.exists() else ".env",
-            ".env",
-        ),
+        env_file=_AI_ENV_PATH,
         env_file_encoding="utf-8-sig",
         case_sensitive=False,
         extra="ignore",
@@ -60,20 +65,8 @@ class Settings(BaseSettings):
             .lower()
             .strip()
         )
-        if env != "production" and (
-            not self.internal_api_secret
-            or self.internal_api_secret.startswith("replace-with-the-same-random-secret-as-")
-        ):
-            db_env = _AI_SERVICE_DIR.parent / ".env.database"
-            if db_env.is_file():
-                for line in db_env.read_text(encoding="utf-8-sig").splitlines():
-                    if line.strip().startswith("EAS_AI_INTERNAL_SECRET="):
-                        val = line.split("=", 1)[1].strip().strip('"\'')
-                        if val and not val.startswith("replace-with-"):
-                            self.internal_api_secret = val
-                            break
-            if not self.internal_api_secret or self.internal_api_secret.startswith("replace-with-"):
-                self.internal_api_secret = "eas-local-dev-shared-internal-secret-2026"
+        if env != "production" and not self.internal_api_secret:
+            self.internal_api_secret = "eas-local-dev-shared-internal-secret-2026"
 
         if env == "production" and self.internal_api_secret in {
             "",

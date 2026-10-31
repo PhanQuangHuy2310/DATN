@@ -13,7 +13,7 @@ from connect_database import database_url, load_environment
 
 if __name__ == "__main__":
     user = sys.argv[1] if len(sys.argv) > 1 else "admin"
-    load_environment(Path(__file__).with_name(".env.database"))
+    load_environment(Path(__file__).with_name(".env"))
     os.environ["DATABASE_URL"] = database_url()
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "api_core.config.settings")
     import django

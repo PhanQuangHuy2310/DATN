@@ -1,0 +1,61 @@
+/* Workflow diagram gallery; shared by client and read-only admin portals. */
+.flow-library { min-width:0; margin:0 0 24px; }
+.flow-library-heading { display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px; }
+.flow-library-heading h2 { margin:0 0 6px; font-size:22px;color:#132c59; }
+.flow-library-heading p {margin:0;max-width:690px;}
+.flow-count {white-space:nowrap;background:#eaf2ff;border:1px solid #d3e4ff;border-radius:24px;color:#24529b;font-size:12px;font-weight:750;padding:7px 12px;}
+.flow-toolbar {display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
+.flow-toolbar label {flex:1 1 240px;max-width:370px;}
+.flow-toolbar input {width:100%;min-height:42px;background:#fff;border:1px solid #d6e1ef;border-radius:9px;padding:10px 14px;}
+.flow-filters {display:flex;align-items:center;gap:6px;max-width:100%;overflow-x:auto;padding:4px 2px;}
+.flow-filter {flex:0 0 auto;background:#fff;color:#506483;border:1px solid #dce5f0;border-radius:100px;padding:7px 13px;font-size:12px;}
+.flow-filter:hover {color:#154796;background:#edf4ff;}
+.flow-filter.active,.flow-filter.active:hover {background:#dcecff;color:#164c9d;border-color:#83b3ff;}
+.flow-workspace {display:grid;grid-template-columns:minmax(0,1.25fr) minmax(290px,1fr);align-items:start;gap:17px;}
+.flow-cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0;}
+.flow-card-item {min-width:0;}
+.flow-card {width:100%;min-width:0;text-align:left;display:flex;flex-direction:column;gap:0;overflow:hidden;background:#fff;border:1px solid #dfe7f3;border-radius:12px;padding:0;color:#1a345b;box-shadow:0 2px 10px #213f6909;transition:border-color .2s,box-shadow .2s,transform .2s;}
+.flow-card:hover {background:#fff;border-color:#7ab2f3;box-shadow:0 6px 18px #1d4f9222;transform:translateY(-2px);}
+.flow-card.selected {border:2px solid #2472e4;background:#fff;box-shadow:0 0 0 3px #e2eeff;}
+.flow-card img {display:block;width:100%;aspect-ratio:4/3;object-fit:contain;background:#fbfcff;}
+.flow-card-foot {display:grid;gap:2px;padding:11px 13px 13px;border-top:1px solid #edf1f7;}
+.flow-card-foot strong {font-size:12px;line-height:1.45;}
+.flow-card-foot small {font-size:11px;color:#667890;}
+.flow-preview {min-width:0;position:sticky;top:18px;background:#fff;border:1px solid #e1e8f3;border-radius:13px;padding:17px;box-shadow:0 4px 16px #15355e0c;}
+.flow-preview-head {display:flex;align-items:start;justify-content:space-between;gap:12px;margin-bottom:10px;}
+.flow-preview-head h3 {margin:4px 0 0;color:#1a376b;font-size:18px;}
+.flow-context-label {flex:0 0 auto;border-radius:30px;background:#e3f5ef;color:#0b7656;padding:5px 9px;font-size:11px;font-weight:700;}
+.flow-preview>p {font-size:12px;line-height:1.65;}
+.flow-preview-image {width:100%;padding:0;display:block;overflow:hidden;border:1px solid #e4e9f2;background:#f8faff;border-radius:11px;cursor:zoom-in;}
+.flow-preview-image:hover {background:#f8faff;border-color:#83b9ff;}
+.flow-preview-image img {display:block;max-width:100%;height:auto;width:100%;object-fit:contain;}
+.flow-disclaimer {margin:12px 0 14px!important;padding:9px 11px;background:#f5f8fe;border-radius:8px;color:#62748e;}
+.flow-viewer-actions {display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.flow-viewer-actions button,.flow-download {font-size:12px;min-height:37px;display:inline-flex;justify-content:center;align-items:center;gap:6px;border-radius:8px;padding:8px 12px;text-decoration:none;}
+.flow-download {background:#fff;color:#21487e;border:1px solid #d4e0f1;font-weight:700;cursor:pointer;}
+.flow-download:hover {background:#edf4ff;}
+.flow-empty {padding:30px;text-align:center;background:#fff;border-radius:12px;border:1px dashed #cddcee;color:#526a8a;}
+.flow-info {border-left:3px solid #4b91e5;background:#eef6ff;color:#365d8c;padding:10px 13px;margin:0 0 16px;border-radius:7px;font-size:12px;}
+.flow-lightbox-backdrop {position:fixed;inset:0;z-index:3000;background:#08172dcc;display:grid;place-items:center;padding:18px;animation:flow-enter .18s ease both;}
+.flow-lightbox {background:#fff;width:min(1500px,100%);height:min(95vh,1050px);display:flex;flex-direction:column;border-radius:14px;box-shadow:0 35px 90px #0007;overflow:hidden;}
+.flow-lightbox-toolbar {display:flex;justify-content:space-between;align-items:center;gap:16px;padding:13px 16px;background:#fff;border-bottom:1px solid #e4eaf2;}
+.flow-lightbox-toolbar>div:first-child {display:grid;gap:2px;min-width:0;}
+.flow-lightbox-toolbar strong {font-size:16px;color:#132e5a;}
+.flow-lightbox-toolbar small {font-size:11px;}
+.flow-lightbox-scroll {background:#eef2f7;flex:1;overflow:auto;text-align:center;padding:16px;}
+.flow-lightbox-scroll img {height:auto;max-width:none;min-width:430px;display:block;margin:0 auto;background:#fff;border-radius:7px;box-shadow:0 2px 12px #17365818;}
+.flow-zoom-level {min-width:43px;text-align:center;font-size:12px;font-weight:750;color:#284a76;}
+.visually-hidden {position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
+.flow-library-embedded .flow-library-heading {margin-bottom:14px;}
+.flow-library-embedded .flow-library-heading h2 {font-size:19px;}
+.flow-library-embedded .flow-workspace {grid-template-columns:minmax(0,1fr);}
+.flow-library-embedded .flow-preview {position:static;}
+.flow-library-embedded .flow-cards {grid-template-columns:repeat(3,minmax(0,1fr));}
+.flow-library-embedded .flow-card-foot {padding:7px 9px;}
+@keyframes flow-enter {from{opacity:0}to{opacity:1}}
+@media(max-width:1050px){.flow-workspace {grid-template-columns:minmax(0,1fr);}.flow-preview {position:static;}.flow-library-embedded .flow-cards {grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:640px){.flow-library-heading {flex-wrap:wrap;}.flow-cards {grid-template-columns:minmax(0,1fr);}.flow-library-embedded .flow-cards {grid-template-columns:minmax(0,1fr);}.flow-toolbar label {max-width:none;}.flow-lightbox-backdrop {padding:0;}.flow-lightbox {height:100dvh;border-radius:0;}.flow-lightbox-toolbar {flex-wrap:wrap;}.flow-viewer-actions {width:100%;justify-content:flex-start;}.flow-preview .flow-viewer-actions button,.flow-preview .flow-download {flex:1;}}
+@media(prefers-reduced-motion:reduce){.flow-lightbox-backdrop{animation:none}.flow-card{transition:none;}.flow-card:hover{transform:none;}}
+
+.flow-detail-grid {grid-template-columns:minmax(0,1fr)!important;}
+.flow-detail-grid > aside {display:none;}

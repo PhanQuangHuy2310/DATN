@@ -334,6 +334,7 @@ class AIServiceClient:
                 "key_points": [],
                 "sentiment": "normal",
                 "tokens_used": 0,
+                "fallback_used": True,
             }
 
         try:
@@ -352,6 +353,7 @@ class AIServiceClient:
                 "key_points": [],
                 "sentiment": "normal",
                 "tokens_used": 0,
+                "fallback_used": True,
             }
 
     async def extract_ocr_from_url(

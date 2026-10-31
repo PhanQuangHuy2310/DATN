@@ -19,8 +19,8 @@ ROOT = Path(__file__).resolve().parent
 
 def main() -> int:
     try:
-        load_environment(ROOT / ".env.database")
-        load_environment(ROOT / ".env.worker")
+        from project_env import load_project_env
+        load_project_env()
     except ConfigurationError as exc:
         print("CONFIG:", exc)
         return 2
@@ -36,7 +36,7 @@ def main() -> int:
         os.environ.get("WORKER_DB_USER") and os.environ.get("WORKER_DB_PASSWORD")
     ):
         print(
-            "WARN: EAS_WORKER_DATABASE_URL trong .env.worker đang chứa chuỗi mẫu chưa cấu hình "
+            "WARN: EAS_WORKER_DATABASE_URL trong .env đang chứa chuỗi mẫu chưa cấu hình "
             "(YOUR_PROJECT_REF, YOUR_POOLER_HOST, hoặc ENCODED_PASSWORD). Worker không thể chạy."
         )
         return 2
@@ -58,7 +58,7 @@ def main() -> int:
         msg = (
             str(exc)
             if isinstance(exc, ConfigurationError)
-            else ".env.worker must contain EAS_WORKER_DATABASE_URL using eas_worker_login or eas_worker_login.PROJECT_REF"
+            else ".env must contain EAS_WORKER_DATABASE_URL using eas_worker_login or eas_worker_login.PROJECT_REF"
         )
         print(f"CONFIG: {msg}")
         return 2

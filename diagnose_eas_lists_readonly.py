@@ -37,11 +37,11 @@ def classify(exc):
 def main():
     root = Path(__file__).resolve().parent
     os.chdir(root)
-    if not (root / ".env.database").exists():
-        print("ERROR: File .env.database chua co.")
+    if not (root / ".env").exists():
+        print("ERROR: File .env chua co.")
         return 2
     import connect_database
-    connect_database.load_environment(root / ".env.database")
+    connect_database.load_environment(root / ".env")
     os.environ["DATABASE_URL"] = connect_database.database_url()
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "api_core.config.settings")
     import django

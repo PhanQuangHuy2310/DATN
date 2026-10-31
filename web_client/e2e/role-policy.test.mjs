@@ -17,7 +17,7 @@ test("each of the seven SRS roles has the correct main worklist", () => {
 
 test("auditors cannot see mutation workspaces", () => {
   const pages = visiblePages(["AUDITOR"]);
-  assert.deepEqual(pages, ["home", "audit", "events", "notifications", "profile"]);
+  assert.deepEqual(pages, ["home", "flow-diagrams", "audit", "events", "notifications", "profile"]);
   assert.ok(!pages.includes("mine"));
   assert.ok(!pages.includes("ops"));
   assert.ok(!pages.includes("policy"));

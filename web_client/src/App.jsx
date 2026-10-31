@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, initializeCsrf } from "./api.js";
+import ToastCenter from "./components/ToastCenter.jsx";
 import { PasswordField, PageControls } from "./components/ux.jsx";
 import { canNavigate } from "./rolePolicy.js";
 import RoleTasks from "./components/RoleTasks.jsx";
@@ -16,6 +17,7 @@ import RequestDetail from "./components/RequestDetail.jsx";
 import IdentityAdmin from "./components/IdentityAdmin.jsx";
 import ApiAdministration from "./components/ApiAdministration.jsx";
 import PlanCatalog from "./components/PlanCatalog.jsx";
+import WorkflowDiagrams from "./components/WorkflowDiagrams.jsx";
 import {
   AdminEvents,
   Notifications,
@@ -23,27 +25,23 @@ import {
   Policy,
   Profile,
 } from "./components/Admin.jsx";
-function Login({ onLogin }) {
+function Login({ onLogin, portal = "client" }) {
   return (
     <main id="main" className="auth-shell">
       <section className="auth-intro">
         <div className="brand-mark">E</div>
         <p className="eyebrow">ENTERPRISE APPROVAL SYSTEM</p>
         <h1>
-          Mọi yêu cầu.
-          <br />
-          Một quy trình rõ ràng.
+          {portal === "admin" ? <>Kiểm soát hệ thống.<br />Vận hành an toàn.</> : <>Mọi yêu cầu.<br />Một quy trình rõ ràng.</>}
         </h1>
-        <p>
-          Kết nối đề xuất, phê duyệt và thực hiện trong một không gian làm việc.
-        </p>
+        <p>{portal === "admin" ? "Quản lý danh tính, cấu hình, quyền truy cập và vận hành trên cổng chuyên biệt." : "Kết nối đề xuất, phê duyệt và thực hiện trong một không gian làm việc."}</p>
         <div className="login-steps">
-          01 · Đề xuất　　02 · Phê duyệt　　03 · Hoàn thành
+          {portal === "admin" ? "Danh tính · Chính sách · Giám sát" : "01 · Đề xuất　　02 · Phê duyệt　　03 · Hoàn thành"}
         </div>
       </section>
       <section className="panel auth-card">
         <p className="eyebrow">CHÀO MỪNG TRỞ LẠI</p>
-        <h2>Đăng nhập EAS Portal</h2>
+        <h2>{portal === "admin" ? "Đăng nhập quản trị hệ thống" : "Đăng nhập EAS Portal"}</h2>
         <p className="muted">Sử dụng tài khoản doanh nghiệp của bạn.</p>
         <ActionForm
           submitLabel="Đăng nhập"
@@ -73,8 +71,9 @@ const menu = [
   ["execution", "Công việc thực hiện", "▣", "EXECUTOR"],
   ["acceptance", "Chờ nghiệm thu", "◇", "ACCEPTOR"],
   ["history", "Hồ sơ liên quan", "◷"],
+  ["flow-diagrams", "Sơ đồ luồng", "◇"],
   ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
-  ["plan-catalog", "Danh mục 18 loại đơn", "▦"],
+  ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
   ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
   ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
   ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
@@ -83,7 +82,7 @@ const menu = [
   ["notifications", "Thông báo", "○"],
   ["profile", "Tài khoản cá nhân", "◎"],
 ];
-function RequestList({ page, user, onOpen, onNew, revision }) {
+function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) {
   const [status, setStatus] = useState(""),
     [type, setType] = useState(""),
     [offset, setOffset] = useState(0),
@@ -120,7 +119,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
             Theo dõi tiến độ, xử lý công việc và tra cứu lịch sử.
           </p>
         </div>
-        {user.roles.includes("REQUESTER") && (
+        {canCreate && user.roles.includes("REQUESTER") && (
           <button type="button" onClick={onNew}>+ Tạo yêu cầu mới</button>
         )}
       </div>
@@ -417,6 +416,7 @@ function renderWorkspaceContent({
   setSelected,
   setEditor,
   setRevision,
+  portal,
 }) {
   if (editor) {
     return (
@@ -456,6 +456,8 @@ function renderWorkspaceContent({
       return <ApiAdministration />;
     case "plan-catalog":
       return <PlanCatalog />;
+    case "flow-diagrams":
+      return <><div className="page-heading"><div><p className="eyebrow">EAS / QUY TRÌNH</p><h1>Sơ đồ luồng</h1><p className="muted">Tra cứu các sơ đồ xử lý và vòng đời yêu cầu.</p></div></div><WorkflowDiagrams /></>;
     case "policy":
       return (
         <Policy
@@ -476,6 +478,7 @@ function renderWorkspaceContent({
           page={page}
           user={user}
           revision={revision}
+          canCreate={portal !== "admin"}
           onOpen={setSelected}
           onNew={() => setEditor({})}
         />
@@ -483,7 +486,23 @@ function renderWorkspaceContent({
   }
 }
 
-function Workspace({ user, onLogout }) {
+const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
+const ADMIN_PAGES = new Set(["flow-diagrams", "home", "policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events", "notifications", "profile"]);
+const CLIENT_PAGES = new Set(["flow-diagrams", "home", "mine", "approval", "execution", "acceptance", "history", "notifications", "profile"]);
+
+function AdminOverview({ navigate, user }) {
+  return (
+    <section className="admin-home">
+      <div className="page-heading"><div><p className="eyebrow">EAS CONTROL CENTER</p><h1>Quản trị hệ thống</h1><p className="muted">Điều hành phân quyền, quy trình, tích hợp và kiểm toán trên cổng riêng.</p></div></div>
+      <div className="admin-tiles">
+        {[["identity", "Danh tính & phân quyền", "Quản lý tài khoản và phạm vi truy cập", "◎"], ["policy", "Cấu hình quy trình", "Quản lý và công bố quy chế", "⚙"], ["ops", "Vận hành hệ thống", "Theo dõi tiến trình xử lý hồ sơ", "◷"], ["events", "Nhật ký quản trị", "Tra cứu sự kiện và lịch sử thay đổi", "≡"]].filter(([key]) => canNavigate(user.roles, key, user.capabilities)).map(([key, label, detail, icon]) => (
+          <button key={key} type="button" className="panel admin-tile" onClick={() => navigate(key)}><span>{icon}</span><strong>{label}</strong><small>{detail}</small></button>
+        ))}
+      </div>
+    </section>
+  );
+}
+function Workspace({ user, onLogout, portal = "client" }) {
   const [page, setPage] = useState("home"),
     [selected, setSelected] = useState(null),
     [editor, setEditor] = useState(null),
@@ -500,6 +519,7 @@ function Workspace({ user, onLogout }) {
   }, [page, selected, editor]);
   function navigate(next) {
     if (!canNavigate(user.roles, next, user.capabilities)) return;
+    if (!(portal === "admin" ? ADMIN_PAGES : CLIENT_PAGES).has(next)) return;
     setPage(next);
     setSelected(null);
     setEditor(null);
@@ -509,13 +529,13 @@ function Workspace({ user, onLogout }) {
     <div className="app-shell">
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")}>
-        <a className="brand" href="#main" onClick={() => navigate("home")}>
+        <a className="brand" href="#main" onClick={(event) => { event.preventDefault(); navigate("home"); }}>
           <span className="brand-mark">E</span>
           <span>
-            EAS Portal<small>ENTERPRISE APPROVAL</small>
+            {portal === "admin" ? "EAS Admin" : "EAS Portal"}<small>{portal === "admin" ? "SYSTEM CONTROL" : "ENTERPRISE APPROVAL"}</small>
           </span>
         </a>
-        {user.roles.includes("REQUESTER") && (
+        {portal !== "admin" && user.roles.includes("REQUESTER") && (
           <button
             className="create-button"
             onClick={() => {
@@ -529,12 +549,12 @@ function Workspace({ user, onLogout }) {
         )}
         <nav aria-label="Điều hướng chính">
           {[
-            ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history"]],
+            ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history", "flow-diagrams"]],
             ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
             ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events"]],
             ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
           ].map(([group, keys]) => {
-            const visible = menu.filter((m) => keys.includes(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
+            const visible = menu.filter((m) => keys.includes(m[0]) && (portal === "admin" ? ADMIN_PAGES : CLIENT_PAGES).has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
             return visible.length ? (
               <div key={group} className="nav-group">
                 <p className="nav-caption">{group}</p>
@@ -589,7 +609,7 @@ function Workspace({ user, onLogout }) {
           </div>
         </header>
         <main id="main" className="content" tabIndex={-1}>
-          {renderWorkspaceContent({
+          {portal === "admin" && page === "home" ? <AdminOverview navigate={navigate} user={user} /> : renderWorkspaceContent({
             editor,
             selected,
             page,
@@ -599,10 +619,11 @@ function Workspace({ user, onLogout }) {
             setSelected,
             setEditor,
             setRevision,
+            portal,
           })}
         </main>
         <footer className="page-footer">
-          EAS · Hệ thống phê duyệt yêu cầu doanh nghiệp
+          EAS · {portal === "admin" ? "Trung tâm quản trị hệ thống" : "Hệ thống phê duyệt yêu cầu doanh nghiệp"}
         </footer>
       </div>
     </div>
@@ -623,7 +644,7 @@ function fetchInitialSession() {
   return _bootstrapSessionPromise;
 }
 
-export default function App() {
+export default function App({ portal = "client" }) {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
   async function load(loginUser) {
@@ -665,6 +686,7 @@ export default function App() {
     });
     setUser(null);
   }
+  const screen = (() => {
   if (error)
     return (
       <main id="main" className="auth-shell">
@@ -673,7 +695,14 @@ export default function App() {
           <p className="error" role="alert">
             {error}
           </p>
-          <button type="button" onClick={() => window.location.reload()}>Thử lại</button>
+          <button type="button" onClick={async () => {
+            setError("");
+            try {
+              await initializeCsrf();
+              const result = await api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } });
+              setUser(result?.user || null);
+            } catch (e) { setError(errorText(e)); }
+          }}>Kết nối lại</button>
         </section>
       </main>
     );
@@ -692,9 +721,17 @@ export default function App() {
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );
+  if (user && portal === "admin" && !user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
+    return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
+  }
+  if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
+    return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
+  }
   return user ? (
-    <Workspace user={user} onLogout={logout} />
+    <Workspace user={user} onLogout={logout} portal={portal} />
   ) : (
-    <Login onLogin={load} />
+    <Login onLogin={load} portal={portal} />
   );
+  })();
+  return <><ToastCenter />{screen}</>;
 }

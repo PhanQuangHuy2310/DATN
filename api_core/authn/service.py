@@ -276,6 +276,12 @@ def require_actor(*required_roles: str) -> Callable:
                 return api_error(request, "PASSWORD_CHANGE_REQUIRED", status=403)
             if required_roles and not actor.roles.intersection(required_roles):
                 return api_error(request, "FORBIDDEN", status=403)
+            # Administrative identities are system-only even if historic grants
+            # also include REQUESTER/APPROVER/EXECUTOR/ACCEPTOR. Enforce on API.
+            operational = {"REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR"}
+            administrator = {"OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"}
+            if required_roles and set(required_roles).issubset(operational) and actor.roles.intersection(administrator):
+                return api_error(request, "ADMIN_PORTAL_ONLY", status=403)
             from api_core.maintenance import (
                 MAINTENANCE_MSG_USER,
                 get_maintenance_info,

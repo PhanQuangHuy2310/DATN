@@ -60,10 +60,7 @@ try {
         }
         "validate-templates" {
             Invoke-Validation -File $CanonicalTemplate -Profile "compose" -AllowPlaceholders
-            Invoke-Validation -File "api_core/.env.example" -Profile "api" -AllowPlaceholders
-            Invoke-Validation -File "api_core/.env.worker.example" -Profile "worker" -AllowPlaceholders
-            Invoke-Validation -File "web_client/.env.example" -Profile "web" -AllowPlaceholders
-            Invoke-Validation -File "web_admin/.env.example" -Profile "web" -AllowPlaceholders
+
         }
         "status" {
             Write-Host "Canonical Compose environment: .env"

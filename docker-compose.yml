@@ -21,6 +21,26 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Dedicated system administration portal: same API, independent build and ingress.
+  web-admin:
+    build:
+      context: .
+      dockerfile: web_admin/Dockerfile
+    ports:
+      - "127.0.0.1:${EAS_ADMIN_WEB_PORT:-8081}:8080"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=16m,noexec,nosuid,uid=101,gid=101,mode=0750
+      - /var/run:size=4m,noexec,nosuid,uid=101,gid=101,mode=0750
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
   # ── API Gateway (Nginx Reverse Proxy) ──
   # Route: /api/* → api_core | /api/v1/mock/* → 8 mock schema | /ai/* → ai_service
   # Port 8088 để không đụng web (8080). Chi tiết: api_gateway/README.md
@@ -203,6 +223,7 @@ services:
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
+      - EAS_ENV=${EAS_ENV:-development}
       - OCR_USE_GPU=false
     volumes:
       - ./ai_service/models:/app/models        # Persist trained models

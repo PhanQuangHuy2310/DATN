@@ -113,14 +113,14 @@ export default function ApiAdministration() {
   const total = filtered.length;
   const verbs = methodOrder.map((name) => [name, items.filter((x) => x.method === name).length]);
   return <>
-    <header className="page-heading api-title"><div><p className="eyebrow">QUẢN TRỊ HỆ THỐNG / UC17</p><h1>Quản lý API & ma trận quyền</h1>
-      <p className="muted">Danh mục endpoint theo hợp đồng SRS v2, chức năng theo 7 vai trò và chẩn đoán trạng thái dịch vụ. Quyền thực tế luôn được bảo vệ tại Backend.</p></div>
+    <header className="page-heading api-title"><div><p className="eyebrow">QUẢN TRỊ HỆ THỐNG</p><h1>Quản lý API & ma trận quyền</h1>
+      <p className="muted">Danh mục dịch vụ, phân quyền truy cập và tình trạng hoạt động của hệ thống. Quyền thực tế luôn được bảo vệ tại Backend.</p></div>
       <span className="api-readonly">CHỈ ĐỌC CẤU HÌNH API</span>
     </header>
     <section className="api-overview-grid" aria-label="Thông tin API">
-      <Info name="Endpoint được mô tả" value={items.length || "—"}/>
+      <Info name="Endpoint có trong danh mục" value={items.length || "—"}/>
       <Info name="Nhóm nghiệp vụ" value={domains.length || "—"}/>
-      <Info name="Vai trò trong đặc tả" value={matrix.data?.items?.length || 7}/>
+      <Info name="Vai trò hệ thống" value={matrix.data?.items?.length || 7}/>
       <article className="api-overview-stat"><span>Backend readiness</span>
         <strong className={ready.data?.status === "ready" ? "api-ok" : "api-alert"}>{getReadyStatusText(ready.loading, ready.data?.status)}</strong>
         {ready.error && <small>{ready.error}</small>}
@@ -132,22 +132,21 @@ export default function ApiAdministration() {
       <button type="button" role="tab" aria-selected={tab === "health"} className={tab === "health" ? "active" : "secondary"} onClick={() => setTab("health")}>Giám sát API</button>
     </div>
     {tab === "endpoints" && <section className="panel" id="api-results">
-      <div className="section-head"><div><h2>Hợp đồng API phiên bản 1</h2><p className="muted">{catalog.data?.contract}. Đây là danh mục dùng để quản trị và truy vết, không phải công cụ cấp token hoặc thay đổi route đang chạy.</p></div></div>
+      <div className="section-head"><div><h2>Danh mục API đang quản lý</h2><p className="muted">{catalog.data?.contract}. Quản lý và giám sát các API hiện có.</p></div></div>
       <ResourceState resource={catalog}>
         <div className="api-filter-grid">
-          <label>Tìm API / Use Case<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nhập đường dẫn, UC hoặc chức năng" aria-label="Tìm kiếm endpoint" /></label>
+          <label>Tìm dịch vụ API<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nhập đường dẫn hoặc chức năng" aria-label="Tìm kiếm endpoint" /></label>
           <label>Nhóm nghiệp vụ<select value={domain} onChange={(e) => setDomain(e.target.value)}><option value="">Tất cả nhóm</option>{domains.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
           <label>Phương thức<select value={method} onChange={(e) => setMethod(e.target.value)}><option value="">Mọi phương thức</option>{verbs.map(([name, n]) => <option key={name} value={name}>{name} ({n})</option>)}</select></label>
           <label>Vai trò<select value={role} onChange={(e) => setRole(e.target.value)}><option value="">Mọi vai trò</option>{matrix.data?.items?.map((item) => <option key={item.role} value={item.role}>{roles[item.role] || item.role}</option>)}</select></label>
         </div>
-        <div className="api-result-summary"><strong>{total} endpoint</strong> phù hợp bộ lọc · Phương thức và scope chỉ mang tính tài liệu; server vẫn quyết định có được gọi hay không.</div>
-        <div className="table-wrap"><table className="responsive-records api-table"><thead><tr><th>Phương thức</th><th>API / Mục đích</th><th>Vai trò</th><th>Quy tắc bảo vệ</th><th>UC</th></tr></thead><tbody>
+        <div className="api-result-summary"><strong>{total} endpoint</strong> phù hợp bộ lọc · Quyền truy cập được xác minh khi gửi yêu cầu tới máy chủ.</div>
+        <div className="table-wrap"><table className="responsive-records api-table"><thead><tr><th>Phương thức</th><th>API / Mục đích</th><th>Vai trò</th><th>Quy tắc bảo vệ</th></tr></thead><tbody>
           {visible.map((item) => <tr key={`${item.method}-${item.path}`}>
             <td data-label="Phương thức"><Method name={item.method}/></td>
             <td data-label="Endpoint"><div className="api-endpoint"><code>{item.path}</code><strong>{item.purpose}</strong><small>{item.domain}</small></div></td>
             <td data-label="Vai trò"><div className="api-role-list">{item.roles.map((r) => <span key={r} className="api-role-chip">{r}</span>)}</div></td>
             <td data-label="Bảo vệ"><span className="muted">{item.protection}</span></td>
-            <td data-label="Use Case">{item.uc}</td>
           </tr>)}
         </tbody></table></div>
         {total === 0 && <p className="empty">Không tìm thấy API nào phù hợp với bộ lọc hiện tại.</p>}
@@ -162,11 +161,11 @@ export default function ApiAdministration() {
         {ready.data?.catalog && <output className="api-inline-note">
           <strong>Danh mục yêu cầu:</strong> {ready.data.catalog.active_type_count} loại đang bật; <strong>{ready.data.catalog.unconfigured_active_type_count} loại thiếu quy chế PUBLISHED</strong>.
           {ready.data.catalog.unconfigured_active_type_count > 0
-            ? " Các loại này sẽ chưa được phép tạo/gửi đơn cho đến khi Policy Admin công bố release hợp lệ; các loại P0 có cấu hình vẫn hoạt động."
+            ? " Các loại này sẽ chưa được phép tạo/gửi đơn cho đến khi Policy Admin công bố release hợp lệ; các loại đã cấu hình vẫn hoạt động."
             : " Tất cả loại đang bật đều có release hợp lệ."}
         </output>}
       </ResourceState>
     </section>}
-    <div className="api-inline-note" role="note"><strong>Giới hạn theo P0:</strong> tài liệu mô tả quản lý danh tính qua công cụ vận hành được kiểm soát; giao diện này bổ sung danh mục API và ma trận quyền để vận hành/kiểm chứng. Không có API-key CRUD, proxy gọi API tùy ý hoặc chuyển quyền của người dùng bằng việc sửa catalogue.</div>
+    <div className="api-inline-note" role="note"><strong>Phạm vi quản trị:</strong> Danh mục API và ma trận quyền được hiển thị ở chế độ chỉ đọc. Không có API-key CRUD, proxy gọi API tùy ý hoặc chuyển quyền của người dùng bằng việc sửa catalogue.</div>
   </>;
 }

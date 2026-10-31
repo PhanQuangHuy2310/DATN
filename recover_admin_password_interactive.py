@@ -1,7 +1,7 @@
 r"""Local authorized account recovery for an EAS Django installation.
 
 Runs the project's existing audited `account_reset` management command.
-Requires local possession of valid .env.database credentials. Does not
+Requires local possession of valid .env credentials. Does not
 write raw passwords to a command argument, config file, or audit event.
 
 Usage:
@@ -33,7 +33,7 @@ def main() -> int:
     try:
         from connect_database import database_url, load_environment
 
-        load_environment(base / ".env.database")
+        load_environment(base / ".env")
         os.environ["DATABASE_URL"] = database_url()
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "api_core.config.settings")
         import django

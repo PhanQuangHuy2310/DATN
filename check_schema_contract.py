@@ -1,7 +1,7 @@
 """Read-only check of current PostgreSQL schema against 2026-10-26 EAS contract.
 
 Windows: python check_schema_contract.py
-Uses .env.database; never prints a URL or credential.
+Uses .env; never prints a URL or credential.
 """
 from __future__ import annotations
 import sys
@@ -45,7 +45,7 @@ def _verify_categories(cur) -> bool:
     return ok
 
 def main():
-    load_environment(Path(__file__).with_name(".env.database"))
+    load_environment(Path(__file__).with_name(".env"))
     import psycopg
     try:
         with psycopg.connect(database_url(), connect_timeout=8, prepare_threshold=None,

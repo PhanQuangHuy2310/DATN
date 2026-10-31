@@ -81,7 +81,7 @@ export function Policy({onManageAccess, canManageAccess=false}) {
               <td data-label="Mẫu">{item.lifecycle}</td>
               <td data-label="Quy chế">
                 <span className={item.has_published_release ? "success" : "muted"}>
-                  {item.has_published_release ? "Đã công bố" : "Chưa có release PUBLISHED"}
+                  {item.has_published_release ? "Đã công bố" : "Chưa công bố"}
                 </span>
                 {!item.is_active && <div><small>Loại đơn đang ngừng hoạt động</small></div>}
               </td>

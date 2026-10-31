@@ -21,7 +21,7 @@ PLACEHOLDERS = (
 
 
 def main():
-    env_file = Path(__file__).with_name(".env.database")
+    env_file = Path(__file__).with_name(".env")
     if not env_file.is_file():
         env_file = Path(__file__).with_name(".env")
     load_environment(env_file)
