@@ -64,7 +64,9 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: web_client/package-lock.json
+          cache-dependency-path: |
+            web_client/package-lock.json
+            web_admin/package-lock.json
       - working-directory: web_client
         run: npm ci --ignore-scripts
       - working-directory: web_client
@@ -72,6 +74,12 @@ jobs:
       - working-directory: web_client
         run: npm run lint
       - working-directory: web_client
+        run: npm run build
+      - working-directory: web_admin
+        run: npm ci --ignore-scripts
+      - working-directory: web_admin
+        run: npm audit --audit-level=high
+      - working-directory: web_admin
         run: npm run build
 
   container-config:

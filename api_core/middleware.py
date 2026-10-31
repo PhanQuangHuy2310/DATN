@@ -37,24 +37,32 @@ class ApiDatabaseErrorMiddleware:
         return response
 
     def process_exception(self, request, exception):
-        if not request.path.startswith("/api/v1/") or not isinstance(
-            exception, DatabaseError
-        ):
+        if not request.path.startswith("/api/v1/"):
             return None
         request_id = correlation_id(request)
-        state = sqlstate(exception)
-        category = failure_category(exception)
-        code, status = api_db_failure(exception)
-        log.error(
-            "API database failure: path=%s category=%s exception_type=%s "
-            "SQLSTATE=%s correlation_id=%s",
+        if isinstance(exception, DatabaseError):
+            state = sqlstate(exception)
+            category = failure_category(exception)
+            code, status = api_db_failure(exception)
+            log.error(
+                "API database failure: path=%s category=%s exception_type=%s "
+                "SQLSTATE=%s correlation_id=%s",
+                request.path,
+                category,
+                type(exception).__name__,
+                state,
+                request_id,
+                extra={"correlation_id": request_id},
+            )
+            # No raw driver message, SQL, credentials, host or user info in response.
+            headers = {"Retry-After": "3"} if status == 503 else None
+            return api_error(request, code, status=status, headers=headers)
+
+        log.exception(
+            "Unhandled API failure: path=%s exception_type=%s correlation_id=%s",
             request.path,
-            category,
             type(exception).__name__,
-            state,
             request_id,
             extra={"correlation_id": request_id},
         )
-        # No raw driver message, SQL, credentials, host or user info in response.
-        headers = {"Retry-After": "3"} if status == 503 else None
-        return api_error(request, code, status=status, headers=headers)
+        return api_error(request, "INTERNAL_SERVER_ERROR", status=500)

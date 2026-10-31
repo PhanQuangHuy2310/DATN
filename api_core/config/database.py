@@ -46,7 +46,7 @@ def parse_database_url(url: str) -> dict[str, object]:
             "PASSWORD": unquote(password),
             "HOST": host,
             "PORT": int(port_text),
-            "CONN_MAX_AGE": 60,
+            "CONN_MAX_AGE": int(os.getenv("EAS_DB_CONN_MAX_AGE", "0")),
             "DISABLE_SERVER_SIDE_CURSORS": True,
             "CONN_HEALTH_CHECKS": True,
             "OPTIONS": {

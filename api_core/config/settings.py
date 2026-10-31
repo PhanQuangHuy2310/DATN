@@ -71,7 +71,7 @@ else:
     # connections in local development. Default remains 60 to avoid changing
     # the production connection policy unexpectedly.
     try:
-        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "60"))
+        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "0"))
         if not 0 <= _db_max_age <= 3600:
             raise ValueError
     except ValueError:

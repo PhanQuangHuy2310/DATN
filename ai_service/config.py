@@ -10,7 +10,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 try:
     from project_env import load_project_env
-except ModuleNotFoundError:  # Separate AI Docker image receives settings as environment variables.
+except (
+    ModuleNotFoundError
+):  # Separate AI Docker image receives settings as environment variables.
     load_project_env = None
 
 if load_project_env is not None:
@@ -40,7 +42,12 @@ class Settings(BaseSettings):
 
     # --- Security ---
     internal_api_secret: str = ""
-    cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000"
+    cors_allowed_origins: str = (
+        "http://localhost:3000,http://127.0.0.1:3000,"
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:5174,http://127.0.0.1:5174,"
+        "http://localhost:8000,http://127.0.0.1:8000"
+    )
 
     # --- OCR ---
     ocr_lang: str = "vi"
