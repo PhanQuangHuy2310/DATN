@@ -48,6 +48,24 @@ class ApiSecurityHeadersMiddleware:
         return response
 
 
+def client_ip(request) -> str:
+    """Resolve the caller address without trusting spoofable headers.
+
+    Behind our own reverse proxy every request shares the proxy's socket
+    address, so counting by REMOTE_ADDR would throttle the whole company as one
+    client. When the deployment declares a trusted proxy (SECURE_PROXY_SSL_HEADER
+    is configured, i.e. EAS_TRUST_PROXY_HEADERS=true) the *last* X-Forwarded-For
+    entry is used: it is the one appended by our proxy, whereas earlier entries
+    are client-controlled and therefore ignored.
+    """
+    remote = request.META.get("REMOTE_ADDR", "127.0.0.1")
+    if getattr(settings, "SECURE_PROXY_SSL_HEADER", None):
+        forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded:
+            return forwarded.split(",")[-1].strip() or remote
+    return remote
+
+
 class ApiRateLimitMiddleware:
     """Sliding-window IP rate limiting for API endpoints (ISO 27001 A.12.1.3 & DoS Protection)."""
 
@@ -63,25 +81,28 @@ class ApiRateLimitMiddleware:
         ):
             return self.get_response(request)
 
-        remote_addr = request.META.get("REMOTE_ADDR", "127.0.0.1")
-        ip_hash = sha256(str(remote_addr).encode("utf-8")).hexdigest()[:16]
+        ip_hash = sha256(client_ip(request).encode("utf-8")).hexdigest()[:16]
         cache_key = f"eas:ratelimit:api:{ip_hash}"
         limit = int(getattr(settings, "EAS_API_RATE_LIMIT_PER_MINUTE", 300))
 
-        current = cache.get(cache_key)
-        if current is not None and int(current) >= limit:
-            return api_error(
-                request,
-                "RATE_LIMIT_EXCEEDED",
-                status=429,
-                headers={"Retry-After": "60"},
-            )
+        try:
+            current = cache.get(cache_key)
+            if current is not None and int(current) >= limit:
+                return api_error(
+                    request,
+                    "RATE_LIMIT_EXCEEDED",
+                    status=429,
+                    headers={"Retry-After": "60"},
+                )
 
-        if not cache.add(cache_key, 1, timeout=60):
-            try:
-                cache.incr(cache_key)
-            except ValueError:
-                cache.set(cache_key, 1, timeout=60)
+            if not cache.add(cache_key, 1, timeout=60):
+                try:
+                    cache.incr(cache_key)
+                except ValueError:
+                    cache.set(cache_key, 1, timeout=60)
+        except Exception:  # noqa: BLE001
+            # Availability first: a cache outage must never take the API down.
+            log.warning("Rate limiter cache unavailable; request allowed (fail-open)")
 
         return self.get_response(request)
 

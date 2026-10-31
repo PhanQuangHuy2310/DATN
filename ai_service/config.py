@@ -75,12 +75,17 @@ class Settings(BaseSettings):
         if env != "production" and not self.internal_api_secret:
             self.internal_api_secret = "eas-local-dev-shared-internal-secret-2026"
 
-        if env == "production" and self.internal_api_secret in {
-            "",
-            "datn-internal-secret-change-in-prod",
-        }:
+        if env == "production" and (
+            self.internal_api_secret
+            in {
+                "",
+                "datn-internal-secret-change-in-prod",
+                "eas-local-dev-shared-internal-secret-2026",
+            }
+            or len(self.internal_api_secret) < 32
+        ):
             raise ValueError(
-                "INTERNAL_API_SECRET must be configured with a secure secret in production"
+                "INTERNAL_API_SECRET must be a random secret of at least 32 characters in production"
             )
 
 

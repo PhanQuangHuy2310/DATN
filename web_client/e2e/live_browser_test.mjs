@@ -1,9 +1,32 @@
 import { chromium } from "playwright";
+import fs from "fs";
 import path from "path";
 
-const ARTIFACT_DIR = "C:\\Users\\PHAN QUANG HUY\\.gemini\\antigravity\\brain\\f3a0e7bd-8e68-488f-8a6a-9f9afecd4111";
+const ARTIFACT_DIR = process.env.EAS_E2E_ARTIFACT_DIR || "./test-results/live";
+
+// Credentials are supplied by the operator at run time; never commit them.
+const CREDENTIALS = {
+  employee: {
+    user: process.env.EAS_E2E_EMPLOYEE_USER,
+    password: process.env.EAS_E2E_EMPLOYEE_PASSWORD,
+  },
+  admin: {
+    user: process.env.EAS_E2E_ADMIN_USER,
+    password: process.env.EAS_E2E_ADMIN_PASSWORD,
+  },
+};
+const missing = Object.entries(CREDENTIALS)
+  .filter(([, c]) => !c.user || !c.password)
+  .map(([role]) => role);
+if (missing.length) {
+  console.error(
+    `Missing credentials for: ${missing.join(", ")}. Set EAS_E2E_EMPLOYEE_USER/PASSWORD and EAS_E2E_ADMIN_USER/PASSWORD.`,
+  );
+  process.exit(2);
+}
 
 async function run() {
+  fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const results = [];
@@ -22,8 +45,8 @@ async function run() {
     const loginHeading = await page.getByRole("heading", { name: "Đăng nhập EAS Portal" }).isVisible();
     console.log(" - Login form heading visible:", loginHeading);
 
-    await page.getByLabel("Tên đăng nhập").fill("ha.luong");
-    await page.getByLabel("Mật khẩu").fill("Password@123456");
+    await page.getByLabel("Tên đăng nhập").fill(CREDENTIALS.employee.user);
+    await page.getByLabel("Mật khẩu").fill(CREDENTIALS.employee.password);
     await page.getByRole("button", { name: "Đăng nhập" }).click();
 
     // Wait for workspace to load
@@ -84,8 +107,8 @@ async function run() {
     console.log("\n[TEST 4] Testing Admin Portal (http://127.0.0.1:5174)...");
     await page.goto("http://127.0.0.1:5174", { waitUntil: "networkidle" });
 
-    await page.getByLabel("Tên đăng nhập").fill("admin");
-    await page.getByLabel("Mật khẩu").fill("Password@123456");
+    await page.getByLabel("Tên đăng nhập").fill(CREDENTIALS.admin.user);
+    await page.getByLabel("Mật khẩu").fill(CREDENTIALS.admin.password);
     await page.getByRole("button", { name: "Đăng nhập" }).click();
 
     await page.waitForSelector(".app-shell, nav, .nav-group", { timeout: 10000 });
@@ -170,8 +193,8 @@ async function run() {
     console.log("\n[TEST 9] Testing RBAC: Non-admin account (ha.luong) on Admin Portal...");
     await page.goto("http://127.0.0.1:5174", { waitUntil: "networkidle" });
 
-    await page.getByLabel("Tên đăng nhập").fill("ha.luong");
-    await page.getByLabel("Mật khẩu").fill("Password@123456");
+    await page.getByLabel("Tên đăng nhập").fill(CREDENTIALS.employee.user);
+    await page.getByLabel("Mật khẩu").fill(CREDENTIALS.employee.password);
     await page.getByRole("button", { name: "Đăng nhập" }).click();
 
     try {

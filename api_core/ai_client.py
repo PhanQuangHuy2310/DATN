@@ -60,6 +60,14 @@ def _resolve_internal_secret() -> str:
         secret = os.getenv("EAS_AI_INTERNAL_SECRET") or os.getenv("INTERNAL_API_SECRET")
 
     if not secret or "replace-with-the-same-random-secret" in str(secret):
+        environment = (
+            os.getenv("EAS_ENV", os.getenv("ENVIRONMENT", "development"))
+            .lower()
+            .strip()
+        )
+        if environment == "production":
+            # Fail closed: never fall back to a publicly known secret in production.
+            return ""
         return "eas-local-dev-shared-internal-secret-2026"
     return str(secret).strip()
 

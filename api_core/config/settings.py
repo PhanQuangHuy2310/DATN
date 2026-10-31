@@ -125,6 +125,9 @@ else:
 EAS_LOGIN_MAX_ATTEMPTS = int(os.getenv("EAS_LOGIN_MAX_ATTEMPTS", "5"))
 EAS_LOGIN_MAX_IP_ATTEMPTS = int(os.getenv("EAS_LOGIN_MAX_IP_ATTEMPTS", "30"))
 EAS_LOGIN_WINDOW_SECONDS = int(os.getenv("EAS_LOGIN_WINDOW_SECONDS", "900"))
+EAS_API_RATE_LIMIT_PER_MINUTE = int(os.getenv("EAS_API_RATE_LIMIT_PER_MINUTE", "300"))
+if EAS_API_RATE_LIMIT_PER_MINUTE < 1:
+    raise RuntimeError("EAS_API_RATE_LIMIT_PER_MINUTE must be >= 1")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")
 EAS_STORAGE_BUCKET = os.getenv("EAS_STORAGE_BUCKET", "eas-private")
@@ -199,12 +202,18 @@ EAS_AI_INTERNAL_SECRET = os.getenv(
 )
 if not EAS_AI_INTERNAL_SECRET and ENVIRONMENT in {"development", "test"}:
     EAS_AI_INTERNAL_SECRET = "eas-local-dev-shared-internal-secret-2026"
-if (
-    ENVIRONMENT == "production"
-    and EAS_AI_INTERNAL_SECRET == "datn-internal-secret-change-in-prod"
+_KNOWN_WEAK_AI_SECRETS = {
+    "",
+    "datn-internal-secret-change-in-prod",
+    "eas-local-dev-shared-internal-secret-2026",
+}
+if ENVIRONMENT == "production" and (
+    EAS_AI_INTERNAL_SECRET in _KNOWN_WEAK_AI_SECRETS
+    or "replace-with" in EAS_AI_INTERNAL_SECRET
+    or len(EAS_AI_INTERNAL_SECRET) < 32
 ):
     raise RuntimeError(
-        "EAS_AI_INTERNAL_SECRET must be explicitly configured and cannot use default value in production"
+        "EAS_AI_INTERNAL_SECRET must be a random secret of at least 32 characters in production"
     )
 EAS_AI_TIMEOUT_SECONDS = float(os.getenv("EAS_AI_TIMEOUT_SECONDS", "5.0"))
 
