@@ -1,6 +1,6 @@
 # Kiểm thử luồng yêu cầu, bảo mật cổng, AI tự duyệt và danh mục 10 nhóm
 
-Nhánh `dat` → `main`. 23 commit, 107 file (+10.083 / −320). Đã thử gộp với `main` hiện tại: **không xung đột**.
+Nhánh `dat` → `main`. 25 commit, 108 file (kể cả commit cập nhật mô tả này). Đã thử gộp với `main` hiện tại: **không xung đột**.
 
 > ⚠️ **Trước khi deploy phải chạy migration trên Supabase** (mục "Việc cần làm khi deploy"). Code đã viết để vẫn chạy được khi migration chưa áp dụng: các tính năng mới chỉ tự bật sau khi bảng/cột tương ứng tồn tại.
 
