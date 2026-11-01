@@ -6,11 +6,22 @@ AI Service — Cấu hình chung (config.py)
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+try:
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+except (ImportError, ModuleNotFoundError):
+    try:
+        from pydantic import BaseModel as BaseSettings  # type: ignore[assignment]
+
+        SettingsConfigDict = dict  # type: ignore[assignment]
+    except (ImportError, ModuleNotFoundError):
+        BaseSettings = object  # type: ignore[assignment, misc]
+        SettingsConfigDict = dict  # type: ignore[assignment]
 
 try:
     from project_env import load_project_env
-except ModuleNotFoundError:  # Separate AI Docker image receives settings as environment variables.
+except (
+    ModuleNotFoundError
+):  # Separate AI Docker image receives settings as environment variables.
     load_project_env = None
 
 if load_project_env is not None:
@@ -40,7 +51,12 @@ class Settings(BaseSettings):
 
     # --- Security ---
     internal_api_secret: str = ""
-    cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000"
+    cors_allowed_origins: str = (
+        "http://localhost:3000,http://127.0.0.1:3000,"
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:5174,http://127.0.0.1:5174,"
+        "http://localhost:8000,http://127.0.0.1:8000"
+    )
 
     # --- OCR ---
     ocr_lang: str = "vi"
@@ -68,12 +84,17 @@ class Settings(BaseSettings):
         if env != "production" and not self.internal_api_secret:
             self.internal_api_secret = "eas-local-dev-shared-internal-secret-2026"
 
-        if env == "production" and self.internal_api_secret in {
-            "",
-            "datn-internal-secret-change-in-prod",
-        }:
+        if env == "production" and (
+            self.internal_api_secret
+            in {
+                "",
+                "datn-internal-secret-change-in-prod",
+                "eas-local-dev-shared-internal-secret-2026",
+            }
+            or len(self.internal_api_secret) < 32
+        ):
             raise ValueError(
-                "INTERNAL_API_SECRET must be configured with a secure secret in production"
+                "INTERNAL_API_SECRET must be a random secret of at least 32 characters in production"
             )
 
 

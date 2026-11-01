@@ -93,7 +93,9 @@ class MaintenanceModeTests(SimpleTestCase):
         # Cố đăng nhập khi hệ thống đang bảo trì
         response = self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps({"email": "requester1@eas.com", "password": "UserPass-2026!"}),
+            data=json.dumps(
+                {"email": "requester1@eas.com", "password": "UserPass-2026!"}
+            ),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 503)
@@ -223,7 +225,9 @@ class MaintenanceModeTests(SimpleTestCase):
         # User thường đăng nhập lại bình thường
         response = self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps({"email": "requester1@eas.com", "password": "UserPass-2026!"}),
+            data=json.dumps(
+                {"email": "requester1@eas.com", "password": "UserPass-2026!"}
+            ),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)

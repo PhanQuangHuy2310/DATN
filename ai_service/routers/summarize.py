@@ -16,6 +16,11 @@ try:
 except (ImportError, AttributeError):
     from ai_service.config import get_settings
 
+try:
+    from sanitizer import sanitize_prompt_text
+except (ImportError, AttributeError):
+    from ai_service.sanitizer import sanitize_prompt_text
+
 from fastapi import APIRouter
 from loguru import logger
 from pydantic import BaseModel
@@ -78,10 +83,14 @@ def build_summarize_prompt(req: SummarizeRequest) -> str:
         # Chỉ lấy các key quan trọng, bỏ qua field kỹ thuật
         ignore_keys = {"id", "created_at", "updated_at", "requester_id", "status"}
         important_data = {k: v for k, v in req.data.items() if k not in ignore_keys}
-        data_str = f"\nDữ liệu bổ sung: {json.dumps(important_data, ensure_ascii=False, indent=2)}"
+        raw_json = json.dumps(important_data, ensure_ascii=False, indent=2)
+        sanitized_json = sanitize_prompt_text(raw_json)
+        data_str = f"\nDữ liệu bổ sung: {sanitized_json}"
 
     amount_str = f"\nSố tiền: {req.amount:,.0f} VNĐ" if req.amount else ""
     risk_str = f"\nĐiểm rủi ro AI: {req.risk_score}/5" if req.risk_score else ""
+    title_sanitized = sanitize_prompt_text(req.title)
+    desc_sanitized = sanitize_prompt_text(req.description or "(không có)")
 
     return f"""Bạn là trợ lý tóm tắt yêu cầu nội bộ doanh nghiệp. 
 Hãy tóm tắt yêu cầu sau bằng tiếng Việt, NGẮN GỌN, RÕ RÀNG để người phê duyệt có thể đọc trong 10 giây.
@@ -89,8 +98,8 @@ Hãy tóm tắt yêu cầu sau bằng tiếng Việt, NGẮN GỌN, RÕ RÀNG đ
 === THÔNG TIN YÊU CẦU ===
 Loại: {type_label}
 Người yêu cầu: {req.requester_name}
-Tiêu đề: {req.title}
-Mô tả: {req.description or "(không có)"}
+Tiêu đề: {title_sanitized}
+Mô tả: {desc_sanitized}
 {amount_str}{risk_str}{data_str}
 
 === YÊU CẦU ĐẦU RA (JSON) ===

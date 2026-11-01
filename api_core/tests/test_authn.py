@@ -93,6 +93,39 @@ class AuthenticationEndpointTests(SimpleTestCase):
         self.assertEqual(limited.status_code, 429)
         self.assertEqual(limited.headers["Retry-After"], "60")
 
+    @override_settings(
+        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+        EAS_LOGIN_MAX_IP_ATTEMPTS=2,
+        EAS_LOGIN_MAX_ATTEMPTS=10,
+    )
+    @patch("api_core.authn.views.find_user", return_value=None)
+    def test_login_rate_limit_uses_client_ip_behind_trusted_proxy(self, _find_user):
+        for _ in range(2):
+            self.client.post(
+                "/api/v1/auth/login",
+                data=json.dumps({"email": "user1@eas.com", "password": "wrong"}),
+                content_type="application/json",
+                REMOTE_ADDR="10.0.0.1",
+                HTTP_X_FORWARDED_FOR="198.51.100.1",
+            )
+        throttled_ip1 = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({"email": "user1@eas.com", "password": "wrong"}),
+            content_type="application/json",
+            REMOTE_ADDR="10.0.0.1",
+            HTTP_X_FORWARDED_FOR="198.51.100.1",
+        )
+        self.assertEqual(throttled_ip1.status_code, 429)
+
+        different_ip = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({"email": "user2@eas.com", "password": "wrong"}),
+            content_type="application/json",
+            REMOTE_ADDR="10.0.0.1",
+            HTTP_X_FORWARDED_FOR="198.51.100.2",
+        )
+        self.assertEqual(different_ip.status_code, 401)
+
     def test_login_requires_csrf_in_real_client_mode(self):
         client = Client(enforce_csrf_checks=True)
         rejected = client.post(
@@ -121,7 +154,11 @@ class AuthenticationEndpointTests(SimpleTestCase):
         self, connection, send_mail
     ):
         cursor = connection.cursor.return_value.__enter__.return_value
-        cursor.fetchone.side_effect = [(self.user.id, self.user.display_name), None, ("reset-id",)]
+        cursor.fetchone.side_effect = [
+            (self.user.id, self.user.display_name),
+            None,
+            ("reset-id",),
+        ]
         cursor.fetchall.return_value = [("ops@eas.com",)]
         requested = self.client.post(
             "/api/v1/auth/password-reset/request",
@@ -180,12 +217,19 @@ class AuthenticationEndpointTests(SimpleTestCase):
         )
         self.assertEqual(approved.status_code, 200)
         self.assertEqual(approved.json()["status"], "approved")
-        self.assertEqual(send_mail.call_args.kwargs["recipient_list"], [self.user.email])
-        temporary_password = send_mail.call_args.kwargs["message"].split(
-            "Mật khẩu tạm thời: ", 1
-        )[1].splitlines()[0]
+        self.assertEqual(
+            send_mail.call_args.kwargs["recipient_list"], [self.user.email]
+        )
+        temporary_password = (
+            send_mail.call_args.kwargs["message"]
+            .split("Mật khẩu tạm thời: ", 1)[1]
+            .splitlines()[0]
+        )
         self.assertNotEqual(temporary_password, "Password@123456")
-        self.assertEqual(validate_new_password(temporary_password, self.user.email), temporary_password)
+        self.assertEqual(
+            validate_new_password(temporary_password, self.user.email),
+            temporary_password,
+        )
         self.assertTrue(
             any(
                 "must_change_password=true" in call.args[0]
@@ -255,7 +299,9 @@ class AuthenticationEndpointTests(SimpleTestCase):
         find_user.return_value = self.user
         self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps({"email": "employee@eas.com", "password": "Correct-Horse-2026"}),
+            data=json.dumps(
+                {"email": "employee@eas.com", "password": "Correct-Horse-2026"}
+            ),
             content_type="application/json",
         )
         session_id = self.client.session["session_id"]

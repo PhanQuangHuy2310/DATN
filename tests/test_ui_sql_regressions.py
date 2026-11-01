@@ -72,8 +72,11 @@ class EASRegressionTests(unittest.TestCase):
         )
         self.assertIn('type={visible ? "text" : "password"}', component)
         self.assertIn("aria-pressed={visible}", component)
+        # The redesigned login page ships its own show/hide toggle.
+        app = (ROOT / "web_client/src/App.jsx").read_text(encoding="utf-8")
+        self.assertIn('type={showPassword ? "text" : "password"}', app)
+        self.assertIn("aria-pressed={showPassword}", app)
         for path in [
-            "web_client/src/App.jsx",
             "web_client/src/components/Admin.jsx",
             "web_client/src/components/IdentityAdmin.jsx",
         ]:

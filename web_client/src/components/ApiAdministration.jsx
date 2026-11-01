@@ -132,7 +132,7 @@ export default function ApiAdministration() {
       <button type="button" role="tab" aria-selected={tab === "health"} className={tab === "health" ? "active" : "secondary"} onClick={() => setTab("health")}>Giám sát API</button>
     </div>
     {tab === "endpoints" && <section className="panel" id="api-results">
-      <div className="section-head"><div><h2>Danh mục API đang quản lý</h2><p className="muted">{catalog.data?.contract}. Quản lý và giám sát các API hiện có.</p></div></div>
+      <div className="section-head"><div><h2>Danh mục API đang quản lý</h2><p className="muted">{catalog.data?.contract ? `${catalog.data.contract} · ` : ""}Quản lý và giám sát danh mục API nội bộ.</p></div></div>
       <ResourceState resource={catalog}>
         <div className="api-filter-grid">
           <label>Tìm dịch vụ API<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nhập đường dẫn hoặc chức năng" aria-label="Tìm kiếm endpoint" /></label>
@@ -166,6 +166,6 @@ export default function ApiAdministration() {
         </output>}
       </ResourceState>
     </section>}
-    <div className="api-inline-note" role="note"><strong>Phạm vi quản trị:</strong> Danh mục API và ma trận quyền được hiển thị ở chế độ chỉ đọc. Không có API-key CRUD, proxy gọi API tùy ý hoặc chuyển quyền của người dùng bằng việc sửa catalogue.</div>
+    <div className="api-inline-note" role="note"><strong>Chính sách an toàn:</strong> Danh mục API và ma trận phân quyền tuân thủ nguyên tắc đặc quyền tối thiểu (Least Privilege). Việc thay đổi quyền hạn được kiểm soát tập trung qua phân hệ Quản trị Danh tính.</div>
   </>;
 }

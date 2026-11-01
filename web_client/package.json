@@ -10,7 +10,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "e2e": "playwright test",
     "test": "node --test e2e/*.test.mjs",
-    "test:ui": "playwright test --config playwright.ui.config.js"
+    "test:ui": "playwright test --config playwright.ui.config.js",
+    "test:live": "node e2e/live_browser_test.mjs"
   },
   "dependencies": {
     "react": "19.3.0",

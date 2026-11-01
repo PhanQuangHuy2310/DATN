@@ -93,6 +93,29 @@ def claim_outbox(*, batch_size: int = 20, lease_seconds: int = 60) -> list[Outbo
 
 
 def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
+    if item.event_type in {"SLA_REMINDER", "SLA_BREACH"}:
+        # Notify the *current assignee*, not only the original requester.
+        # A stage's responsible user may change when OPS reassigns work.
+        cursor.execute(
+            """
+            SELECT CASE WHEN s.kind='APPROVAL' THEN ap.assignee_id::text
+                        WHEN s.kind='EXECUTION' THEN ex.executor_id::text
+                        ELSE wi.acceptor_id::text END
+            FROM eas.sla_stage s
+            LEFT JOIN eas.approval_step ap ON ap.id=s.approval_step_id
+            LEFT JOIN eas.execution_attempt ex ON ex.id=s.attempt_id
+            LEFT JOIN eas.workflow_instance wi ON wi.id=ex.instance_id
+            WHERE s.id=%s AND s.request_id=%s
+            """,
+            [item.payload.get("stage_id"), item.request_id],
+        )
+        row = cursor.fetchone()
+        label = (
+            "Công việc được phân công đã quá hạn, vui lòng xử lý"
+            if item.event_type == "SLA_BREACH"
+            else "Công việc được phân công đang đến hạn xử lý"
+        )
+        return [(row[0], label)] if row and row[0] else []
     if item.event_type == "APPROVAL_REQUESTED":
         cursor.execute(
             "SELECT assignee_id::text FROM eas.approval_step WHERE id=%s",
@@ -230,9 +253,13 @@ def process_sla_batch(*, batch_size: int = 100) -> int:
             """
             SELECT s.id::text,s.request_id::text,s.started_at,s.due_at,s.breached_at
             FROM eas.sla_stage s
-            WHERE s.closed_at IS NULL AND (
-              (s.breached_at IS NULL AND s.due_at <= %s) OR
-              (%s >= s.started_at + (s.due_at-s.started_at)/2)
+            WHERE s.closed_at IS NULL AND s.breached_at IS NULL AND (
+              (s.due_at <= %s AND NOT EXISTS (
+                  SELECT 1 FROM eas.sla_alert al WHERE al.stage_id=s.id AND al.kind='BREACH'
+              )) OR
+              (%s >= s.started_at + (s.due_at-s.started_at)/2 AND NOT EXISTS (
+                  SELECT 1 FROM eas.sla_alert al WHERE al.stage_id=s.id AND al.kind='REMINDER'
+              ))
             )
             ORDER BY s.due_at,s.id
             FOR UPDATE SKIP LOCKED LIMIT %s

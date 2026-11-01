@@ -62,9 +62,9 @@ class ReportingBoundaryAndLogicTests(SimpleTestCase):
         mock_cursor = MagicMock()
         mock_cursor_ctx.return_value.__enter__.return_value = mock_cursor
         mock_cursor.fetchall.return_value = [
-            ("COMPLETED", 3, 3, 3, 3),
-            ("PENDING_APPROVAL", 2, 2, 0, 0),
-            ("REJECTED", 1, 1, 0, 0),
+            ("IT_ACCESS", "IT access", "COMPLETED", 3, 3, 3),
+            ("IT_ACCESS", "IT access", "PENDING_APPROVAL", 2, 2, 0),
+            ("HR_LEAVE", "HR leave", "REJECTED", 1, 1, 0),
         ]
 
         result = get_request_metrics_report(
@@ -84,6 +84,13 @@ class ReportingBoundaryAndLogicTests(SimpleTestCase):
         )
         self.assertEqual(result["approved_rate"], 0.5)
         self.assertEqual(result["completed_rate"], 0.5)
+        self.assertEqual(
+            result["top_types"],
+            [
+                {"code": "IT_ACCESS", "name": "IT access", "count": 5},
+                {"code": "HR_LEAVE", "name": "HR leave", "count": 1},
+            ],
+        )
         self.assertNotIn("LIMIT 100000", mock_cursor.execute.call_args.args[0])
 
     @patch("api_core.workflow.reporting.connection.cursor")

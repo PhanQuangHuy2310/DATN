@@ -49,10 +49,12 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "api_core.middleware.ApiSecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "api_core.middleware.ApiRateLimitMiddleware",
     "api_core.middleware.ApiDatabaseErrorMiddleware",
 ]
 
@@ -74,7 +76,7 @@ else:
     # connections in local development. Default remains 60 to avoid changing
     # the production connection policy unexpectedly.
     try:
-        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "60"))
+        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "0"))
         if not 0 <= _db_max_age <= 3600:
             raise ValueError
     except ValueError:
@@ -155,6 +157,10 @@ if EAS_EMAIL_TEST_RECIPIENT:
         ) from None
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise RuntimeError("Configure only one of EAS_EMAIL_USE_TLS or EAS_EMAIL_USE_SSL")
+
+EAS_API_RATE_LIMIT_PER_MINUTE = int(os.getenv("EAS_API_RATE_LIMIT_PER_MINUTE", "300"))
+if EAS_API_RATE_LIMIT_PER_MINUTE < 1:
+    raise RuntimeError("EAS_API_RATE_LIMIT_PER_MINUTE must be >= 1")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")
 EAS_STORAGE_BUCKET = os.getenv("EAS_STORAGE_BUCKET", "eas-private")
@@ -229,12 +235,18 @@ EAS_AI_INTERNAL_SECRET = os.getenv(
 )
 if not EAS_AI_INTERNAL_SECRET and ENVIRONMENT in {"development", "test"}:
     EAS_AI_INTERNAL_SECRET = "eas-local-dev-shared-internal-secret-2026"
-if (
-    ENVIRONMENT == "production"
-    and EAS_AI_INTERNAL_SECRET == "datn-internal-secret-change-in-prod"
+_KNOWN_WEAK_AI_SECRETS = {
+    "",
+    "datn-internal-secret-change-in-prod",
+    "eas-local-dev-shared-internal-secret-2026",
+}
+if ENVIRONMENT == "production" and (
+    EAS_AI_INTERNAL_SECRET in _KNOWN_WEAK_AI_SECRETS
+    or "replace-with" in EAS_AI_INTERNAL_SECRET
+    or len(EAS_AI_INTERNAL_SECRET) < 32
 ):
     raise RuntimeError(
-        "EAS_AI_INTERNAL_SECRET must be explicitly configured and cannot use default value in production"
+        "EAS_AI_INTERNAL_SECRET must be a random secret of at least 32 characters in production"
     )
 EAS_AI_TIMEOUT_SECONDS = float(os.getenv("EAS_AI_TIMEOUT_SECONDS", "5.0"))
 

@@ -2,16 +2,16 @@
  * Authorization always remains enforced on the Django API with role + scope + SoD.
  */
 export const ROLE_NAVIGATION = Object.freeze({
-  REQUESTER: ["home", "flow-diagrams", "mine", "history", "notifications", "profile"],
-  APPROVER: ["home", "flow-diagrams", "approval", "history", "notifications", "profile"],
-  EXECUTOR: ["home", "flow-diagrams", "execution", "history", "notifications", "profile"],
-  ACCEPTOR: ["home", "flow-diagrams", "acceptance", "history", "notifications", "profile"],
-  POLICY_ADMIN: ["home", "flow-diagrams", "policy", "plan-catalog", "notifications", "profile"],
-  OPS_ADMIN: ["home", "flow-diagrams", "ops", "identity", "api-admin", "plan-catalog", "notifications", "profile"],
-  AUDITOR: ["home", "flow-diagrams", "audit", "events", "notifications", "profile"],
+  REQUESTER: ["home", "flow-diagrams", "ai-process", "mine", "org-client", "notifications", "profile"],
+  APPROVER: ["home", "flow-diagrams", "ai-process", "org-client", "approval", "notifications", "profile"],
+  EXECUTOR: ["home", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
+  ACCEPTOR: ["home", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
+  POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "plan-catalog", "notifications", "profile"],
+  OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "identity", "users", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
+  AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "notifications", "profile"],
 });
 
-const NAV_ORDER = ["home", "flow-diagrams", "mine", "approval", "execution", "acceptance", "history", "policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events", "notifications", "profile"];
+const NAV_ORDER = ["home", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "history", "policy", "plan-catalog", "ops", "identity", "users", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
 
 export function visiblePages(roles = [], capabilities = {}) {
   const enabled = new Set(["home", "notifications", "profile"]);
@@ -19,7 +19,7 @@ export function visiblePages(roles = [], capabilities = {}) {
     for (const page of ROLE_NAVIGATION[role] || []) enabled.add(page);
   }
   // UC17: identity management is restricted to GLOBAL + ALL OPS admins.
-  if (!capabilities.identity_manage) { enabled.delete("identity"); enabled.delete("api-admin"); }
+  if (!capabilities.identity_manage) { enabled.delete("identity"); enabled.delete("users"); enabled.delete("permissions"); enabled.delete("request-catalog"); enabled.delete("org-chart"); enabled.delete("api-admin"); }
   return NAV_ORDER.filter((page) => enabled.has(page));
 }
 
@@ -35,6 +35,7 @@ export const ROLE_TASKS = Object.freeze([
   { role: "POLICY_ADMIN", title: "Phiên bản chính sách", description: "Soạn, kiểm tra và công bố cấu hình có kiểm soát", page: "policy", uc: "UC02", icon: "⚙" },
   { role: "OPS_ADMIN", title: "Điều phối vận hành", description: "Điều chuyển, giám sát SLA và khôi phục outbox", page: "ops", uc: "UC09 · UC14", icon: "⇄" },
   { role: "OPS_ADMIN", title: "Danh tính & phân quyền", description: "Quản lý tổ chức và role theo phạm vi được cấp", page: "identity", uc: "UC17", icon: "◎" },
+  { role: "OPS_ADMIN", title: "Sơ đồ tổ chức", description: "Trực quan hóa cơ cấu ban giám đốc và 7 phòng ban", page: "org-chart", uc: "Sơ đồ tổ chức", icon: "🏛" },
   { role: "OPS_ADMIN", title: "Quản lý API & ma trận quyền", description: "Đối chiếu endpoint, quyền truy cập và trạng thái API", page: "api-admin", uc: "UC17 · API v1", icon: "⌘" },
   { role: "AUDITOR", title: "Tra cứu kiểm toán", description: "Đọc hồ sơ được cấp phạm vi và xác minh chuỗi audit", page: "audit", uc: "UC05 · UC15", icon: "⌕" },
   { role: "AUDITOR", title: "Nhật ký quản trị", description: "Kiểm tra sự kiện vận hành, bất biến và phân trang", page: "events", uc: "UC15", icon: "≡" },
@@ -42,5 +43,5 @@ export const ROLE_TASKS = Object.freeze([
 
 export function roleTasks(roles = [], capabilities = {}) {
   const granted = new Set(roles);
-  return ROLE_TASKS.filter((task) => granted.has(task.role) && (!["identity", "api-admin"].includes(task.page) || capabilities.identity_manage));
+  return ROLE_TASKS.filter((task) => granted.has(task.role) && (!["identity", "org-chart", "api-admin"].includes(task.page) || capabilities.identity_manage));
 }

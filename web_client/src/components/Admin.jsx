@@ -294,8 +294,9 @@ export function Operations({ items, onRefresh }) {
           <table>
             <thead>
               <tr>
-                <th>Mã yêu cầu</th>
+                <th>Hồ sơ</th>
                 <th>Trạng thái</th>
+                <th>Người phụ trách</th>
                 <th>Hạn xử lý</th>
                 <th>Thao tác</th>
               </tr>
@@ -303,15 +304,16 @@ export function Operations({ items, onRefresh }) {
             <tbody>
               {items.map((r) => (
                 <tr key={r.id}>
-                  <td data-label="Mã yêu cầu">{r.code}</td>
+                  <td data-label="Hồ sơ"><strong>{r.code}</strong><small className="muted" style={{display:"block"}}>{r.type_name || "Yêu cầu"}</small></td>
                   <td data-label="Trạng thái">
                     <Badge value={r.status} />
                   </td>
+                  <td data-label="Người phụ trách"><strong>{r.responsible?.name || "Chưa phân công"}</strong>
+                    <small className="muted" style={{display:"block"}}>{({APPROVAL:"Đang kiểm duyệt",EXECUTION:"Đang thực hiện",ACCEPTANCE:"Đang nghiệm thu"})[r.responsible?.stage] || "Chưa có người xử lý"}</small>
+                  </td>
                   <td data-label="Hạn xử lý">
-                    {date(r.sla?.due_at)}{" "}
-                    {r.sla?.breached_at && (
-                      <span className="badge REJECTED">Quá hạn</span>
-                    )}
+                    <span>{r.sla?.due_at ? date(r.sla.due_at) : "Chưa có hạn"}</span>{" "}
+                    {(r.overdue || r.sla?.breached_at) && <span className="badge REJECTED" role="status">Quá hạn</span>}
                   </td>
                   <td data-label="Thao tác">
                     <button

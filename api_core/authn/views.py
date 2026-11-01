@@ -18,6 +18,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
+from api_core.middleware import client_ip
 
 from .login_throttle import (
     clear_account_failures,
@@ -143,7 +144,7 @@ def login(request: HttpRequest) -> JsonResponse:
         return parsed
     email, password = parsed
 
-    keys = throttle_keys(email, request.META.get("REMOTE_ADDR", "unknown"))
+    keys = throttle_keys(email, client_ip(request))
     if is_throttled(
         cache,
         keys,
@@ -266,14 +267,20 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
         try:
             if cache.incr(ip_key) > 20:
                 return JsonResponse(
-                    {"status": "accepted", "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị."},
+                    {
+                        "status": "accepted",
+                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                    },
                     status=202,
                 )
         except ValueError:
             cache.add(ip_key, 1, timeout=3600)
     if not cache.add(cooldown_key, "1", timeout=300):
         return JsonResponse(
-            {"status": "accepted", "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị."},
+            {
+                "status": "accepted",
+                "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+            },
             status=202,
         )
 
@@ -286,7 +293,10 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
             user = cursor.fetchone()
             if not user:
                 return JsonResponse(
-                    {"status": "accepted", "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị."},
+                    {
+                        "status": "accepted",
+                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                    },
                     status=202,
                 )
             cursor.execute(
@@ -327,7 +337,9 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
                     )
                     pending = cursor.fetchone()
                     if not pending:
-                        raise DatabaseError("Password reset request conflict was not recoverable.")
+                        raise DatabaseError(
+                            "Password reset request conflict was not recoverable."
+                        )
                     request_id = pending[0]
             admin_emails = _password_reset_admin_emails(cursor)
             if not admin_emails:
@@ -336,7 +348,10 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
                     extra={"correlation_id": correlation_id(request)},
                 )
                 return JsonResponse(
-                    {"status": "accepted", "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị."},
+                    {
+                        "status": "accepted",
+                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                    },
                     status=202,
                 )
         try:
@@ -363,7 +378,10 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
                 },
             )
             return JsonResponse(
-                {"status": "accepted", "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị."},
+                {
+                    "status": "accepted",
+                    "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                },
                 status=202,
             )
     except DatabaseError:
@@ -371,7 +389,10 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
         raise
 
     return JsonResponse(
-        {"status": "accepted", "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị."},
+        {
+            "status": "accepted",
+            "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+        },
         status=202,
     )
 
@@ -421,7 +442,11 @@ def password_reset_approve(request: HttpRequest, request_id: str) -> JsonRespons
     except JsonBodyError as exc:
         return api_error(request, str(exc), status=400)
     reason = body.get("reason")
-    if set(body) != {"reason"} or not isinstance(reason, str) or not 10 <= len(reason.strip()) <= 2000:
+    if (
+        set(body) != {"reason"}
+        or not isinstance(reason, str)
+        or not 10 <= len(reason.strip()) <= 2000
+    ):
         return api_error(request, "RESET_APPROVAL_REASON_REQUIRED", status=400)
 
     from django.contrib.auth.hashers import make_password
@@ -432,60 +457,64 @@ def password_reset_approve(request: HttpRequest, request_id: str) -> JsonRespons
     temporary_password = None
     target_email = ""
     target_name = ""
-    try:
-        with transaction.atomic(), connection.cursor() as cursor:
-            cursor.execute("SELECT eas.lock_security(true)")
-            cursor.execute(
-                """SELECT pr.user_id::text, pr.requested_email, u.email,
-                          u.display_name, u.department_id::text, u.auth_version
-                   FROM eas.password_reset_request pr
-                   JOIN eas.app_user u ON u.id=pr.user_id
-                   WHERE pr.id=%s AND pr.status='PENDING'
-                     AND pr.expires_at > statement_timestamp()
-                     AND u.is_active
-                   FOR UPDATE OF pr,u""",
-                [request_id],
-            )
-            row = cursor.fetchone()
-            if not row:
-                return api_error(request, "RESET_REQUEST_NOT_FOUND_OR_EXPIRED", status=404)
-            user_id, requested_email, target_email, target_name, department_id, auth_version = row
-            if request.actor.id == user_id:
-                return api_error(request, "CANNOT_APPROVE_OWN_RESET", status=403)
-            if target_email != requested_email:
-                return api_error(request, "RESET_REQUEST_EMAIL_CHANGED", status=409)
-            temporary_password = _temporary_password(target_email)
-            new_version = auth_version + 1
-            cursor.execute(
-                """UPDATE eas.app_user
-                   SET password_hash=%s, auth_version=%s, must_change_password=true
-                   WHERE id=%s""",
-                [make_password(temporary_password, hasher="argon2"), new_version, user_id],
-            )
-            cursor.execute(
-                """UPDATE eas.password_reset_request
-                   SET status='APPROVED', resolved_at=statement_timestamp(),
-                       resolved_by=%s, resolution_reason=%s
-                   WHERE id=%s""",
-                [request.actor.id, reason.strip(), request_id],
-            )
-            cursor.execute(
-                "UPDATE eas.security_epoch SET version=version+1,updated_at=statement_timestamp() WHERE id=1"
-            )
-            _append_admin_audit(
-                cursor,
-                actor_id=request.actor.id,
-                actor_kind="HUMAN",
-                action="PASSWORD_RESET_APPROVED",
-                target_type="app_user",
-                target_id=user_id,
-                department_id=department_id,
-                details={"request_id": request_id, "auth_version": new_version},
-                reason=reason.strip(),
-                correlation_id=correlation_id(request),
-            )
-    except DatabaseError:
-        raise
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute("SELECT eas.lock_security(true)")
+        cursor.execute(
+            """SELECT pr.user_id::text, pr.requested_email, u.email,
+                      u.display_name, u.department_id::text, u.auth_version
+               FROM eas.password_reset_request pr
+               JOIN eas.app_user u ON u.id=pr.user_id
+               WHERE pr.id=%s AND pr.status='PENDING'
+                 AND pr.expires_at > statement_timestamp()
+                 AND u.is_active
+               FOR UPDATE OF pr,u""",
+            [request_id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            return api_error(request, "RESET_REQUEST_NOT_FOUND_OR_EXPIRED", status=404)
+        (
+            user_id,
+            requested_email,
+            target_email,
+            target_name,
+            department_id,
+            auth_version,
+        ) = row
+        if request.actor.id == user_id:
+            return api_error(request, "CANNOT_APPROVE_OWN_RESET", status=403)
+        if target_email != requested_email:
+            return api_error(request, "RESET_REQUEST_EMAIL_CHANGED", status=409)
+        temporary_password = _temporary_password(target_email)
+        new_version = auth_version + 1
+        cursor.execute(
+            """UPDATE eas.app_user
+               SET password_hash=%s, auth_version=%s, must_change_password=true
+               WHERE id=%s""",
+            [make_password(temporary_password, hasher="argon2"), new_version, user_id],
+        )
+        cursor.execute(
+            """UPDATE eas.password_reset_request
+               SET status='APPROVED', resolved_at=statement_timestamp(),
+                   resolved_by=%s, resolution_reason=%s
+               WHERE id=%s""",
+            [request.actor.id, reason.strip(), request_id],
+        )
+        cursor.execute(
+            "UPDATE eas.security_epoch SET version=version+1,updated_at=statement_timestamp() WHERE id=1"
+        )
+        _append_admin_audit(
+            cursor,
+            actor_id=request.actor.id,
+            actor_kind="HUMAN",
+            action="PASSWORD_RESET_APPROVED",
+            target_type="app_user",
+            target_id=user_id,
+            department_id=department_id,
+            details={"request_id": request_id, "auth_version": new_version},
+            reason=reason.strip(),
+            correlation_id=correlation_id(request),
+        )
 
     try:
         send_mail(

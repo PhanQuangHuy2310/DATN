@@ -40,7 +40,7 @@ def get_maintenance_metadata() -> dict[str, Any]:
             "active": False,
             "reason": "Hệ thống hoạt động bình thường",
             "started_at": None,
-            "estimated_duration_seconds": 0
+            "estimated_duration_seconds": 0,
         }
     return data if isinstance(data, dict) else json.loads(data)
 
@@ -49,19 +49,20 @@ def set_maintenance_mode(
     active: bool,
     reason: str = "Cập nhật quy chế doanh nghiệp & Tối ưu hóa mô hình AI",
     operator: str = "SYSTEM",
-    duration_seconds: int = 120
+    duration_seconds: int = 120,
 ) -> dict[str, Any]:
     """Bật/tắt chế độ bảo trì hệ thống."""
     import datetime
+
     now_iso = datetime.datetime.now(datetime.UTC).isoformat()
     cache.set(MAINTENANCE_CACHE_KEY, active, timeout=None if active else 1)
-    
+
     metadata = {
         "active": active,
         "reason": reason,
         "operator": operator,
         "started_at": now_iso if active else None,
-        "estimated_duration_seconds": duration_seconds if active else 0
+        "estimated_duration_seconds": duration_seconds if active else 0,
     }
     cache.set(MAINTENANCE_METADATA_KEY, metadata, timeout=None if active else 1)
     return metadata
@@ -90,13 +91,14 @@ class MaintenanceModeMiddleware:
 
         # 3. Khi chế độ bảo trì đang bật: Kiểm tra danh tính người dùng
         actor = load_actor_from_session(request)
-        
+
         # Nếu là Admin hoặc có vai trò quản trị hệ thống -> Cho phép đi tiếp
         if actor:
-            is_admin = (
-                actor.email.split("@", 1)[0] in {"admin", "director", "policy_admin"}
-                or bool(actor.roles.intersection(ADMIN_ROLES))
-            )
+            is_admin = actor.email.split("@", 1)[0] in {
+                "admin",
+                "director",
+                "policy_admin",
+            } or bool(actor.roles.intersection(ADMIN_ROLES))
             if is_admin:
                 return self.get_response(request)
 
@@ -109,9 +111,11 @@ class MaintenanceModeMiddleware:
                 "maintenance": True,
                 "reason": meta.get("reason"),
                 "started_at": meta.get("started_at"),
-                "estimated_duration_seconds": meta.get("estimated_duration_seconds", 120),
+                "estimated_duration_seconds": meta.get(
+                    "estimated_duration_seconds", 120
+                ),
                 "retry_after": 60,
             },
             status=503,
-            headers={"Retry-After": "60"}
+            headers={"Retry-After": "60"},
         )

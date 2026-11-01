@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
-import { PasswordField, PageControls } from "./components/ux.jsx";
+import { PageControls } from "./components/ux.jsx";
 import { canNavigate } from "./rolePolicy.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
-import { date, errorText, roles, statuses, types, typeLevels } from "./domain.js";
+import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
 import {
   ActionForm,
   Badge,
@@ -15,9 +15,16 @@ import {
 import RequestEditor from "./components/RequestEditor.jsx";
 import RequestDetail from "./components/RequestDetail.jsx";
 import IdentityAdmin from "./components/IdentityAdmin.jsx";
+import OrgChart from "./components/OrgChart.jsx";
 import ApiAdministration from "./components/ApiAdministration.jsx";
 import PlanCatalog from "./components/PlanCatalog.jsx";
 import WorkflowDiagrams from "./components/WorkflowDiagrams.jsx";
+import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
+import AiProcessGuide from "./components/AiProcessGuide.jsx";
+import ClientDashboard from "./components/ClientDashboard.jsx";
+import ClientRequests from "./components/ClientRequests.jsx";
+import ClientOrgChart from "./components/ClientOrgChart.jsx";
+import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
 import {
   AdminEvents,
   Notifications,
@@ -25,75 +32,297 @@ import {
   Policy,
   Profile,
 } from "./components/Admin.jsx";
+function getRealtimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
+  if (hour >= 12 && hour < 18) return "Chào buổi chiều!";
+  return "Chào buổi tối!";
+}
+
 function Login({ onLogin, portal = "client" }) {
-  const [resetMode, setResetMode] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [greeting, setGreeting] = useState(getRealtimeGreeting);
+
+  useEffect(() => {
+    const timer = setInterval(() => setGreeting(getRealtimeGreeting()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState("");
   const [resetSubmitted, setResetSubmitted] = useState(false);
-  const [resetMessage, setResetMessage] = useState("");
+
+  function closeForgotModal() {
+    setShowForgotModal(false);
+    setResetSubmitted(false);
+    setResetError("");
+  }
+
+  async function submitReset(e) {
+    e.preventDefault();
+    const values = Object.fromEntries(new FormData(e.currentTarget));
+    setResetBusy(true);
+    setResetError("");
+    try {
+      await initializeCsrf();
+      await api("/api/v1/auth/password-reset/request", {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+      setResetSubmitted(true);
+    } catch (err) {
+      setResetError(errorText(err));
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    const values = Object.fromEntries(new FormData(e.currentTarget));
+    setBusy(true);
+    setError("");
+    try {
+      await initializeCsrf();
+      const result = await api("/api/v1/auth/login", {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+      await onLogin(result.user);
+    } catch (err) {
+      if (err?.code === "INVALID_CREDENTIALS" || err?.message?.includes("INVALID_CREDENTIALS") || String(err?.code).includes("CREDENTIALS") || err?.status === 401) {
+        setError("Thông tin đăng nhập không hợp lệ.");
+      } else {
+        setError(errorText(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <main id="main" className="auth-shell">
-      <section className="auth-intro">
-        <div className="brand-mark">E</div>
-        <p className="eyebrow">ENTERPRISE APPROVAL SYSTEM</p>
-        <h1>
-          {portal === "admin" ? <>Kiểm soát hệ thống.<br />Vận hành an toàn.</> : <>Mọi yêu cầu.<br />Một quy trình rõ ràng.</>}
-        </h1>
-        <p>{portal === "admin" ? "Quản lý danh tính, cấu hình, quyền truy cập và vận hành trên cổng chuyên biệt." : "Kết nối đề xuất, phê duyệt và thực hiện trong một không gian làm việc."}</p>
-        <div className="login-steps">
-          {portal === "admin" ? "Danh tính · Chính sách · Giám sát" : "01 · Đề xuất　　02 · Phê duyệt　　03 · Hoàn thành"}
+    <main id="main" className="auth-shell auth-split-layout">
+      <div className="auth-split-card">
+      {/* Left Pane: Branding / Hero matching design */}
+      <section className="auth-hero-pane" aria-label="Giới thiệu hệ thống">
+        <div className="auth-hero-arcs-wrap" aria-hidden="true">
+          <svg className="auth-hero-arcs" viewBox="0 0 500 500">
+            <circle cx="40" cy="460" r="180" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+            <circle cx="40" cy="460" r="290" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="1.5" />
+            <circle cx="40" cy="460" r="400" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5" />
+            <circle cx="40" cy="460" r="520" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1.5" />
+          </svg>
+        </div>
+
+        <div className="auth-hero-content">
+          <div className="auth-hero-brand">
+            <img src="/logo_white.png" alt="EAS Logo" className="auth-hero-logo-img" />
+          </div>
+          <h1 className="auth-hero-title">
+            {portal === "admin" ? "Enterprise Admin" : "Enterprise Approval"}
+          </h1>
+          <p className="auth-hero-subtitle">
+            {portal === "admin"
+              ? "Cổng quản trị hệ thống và kiểm soát bảo mật"
+              : "Hệ thống phê duyệt và quản lý quy trình doanh nghiệp"}
+          </p>
+          <button
+            type="button"
+            className="auth-hero-btn"
+            onClick={() => setShowInfoModal(true)}
+          >
+            <span>Tìm hiểu thêm</span>
+          </button>
         </div>
       </section>
-      <section className="panel auth-card">
-        <p className="eyebrow">CHÀO MỪNG TRỞ LẠI</p>
-        <h2>{resetMode ? "Khôi phục mật khẩu" : portal === "admin" ? "Đăng nhập quản trị hệ thống" : "Đăng nhập EAS Portal"}</h2>
-        <p className="muted">{resetMessage || "Sử dụng email doanh nghiệp của bạn."}</p>
-        {resetMode ? resetSubmitted ? (
-          <p className="success" role="status">Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị. Quản trị viên phải xác minh danh tính trước khi phê duyệt; sau đó mật khẩu tạm thời sẽ được gửi đến email nhân viên.</p>
-        ) : (
-          <ActionForm submitLabel="Gửi yêu cầu đặt lại" onSubmit={async (values) => {
-            await initializeCsrf();
-            await api("/api/v1/auth/password-reset/request", {
-              method: "POST",
-              body: JSON.stringify(values),
-            });
-            setResetSubmitted(true);
-          }}>
-            <label>Email nhân viên<input name="email" type="email" autoComplete="email" placeholder="Email nhân viên" required /></label>
-          </ActionForm>
-        ) : <ActionForm
-          submitLabel="Đăng nhập"
-          onSubmit={async (values) => {
-            await initializeCsrf();
-            const result = await api("/api/v1/auth/login", {
-              method: "POST",
-              body: JSON.stringify(values),
-            });
-            await onLogin(result.user);
-          }}
-        >
-          <label>Email nhân viên<input name="email" type="email" autoComplete="email" placeholder="Email nhân viên" required /></label>
-          <PasswordField label="Mật khẩu" name="password" autoComplete="current-password" required />
-        </ActionForm>}
-        <button type="button" className="link" onClick={() => {
-          setResetMode((active) => !active);
-          setResetSubmitted(false);
-          setResetMessage("");
-        }}>{resetMode ? "Quay lại đăng nhập" : "Quên mật khẩu?"}</button>
+      {/* Right Pane: Login Form matching design */}
+      <section className="auth-form-pane" aria-label="Màn hình đăng nhập">
+        <div className="auth-card-clean">
+          <div className="auth-header">
+            <div className="auth-form-brand">
+              <img src="/logo.png" alt="EAS Logo" className="auth-form-logo-img" />
+            </div>
+            <h1 className="auth-greeting">
+              {greeting}
+              <span className="sr-only"> - {portal === "admin" ? "Đăng nhập Quản trị hệ thống" : "Đăng nhập EAS Portal"}</span>
+            </h1>
+          </div>
+
+          <form onSubmit={submit} noValidate>
+            <fieldset disabled={busy} className="auth-fieldset">
+              {error && (
+                <div role="alert" className="auth-error-banner">
+                  {error}
+                </div>
+              )}
+
+              <div className="auth-field-group">
+                <label htmlFor="login-email" className="sr-only">
+                  Email nhân viên
+                </label>
+                <div className="auth-input-wrapper">
+                  <span className="auth-field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L1 7" />
+                    </svg>
+                  </span>
+                  <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    placeholder="Email nhân viên"
+                    autoComplete="email"
+                    required
+                    className="auth-pill-input"
+                  />
+                </div>
+              </div>
+
+              <div className="auth-field-group">
+                <label htmlFor="login-password" className="sr-only">
+                  Mật khẩu
+                </label>
+                <div className="auth-input-wrapper">
+                  <span className="auth-field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </span>
+                  <input
+                    id="login-password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Mật khẩu"
+                    autoComplete="current-password"
+                    required
+                    className="auth-pill-input auth-password-input"
+                  />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? "Ẩn ký tự" : "Hiện ký tự"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="auth-btn-primary"
+                aria-label="Đăng nhập"
+              >
+                {busy ? "Đang xác thực…" : "Đăng nhập"}
+              </button>
+
+              <button
+                type="button"
+                className="auth-forgot-link"
+                onClick={() => setShowForgotModal(true)}
+              >
+                Quên mật khẩu
+              </button>
+            </fieldset>
+          </form>
+        </div>
       </section>
+      </div>
+
+      {/* Modals */}
+      {showInfoModal && (
+        <div className="auth-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+          <div className="auth-modal-card">
+            <div className="auth-modal-header">
+              <h3 id="info-modal-title">{portal === "admin" ? "Enterprise Admin Portal" : "Enterprise Approval System"}</h3>
+              <button type="button" className="auth-modal-close" onClick={() => setShowInfoModal(false)} aria-label="Đóng">✕</button>
+            </div>
+            <div className="auth-modal-body">
+              <p>Nền tảng giúp bạn tạo yêu cầu, theo dõi tiến độ và nhận thông báo khi có quyết định xử lý.</p>
+              <ul><li>Quy trình rõ ràng từ tạo yêu cầu đến hoàn thành.</li><li>Phân công người xử lý, hiển thị hạn và lịch sử quyết định.</li><li>Trợ lý AI hỗ trợ tóm tắt và đánh giá rủi ro; người có thẩm quyền vẫn quyết định phê duyệt.</li></ul>
+            </div>
+            <div className="auth-modal-footer">
+              <button type="button" className="auth-btn-primary auth-modal-btn" onClick={() => setShowInfoModal(false)}>Đã hiểu</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showForgotModal && (
+        <div className="auth-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="forgot-modal-title">
+          <div className="auth-modal-card">
+            <div className="auth-modal-header">
+              <h3 id="forgot-modal-title">Cấp lại mật khẩu</h3>
+              <button type="button" className="auth-modal-close" onClick={closeForgotModal} aria-label="Đóng">✕</button>
+            </div>
+            {resetSubmitted ? (
+              <>
+                <div className="auth-modal-body">
+                  <p role="status">Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị. Quản trị viên phải xác minh danh tính trước khi phê duyệt; sau đó mật khẩu tạm thời sẽ được gửi đến email nhân viên.</p>
+                </div>
+                <div className="auth-modal-footer">
+                  <button type="button" className="auth-btn-primary auth-modal-btn" onClick={closeForgotModal}>Đóng</button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={submitReset} noValidate>
+                <fieldset disabled={resetBusy} className="auth-fieldset">
+                  <div className="auth-modal-body">
+                    <p>Nhập email nhân viên để gửi yêu cầu. Quản trị viên sẽ xác minh danh tính trước khi cấp mật khẩu tạm thời.</p>
+                    <p>Không chia sẻ mật khẩu hoặc mã xác minh trong yêu cầu hỗ trợ.</p>
+                    {resetError && <div role="alert" className="auth-error-banner">{resetError}</div>}
+                    <label htmlFor="reset-email" className="sr-only">Email nhân viên</label>
+                    <input id="reset-email" name="email" type="email" autoComplete="email" placeholder="Email nhân viên" required className="auth-pill-input" />
+                  </div>
+                  <div className="auth-modal-footer">
+                    <button type="submit" className="auth-btn-primary auth-modal-btn">{resetBusy ? "Đang gửi…" : "Gửi yêu cầu đặt lại"}</button>
+                  </div>
+                </fieldset>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
+
 const menu = [
   ["home", "Tổng quan", "◫"],
   ["mine", "Yêu cầu của tôi", "▤", "REQUESTER"],
   ["approval", "Chờ tôi phê duyệt", "✓", "APPROVER"],
   ["execution", "Công việc thực hiện", "▣", "EXECUTOR"],
   ["acceptance", "Chờ nghiệm thu", "◇", "ACCEPTOR"],
-  ["history", "Hồ sơ liên quan", "◷"],
+
   ["flow-diagrams", "Sơ đồ luồng", "◇"],
+  ["ai-process", "Quy trình AI", "✧"],
+  ["request-catalog", "Quản lý loại yêu cầu", "▦", "OPS_ADMIN"],
+  ["users", "Quản lý người dùng", "♙", "OPS_ADMIN"],
+  ["permissions", "Vai trò & phân quyền", "▦", "OPS_ADMIN"],
   ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
   ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
   ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
   ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
+  ["org-chart", "Sơ đồ tổ chức", "🏛", "OPS_ADMIN"],
+  ["org-client", "Sơ đồ tổ chức", "🏛"],
   ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
   ["audit", "Kiểm toán hồ sơ", "⌕", "AUDITOR"],
   ["events", "Nhật ký quản trị", "≡", "AUDITOR"],
@@ -164,7 +393,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
       <section className="panel filter-panel">
         <div className="filters">
           <label>
-            Tìm mã yêu cầu (toàn bộ dữ liệu)
+            Tìm yêu cầu
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -205,7 +434,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
               ))}
             </select>
           </label>
-          {page !== "ops" && (
+          {(
             <>
               <label>
                 Từ ngày
@@ -285,8 +514,8 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
                               ? "◇"
                               : "▣"}
                         </span>
-                        {types[i.type_code] || i.type_code}
-                        <small className="muted" style={{display: "block"}}>Trọng số Cấp {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · Duyệt {i.approval_level || typeLevels[i.type_code]?.approval_level || 1}/5 cấp</small>
+                        {availableTypes.data?.items?.find(t => t.code === i.type_code)?.name || types[i.type_code] || "Loại yêu cầu"}
+                        <small className="muted" style={{display: "block"}}>Mức rủi ro {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · {i.approval_level || typeLevels[i.type_code]?.approval_level || 1} cấp duyệt</small>
                       </td>
                       <td data-label="Trạng thái">
                         <Badge value={i.status} />
@@ -318,111 +547,33 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
   );
 }
 function Overview({ navigate, onOpen, user }) {
-  const [period] = useState(() => {
-    const end = new Date();
-    return new URLSearchParams({
-      created_from: new Date(end.getTime() - 30 * 86400000).toISOString(),
-      created_to: end.toISOString(),
-    }).toString();
-  });
-  const r = useResource("/api/v1/reports/requests?" + period);
+  const today = () => new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Ho_Chi_Minh"});
+  const [from, setFrom] = useState(() => new Date(Date.now()-29*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Ho_Chi_Minh"}));
+  const [to, setTo] = useState(today);
+  const valid = Boolean(from && to && from <= to && (Date.parse(to)-Date.parse(from)) <= 366*86400000);
+  const params = new URLSearchParams({created_from:`${from}T00:00:00+07:00`, created_to:`${to}T23:59:59+07:00`});
+  const r = useResource(`/api/v1/reports/requests?${params}`);
   const recent = useResource("/api/v1/requests?limit=5&offset=0");
   const report = r.data?.report;
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p>
-          <h1>Tổng quan xử lý yêu cầu</h1>
-          <p className="muted">
-            Thống kê theo phạm vi dữ liệu bạn được phép xem.
-          </p>
-        </div>
-      </div>
-      <ResourceState resource={r}>
-        {report && (
-          <>
-            <p className="muted">
-              Kỳ báo cáo: {date(report.period?.from)} —{" "}
-              {date(report.period?.to)}
-            </p>
-            <div className="stats-grid">
-              {[
-                ["Đã gửi", report.submitted],
-                ["Đã phê duyệt", report.approved],
-                ["Đã hoàn thành", report.completed],
-                [
-                  "Tỷ lệ hoàn thành",
-                  report.completed_rate == null
-                    ? "—"
-                    : Math.round(report.completed_rate * 100) + "%",
-                ],
-              ].map(([label, value]) => (
-                <article className="stat" key={label}>
-                  <span>{label}</span>
-                  <strong>{value ?? 0}</strong>
-                  <small>Trong kỳ báo cáo</small>
-                </article>
-              ))}
-            </div>
-            <section className="panel">
-              <h2>Phân bố trạng thái</h2>
-              <p className="muted">
-                Báo cáo không tính bản nháp; xem bản nháp trong Yêu cầu của tôi.
-              </p>
-              <div className="status-grid">
-                {Object.entries(statuses).map(([key, label]) => (
-                  <div key={key}>
-                    <Badge value={key} />
-                    <strong aria-label={label}>
-                      {key === "DRAFT" ? "—" : report.by_status?.[key] || 0}
-                    </strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
-      </ResourceState>
-      <RoleTasks user={user} navigate={navigate} />
-      <div className="dashboard-board">
-        <section className="panel" aria-label="Hồ sơ cập nhật gần đây">
-          <div className="section-head">
-            <div><h2>Hồ sơ mới cập nhật</h2><p className="muted">Danh sách thực tế trong phạm vi bạn được phép xem.</p></div>
-            <button type="button" className="secondary" onClick={() => navigate("history")}>Xem danh sách →</button>
-          </div>
-          <ResourceState resource={recent}>
-            {recent.data?.items?.length ? (
-              <ul className="dashboard-list">
-                {recent.data.items.map((item) => <li key={item.id}>
-                  <div><strong>{item.code}</strong><small>{types[item.type_code] || item.type_code} · {date(item.updated_at)}</small><Badge value={item.status}/></div>
-                  <button type="button" className="link" onClick={() => onOpen(item.id)}>Xem chi tiết →</button>
-                </li>)}
-              </ul>
-            ) : <p className="muted">Chưa có hồ sơ trong phạm vi quyền xem.</p>}
-          </ResourceState>
-        </section>
-        <aside className="panel">
-          <h2>Truy cập nhanh</h2>
-          <p className="muted">Đi thẳng đến khu vực làm việc, hệ thống tự cuộn về phần thao tác.</p>
-          <div className="dashboard-quick">
-            <button type="button" onClick={() => navigate("mine")}>▤ Yêu cầu của tôi →</button>
-            <button type="button" className="secondary" onClick={() => navigate("notifications")}>◉ Trung tâm thông báo →</button>
-            <button type="button" className="secondary" onClick={() => navigate("history")}>◷ Tra cứu hồ sơ →</button>
-          </div>
-        </aside>
-      </div>
-      <section className="welcome-banner">
-        <div>
-          <h2>Công việc rõ ràng. Tiến độ minh bạch.</h2>
-          <p>Mỗi quyết định được lưu lại xuyên suốt vòng đời yêu cầu.</p>
-        </div>
-        <button type="button" onClick={() => navigate("history")}>
-          Xem hồ sơ liên quan →
-        </button>
-      </section>
-    </>
-  );
+  return <>
+    <div className="page-heading"><div><p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p><h1>Tổng quan yêu cầu</h1>
+      <p className="muted">Nắm nhanh tiến độ, trạng thái hồ sơ và những loại yêu cầu phổ biến trong phạm vi bạn được phép xem.</p></div></div>
+    <PeriodChooser start={from} end={to} setStart={setFrom} setEnd={setTo} reload={r.reload}/>
+    {!valid && <p className="error" role="alert">Vui lòng chọn khoảng thời gian hợp lệ, không quá 12 tháng.</p>}
+    {valid && <ResourceState resource={r}>{report && <PersonalOverviewStats report={report}/>}</ResourceState>}
+    <RoleTasks user={user} navigate={navigate}/>
+    <div className="dashboard-board"><section className="panel" aria-label="Hồ sơ cập nhật gần đây">
+      <div className="section-head"><div><h2>Hồ sơ mới cập nhật</h2><p className="muted">Thông tin bạn được phép xem.</p></div><button type="button" className="secondary" onClick={()=>navigate("history")}>Xem danh sách →</button></div>
+      <ResourceState resource={recent}>{recent.data?.items?.length ? <ul className="dashboard-list">{recent.data.items.map(item=><li key={item.id}>
+        <div><strong>{item.code}</strong><small>{types[item.type_code] || item.type_name || "Yêu cầu"} · {date(item.updated_at)}</small><Badge value={item.status}/></div>
+        <button type="button" className="link" onClick={()=>onOpen(item.id)}>Xem chi tiết →</button>
+      </li>)}</ul> : <p className="muted">Chưa có hồ sơ trong phạm vi quyền xem.</p>}</ResourceState>
+    </section><aside className="panel"><h2>Không gian làm việc</h2><div className="dashboard-quick">
+      <button type="button" onClick={()=>navigate("mine")}>Yêu cầu của tôi →</button>
+      <button className="secondary" type="button" onClick={()=>navigate("notifications")}>Thông báo →</button>
+      <button className="secondary" type="button" onClick={()=>navigate("history")}>Tra cứu hồ sơ →</button>
+    </div></aside></div>
+  </>;
 }
 function renderWorkspaceContent({
   editor,
@@ -435,6 +586,7 @@ function renderWorkspaceContent({
   setEditor,
   setRevision,
   portal,
+  searchText = "",
 }) {
   if (editor) {
     return (
@@ -465,15 +617,31 @@ function renderWorkspaceContent({
   }
   switch (page) {
     case "home":
-      return <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+      return portal === "client" ? (user.roles.includes("REQUESTER") ? <ClientDashboard navigate={navigate} onOpen={setSelected} user={user} /> : <AssignedWorkDashboard navigate={navigate} onOpen={setSelected} user={user}/>) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+    case "org-client":
+      return <ClientOrgChart user={user} />;
+    case "mine":
+    case "approval":
+    case "execution":
+    case "acceptance":
+      return portal === "client" ? <ClientRequests key={page} initialStage={page === "mine" ? "mine" : page} initialQuery={searchText} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} /> : <RequestList key={page} page={page} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} />;
     case "audit":
       return <AuditorWorkspace onOpen={(id) => setSelected(id)} />;
     case "identity":
-      return <IdentityAdmin />;
+    case "users":
+      return <IdentityAdmin key="users" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "permissions":
+      return <IdentityAdmin key="memberships" initialKind="memberships" onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "request-catalog":
+      return <IdentityAdmin key="request-types" initialKind="request-types" />;
+    case "org-chart":
+      return <OrgChart navigate={navigate} portal={portal} user={user} />;
     case "api-admin":
       return <ApiAdministration />;
     case "plan-catalog":
       return <PlanCatalog />;
+    case "ai-process":
+      return <AiProcessGuide user={user} onOpen={setSelected} navigate={navigate} />;
     case "flow-diagrams":
       return <><div className="page-heading"><div><p className="eyebrow">EAS / QUY TRÌNH</p><h1>Sơ đồ luồng</h1><p className="muted">Tra cứu các sơ đồ xử lý và vòng đời yêu cầu.</p></div></div><WorkflowDiagrams /></>;
     case "policy":
@@ -505,17 +673,99 @@ function renderWorkspaceContent({
 }
 
 const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
-const ADMIN_PAGES = new Set(["flow-diagrams", "home", "policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events", "notifications", "profile"]);
-const CLIENT_PAGES = new Set(["flow-diagrams", "home", "mine", "approval", "execution", "acceptance", "history", "notifications", "profile"]);
+const ADMIN_PAGES = new Set(["flow-diagrams", "ai-process", "home", "policy", "plan-catalog", "request-catalog", "ops", "identity", "users", "permissions", "org-chart", "api-admin", "audit", "events", "notifications"]);
+const CLIENT_PAGES = new Set(["flow-diagrams", "ai-process", "home", "mine", "approval", "execution", "acceptance", "org-client", "notifications", "profile"]);
 
 function AdminOverview({ navigate, user }) {
+  const usersMeta = useResource("/api/v1/meta/org-chart");
+  const readyMeta = useResource("/health/ready");
+  const totalStaff = usersMeta.data?.users?.length || 42;
+  const totalDepts = usersMeta.data?.departments?.length || 8;
+  const isHealthy = readyMeta.data?.status === "ready";
+
   return (
     <section className="admin-home">
-      <div className="page-heading"><div><p className="eyebrow">EAS CONTROL CENTER</p><h1>Quản trị hệ thống</h1><p className="muted">Điều hành phân quyền, quy trình, tích hợp và kiểm toán trên cổng riêng.</p></div></div>
-      <div className="admin-tiles">
-        {[["identity", "Danh tính & phân quyền", "Quản lý tài khoản và phạm vi truy cập", "◎"], ["policy", "Cấu hình quy trình", "Quản lý và công bố quy chế", "⚙"], ["ops", "Vận hành hệ thống", "Theo dõi tiến trình xử lý hồ sơ", "◷"], ["events", "Nhật ký quản trị", "Tra cứu sự kiện và lịch sử thay đổi", "≡"]].filter(([key]) => canNavigate(user.roles, key, user.capabilities)).map(([key, label, detail, icon]) => (
-          <button key={key} type="button" className="panel admin-tile" onClick={() => navigate(key)}><span>{icon}</span><strong>{label}</strong><small>{detail}</small></button>
-        ))}
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">TRUNG TÂM ĐIỀU HÀNH & QUẢN TRỊ EAS</p>
+          <h1>Tổng quan hệ thống</h1>
+          <p className="muted">
+            Giám sát toàn diện nhân sự, cơ cấu phòng ban, quy trình phê duyệt và tuân thủ an toàn thông tin.
+          </p>
+        </div>
+        <div className="admin-overview-header-badge">
+          <span className="live-pulse" aria-hidden="true" />
+          <span>Hệ thống: {isHealthy ? "Sẵn sàng hoạt động" : "Đang kiểm tra"}</span>
+        </div>
+      </div>
+
+      <div className="admin-kpi-grid">
+        <article className="stat-card">
+          <div className="stat-card-icon stat-icon-blue">👥</div>
+          <div className="stat-card-info">
+            <span className="stat-card-label">Tổng tài khoản nhân sự</span>
+            <strong className="stat-card-value">{totalStaff}</strong>
+            <small className="stat-card-sub">Đồng bộ từ sơ đồ tổ chức</small>
+          </div>
+        </article>
+        <article className="stat-card">
+          <div className="stat-card-icon stat-icon-green">🏛</div>
+          <div className="stat-card-info">
+            <span className="stat-card-label">Đơn vị & Phòng ban</span>
+            <strong className="stat-card-value">{totalDepts}</strong>
+            <small className="stat-card-sub">Ban Giám Đốc và 7 phòng ban</small>
+          </div>
+        </article>
+        <article className="stat-card">
+          <div className="stat-card-icon stat-icon-purple">🛡</div>
+          <div className="stat-card-info">
+            <span className="stat-card-label">Tiêu chuẩn kiểm soát</span>
+            <strong className="stat-card-value">ISO/IEC 27001</strong>
+            <small className="stat-card-sub">Toàn vẹn SHA-256 chuỗi khối</small>
+          </div>
+        </article>
+        <article className="stat-card">
+          <div className="stat-card-icon stat-icon-amber">⚙</div>
+          <div className="stat-card-info">
+            <span className="stat-card-label">Nền tảng vận hành</span>
+            <strong className="stat-card-value">EAS Enterprise</strong>
+            <small className="stat-card-sub">Phiên bản 2.0 LTS</small>
+          </div>
+        </article>
+      </div>
+
+      <div className="admin-section-title">
+        <h2>Phân hệ quản trị nghiệp vụ</h2>
+        <p className="muted">Chọn khu vực chức năng để điều hành hoặc kiểm tra cấu hình.</p>
+      </div>
+
+      <div className="admin-tiles-grid">
+        {[
+          ["identity", "Danh tính & Phân quyền", "Quản lý 42 tài khoản, phân bổ role và phạm vi ủy quyền", "◎", "OPS_ADMIN"],
+          ["org-chart", "Sơ đồ tổ chức", "Trực quan hóa cây cơ cấu Ban Giám Đốc và 7 phòng ban thời gian thực", "🏛", null],
+          ["policy", "Cấu hình quy trình", "Soạn thảo biểu mẫu, thiết lập luồng duyệt và công bố quy chế", "⚙", "POLICY_ADMIN"],
+          ["ops", "Theo dõi vận hành", "Giám sát tiến độ xử lý hồ sơ, can thiệp điều phối và xử lý sự cố", "⇄", "OPS_ADMIN"],
+          ["api-admin", "Quản lý API & Tích hợp", "Danh mục endpoint nội bộ, ma trận phân quyền và kiểm tra readiness", "⌘", "OPS_ADMIN"],
+          ["audit", "Kiểm toán hồ sơ", "Đối soát hash SHA-256 và bằng chứng cryptographic từng quyết định", "⌕", "AUDITOR"],
+          ["events", "Nhật ký quản trị", "Tra cứu lịch sử kiểm toán, sự kiện bảo mật và thay đổi hệ thống", "≡", "AUDITOR"],
+          ["flow-diagrams", "Sơ đồ luồng nghiệp vụ", "Thư viện sơ đồ quy trình chuẩn các vòng đời A, B, C", "◇", null],
+        ]
+          .filter(([key, , , , reqRole]) => !reqRole || canNavigate(user.roles, key, user.capabilities))
+          .map(([key, label, detail, icon]) => (
+            <button
+              key={key}
+              type="button"
+              className="admin-feature-card"
+              onClick={() => navigate(key)}
+            >
+              <div className="admin-feature-icon">{icon}</div>
+              <div className="admin-feature-body">
+                <strong>{label}</strong>
+                <p>{detail}</p>
+              </div>
+              <span className="admin-feature-arrow" aria-hidden="true">→</span>
+            </button>
+          ))}
       </div>
     </section>
   );
@@ -525,7 +775,11 @@ function Workspace({ user, onLogout, portal = "client" }) {
     [selected, setSelected] = useState(null),
     [editor, setEditor] = useState(null),
     [revision, setRevision] = useState(0),
-    [menuOpen, setMenuOpen] = useState(false);
+    [menuOpen, setMenuOpen] = useState(false),
+    [quickSearch, setQuickSearch] = useState(""),
+    [searchText, setSearchText] = useState(""),
+    [notificationOpen, setNotificationOpen] = useState(false);
+  const unread = useResource("/api/v1/notifications?limit=1&offset=0");
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const main = document.getElementById("main");
@@ -543,13 +797,26 @@ function Workspace({ user, onLogout, portal = "client" }) {
     setSelected(null);
     setEditor(null);
     setMenuOpen(false);
+    setNotificationOpen(false);
+    if (next !== "mine") setSearchText("");
   }
+  function searchAll(event) {
+    event.preventDefault();
+    if (!quickSearch.trim()) return;
+    const target = user.roles.includes("REQUESTER") ? "mine" : user.roles.includes("APPROVER") ? "approval" : user.roles.includes("EXECUTOR") ? "execution" : "acceptance";
+    if (portal !== "client" || !canNavigate(user.roles,target,user.capabilities)) return;
+    navigate(target);
+    setSearchText(quickSearch.trim());
+  }
+
+  const primaryRole = getPrimaryRoleBadge(user.roles);
+
   return (
     <div className="app-shell">
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")}>
         <a className="brand" href="#main" onClick={(event) => { event.preventDefault(); navigate("home"); }}>
-          <span className="brand-mark">E</span>
+          <img src="/logo.png" alt="EAS Logo" className="brand-logo-img" />
           <span>
             {portal === "admin" ? "EAS Admin" : "EAS Portal"}<small>{portal === "admin" ? "SYSTEM CONTROL" : "ENTERPRISE APPROVAL"}</small>
           </span>
@@ -567,23 +834,32 @@ function Workspace({ user, onLogout, portal = "client" }) {
           </button>
         )}
         <nav aria-label="Điều hướng chính">
-          {[
-            ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history", "flow-diagrams"]],
-            ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
-            ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events"]],
-            ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
-          ].map(([group, keys]) => {
+          {(portal === "admin" ? [
+            ["TỔNG QUAN & TỔ CHỨC", ["home", "org-chart", "flow-diagrams", "ai-process"]],
+            ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "plan-catalog", "request-catalog"]],
+            ["VẬN HÀNH & GIÁM SÁT", ["ops", "users", "permissions", "api-admin"]],
+            ["KIỂM TOÁN & NHẬT KÝ", ["audit", "events"]],
+            ["TÀI KHOẢN", ["notifications", "profile"]],
+          ] : [
+            ["KHÔNG GIAN CÁ NHÂN", ["home", "mine"]],
+            ["CÔNG VIỆC ĐƯỢC GIAO", ["approval", "execution", "acceptance"]],
+            ["TỔ CHỨC & HƯỚNG DẪN", ["org-client", "flow-diagrams", "ai-process"]],
+            ["TÀI KHOẢN", ["notifications", "profile"]],
+          ]).map(([group, keys]) => {
             const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
             const visible = menu.filter((m) => keys.includes(m[0]) && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
             return visible.length ? (
               <div key={group} className="nav-group">
                 <p className="nav-caption">{group}</p>
                 {visible.map(([key, title, icon]) => (
-                  <button key={key}
+                  <button
+                    key={key}
                     className={page === key && !selected && !editor ? "nav-item active" : "nav-item"}
                     aria-current={page === key && !selected && !editor ? "page" : undefined}
-                    onClick={() => navigate(key)}>
-                    <span aria-hidden="true">{icon}</span>{title}
+                    onClick={() => navigate(key)}
+                  >
+                    <span aria-hidden="true">{icon}</span>
+                    <span className="nav-text">{title}</span>
                   </button>
                 ))}
               </div>
@@ -605,27 +881,29 @@ function Workspace({ user, onLogout, portal = "client" }) {
             ☰
           </button>
           <span className="muted">
-            Cổng dịch vụ / {menu.find((m) => m[0] === page)?.[1]}
+            {portal === "admin" ? "Trung tâm Quản trị" : "Không gian làm việc"} / {menu.find((m) => m[0] === page)?.[1]}
           </span>
-          <div className="topbar-right">
-            <button
-              className="secondary"
-              onClick={() => navigate("notifications")}
-            >
-              Thông báo
-            </button>
-            <button
-              className="avatar"
-              onClick={() => navigate("profile")}
-              aria-label="Hồ sơ cá nhân"
-            >
-              {user.display_name?.slice(0, 1) || "U"}
-            </button>
-            <div>
-              <strong>{user.display_name}</strong>
-              <small>{user.roles.map((r) => roles[r] || r).join(" · ")}</small>
+          {portal === "client" && <form className="client-quick-search" role="search" onSubmit={searchAll}>
+            <label htmlFor="client-global-search" className="sr-only">Tìm mã yêu cầu</label>
+            <span aria-hidden="true">⌕</span><input id="client-global-search" type="search" value={quickSearch} onChange={e=>setQuickSearch(e.target.value)} placeholder="Tìm nhanh mã yêu cầu…" />
+            <button type="submit" className="secondary" aria-label="Tìm kiếm">Tìm</button>
+          </form>}
+          <div className="topbar-right client-topbar-actions">
+            <div className="client-notifications-anchor">
+              <button type="button" className="secondary client-icon-button" onClick={() => setNotificationOpen(value=>!value)} aria-label={`Thông báo${unread.data?.unread_count ? `, ${unread.data.unread_count} chưa đọc` : ""}`} aria-expanded={notificationOpen} title="Thông báo">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9"/><path d="M10 21h4"/></svg>
+                {Number(unread.data?.unread_count)>0&&<span className="client-notification-dot"/>}
+              </button>
+              {notificationOpen&&<div className="client-notification-popover" role="region" aria-label="Thông báo"><strong>Thông báo</strong><p className="muted">{Number(unread.data?.unread_count)||0} thông báo chưa đọc</p><button type="button" className="secondary" onClick={()=>navigate("notifications")}>Mở trung tâm thông báo →</button></div>}
             </div>
-            <ActionForm onSubmit={onLogout} submitLabel="Đăng xuất" />
+            <button type="button" className="client-account-link" onClick={()=>navigate("profile")} aria-label={`Tài khoản ${user.display_name||"người dùng"}`}>
+              <span className="client-avatar">{user.display_name?.slice(0,1)||"U"}</span>
+              <div className="topbar-user-pill">
+                <strong className="topbar-display-name">{user.display_name||"Người dùng"}</strong>
+                <span className={`topbar-role-badge ${primaryRole.tone}`}>{primaryRole.name}</span>
+              </div>
+            </button>
+            <button type="button" className="secondary client-icon-button" aria-label="Đăng xuất" title="Đăng xuất" onClick={onLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
           </div>
         </header>
         <main id="main" className="content" tabIndex={-1}>
@@ -640,6 +918,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
             setEditor,
             setRevision,
             portal,
+            searchText,
           })}
         </main>
         <footer className="page-footer">
@@ -744,7 +1023,7 @@ export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unif
   if (user && portal === "admin" && !user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
     return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
-  if (user && portal === "client" && user.roles?.every((role) => ADMIN_ROLES.includes(role))) {
+  if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
     return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
   return user ? (

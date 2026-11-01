@@ -2,16 +2,16 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
 
+from api_core.health.schema_contract import (
+    REQUIRED_EAS_TABLES,
+    has_required_eas_tables,
+)
 from api_core.health.views import (
     EXPECTED_MOCK_RELATIONS,
     assess_mock_sources,
     assess_request_types,
     assess_runtime_role,
     storage_readiness,
-)
-from api_core.health.schema_contract import (
-    REQUIRED_EAS_TABLES,
-    has_required_eas_tables,
 )
 
 
