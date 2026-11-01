@@ -3,14 +3,14 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 1.2 Proxy: cổng nhân viên chặn /api/v1/admin|ops|internal (404); cổng quản trị có nginx.conf riêng, chặn internal; gateway trả 404 cho /api/v1/internal/
 - [x] 1.1 Quy tắc cổng: admin thuần chỉ dùng cổng quản trị; admin có APPROVER/EXECUTOR dùng cả hai (`rolePolicy.canUsePortal`)
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 1.2 Proxy & gateway chặn admin/ops/internal
+- [ ] 1.3 Mật khẩu admin đọc từ biến môi trường
 
 ## Chưa làm
-- [ ] 1.3 Mật khẩu admin đọc từ biến môi trường
 - [ ] 1.4 Quy định AI lưu DB
 - [ ] 1.5 Hoàn tác AI tự duyệt trong 24h
 - [ ] 2.1 Migration 10 nhóm + ngưng 8 loại trùng
