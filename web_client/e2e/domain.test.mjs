@@ -42,3 +42,17 @@ test("SoD: executor cannot accept own execution attempt", () => {
   const selfAccept = {...submitted, workflow:{...submitted.workflow, attempt:{...submitted.workflow.attempt,executor_id:"me"}}};
   assert.equal(permissions(me,selfAccept).accept,false);
 });
+
+test("revoke AI approval button shows only within 24h for a non-requester approver", () => {
+  const soon = new Date(Date.now() + 3600_000).toISOString();
+  const past = new Date(Date.now() - 60_000).toISOString();
+  const aiDone = (until, revocable = true) => ({
+    requester_id: "requester", status: "COMPLETED", approval_steps: [],
+    ai_auto_approval: { revocable, revocable_until: until },
+  });
+  assert.equal(permissions(me, aiDone(soon)).revokeAi, true);
+  assert.equal(permissions(me, aiDone(past)).revokeAi, false);
+  assert.equal(permissions(me, aiDone(soon, false)).revokeAi, false);
+  assert.equal(permissions({ ...me, id: "requester" }, aiDone(soon)).revokeAi, false);
+  assert.equal(permissions({ id: "x", roles: ["REQUESTER"] }, aiDone(soon)).revokeAi, false);
+});

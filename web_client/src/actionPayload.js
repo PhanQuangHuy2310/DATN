@@ -20,7 +20,7 @@ export function requestActionPayload(action, expectedVersion, values = {}) {
       ...(action === "approve" && values.executor_id ? { executor_id: values.executor_id } : {}),
     };
   }
-  if (action === "cancel") return { ...body, reason: values.reason };
+  if (action === "cancel" || action === "revokeAi") return { ...body, reason: values.reason };
   if (action === "claim") return body;
   if (action === "issue") {
     return { ...body, kind: values.kind, reason: values.reason };

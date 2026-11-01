@@ -496,9 +496,16 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
     else:
         raw_app_level = None
     risk_w, app_lvl = resolve_five_level_metadata(row[2], raw_risk, raw_app_level)
+    ai_approval = None
+    if row[3] == "COMPLETED":
+        from api_core.workflow.auto_approval import ai_approval_info
+
+        with connection.cursor() as cursor:
+            ai_approval = ai_approval_info(cursor, row[0], row[3])
     return JsonResponse(
         {
             "request": {
+                "ai_auto_approval": ai_approval,
                 "id": row[0],
                 "code": row[1],
                 "type_code": row[2],
@@ -594,6 +601,16 @@ def submit(request: HttpRequest, request_id: str | None = None) -> JsonResponse:
     response["X-Idempotent-Replay"] = "true" if result.replayed else "false"
     response["X-Correlation-ID"] = correlation_id(request)
     return response
+
+
+@require_POST
+@require_actor("APPROVER")
+def revoke_ai_approval_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    from api_core.workflow.auto_approval import revoke_ai_auto_approval
+
+    return _command_response(
+        request, revoke_ai_auto_approval, request_id=str(request_id)
+    )
 
 
 @require_POST

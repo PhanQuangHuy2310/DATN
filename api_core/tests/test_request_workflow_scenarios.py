@@ -195,6 +195,7 @@ class AutoApproveIntegrationTests(SimpleTestCase):
             "step_id": str(uuid4()),
             "assignee_id": str(uuid4()),
             "amount_vnd": None,
+            "ai_allowed": True,
         }
 
     def run_auto_approve(self, context, decision="auto_approve"):

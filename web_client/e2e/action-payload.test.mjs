@@ -40,3 +40,8 @@ test("approve may hand the work down to a chosen executor", () => {
     expected_version: 6, outcome: "APPROVE", reason: null,
   });
 });
+test("revoking an AI approval carries the mandatory reason", () => {
+  assert.deepEqual(requestActionPayload("revokeAi", 9, { reason: "AI duyệt sai quy định." }), {
+    expected_version: 9, reason: "AI duyệt sai quy định.",
+  });
+});

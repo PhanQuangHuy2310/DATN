@@ -372,6 +372,11 @@ export function permissions(user, r) {
     accept: granted.has("ACCEPTOR") && r.status === "WAITING_FOR_ACCEPTANCE" &&
       r.workflow?.lifecycle === "C" && r.workflow?.acceptor_id === user.id &&
       attempt?.state === "SUBMITTED" && !isExecutor,
+    // Within 24h of an AI auto-approval any approver (not the requester) may
+    // send the request back to manual review; the server re-checks scope.
+    revokeAi: granted.has("APPROVER") && !own && r.status === "COMPLETED" &&
+      Boolean(r.ai_auto_approval?.revocable) &&
+      Date.now() < Date.parse(r.ai_auto_approval?.revocable_until || 0),
   };
 }
 export const date = (v) => (v ? new Date(v).toLocaleString("vi-VN") : "—");
@@ -381,6 +386,7 @@ export function errorText(e) {
       "Dữ liệu đã thay đổi. Hãy tải lại hồ sơ trước khi tiếp tục.",
     REQUEST_STATE_CONFLICT: "Trạng thái đã thay đổi. Hãy tải lại hồ sơ.",
     FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
+    AI_APPROVAL_NOT_REVOCABLE: "Đã quá 24 giờ hoặc hồ sơ không còn do AI duyệt; không thể thu hồi.",
     INVALID_CREDENTIALS: "Tên đăng nhập hoặc mật khẩu không đúng.",
     DATABASE_QUERY_FAILED: "Máy chủ gặp lỗi truy vấn dữ liệu. Vui lòng báo quản trị viên kèm mã lỗi để kiểm tra Backend.",
     DATABASE_TEMPORARILY_UNAVAILABLE: "Kết nối cơ sở dữ liệu đang gián đoạn hoặc quá thời gian chờ. Vui lòng thử lại sau vài giây; nếu còn lỗi hãy gửi mã lỗi cho quản trị viên.",

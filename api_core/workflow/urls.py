@@ -74,6 +74,11 @@ urlpatterns = [
     ),
     # Decisions & Cancellation
     path(
+        "requests/<uuid:request_id>/ai-approval/revoke",
+        views.revoke_ai_approval_view,
+        name="request-ai-approval-revoke",
+    ),
+    path(
         "requests/<uuid:request_id>/approval-decisions",
         views.approval_decision,
         name="approval-decision",
