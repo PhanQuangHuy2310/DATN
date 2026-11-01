@@ -1,6 +1,6 @@
 # Kiểm thử luồng yêu cầu, bảo mật cổng, AI tự duyệt và danh mục 10 nhóm
 
-Nhánh `dat` → `main`. 30 commit, 110 file (kể cả commit cập nhật mô tả này). Đã thử gộp với `main` hiện tại: **không xung đột**.
+Nhánh `dat` → `main`. 31 commit, 110 file (kể cả commit cập nhật mô tả này). Đã thử gộp với `main` hiện tại: **không xung đột**.
 
 > ⚠️ **Trước khi deploy phải chạy migration trên Supabase** (mục "Việc cần làm khi deploy"). Code đã viết để vẫn chạy được khi migration chưa áp dụng: các tính năng mới chỉ tự bật sau khi bảng/cột tương ứng tồn tại.
 
@@ -32,7 +32,7 @@ Nhánh `dat` → `main`. 30 commit, 110 file (kể cả commit cập nhật mô 
 - **Ủy quyền duyệt** theo khoảng thời gian (trang Tài khoản). Khi bước duyệt kích hoạt: dùng người được ủy quyền; không có ủy quyền mà người duyệt vắng (theo chấm công) → chuyển lên quản lý trực tiếp. REWORK cũng thay người thực hiện vắng.
 - Chấm công khớp theo mã nhân viên, email làm dự phòng; lệnh `sync_employee_codes` báo bản ghi không khớp.
 - Dockerfile ai-service nhiều tầng, PaddlePaddle ở layer riêng có cache, thêm `ai_service/.dockerignore` (trước đây thư mục `.venv-ai` local bị đưa vào build context). **Đo ngày 02/11: image 8,5 GB → 3,41 GB; build context còn 21,7 MB.** Đã bổ sung `libgl1` (OpenCV của PaddleOCR cần, thiếu thì OCR lỗi khi chạy) — phát hiện khi build thật.
-- **Thu gọn build context gốc:** `.dockerignore` ở thư mục gốc loại `ai_service/`, `mobile_app/`, `database/`, `tests/`, `scripts/`, `plans/`, cache IDE/ruff và log. Các image `api`, `worker`, `web`, `web-admin` chỉ copy `api_core/`, `manage.py`, `project_env.py`, `web_client/`, `web_admin/`, nhưng trước đây vẫn phải gửi cả repo (riêng `ai_service/training/data` đã 824 MB, cộng thêm venv AI local) vào Docker mỗi lần build. Có test chặn trường hợp loại nhầm thư mục mà Dockerfile cần.
+- **Thu gọn build context gốc:** `.dockerignore` ở thư mục gốc loại `ai_service/`, `mobile_app/`, `database/`, `tests/`, `scripts/`, `plans/`, cache IDE/ruff và log. Các image `api`, `worker`, `web`, `web-admin` chỉ copy `api_core/`, `manage.py`, `project_env.py`, `web_client/`, `web_admin/`, nhưng trước đây vẫn phải gửi cả repo vào Docker mỗi lần build — thừa khoảng **2,2 GB** trên máy dev (venv AI local 1,4 GB + `ai_service/training/data` 824 MB). Có test chặn trường hợp loại nhầm thư mục mà Dockerfile cần.
 - Smoke test OCR chạy PaddleOCR thật trên 3 hóa đơn tự sinh, thêm job CI `ocr-smoke`; bộ trích xuất trường chịu được OCR mất dấu tiếng Việt.
 
 ### Phần 5 — Ưu tiên thấp
