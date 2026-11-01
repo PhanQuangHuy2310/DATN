@@ -18,7 +18,7 @@ class WorkflowCommandBoundaryTests(SimpleTestCase):
     def setUp(self):
         self.actor = Actor(
             id=str(uuid4()),
-            username="actor",
+            email="actor@eas.com",
             display_name="Actor",
             department_id=str(uuid4()),
             auth_version=1,

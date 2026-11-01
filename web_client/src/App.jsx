@@ -52,6 +52,35 @@ function Login({ onLogin, portal = "client" }) {
     return () => clearInterval(timer);
   }, []);
 
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetSubmitted, setResetSubmitted] = useState(false);
+
+  function closeForgotModal() {
+    setShowForgotModal(false);
+    setResetSubmitted(false);
+    setResetError("");
+  }
+
+  async function submitReset(e) {
+    e.preventDefault();
+    const values = Object.fromEntries(new FormData(e.currentTarget));
+    setResetBusy(true);
+    setResetError("");
+    try {
+      await initializeCsrf();
+      await api("/api/v1/auth/password-reset/request", {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+      setResetSubmitted(true);
+    } catch (err) {
+      setResetError(errorText(err));
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
   async function submit(e) {
     e.preventDefault();
     const values = Object.fromEntries(new FormData(e.currentTarget));
@@ -110,7 +139,6 @@ function Login({ onLogin, portal = "client" }) {
           </button>
         </div>
       </section>
-
       {/* Right Pane: Login Form matching design */}
       <section className="auth-form-pane" aria-label="Màn hình đăng nhập">
         <div className="auth-card-clean">
@@ -133,8 +161,8 @@ function Login({ onLogin, portal = "client" }) {
               )}
 
               <div className="auth-field-group">
-                <label htmlFor="login-username" className="sr-only">
-                  Tên đăng nhập hoặc Email
+                <label htmlFor="login-email" className="sr-only">
+                  Email nhân viên
                 </label>
                 <div className="auth-input-wrapper">
                   <span className="auth-field-icon" aria-hidden="true">
@@ -144,11 +172,11 @@ function Login({ onLogin, portal = "client" }) {
                     </svg>
                   </span>
                   <input
-                    id="login-username"
-                    name="username"
-                    type="text"
-                    placeholder="Tên đăng nhập hoặc email"
-                    autoComplete="username"
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    placeholder="Email nhân viên"
+                    autoComplete="email"
                     required
                     className="auth-pill-input"
                   />
@@ -243,15 +271,33 @@ function Login({ onLogin, portal = "client" }) {
           <div className="auth-modal-card">
             <div className="auth-modal-header">
               <h3 id="forgot-modal-title">Cấp lại mật khẩu</h3>
-              <button type="button" className="auth-modal-close" onClick={() => setShowForgotModal(false)} aria-label="Đóng">✕</button>
+              <button type="button" className="auth-modal-close" onClick={closeForgotModal} aria-label="Đóng">✕</button>
             </div>
-            <div className="auth-modal-body">
-              <p>Để được cấp lại mật khẩu, hãy liên hệ bộ phận quản trị hệ thống của đơn vị. Quản trị viên sẽ xác minh danh tính và hỗ trợ đặt mật khẩu tạm thời.</p>
-              <p>Không chia sẻ mật khẩu hoặc mã xác minh trong yêu cầu hỗ trợ.</p>
-            </div>
-            <div className="auth-modal-footer">
-              <button type="button" className="auth-btn-primary auth-modal-btn" onClick={() => setShowForgotModal(false)}>Đóng</button>
-            </div>
+            {resetSubmitted ? (
+              <>
+                <div className="auth-modal-body">
+                  <p role="status">Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị. Quản trị viên phải xác minh danh tính trước khi phê duyệt; sau đó mật khẩu tạm thời sẽ được gửi đến email nhân viên.</p>
+                </div>
+                <div className="auth-modal-footer">
+                  <button type="button" className="auth-btn-primary auth-modal-btn" onClick={closeForgotModal}>Đóng</button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={submitReset} noValidate>
+                <fieldset disabled={resetBusy} className="auth-fieldset">
+                  <div className="auth-modal-body">
+                    <p>Nhập email nhân viên để gửi yêu cầu. Quản trị viên sẽ xác minh danh tính trước khi cấp mật khẩu tạm thời.</p>
+                    <p>Không chia sẻ mật khẩu hoặc mã xác minh trong yêu cầu hỗ trợ.</p>
+                    {resetError && <div role="alert" className="auth-error-banner">{resetError}</div>}
+                    <label htmlFor="reset-email" className="sr-only">Email nhân viên</label>
+                    <input id="reset-email" name="email" type="email" autoComplete="email" placeholder="Email nhân viên" required className="auth-pill-input" />
+                  </div>
+                  <div className="auth-modal-footer">
+                    <button type="submit" className="auth-btn-primary auth-modal-btn">{resetBusy ? "Đang gửi…" : "Gửi yêu cầu đặt lại"}</button>
+                  </div>
+                </fieldset>
+              </form>
+            )}
           </div>
         </div>
       )}

@@ -509,7 +509,7 @@ export function Profile({ user, onChanged }) {
       <h2>Hồ sơ cá nhân</h2>
       <p>{user.display_name}</p>
       <p className="muted">
-        {user.username} · {user.department_id}
+        {user.email} · {user.department_id}
       </p>
       <h2>Đổi mật khẩu</h2>
       <ActionForm
@@ -520,8 +520,8 @@ export function Profile({ user, onChanged }) {
           const pwd = v.new_password;
           if (pwd.length < 15 || pwd.length > 128 || !/[a-z]/.test(pwd) ||
             !/[A-Z]/.test(pwd) || !/[0-9]/.test(pwd) || !/[^\p{L}\p{N}]/u.test(pwd) ||
-            (user.username && pwd.toLowerCase().includes(user.username.toLowerCase())))
-            throw new Error("Mật khẩu chưa đạt chính sách: 15–128 ký tự, có chữ hoa, thường, số, ký tự đặc biệt và không chứa username.");
+            (user.email && pwd.toLowerCase().includes(user.email.split("@")[0].toLowerCase())))
+            throw new Error("Mật khẩu chưa đạt chính sách: 15–128 ký tự, có chữ hoa, thường, số, ký tự đặc biệt và không chứa phần tên trước @ của email.");
           await api("/api/v1/auth/password", {
             method: "POST",
             body: JSON.stringify({

@@ -28,7 +28,7 @@ class MaintenanceModeTests(SimpleTestCase):
         reset_maintenance_for_test()
         self.non_admin_user = AuthUser(
             id=str(uuid4()),
-            username="requester1",
+            email="requester1@eas.com",
             display_name="Nguyen Van A",
             department_id=str(uuid4()),
             password_hash=make_password("UserPass-2026!", hasher="pbkdf2_sha256"),
@@ -38,7 +38,7 @@ class MaintenanceModeTests(SimpleTestCase):
         )
         self.admin_user = AuthUser(
             id=str(uuid4()),
-            username="policy_admin",
+            email="policy_admin@eas.com",
             display_name="Tran Thi B (Admin)",
             department_id=str(uuid4()),
             password_hash=make_password("AdminPass-2026!", hasher="pbkdf2_sha256"),
@@ -93,7 +93,9 @@ class MaintenanceModeTests(SimpleTestCase):
         # Cố đăng nhập khi hệ thống đang bảo trì
         response = self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps({"username": "requester1", "password": "UserPass-2026!"}),
+            data=json.dumps(
+                {"email": "requester1@eas.com", "password": "UserPass-2026!"}
+            ),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 503)
@@ -114,13 +116,13 @@ class MaintenanceModeTests(SimpleTestCase):
         response = self.client.post(
             "/api/v1/auth/login",
             data=json.dumps(
-                {"username": "policy_admin", "password": "AdminPass-2026!"}
+                {"email": "policy_admin@eas.com", "password": "AdminPass-2026!"}
             ),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["user"]["username"], "policy_admin")
+        self.assertEqual(body["user"]["email"], "policy_admin@eas.com")
         self.assertTrue(body["maintenance"]["active"])
         self.assertEqual(body["maintenance"]["status"], "UPDATING")
         self.assertIn("quá trình cập nhật", body["maintenance"]["message"])
@@ -130,7 +132,7 @@ class MaintenanceModeTests(SimpleTestCase):
         # Giả lập user thường đã có session từ trước
         non_admin_actor = Actor(
             id=self.non_admin_user.id,
-            username="requester1",
+            email="requester1@eas.com",
             display_name="Nguyen Van A",
             department_id=str(uuid4()),
             auth_version=1,
@@ -149,7 +151,7 @@ class MaintenanceModeTests(SimpleTestCase):
     def test_require_actor_allows_admin_during_maintenance(self, load_actor):
         admin_actor = Actor(
             id=self.admin_user.id,
-            username="policy_admin",
+            email="policy_admin@eas.com",
             display_name="Tran Thi B (Admin)",
             department_id=str(uuid4()),
             auth_version=1,
@@ -165,7 +167,7 @@ class MaintenanceModeTests(SimpleTestCase):
         response = self.client.get("/api/v1/me")
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["user"]["username"], "policy_admin")
+        self.assertEqual(body["user"]["email"], "policy_admin@eas.com")
         self.assertTrue(body["maintenance"]["active"])
         self.assertEqual(body["maintenance"]["status"], "UPDATING")
 
@@ -183,7 +185,7 @@ class MaintenanceModeTests(SimpleTestCase):
     def test_complete_maintenance_endpoint(self, mock_audit, load_actor):
         admin_actor = Actor(
             id=self.admin_user.id,
-            username="policy_admin",
+            email="policy_admin@eas.com",
             display_name="Tran Thi B (Admin)",
             department_id=str(uuid4()),
             auth_version=1,
@@ -223,8 +225,10 @@ class MaintenanceModeTests(SimpleTestCase):
         # User thường đăng nhập lại bình thường
         response = self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps({"username": "requester1", "password": "UserPass-2026!"}),
+            data=json.dumps(
+                {"email": "requester1@eas.com", "password": "UserPass-2026!"}
+            ),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["user"]["username"], "requester1")
+        self.assertEqual(response.json()["user"]["email"], "requester1@eas.com")

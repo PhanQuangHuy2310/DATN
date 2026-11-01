@@ -37,7 +37,7 @@ class OpsMetadataAuthorizationTests(SimpleTestCase):
         connection.cursor.return_value = cursor
         actor = Actor(
             id=str(uuid4()),
-            username="ops",
+            email="ops@eas.com",
             display_name="Ops",
             department_id=str(uuid4()),
             auth_version=1,
@@ -85,7 +85,7 @@ class AuditEventScopeTests(SimpleTestCase):
         connection.cursor.return_value = cursor
         actor = Actor(
             id=str(uuid4()),
-            username="auditor",
+            email="auditor@eas.com",
             display_name="Auditor",
             department_id=str(uuid4()),
             auth_version=1,

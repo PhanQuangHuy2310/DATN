@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from django.core.management import call_command
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from api_core.administration.service import (
     TABLES,
@@ -73,7 +73,7 @@ class AdministrationTests(SimpleTestCase):
         v = validate(
             "users",
             {
-                "username": "person",
+                "email": "person@eas.com",
                 "display_name": "Person",
                 "department_id": str(uuid4()),
                 "password": "Abcd!92873#long",
@@ -81,6 +81,30 @@ class AdministrationTests(SimpleTestCase):
         )
         self.assertTrue(v["password_hash"].startswith("argon2"))
         self.assertNotIn("password", v)
+
+    @override_settings(EAS_LOGIN_EMAIL_DOMAIN="gmail.com")
+    def test_user_validation_uses_configured_email_domain(self):
+        valid = validate(
+            "users",
+            {
+                "email": "person+test@gmail.com",
+                "display_name": "Person",
+                "department_id": str(uuid4()),
+                "password": "Abcd!92873#long",
+            },
+        )
+        self.assertEqual(valid["email"], "person+test@gmail.com")
+        with self.assertRaises(CommandError) as error:
+            validate(
+                "users",
+                {
+                    "email": "person@eas.com",
+                    "display_name": "Person",
+                    "department_id": str(uuid4()),
+                    "password": "Abcd!92873#long",
+                },
+            )
+        self.assertEqual(error.exception.code, "INVALID_EMAIL_DOMAIN")
 
     def test_membership_owner_immutable(self):
         with self.assertRaises(CommandError):

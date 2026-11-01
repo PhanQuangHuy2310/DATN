@@ -1,8 +1,8 @@
 """Runtime EAS schema contract.
 
-Do not use ``count(*) = 30`` as a readiness requirement. PostgreSQL has
+Do not use a fixed table count as a readiness requirement. PostgreSQL has
 supporting lookup tables and future additive schema changes may introduce
-more tables. The required 30 workflow tables must all exist by name.
+more tables. Every table required by the deployed API must exist by name.
 """
 
 REQUIRED_EAS_TABLES = frozenset(
@@ -10,6 +10,7 @@ REQUIRED_EAS_TABLES = frozenset(
         "security_epoch",
         "department",
         "app_user",
+        "password_reset_request",
         "request_type",
         "role_membership",
         "config_release",

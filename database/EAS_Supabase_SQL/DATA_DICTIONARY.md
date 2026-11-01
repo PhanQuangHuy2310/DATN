@@ -1,6 +1,6 @@
 # EAS 2.0.1 — Từ điển dữ liệu vật lý
 
-Nguồn: `03_Du_lieu_va_API_v2.docx`, DB01–DB30. Trích từ PostgreSQL sau khi cài script 00; schema `eas`. Có 30 bảng và 260 cột. Mọi FK dùng ON DELETE RESTRICT. Cột nullable hiển thị Có/Không; NULL nghĩa là không có default trong DDL.
+Tạo từ schema catalog baseline EAS 2.0.1, DB01–DB30. Từ điển mô tả PostgreSQL sau khi cài script 00; migration 04 và 05 lần lượt bổ sung các bảng `lifecycle`, `role`, `password_reset_request`, đưa schema cuối lên 33 bảng. Foreign key dùng ON DELETE RESTRICT. Nullable hiển thị Có/Không; NULL nghĩa là DDL không khai báo default.
 
 | ID nguồn | Bảng | Số cột | Chức năng |
 |---|---|---:|---|
@@ -106,7 +106,7 @@ Tài khoản backend, không phải auth.users của Supabase; hash Argon2 do ba
 | Cột | Kiểu PostgreSQL | Nullable | Default |
 |---|---|---|---|
 | `id` | `uuid` | Không | `gen_random_uuid()` |
-| `username` | `character varying(80)` | Không | NULL |
+| `email` | `character varying(254)` | Không | NULL |
 | `display_name` | `character varying(150)` | Không | NULL |
 | `department_id` | `uuid` | Không | NULL |
 | `manager_id` | `uuid` | Có | NULL |
@@ -132,16 +132,16 @@ Ràng buộc:
 - `app_user_password_hash_check`: `CHECK (length(password_hash) > 0)`
 - `app_user_password_hash_not_null`: `NOT NULL password_hash`
 - `app_user_pkey`: `PRIMARY KEY (id)`
-- `app_user_username_check`: `CHECK (username::text = lower(btrim(username::text)) AND length(username::text) > 0)`
-- `app_user_username_key`: `UNIQUE (username)`
-- `app_user_username_not_null`: `NOT NULL username`
+- `app_user_email_check`: `CHECK (email = lower(btrim(email)) AND email ~ '^[^@[:space:]]+@eas[.]com$')`
+- `app_user_email_key`: `UNIQUE (email)`
+- `app_user_email_not_null`: `NOT NULL email`
 - `manager_acyclic`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
 - `user_no_self_manager`: `CHECK (manager_id IS NULL OR manager_id <> id)`
 
 Chỉ mục:
 
 - `CREATE UNIQUE INDEX app_user_pkey ON eas.app_user USING btree (id)`
-- `CREATE UNIQUE INDEX app_user_username_key ON eas.app_user USING btree (username)`
+- `CREATE UNIQUE INDEX app_user_email_key ON eas.app_user USING btree (email)`
 - `CREATE INDEX ix_app_user_department_id ON eas.app_user USING btree (department_id)`
 - `CREATE INDEX ix_app_user_manager_id ON eas.app_user USING btree (manager_id)`
 

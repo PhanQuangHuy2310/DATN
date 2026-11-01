@@ -1,4 +1,4 @@
-r"""Start worker using .env.database + .env.worker; does not print credentials.
+r"""Start worker using the single repository-root .env; does not print credentials.
 
 CMD: .\.venv\Scripts\python.exe run_worker_local.py --once
      .\.venv\Scripts\python.exe run_worker_local.py

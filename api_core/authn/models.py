@@ -6,7 +6,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class AuthUser:
     id: str
-    username: str
+    email: str
     display_name: str
     department_id: str
     password_hash: str
@@ -18,7 +18,7 @@ class AuthUser:
 @dataclass(frozen=True)
 class Actor:
     id: str
-    username: str
+    email: str
     display_name: str
     department_id: str
     auth_version: int

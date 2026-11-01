@@ -55,13 +55,13 @@ def main():
     with transaction.atomic():
         with connection.cursor() as c:
             c.execute("SET TRANSACTION READ ONLY")
-            c.execute("SELECT current_user, id::text, username, display_name, department_id::text, auth_version, must_change_password FROM eas.app_user WHERE username = %s AND is_active", ["admin"])
+            c.execute("SELECT current_user, id::text, email, display_name, department_id::text, auth_version, must_change_password FROM eas.app_user WHERE email = %s AND is_active", ["admin@eas.com"])
             row = c.fetchone()
     if not row:
         print("ERROR: Khong tim thay tai khoan admin active de test pham vi du lieu.")
         return 2
     print("DATABASE_ROLE:", row[0], "| TEST_ACTOR:", row[2])
-    actor = Actor(id=row[1],username=row[2],display_name=row[3], department_id=row[4],auth_version=row[5],roles=frozenset(),must_change_password=row[6])
+    actor = Actor(id=row[1],email=row[2],display_name=row[3], department_id=row[4],auth_version=row[5],roles=frozenset(),must_change_password=row[6])
 
     def execute(name,fn):
         try:

@@ -2,7 +2,7 @@ r"""Create a one-time temporary password using EAS's existing audited reset.
 
 Run in the EAS project root (same directory as manage.py):
 
-  .\.venv\Scripts\python.exe set_temporary_admin_password.py --user admin \
+  .\.venv\Scripts\python.exe set_temporary_admin_password.py --email admin@eas.com \
       --operator admin --approval LOCAL-RECOVERY-20261027
 
 Requirements:
@@ -37,13 +37,13 @@ def generate_password(length: int = 24) -> str:
     return "".join(chars)
 
 
-def _obtain_valid_password(username: str) -> str:
+def _obtain_valid_password(email: str) -> str:
     from api_core.authn.service import validate_new_password
 
     for _ in range(30):
         candidate = generate_password()
         try:
-            validate_new_password(candidate, username)
+            validate_new_password(candidate, email)
             return candidate
         except Exception:  # noqa: BLE001
             continue
@@ -53,15 +53,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Generate an EAS temporary password, reset account with audit, force password change"
     )
-    parser.add_argument("--user", default="admin", help="Account to reset (default: admin)")
-    parser.add_argument("--operator", required=True, help="Authorized operator username, for audit")
+    parser.add_argument("--email", "--user", dest="email", default="admin@eas.com", help="Account email to reset")
+    parser.add_argument("--operator", required=True, help="Authorized operator email or UUID, for audit")
     parser.add_argument("--approval", required=True, help="Authorized recovery ticket/reference")
     args = parser.parse_args()
-    username = args.user.strip().lower()
+    email = args.email.strip().lower()
     operator = args.operator.strip()
     approval = args.approval.strip()
-    if not username or not operator or len(approval) < 10:
-        parser.error("--user/--operator cannot be blank; --approval needs at least 10 characters")
+    if not email or not operator or len(approval) < 10:
+        parser.error("--email/--operator cannot be blank; --approval needs at least 10 characters")
 
     root = Path(__file__).resolve().parent
     if not (root / "manage.py").exists():
@@ -83,14 +83,14 @@ def main() -> int:
         print(f"[ERROR] Khong tai duoc cau hinh EAS: {type(exc).__name__}", file=sys.stderr)
         return 2
 
-    print(f"Tai khoan dich: {username}")
+    print(f"Tai khoan dich: {email}")
     print("Canh bao: Lenh thay doi mat khau tren DATABASE dang ket noi, vo hieu hoa phien cu.")
     print("Chi thuc hien neu ban co quyen quan tri database nay.")
     if input("Nhap RESET de xac nhan: ").strip() != "RESET":
         print("Da huy, khong thay doi gi.")
         return 1
 
-    password = _obtain_valid_password(username)
+    password = _obtain_valid_password(email)
     if not password:
         print("[ERROR] Khong tao duoc mat khau thoa chinh sach.", file=sys.stderr)
         return 2
@@ -100,7 +100,7 @@ def main() -> int:
         try:
             call_command(
                 "account_reset",
-                user=username,
+                user=email,
                 mode="reset-password",
                 operator=operator,
                 approval=approval,
@@ -121,8 +121,8 @@ def main() -> int:
     try:
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT must_change_password, is_active FROM eas.app_user WHERE username = %s",
-                [username],
+                "SELECT must_change_password, is_active FROM eas.app_user WHERE email = %s",
+                [email],
             )
             state = cursor.fetchone()
         if not state or not state[0]:

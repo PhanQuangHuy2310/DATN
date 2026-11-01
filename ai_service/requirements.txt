@@ -14,7 +14,7 @@ joblib==1.4.2
 imbalanced-learn==0.12.3
 
 # ===== OCR =====
-paddlepaddle==2.6.1
+paddlepaddle==2.6.2
 paddleocr==2.8.1
 Pillow==10.4.0
 opencv-python-headless==4.10.0.84
