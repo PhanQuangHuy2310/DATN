@@ -390,6 +390,7 @@ export function errorText(e) {
       "Dữ liệu đã thay đổi. Hãy tải lại hồ sơ trước khi tiếp tục.",
     REQUEST_STATE_CONFLICT: "Trạng thái đã thay đổi. Hãy tải lại hồ sơ.",
     FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
+    SYSTEM_ACCOUNT_LOCKED: "Tài khoản hệ thống không thể sửa, vô hiệu hóa hay đổi quyền.",
     AI_APPROVAL_NOT_REVOCABLE: "Đã quá 24 giờ hoặc hồ sơ không còn do AI duyệt; không thể thu hồi.",
     INVALID_CREDENTIALS: "Tên đăng nhập hoặc mật khẩu không đúng.",
     DATABASE_QUERY_FAILED: "Máy chủ gặp lỗi truy vấn dữ liệu. Vui lòng báo quản trị viên kèm mã lỗi để kiểm tra Backend.",

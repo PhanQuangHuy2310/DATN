@@ -225,6 +225,7 @@ export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users
   const [modal, setModal] = useState(null);
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
+  const [showSystem, setShowSystem] = useState(false);
   const [debounced, setDebounced] = useState("");
   const [status, setStatus] = useState("");
   const [role, setRole] = useState("");
@@ -233,6 +234,7 @@ export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users
   if (debounced) params.set("q", debounced);
   if (status) params.set(kind === "memberships" ? "state" : "active", status);
   if (role && ["users", "memberships"].includes(kind)) params.set("role", role);
+  if (showSystem && ["users", "memberships"].includes(kind)) params.set("include_system", "true");
   const r = useResource(`/api/v1/admin/${kind}?${params}`);
   const total = r.data?.total ?? 0;
   async function save(v) {
@@ -281,6 +283,7 @@ export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users
         {["users", "memberships"].includes(kind) && <label>Vai trò<select value={role} onChange={(e) => { setRole(e.target.value); setOffset(0); }}>
           <option value="">Mọi vai trò</option>{Object.entries(roles).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </select></label>}
+        {["users", "memberships"].includes(kind) && <label className="identity-system-toggle"><input type="checkbox" checked={showSystem} onChange={(e) => { setShowSystem(e.target.checked); setOffset(0); }} /> Hiện tài khoản hệ thống</label>}
         <div className="identity-filter-reset"><button className="secondary" type="button" onClick={() => { setSearch(""); setStatus(""); setRole(""); setOffset(0); }}>Đặt lại bộ lọc</button></div>
       </div>
     </section>
@@ -289,10 +292,10 @@ export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users
         {kind === "memberships" && <MembershipOverview items={r.data?.items || []}/>}
         <div className="table-wrap"><table className="responsive-records identity-table"><thead><tr><th>Thông tin</th><th>Phòng ban / scope</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
           {r.data?.items?.map((item) => <tr key={item.id}>
-            <td data-label="Thông tin"><div className="identity-primary"><span className="identity-avatar" aria-hidden="true">{(item.display_name || item.name || item.role || item.code || "E").slice(0, 1).toLocaleUpperCase("vi")}</span><span><strong>{item.display_name || item.name || roles[item.role] || item.code || "—"}</strong><small>{item.email || (kind === "memberships" ? roles[item.role] || "Đã cấp quyền" : "")}</small>{kind === "request-types" && <small>{CATEGORY_LABELS[item.category] || "Nghiệp vụ"} · Vòng đời {item.lifecycle} · Mức rủi ro {item.risk_weight || 3}/5 · Duyệt {item.approval_level || 1}/5 cấp · {item.description || "Chưa có mô tả"}</small>}</span></div></td>
+            <td data-label="Thông tin"><div className="identity-primary"><span className="identity-avatar" aria-hidden="true">{(item.display_name || item.name || item.role || item.code || "E").slice(0, 1).toLocaleUpperCase("vi")}</span><span><strong>{item.display_name || item.name || roles[item.role] || item.code || "—"}{item.is_system_account && <span className="badge"> Hệ thống</span>}</strong><small>{item.email || (kind === "memberships" ? roles[item.role] || "Đã cấp quyền" : "")}</small>{kind === "request-types" && <small>{CATEGORY_LABELS[item.category] || "Nghiệp vụ"} · Vòng đời {item.lifecycle} · Mức rủi ro {item.risk_weight || 3}/5 · Duyệt {item.approval_level || 1}/5 cấp · {item.description || "Chưa có mô tả"}</small>}</span></div></td>
             <td data-label="Phạm vi"><small>{item.scope_kind ? `${item.scope_kind === "GLOBAL" ? "Toàn tổ chức" : "Theo phòng ban"} · ${item.type_scope === "ALL" ? "Mọi loại yêu cầu" : "Loại yêu cầu cụ thể"}` : item.department_id ? "Theo phòng ban đã chọn" : "—"}</small></td>
             <td data-label="Trạng thái"><span className={`identity-status ${kind === "memberships" ? (item.revoked_at ? "off" : item.valid_to && new Date(item.valid_to) <= new Date() ? "off" : new Date(item.valid_from) > new Date() ? "future" : "on") : item.is_active ? "on" : "off"}`}>{kind === "memberships" ? item.revoked_at ? "Đã thu hồi" : item.valid_to && new Date(item.valid_to) <= new Date() ? "Hết hiệu lực" : new Date(item.valid_from) > new Date() ? "Chưa hiệu lực" : "Đang hiệu lực" : item.is_active ? "Hoạt động" : "Ngừng hoạt động"}</span></td>
-            <td data-label="Thao tác"><div className="actions"><button type="button" className="secondary" onClick={() => setModal({mode:"view",record:item})}>Chi tiết</button><button type="button" className="secondary" disabled={!!item.revoked_at} onClick={() => setModal({mode:"edit",record:item})}>Sửa</button><button type="button" className="danger" disabled={kind === "memberships" ? !!item.revoked_at : !item.is_active} onClick={() => setModal({mode:"delete",record:item})}>{kind === "memberships" ? "Thu hồi" : "Vô hiệu hóa"}</button></div></td>
+            <td data-label="Thao tác"><div className="actions"><button type="button" className="secondary" onClick={() => setModal({mode:"view",record:item})}>Chi tiết</button><button type="button" className="secondary" disabled={!!item.revoked_at || item.is_system_account} title={item.is_system_account ? "Tài khoản hệ thống không sửa được" : undefined} onClick={() => setModal({mode:"edit",record:item})}>Sửa</button><button type="button" className="danger" disabled={item.is_system_account || (kind === "memberships" ? !!item.revoked_at : !item.is_active)} onClick={() => setModal({mode:"delete",record:item})}>{kind === "memberships" ? "Thu hồi" : "Vô hiệu hóa"}</button></div></td>
           </tr>)}
         </tbody></table></div>
         {!r.data?.items?.length && <p className="empty">Không có dữ liệu phù hợp. Bạn có thể đổi bộ lọc hoặc thêm mới.</p>}

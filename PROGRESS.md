@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 4.1 Cờ is_system_account (migration 14 + rollback); API admin ẩn tài khoản hệ thống mặc định (include_system=true để xem), từ chối sửa/vô hiệu hóa/đổi quyền (403 SYSTEM_ACCOUNT_LOCKED); UI có ô 'Hiện tài khoản hệ thống', nhãn và khóa nút. Hoạt động cả trước khi chạy migration 14 (nhận diện qua EAS_AI_SYSTEM_USER_ID)
 - [x] 3.1 Màn hình quản trị lazy-load qua adminScreens.jsx, chỉ entry web_admin truyền vào App (AdminScreensContext). Đã build kiểm tra: bundle cổng nhân viên 0/7 dấu hiệu màn hình quản trị, cổng quản trị đủ 7/7; scripts/check_client_bundle.py chạy trong CI
 - [x] 2.5 tests/test_request_catalog_v2.py (13 test): 10 nhóm/58/13/8, mọi loại có cấu hình hợp lệ và nhóm hợp lệ, số cấp = số cấp tối đa của luồng, mọi loại (kể cả 13 loại mới) tạo được route cho 8 phòng (fixture bindings ẩn danh), migration 11/12/13 khớp danh mục, có rollback, catalogV2.js đồng bộ
 - [x] 2.4 Code dùng catalog_v2.json: REQUEST_TYPE_CATEGORIES = 10 nhóm; menu tạo yêu cầu, trọng số/số cấp, nhãn trường, tên loại lấy từ catalog_v2; web_client/src/catalogV2.js sinh bằng scripts/generate_catalog_js.py; IdentityAdmin 10 nhóm; PlanCatalog chế độ 'Danh mục 10 nhóm (58 loại)'
@@ -17,10 +18,9 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 4.1 Cờ is_system_account cho EAS AI
+- [ ] 4.2 Xóa ingest_policy / toggle_maintenance cũ
 
 ## Chưa làm
-- [ ] 4.2 Xóa ingest_policy / toggle_maintenance cũ
 - [ ] 4.3 Giao diện nạp bộ luật POLICY_ADMIN
 - [ ] 4.4 Ủy quyền duyệt
 - [ ] 4.5 Chấm công khớp mã nhân viên
@@ -36,6 +36,6 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - 1.5: chỉ hoàn tác được hồ sơ vòng đời A đã COMPLETED (AI chỉ tự duyệt vòng đời A). Bất kỳ APPROVER trong phạm vi phòng/loại (trừ người tạo) đều thu hồi được, không chỉ người duyệt gốc.
 
 ## Việc tôi phải làm thủ công
-- Chạy trên Supabase SQL Editor theo thứ tự: `database/migrations/07_dev_restore_eas_emails.sql` (đã chạy), `08_ai_system_account.sql`, `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`, `09_ai_policy_store.sql`, `10_ai_auto_approve_revoke.sql`, `11_request_category_regroup.sql`, `12_request_types_new.sql`, `13_it_support_executor.sql`
+- Chạy trên Supabase SQL Editor theo thứ tự: `database/migrations/07_dev_restore_eas_emails.sql` (đã chạy), `08_ai_system_account.sql`, `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`, `09_ai_policy_store.sql`, `10_ai_auto_approve_revoke.sql`, `11_request_category_regroup.sql`, `12_request_types_new.sql`, `13_it_support_executor.sql`, `14_system_account_flag.sql`
 - Sau migration 09, nếu container AI đang có file quy định cũ: `python manage.py import_ai_policy_file ai_service/data/active_enterprise_policy.json --operator <email POLICY_ADMIN>`
 - Rollback: `database/migrations/rollback/`
