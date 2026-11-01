@@ -128,20 +128,20 @@ function Login({ onLogin, portal = "client" }) {
 
               <div className="auth-field-group">
                 <label htmlFor="login-username" className="sr-only">
-                  Tên đăng nhập
+                  Tên đăng nhập hoặc Email
                 </label>
                 <div className="auth-input-wrapper">
                   <span className="auth-field-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
+                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L1 7" />
                     </svg>
                   </span>
                   <input
                     id="login-username"
                     name="username"
                     type="text"
-                    placeholder="Tên đăng nhập"
+                    placeholder="Email Address"
                     autoComplete="username"
                     required
                     className="auth-pill-input"
