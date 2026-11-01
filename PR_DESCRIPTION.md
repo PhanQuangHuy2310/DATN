@@ -1,6 +1,6 @@
 # Kiểm thử luồng yêu cầu, bảo mật cổng, AI tự duyệt và danh mục 10 nhóm
 
-Nhánh `dat` → `main`. 25 commit, 108 file (kể cả commit cập nhật mô tả này). Đã thử gộp với `main` hiện tại: **không xung đột**.
+Nhánh `dat` → `main`. 27 commit, 108 file (kể cả commit cập nhật mô tả này). Đã thử gộp với `main` hiện tại: **không xung đột**.
 
 > ⚠️ **Trước khi deploy phải chạy migration trên Supabase** (mục "Việc cần làm khi deploy"). Code đã viết để vẫn chạy được khi migration chưa áp dụng: các tính năng mới chỉ tự bật sau khi bảng/cột tương ứng tồn tại.
 
@@ -31,7 +31,7 @@ Nhánh `dat` → `main`. 25 commit, 108 file (kể cả commit cập nhật mô 
 - Trang "Bộ luật quy định AI" cho POLICY_ADMIN: tải tệp JSON, danh sách phiên bản, kích hoạt/khôi phục.
 - **Ủy quyền duyệt** theo khoảng thời gian (trang Tài khoản). Khi bước duyệt kích hoạt: dùng người được ủy quyền; không có ủy quyền mà người duyệt vắng (theo chấm công) → chuyển lên quản lý trực tiếp. REWORK cũng thay người thực hiện vắng.
 - Chấm công khớp theo mã nhân viên, email làm dự phòng; lệnh `sync_employee_codes` báo bản ghi không khớp.
-- Dockerfile ai-service nhiều tầng, PaddlePaddle ở layer riêng có cache, thêm `ai_service/.dockerignore` (trước đây thư mục `.venv-ai` local bị đưa vào build context).
+- Dockerfile ai-service nhiều tầng, PaddlePaddle ở layer riêng có cache, thêm `ai_service/.dockerignore` (trước đây thư mục `.venv-ai` local bị đưa vào build context). **Đo ngày 02/11: image 8,5 GB → 3,41 GB; build context còn 21,7 MB.** Đã bổ sung `libgl1` (OpenCV của PaddleOCR cần, thiếu thì OCR lỗi khi chạy) — phát hiện khi build thật.
 - Smoke test OCR chạy PaddleOCR thật trên 3 hóa đơn tự sinh, thêm job CI `ocr-smoke`; bộ trích xuất trường chịu được OCR mất dấu tiếng Việt.
 
 ### Phần 5 — Ưu tiên thấp
@@ -54,7 +54,7 @@ Nhánh `dat` → `main`. 25 commit, 108 file (kể cả commit cập nhật mô 
 
 Số liệu OCR: độ tin cậy 95,7–96,6%; đọc đúng chữ 97,8–99,2% nhưng **giữ đúng dấu chỉ 83,1–88,5%** (giới hạn của model PaddleOCR `vi`), nên tên nhà cung cấp trả về không dấu.
 
-Chưa kiểm thử được: chạy trên Supabase thật sau migration (cần chạy migration trước), build image Docker (Docker Desktop không phản hồi trong phiên làm việc).
+Chưa kiểm thử được: chạy trên Supabase thật sau migration (cần chạy migration trước); chạy các container sau khi build (Docker Desktop sập ở bước xuất image khi build lại bản có `libgl1`, xem mục "Chưa hoàn thành").
 
 ## Danh mục loại yêu cầu mới
 
@@ -159,7 +159,8 @@ Rollback chạy **ngược thứ tự** (ví dụ rollback 12 trước 11).
 
 ## Chưa hoàn thành
 
-- Đo kích thước image ai-service trước/sau: Docker Desktop không phản hồi nên chưa build được.
+- Đã đo image ai-service: trước 8,5 GB (Dockerfile cũ, image dựng 01/11), sau 3,41 GB (Dockerfile nhiều tầng, chưa có `libgl1`). Bản có `libgl1` build qua hết các bước nhưng Docker Desktop sập (EOF) khi xuất image, nên chưa có số đo cuối và chưa chạy kiểm tra container: cổng 8080/8081/8088 trả 404 đúng đường dẫn, Redis ở 6380, OCR trong container.
+- Lần build đó, bước tải trước model OCR báo `zlib ... inconsistent stream state` (file tải về hỏng, khả năng do mạng) và được bỏ qua; model sẽ tự tải khi OCR chạy lần đầu.
 - Kiểm thử end-to-end trên Supabase thật cho các tính năng cần migration (thực hiện sau khi chạy migration).
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] Phiên 02/11 — A: cập nhật số commit/file trong PR_DESCRIPTION.md (db4299b). C1: đo image ai-service 8,5 GB → 3,41 GB, context 21,7 MB; build thật phát hiện thiếu libgl1 → đã sửa (e19b12a)
 - [x] 6.x Toàn bộ test đạt (Django 376, run_tests 141, AI 26, OCR thật 3/3, web 52); sửa 2 test email bị .env local ảnh hưởng; PR_DESCRIPTION.md cho PR dat → main (thử gộp với main: không xung đột)
 - [x] 5.3 Redis: REDIS_URL ưu tiên; ngoài Docker dùng EAS_REDIS_HOST/EAS_REDIS_PORT (mặc định 6380); compose publish Redis ra 127.0.0.1:6380 (EAS_REDIS_HOST_PORT) để không đụng Redis có sẵn ở 6379 trên máy; cập nhật .env.example, README
 - [x] 5.2 Test secret-policy cô lập môi trường: project_env bỏ qua .env khi EAS_SKIP_DOTENV=1, probe subprocess đặt cờ này; đạt 4/4 cả khi .env local có EAS_EMAIL_TEST_RECIPIENT
@@ -28,8 +29,12 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
+- [ ] C. Docker: build lại ai-service (bản có libgl1) — Docker Desktop sập (EOF) ở bước xuất image; sau đó chạy compose và kiểm tra 8080/8081/8088 trả 404, Redis 6380, OCR trong container. Image cũ giữ tag `eas-ai-service:before-multistage` để so sánh/quay lại.
 
 ## Chưa làm
+- [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→16, mock 004→005 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)
+- [ ] D. Chờ quyết định trưởng nhóm cho 4 mục bên dưới
+- [ ] Tạo PR trên GitHub: máy không có gh CLI, tạo tay qua https://github.com/PhanQuangHuy2310/DATN/compare/main...dat?expand=1
 
 ## Quyết định cần tôi xác nhận
 - 4.5: dữ liệu HRM giả lập (mock_hr.employee_directory, 55 người, email @example.test) không trùng 42 tài khoản @eas.com; sync chỉ khớp 2 theo tên, 40 tài khoản không khớp. Chấm công vẫn chạy nhờ dự phòng email. Muốn khớp mã thật cần seed lại HRM theo 42 tài khoản.
