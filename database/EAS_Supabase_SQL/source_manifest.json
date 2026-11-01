@@ -42,5 +42,6 @@
   ],
   "scope": "P0; 30 domain tables DB01-DB30; excludes Django framework tables, storage objects and P1",
   "reference_document": "03_Du_lieu_va_API_v2.docx",
-  "verified_source_access": "Library documents read during this task; local source bytes hashed for traceability."
+  "source_document_files_included": false,
+  "verified_source_access": "Source documents were read and hashed when this schema package was created; the source files are intentionally excluded from the cleaned repository."
 }

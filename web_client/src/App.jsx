@@ -26,6 +26,9 @@ import {
   Profile,
 } from "./components/Admin.jsx";
 function Login({ onLogin, portal = "client" }) {
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSubmitted, setResetSubmitted] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
   return (
     <main id="main" className="auth-shell">
       <section className="auth-intro">
@@ -41,9 +44,22 @@ function Login({ onLogin, portal = "client" }) {
       </section>
       <section className="panel auth-card">
         <p className="eyebrow">CHÀO MỪNG TRỞ LẠI</p>
-        <h2>{portal === "admin" ? "Đăng nhập quản trị hệ thống" : "Đăng nhập EAS Portal"}</h2>
-        <p className="muted">Sử dụng tài khoản doanh nghiệp của bạn.</p>
-        <ActionForm
+        <h2>{resetMode ? "Khôi phục mật khẩu" : portal === "admin" ? "Đăng nhập quản trị hệ thống" : "Đăng nhập EAS Portal"}</h2>
+        <p className="muted">{resetMessage || "Sử dụng email doanh nghiệp của bạn."}</p>
+        {resetMode ? resetSubmitted ? (
+          <p className="success" role="status">Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị. Quản trị viên phải xác minh danh tính trước khi phê duyệt; sau đó mật khẩu tạm thời sẽ được gửi đến email nhân viên.</p>
+        ) : (
+          <ActionForm submitLabel="Gửi yêu cầu đặt lại" onSubmit={async (values) => {
+            await initializeCsrf();
+            await api("/api/v1/auth/password-reset/request", {
+              method: "POST",
+              body: JSON.stringify(values),
+            });
+            setResetSubmitted(true);
+          }}>
+            <label>Email nhân viên<input name="email" type="email" autoComplete="email" placeholder="Email nhân viên" required /></label>
+          </ActionForm>
+        ) : <ActionForm
           submitLabel="Đăng nhập"
           onSubmit={async (values) => {
             await initializeCsrf();
@@ -54,12 +70,14 @@ function Login({ onLogin, portal = "client" }) {
             await onLogin(result.user);
           }}
         >
-          <label>
-            Tên đăng nhập
-            <input name="username" autoComplete="username" required />
-          </label>
+          <label>Email nhân viên<input name="email" type="email" autoComplete="email" placeholder="Email nhân viên" required /></label>
           <PasswordField label="Mật khẩu" name="password" autoComplete="current-password" required />
-        </ActionForm>
+        </ActionForm>}
+        <button type="button" className="link" onClick={() => {
+          setResetMode((active) => !active);
+          setResetSubmitted(false);
+          setResetMessage("");
+        }}>{resetMode ? "Quay lại đăng nhập" : "Quên mật khẩu?"}</button>
       </section>
     </main>
   );

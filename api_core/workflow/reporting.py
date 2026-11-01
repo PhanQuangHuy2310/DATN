@@ -143,7 +143,11 @@ def get_request_metrics_report(
             raise CommandError("INVALID_DEPARTMENT_ID", status=400)
 
     sql = """
-        SELECT r.id::text, r.status, r.current_revision_id, r.approved_at
+        SELECT r.status,
+               COUNT(*),
+               COUNT(*) FILTER (WHERE r.current_revision_id IS NOT NULL),
+               COUNT(*) FILTER (WHERE r.approved_at IS NOT NULL),
+               COUNT(*) FILTER (WHERE r.status = 'COMPLETED')
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         JOIN eas.app_user u ON u.id = r.requester_id
@@ -175,7 +179,7 @@ def get_request_metrics_report(
               )
             )
           )
-        LIMIT 100000
+        GROUP BY r.status
     """
     params = [
         dt_from,
@@ -192,16 +196,15 @@ def get_request_metrics_report(
     with connection.cursor() as cursor:
         # NOSONAR python:S2077 - query parameterized with psycopg placeholders
         cursor.execute(sql, params)
-        rows = cursor.fetchall()
-
-    submitted = sum(1 for row in rows if row[2] is not None)
-    approved = sum(1 for row in rows if row[3] is not None)
-    completed = sum(1 for row in rows if row[1] == "COMPLETED")
+        status_rows = cursor.fetchall()
 
     by_status: dict[str, int] = {}
-    for row in rows:
-        st = row[1]
-        by_status[st] = by_status.get(st, 0) + 1
+    submitted = approved = completed = 0
+    for status, count, submitted_count, approved_count, completed_count in status_rows:
+        by_status[status] = count
+        submitted += submitted_count
+        approved += approved_count
+        completed += completed_count
 
     approved_rate = round(approved / submitted, 4) if submitted > 0 else None
     completed_rate = round(completed / submitted, 4) if submitted > 0 else None

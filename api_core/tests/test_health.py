@@ -9,6 +9,17 @@ from api_core.health.views import (
     assess_runtime_role,
     storage_readiness,
 )
+from api_core.health.schema_contract import (
+    REQUIRED_EAS_TABLES,
+    has_required_eas_tables,
+)
+
+
+class SchemaContractTests(SimpleTestCase):
+    def test_password_reset_requests_are_required_for_api_readiness(self):
+        without_reset_table = REQUIRED_EAS_TABLES - {"password_reset_request"}
+        self.assertFalse(has_required_eas_tables(without_reset_table))
+        self.assertTrue(has_required_eas_tables(REQUIRED_EAS_TABLES))
 
 
 class ReadinessLogicTests(SimpleTestCase):

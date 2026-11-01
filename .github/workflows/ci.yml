@@ -95,7 +95,6 @@ jobs:
       - run: python scripts/validate_env.py --file api_core/.env.example --profile api --allow-placeholders
       - run: python scripts/validate_env.py --file api_core/.env.worker.example --profile worker --allow-placeholders
       - run: python scripts/validate_env.py --file web_client/.env.example --profile web --allow-placeholders
-      - run: python scripts/validate_env.py --file web_admin/.env.example --profile web --allow-placeholders
       - run: docker compose config --quiet
       - run: docker compose build api web
 

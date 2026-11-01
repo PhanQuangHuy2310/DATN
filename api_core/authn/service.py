@@ -45,7 +45,7 @@ class PasswordChangeError(ValueError):
     pass
 
 
-def validate_new_password(password: object, username: str) -> str:
+def validate_new_password(password: object, email: str) -> str:
     if not isinstance(password, str) or not 15 <= len(password) <= 128:
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
     # SRS v2 NFR-Security: exclude passwords from a minimal weak-password
@@ -57,7 +57,7 @@ def validate_new_password(password: object, username: str) -> str:
         CommonPasswordValidator().validate(password)
     except ValidationError:
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION") from None
-    if username.lower() in password.lower():
+    if email.split("@", 1)[0].lower() in password.lower():
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
     required = (
         any(char.islower() for char in password),
@@ -73,7 +73,7 @@ def validate_new_password(password: object, username: str) -> str:
 def change_password(
     *, actor: Actor, current_password: object, new_password: object, correlation_id: str
 ) -> int:
-    new_password = validate_new_password(new_password, actor.username)
+    new_password = validate_new_password(new_password, actor.email)
     now = datetime.now(timezone.utc)
     with transaction.atomic(), connection.cursor() as cursor:
         cursor.execute("SELECT eas.lock_security(true)")
@@ -158,16 +158,16 @@ def change_password(
     return new_version
 
 
-def find_user(username: str) -> AuthUser | None:
+def find_user(email: str) -> AuthUser | None:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id::text, username, display_name, department_id::text,
+            SELECT id::text, email, display_name, department_id::text,
                    password_hash, auth_version, is_active, must_change_password
             FROM eas.app_user
-            WHERE username = %s
+            WHERE email = %s
             """,
-            [username],
+            [email],
         )
         row = cursor.fetchone()
     return AuthUser(*row) if row else None
@@ -203,7 +203,7 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id::text, username, display_name, department_id::text,
+            SELECT id::text, email, display_name, department_id::text,
                    auth_version, must_change_password
             FROM eas.app_user
             WHERE id = %s AND is_active AND auth_version = %s
@@ -239,7 +239,7 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
     cache.set(idle_key, active_session, timeout=settings.EAS_SESSION_IDLE_SECONDS)
     return Actor(
         id=user[0],
-        username=user[1],
+        email=user[1],
         display_name=user[2],
         department_id=user[3],
         auth_version=user[4],

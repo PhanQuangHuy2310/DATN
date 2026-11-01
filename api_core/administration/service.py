@@ -10,6 +10,8 @@ from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import connection, transaction
 
 from api_core.audit import canonical_sha256
@@ -45,7 +47,7 @@ TABLES = {
         "app_user",
         (
             "id",
-            "username",
+            "email",
             "display_name",
             "department_id",
             "manager_id",
@@ -190,7 +192,7 @@ def _list_filters(kind, query):
     if state in state_sql:
         clauses.append(state_sql[state])
     searchable = {
-        "users": ("username", "display_name"),
+        "users": ("email", "display_name"),
         "departments": ("code", "name"),
         "request-types": ("code", "name", "category", "description"),
         "memberships": ("role", "user_id::text"),
@@ -234,7 +236,7 @@ def list_records(actor, kind, query):
     where, params = _list_filters(kind, query)
     fields = ",".join("t." + field for field in columns)
     order = {
-        "users": "t.username,t.id",
+        "users": "t.email,t.id",
         "departments": "t.code,t.id",
         "memberships": "t.role,t.id",
         "request-types": "t.code,t.id",
@@ -259,8 +261,8 @@ def list_records(actor, kind, query):
 
 SELECT_BY_ID_SQL = {
     "users": (
-        "SELECT id,username,display_name,work_email,job_title,department_id,"
-        "is_active,created_at,updated_at FROM eas.app_user WHERE id=%s"
+        "SELECT id,email,display_name,department_id,manager_id,is_active,"
+        "auth_version,must_change_password FROM eas.app_user WHERE id=%s"
     ),
     "departments": (
         "SELECT id,code,name,parent_id,is_active,created_at,updated_at "
@@ -306,7 +308,7 @@ def read_record(actor, kind, record_id):
 def validate(kind, body, old=None):
     allowed = {"reason", "expected_revision"} | {
         "users": {
-            "username",
+            "email",
             "display_name",
             "department_id",
             "manager_id",
@@ -355,16 +357,22 @@ def validate(kind, body, old=None):
     if kind == "users":
         v = {
             **v,
-            "username": text(v.get("username"), "username").lower(),
+            "email": text(v.get("email"), "email", 254).lower(),
             "display_name": text(v.get("display_name"), "display_name"),
             "department_id": uid(v.get("department_id"), "department_id"),
             "manager_id": uid(v.get("manager_id"), "manager_id", True),
             "is_active": boolean(v.get("is_active", True)),
         }
+        try:
+            validate_email(v["email"])
+        except ValidationError:
+            raise CommandError("INVALID_EMAIL", status=422) from None
+        if not v["email"].endswith(f"@{settings.EAS_LOGIN_EMAIL_DOMAIN}"):
+            raise CommandError("INVALID_EMAIL_DOMAIN", status=422)
         if not old or body.get("password"):
             try:
                 v["password_hash"] = make_password(
-                    validate_new_password(body.get("password"), v["username"]),
+                    validate_new_password(body.get("password"), v["email"]),
                     hasher="argon2",
                 )
             except PasswordChangeError:
@@ -549,7 +557,7 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 active_reference(c, "request_type", v.get("type_id"))
         fields = {
             "users": [
-                "username",
+                "email",
                 "display_name",
                 "department_id",
                 "manager_id",

@@ -5,7 +5,7 @@ test("login screen is keyboard-addressable and has no serious accessibility find
   await page.goto("/");
   await expect(page).toHaveTitle(/EAS|Enterprise Approval System/i);
   await expect(page.getByRole("heading", { name: "Đăng nhập" })).toBeVisible();
-  await expect(page.getByLabel("Tên đăng nhập")).toBeEditable();
+  await expect(page.getByLabel("Email nhân viên")).toBeEditable();
   await expect(page.getByLabel("Mật khẩu")).toHaveAttribute("type", "password");
 
   await page.keyboard.press("Tab");
@@ -19,11 +19,11 @@ test("login screen is keyboard-addressable and has no serious accessibility find
 
 test("invalid credentials fail generically without leaking account state", async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel("Tên đăng nhập").fill("account-that-does-not-exist");
+  await page.getByLabel("Email nhân viên").fill("account-that-does-not-exist@eas.com");
   await page.getByLabel("Mật khẩu").fill("wrong-password");
   await page.getByRole("button", { name: "Đăng nhập" }).click();
   await expect(page.getByRole("alert")).toHaveText("Thông tin đăng nhập không hợp lệ.");
-  await expect(page.getByRole("alert")).not.toContainText(/user|username|password|database|sql/i);
+  await expect(page.getByRole("alert")).not.toContainText(/email|password|database|sql/i);
 });
 
 test("reverse proxy exposes API readiness without disclosing secrets", async ({ request }) => {
@@ -35,12 +35,12 @@ test("reverse proxy exposes API readiness without disclosing secrets", async ({ 
 });
 
 test("authenticated requester can reach dashboard and mock catalog", async ({ page }) => {
-  const username = process.env.EAS_E2E_USERNAME;
+  const email = process.env.EAS_E2E_EMAIL;
   const password = process.env.EAS_E2E_PASSWORD;
-  test.skip(!username || !password, "Live credentials are intentionally supplied only by the fixture runner.");
+  test.skip(!email || !password, "Live credentials are intentionally supplied only by the fixture runner.");
 
   await page.goto("/");
-  await page.getByLabel("Tên đăng nhập").fill(username);
+  await page.getByLabel("Email nhân viên").fill(email);
   await page.getByLabel("Mật khẩu").fill(password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
   await expect(page.getByText("DEMO REQUESTER", { exact: true })).toBeVisible();

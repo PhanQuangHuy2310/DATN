@@ -30,7 +30,7 @@ class OpsAndConfigBoundaryTests(SimpleTestCase):
     def setUp(self):
         self.ops_actor = Actor(
             id=str(uuid4()),
-            username="ops_admin",
+            email="ops_admin@eas.com",
             display_name="Operations Admin",
             department_id=str(uuid4()),
             auth_version=1,
@@ -39,7 +39,7 @@ class OpsAndConfigBoundaryTests(SimpleTestCase):
         )
         self.policy_actor = Actor(
             id=str(uuid4()),
-            username="policy_admin",
+            email="policy_admin@eas.com",
             display_name="Policy Admin",
             department_id=str(uuid4()),
             auth_version=1,
@@ -48,7 +48,7 @@ class OpsAndConfigBoundaryTests(SimpleTestCase):
         )
         self.requester_actor = Actor(
             id=str(uuid4()),
-            username="requester",
+            email="requester@eas.com",
             display_name="Requester",
             department_id=str(uuid4()),
             auth_version=1,
@@ -57,7 +57,7 @@ class OpsAndConfigBoundaryTests(SimpleTestCase):
         )
         self.executor_actor = Actor(
             id=str(uuid4()),
-            username="executor",
+            email="executor@eas.com",
             display_name="Executor",
             department_id=str(uuid4()),
             auth_version=1,
@@ -258,7 +258,7 @@ class OpsAndConfigHttpContractTests(SimpleTestCase):
     def setUp(self):
         self.ops_actor = Actor(
             id=str(uuid4()),
-            username="ops_admin",
+            email="ops_admin@eas.com",
             display_name="Operations Admin",
             department_id=str(uuid4()),
             auth_version=1,
@@ -267,7 +267,7 @@ class OpsAndConfigHttpContractTests(SimpleTestCase):
         )
         self.policy_actor = Actor(
             id=str(uuid4()),
-            username="policy_admin",
+            email="policy_admin@eas.com",
             display_name="Policy Admin",
             department_id=str(uuid4()),
             auth_version=1,
@@ -276,7 +276,7 @@ class OpsAndConfigHttpContractTests(SimpleTestCase):
         )
         self.requester_actor = Actor(
             id=str(uuid4()),
-            username="requester",
+            email="requester@eas.com",
             display_name="Requester",
             department_id=str(uuid4()),
             auth_version=1,

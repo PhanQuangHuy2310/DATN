@@ -3,6 +3,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+
 from project_env import load_project_env
 
 from .database import DatabaseUrlError, parse_database_url
@@ -123,6 +126,35 @@ else:
 EAS_LOGIN_MAX_ATTEMPTS = int(os.getenv("EAS_LOGIN_MAX_ATTEMPTS", "5"))
 EAS_LOGIN_MAX_IP_ATTEMPTS = int(os.getenv("EAS_LOGIN_MAX_IP_ATTEMPTS", "30"))
 EAS_LOGIN_WINDOW_SECONDS = int(os.getenv("EAS_LOGIN_WINDOW_SECONDS", "900"))
+EAS_LOGIN_EMAIL_DOMAIN = os.getenv("EAS_LOGIN_EMAIL_DOMAIN", "eas.com").strip().lower()
+
+try:
+    validate_email(f"eas-user@{EAS_LOGIN_EMAIL_DOMAIN}")
+except ValidationError:
+    raise RuntimeError("EAS_LOGIN_EMAIL_DOMAIN must be a valid email domain") from None
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("EAS_EMAIL_HOST", "").strip()
+EMAIL_PORT = int(os.getenv("EAS_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EAS_EMAIL_USER", "").strip()
+EMAIL_HOST_PASSWORD = os.getenv("EAS_EMAIL_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EAS_EMAIL_USE_TLS", "true").lower() == "true"
+EMAIL_USE_SSL = os.getenv("EAS_EMAIL_USE_SSL", "false").lower() == "true"
+DEFAULT_FROM_EMAIL = os.getenv("EAS_EMAIL_FROM", "").strip()
+EMAIL_TIMEOUT = int(os.getenv("EAS_EMAIL_TIMEOUT_SECONDS", "10"))
+EAS_EMAIL_TEST_RECIPIENT = os.getenv("EAS_EMAIL_TEST_RECIPIENT", "").strip()
+if EAS_EMAIL_TEST_RECIPIENT:
+    if ENVIRONMENT not in {"development", "test"}:
+        raise RuntimeError(
+            "EAS_EMAIL_TEST_RECIPIENT is only allowed in development/test"
+        )
+    try:
+        validate_email(EAS_EMAIL_TEST_RECIPIENT)
+    except ValidationError:
+        raise RuntimeError(
+            "EAS_EMAIL_TEST_RECIPIENT must be a valid email address"
+        ) from None
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise RuntimeError("Configure only one of EAS_EMAIL_USE_TLS or EAS_EMAIL_USE_SSL")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")
 EAS_STORAGE_BUCKET = os.getenv("EAS_STORAGE_BUCKET", "eas-private")
