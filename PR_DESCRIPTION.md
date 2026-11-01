@@ -1,6 +1,6 @@
 # Kiểm thử luồng yêu cầu, bảo mật cổng, AI tự duyệt và danh mục 10 nhóm
 
-Nhánh `dat` → `main`. 36 commit, 111 file (kể cả commit cập nhật mô tả này). Đã thử gộp với `main` hiện tại: **không xung đột**.
+Nhánh `dat` → `main`. 42 commit, 90 file (kể cả commit cập nhật mô tả này). Đã thử gộp với `main` hiện tại: **không xung đột**.
 
 > ⚠️ **Trước khi deploy phải chạy migration trên Supabase** (mục "Việc cần làm khi deploy"). Code đã viết để vẫn chạy được khi migration chưa áp dụng: các tính năng mới chỉ tự bật sau khi bảng/cột tương ứng tồn tại.
 
@@ -54,12 +54,35 @@ Nhánh `dat` → `main`. 36 commit, 111 file (kể cả commit cập nhật mô 
 - **Sửa 2 lỗi chỉ lộ ra khi chạy container thật:** thiếu `libgl1` (OpenCV của PaddleOCR không import được) và user `aiuser` có `HOME=/nonexistent` nên PaddleOCR không ghi được model → OCR trong container đều lỗi. Đã sửa, kèm test.
 - **Đã kiểm tra trên stack Docker thật:** cổng nhân viên 8080 trả 404 cho `/api/v1/admin/`, `/api/v1/ops/`, `/api/v1/internal/`; cổng quản trị 8081 vẫn tới được API admin (401 khi chưa đăng nhập); gateway 8088 trả 404 cho `/api/v1/internal/`; API trả 401 cho `/internal` khi thiếu secret; Redis trả lời ở `127.0.0.1:6380`; OCR trong container đọc đúng 3/3 hóa đơn mẫu.
 
+### Phần 8 — Gộp file, tinh gọn cấu trúc (02/11)
+
+Giảm ròng **23 file**, không đổi hành vi (số test giữ nguyên ở từng nhóm được gộp).
+
+| Trước | Sau |
+|---|---|
+| 9 migration `08`–`16` + 9 rollback (chưa chạy lên Supabase) | 3 cặp theo chủ đề: `08_ai_auto_approval`, `09_request_catalog_v2`, `10_approval_delegation_and_employee_code` |
+| Mock `004_hrm_attendance` + `005_attendance_employee_code` + rollback 005 | `004_hrm_attendance` (có `employee_code` ngay từ đầu) + rollback |
+| 4 file test cấu hình triển khai (Dockerfile AI, build context, nginx 3 cổng, tách bundle) | `tests/test_deployment_config.py` |
+| `test_employee_code_sync.py`, `test_redis_url.py` | Gộp vào `test_approval_delegation.py`, `test_database_config.py` |
+| `api_core/config/redis_url.py` | Gộp vào `api_core/config/database.py` (cấu hình kết nối đọc từ môi trường) |
+| `web_client/src/aiPolicy.js`, `delegation.js` + 2 file test | Gộp vào `actionPayload.js` (body gửi API dựng từ form); test gộp vào `action-payload.test.mjs`, `role-policy.test.mjs` |
+
+- Mỗi migration gộp là **một transaction** (lỗi giữa chừng thì không thay đổi gì) và chỉ tăng `security_epoch` một lần.
+- **Đã chạy thật trên Postgres 16** (container tạm dựng từ baseline của repo, không đụng Supabase): áp 08 → 09 → 10 → mock 004, rollback theo thứ tự ngược, rồi áp lại — đều đúng. Hàm `guard_request` trong rollback 08 khớp hàm đang chạy trên Supabase (so sánh chỉ đọc).
+- Chạy thật phát hiện và đã sửa 6 lỗi:
+  1. `ALTER TABLE app_user` sau `INSERT` trong cùng transaction lỗi "pending trigger events" → thay đổi schema chạy trước, dữ liệu chạy sau.
+  2. Tài khoản AI không còn bắt buộc có phòng `BOD` (thiếu phòng này thì trước đây lỗi khóa ngoại khi gán quyền).
+  3. `IT_SUPPORT` chưa có release đang dùng → bỏ qua riêng phần đó kèm NOTICE thay vì hủy cả migration.
+  4. Ràng buộc nhóm (`category`) được xóa theo định nghĩa, không phụ thuộc tên (DB cài mới đặt tên `request_type_category_check`).
+  5. Áp lại sau rollback khôi phục đủ 13 loại mới (danh sách phân nhóm có đủ 66 mã).
+  6. Áp lại sau rollback bật lại tài khoản AI (rollback chỉ vô hiệu hóa vì các quyết định cũ còn tham chiếu tới tài khoản này).
+
 ## Kết quả kiểm thử (chạy local ngày 02/11/2026)
 
 | Bộ kiểm thử | Kết quả |
 |---|---|
-| Django `python manage.py test` | **385 đạt**, 1 bỏ qua (smoke OCR khi Python không có PaddleOCR) |
-| `python tests/run_tests.py` | **150 đạt** |
+| Django `python manage.py test` | **386 đạt**, 1 bỏ qua (smoke OCR khi Python không có PaddleOCR) |
+| `python tests/run_tests.py` | **151 đạt** (thêm test: mỗi migration gộp là một transaction, có rollback) |
 | AI `tests.integration` (scenarios + service) | **29 đạt** |
 | Smoke OCR với PaddleOCR thật (`tests/ocr_smoke`) | **3/3 đạt** — số tiền, ngày, nhà cung cấp đúng 3/3 ảnh; chạy được cả trong container ai-service |
 | Frontend `web_client` `npm test` | **52 đạt**; lint sạch; build OK |
@@ -69,7 +92,7 @@ Nhánh `dat` → `main`. 36 commit, 111 file (kể cả commit cập nhật mô 
 
 Số liệu OCR: độ tin cậy 95,7–96,6%; đọc đúng chữ 97,8–99,2% nhưng **giữ đúng dấu chỉ 83,1–88,5%** (giới hạn của model PaddleOCR `vi`), nên tên nhà cung cấp trả về không dấu.
 
-Chưa kiểm thử được: chạy trên Supabase thật sau migration (cần chạy migration trước).
+Migration 08–10 và mock 004 đã chạy thử áp → rollback → áp lại trên Postgres 16 (Phần 8). Chưa kiểm thử được: chạy trên Supabase thật sau migration (cần chạy migration trước).
 
 ## Danh mục loại yêu cầu mới
 
@@ -140,19 +163,12 @@ Trọng số 1–5. Vòng đời: **A** = duyệt xong là hoàn tất; **B** = 
 
 | # | File | Nội dung | Rollback |
 |---|---|---|---|
-| 1 | `database/migrations/08_ai_system_account.sql` | Tài khoản hệ thống `EAS AI` | `rollback/08_ai_system_account_rollback.sql` |
-| 2 | `database/migrations/09_ai_policy_store.sql` | Bảng `eas.ai_policy_version` | `rollback/09_ai_policy_store_rollback.sql` |
-| 3 | `database/migrations/10_ai_auto_approve_revoke.sql` | Cho phép thu hồi AI tự duyệt trong 24 giờ | `rollback/10_ai_auto_approve_revoke_rollback.sql` (đã đối chiếu khôi phục đúng hàm gốc) |
-| 4 | `database/migrations/11_request_category_regroup.sql` | 10 nhóm, trọng số, ngưng 8 loại | `rollback/11_request_category_regroup_rollback.sql` |
-| 5 | `database/migrations/12_request_types_new.sql` | 13 loại mới + cấu hình đã công bố | `rollback/12_request_types_new_rollback.sql` (ngưng dùng, không xóa) |
-| 6 | `database/migrations/13_it_support_executor.sql` | IT_SUPPORT do IT thực hiện | `rollback/13_it_support_executor_rollback.sql` |
-| 7 | `database/migrations/14_system_account_flag.sql` | Cột `is_system_account` | `rollback/14_system_account_flag_rollback.sql` |
-| 8 | `database/migrations/15_approval_delegation.sql` | Bảng ủy quyền duyệt | `rollback/15_approval_delegation_rollback.sql` |
-| 9 | `database/migrations/16_employee_code.sql` | Cột `employee_code` | `rollback/16_employee_code_rollback.sql` |
-| 10 | `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql` | Bảng chấm công mock | (bảng mock, xóa tay nếu cần) |
-| 11 | `database/mock_enterprise_sql/migrations/005_attendance_employee_code.sql` | Chấm công theo mã nhân viên | `mock_enterprise_sql/migrations/rollback/005_attendance_employee_code_rollback.sql` |
+| 1 | `database/migrations/08_ai_auto_approval.sql` | Tài khoản hệ thống `EAS AI` + cột `is_system_account`; bảng `eas.ai_policy_version`; cho phép thu hồi AI tự duyệt trong 24 giờ | `rollback/08_ai_auto_approval_rollback.sql` (khôi phục đúng hàm `guard_request` gốc) |
+| 2 | `database/migrations/09_request_catalog_v2.sql` | 10 nhóm, trọng số, ngưng 8 loại; 13 loại mới + cấu hình đã công bố; IT_SUPPORT do IT thực hiện | `rollback/09_request_catalog_v2_rollback.sql` (13 loại mới chỉ ngưng dùng, không xóa) |
+| 3 | `database/migrations/10_approval_delegation_and_employee_code.sql` | Bảng ủy quyền duyệt; cột `employee_code` | `rollback/10_approval_delegation_and_employee_code_rollback.sql` |
+| 4 | `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql` | Bảng chấm công mock (khớp theo mã nhân viên, email dự phòng) | `mock_enterprise_sql/migrations/rollback/004_hrm_attendance_rollback.sql` |
 
-Rollback chạy **ngược thứ tự** (ví dụ rollback 12 trước 11).
+Mỗi file là một transaction. Rollback chạy **ngược thứ tự** (mock 004 → 10 → 09 → 08).
 
 ## Việc cần làm khi deploy
 
@@ -167,7 +183,8 @@ Rollback chạy **ngược thứ tự** (ví dụ rollback 12 trước 11).
 
 ## Gợi ý dọn dẹp (không nằm trong PR, cần nhóm quyết)
 
-- 13 script chẩn đoán/khởi động ở thư mục gốc không được file nào tham chiếu (`check_approval_menu_readonly.py`, `check_schema_contract.py`, `diagnose_supabase.py`, `diagnose_eas_lists_readonly.py`, `diagnose_readiness_readonly.py`, `recover_admin_password_interactive.py`, `report_conformance.py`, `verify_admin_password_local.py`, `check_local.cmd`, `setup_local.cmd`, `start_backend.ps1`, `start_frontend.ps1`…). Có thể gom vào `scripts/` hoặc xóa nếu không còn ai dùng.
+- 13 script chẩn đoán/khởi động ở thư mục gốc không được file nào tham chiếu (`check_approval_menu_readonly.py`, `check_schema_contract.py`, `diagnose_supabase.py`, `diagnose_eas_lists_readonly.py`, `diagnose_readiness_readonly.py`, `recover_admin_password_interactive.py`, `report_conformance.py`, `verify_admin_password_local.py`, `check_local.cmd`, `setup_local.cmd`, `start_backend.ps1`, `start_frontend.ps1`…). Có thể gom vào `scripts/` hoặc xóa nếu không còn ai dùng. Riêng `start_backend.ps1` ≡ `start_backend_local.cmd` và `start_frontend.ps1` ≡ `start_frontend_local.cmd` (bản `.ps1` chỉ thêm `-Install`), giữ một bản là đủ.
+- Dựng DB sạch từ baseline (phát hiện khi chạy thử migration): `06_dev_gmail_aliases.sql` dừng vì thiếu ràng buộc `app_user_email_policy`; `report_migrations/01` xóa ràng buộc `type_p0` không tồn tại; `report_migrations/04` lỗi cú pháp `$`. Không sửa vì 04–07 đã chạy trên Supabase và `report_migrations` ghi rõ chỉ để DBA xem xét; môi trường mới cần lưu ý.
 - Dữ liệu huấn luyện sinh tự động `ai_service/training/data/partitions` (801 MB, đã gitignore) tạo lại được bằng `enterprise_bigdata_generator.py`, nhưng dữ liệu sinh ngẫu nhiên nên lần sau sẽ khác.
 
 ## Quyết định cần trưởng nhóm xác nhận

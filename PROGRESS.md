@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] Gộp file 02/11 (giảm ròng 23 file): migration 08–16 + mock 004/005 (21 file SQL) → 3 cặp 08/09/10 + mock 004 (8 file), mỗi file một transaction, chạy thật trên Postgres 16 áp → rollback → áp lại đều đúng (sửa 6 lỗi lộ ra khi chạy thật); 4 test cấu hình triển khai → tests/test_deployment_config.py; test_employee_code_sync → test_approval_delegation; test_redis_url → test_database_config; config/redis_url.py → config/database.py; aiPolicy.js + delegation.js → actionPayload.js. Lần sau có thể gộp tiếp: script khởi động trùng ở thư mục gốc (start_*.ps1 ≡ start_*_local.cmd), script chẩn đoán gốc → scripts/ (cần nhóm đồng ý)
 - [x] Tối ưu & Docker 02/11: OCR làm nóng khi khởi động + volume model (request đầu 21,3 s → 1,6 s); bundle cổng nhân viên 390,8 → 335,1 KB (6 màn hình lazy); test fallback AI ~10 s → 2 s; sửa libgl1 + HOME aiuser (OCR container trước đó hỏng); kiểm tra stack thật: 8080/8081/8088 chặn đúng, Redis 6380, OCR container 3/3; dọn Docker ~23 GB (image cũ 8,5 GB + build cache, giữ 5 GB cache gần nhất)
 - [x] Dọn dẹp 02/11: xóa __pycache__, .ruff_cache, web dist (≈12 MB, tạo lại được); .dockerignore gốc loại ai_service/, database/, tests/, scripts/... khỏi build context (có test). Docker chưa dọn được vì engine không phản hồi
 - [x] Phiên 02/11 — A: cập nhật số commit/file trong PR_DESCRIPTION.md (db4299b). C1: đo image ai-service 8,5 GB → 3,41 GB, context 21,7 MB; build thật phát hiện thiếu libgl1 → đã sửa (e19b12a)
@@ -30,10 +31,12 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] 1.1 Quy tắc cổng: admin thuần chỉ dùng cổng quản trị; admin có APPROVER/EXECUTOR dùng cả hai (`rolePolicy.canUsePortal`)
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
+Số migration trong các mục cũ là số trước khi gộp: 08, 09, 10, 14 → `08_ai_auto_approval`; 11, 12, 13 → `09_request_catalog_v2`; 15, 16 → `10_approval_delegation_and_employee_code`; mock 004, 005 → mock `004_hrm_attendance`.
+
 ## Đang làm
 
 ## Chưa làm
-- [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→16, mock 004→005 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)
+- [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→10 và mock 004 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)
 - [ ] D. Chờ quyết định trưởng nhóm cho 4 mục bên dưới
 - [ ] Tạo PR trên GitHub: máy không có gh CLI, tạo tay qua https://github.com/PhanQuangHuy2310/DATN/compare/main...dat?expand=1
 
@@ -44,6 +47,6 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - 1.5: chỉ hoàn tác được hồ sơ vòng đời A đã COMPLETED (AI chỉ tự duyệt vòng đời A). Bất kỳ APPROVER trong phạm vi phòng/loại (trừ người tạo) đều thu hồi được, không chỉ người duyệt gốc.
 
 ## Việc tôi phải làm thủ công
-- Chạy trên Supabase SQL Editor theo thứ tự: `database/migrations/07_dev_restore_eas_emails.sql` (đã chạy), `08_ai_system_account.sql`, `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`, `09_ai_policy_store.sql`, `10_ai_auto_approve_revoke.sql`, `11_request_category_regroup.sql`, `12_request_types_new.sql`, `13_it_support_executor.sql`, `14_system_account_flag.sql`, `15_approval_delegation.sql`, `16_employee_code.sql`; mock: `005_attendance_employee_code.sql` (sau 004); rồi `python manage.py sync_employee_codes --apply`
-- Sau migration 09, nếu container AI đang có file quy định cũ: `python manage.py import_ai_policy_file ai_service/data/active_enterprise_policy.json --operator <email POLICY_ADMIN>`
-- Rollback: `database/migrations/rollback/`
+- Chạy trên Supabase SQL Editor theo thứ tự (07 đã chạy): `database/migrations/08_ai_auto_approval.sql`, `09_request_catalog_v2.sql`, `10_approval_delegation_and_employee_code.sql`, rồi `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`; sau đó `python manage.py sync_employee_codes --apply`
+- Sau migration 08, nếu container AI đang có file quy định cũ: `python manage.py import_ai_policy_file ai_service/data/active_enterprise_policy.json --operator <email POLICY_ADMIN>`
+- Rollback (ngược thứ tự: mock 004 → 10 → 09 → 08): `database/migrations/rollback/`, `database/mock_enterprise_sql/migrations/rollback/`
