@@ -42,6 +42,14 @@ class AiDockerfileTests(unittest.TestCase):
         for line in installs:
             self.assertIn("libgl1", line)
 
+    def test_runtime_user_has_writable_home_for_ocr_models(self):
+        # A --system user defaults to HOME=/nonexistent and PaddleOCR then
+        # cannot download its models (PermissionError at the first OCR call).
+        runtime = DOCKERFILE.split("AS runtime", 1)[1]
+        self.assertIn("--home /home/aiuser aiuser", runtime)
+        self.assertIn("HOME=/home/aiuser", runtime)
+        self.assertIn("/home/aiuser/.paddleocr", runtime)
+
     def test_dockerignore_keeps_local_venv_out_of_context(self):
         ignored = (AI / ".dockerignore").read_text(encoding="utf-8").split()
         for entry in (".venv*", "**/__pycache__", ".env", "training/data"):

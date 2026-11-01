@@ -41,12 +41,14 @@ FROM python:3.11-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     VIRTUAL_ENV=/opt/venv \
-    PATH=/opt/venv/bin:$PATH
+    PATH=/opt/venv/bin:$PATH \
+    HOME=/home/aiuser
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libglib2.0-0 libgomp1 libgl1 libsm6 libxrender1 libxext6 curl \
     && rm -rf /var/lib/apt/lists/* \
-    && addgroup --system aiuser && adduser --system --ingroup aiuser aiuser
+    && addgroup --system aiuser \
+    && adduser --system --ingroup aiuser --home /home/aiuser aiuser
 
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
