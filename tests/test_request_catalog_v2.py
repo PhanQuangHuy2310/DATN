@@ -184,7 +184,9 @@ class MigrationConsistencyTests(unittest.TestCase):
     def test_new_types_migration_inserts_exactly_the_13_types(self):
         sql = (MIGRATIONS / "12_request_types_new.sql").read_text(encoding="utf-8")
         values = sql[sql.index("(VALUES") : sql.index(") AS v(")]
-        self.assertEqual(set(re.findall(r"^\s+\('([A-Z_]+)'", values, re.MULTILINE)), NEW_CODES)
+        self.assertEqual(
+            set(re.findall(r"^\s+\('([A-Z_]+)'", values, re.MULTILINE)), NEW_CODES
+        )
         self.assertIn("'PUBLISHED'", sql)
 
     def test_it_support_migration_publishes_it_executor(self):

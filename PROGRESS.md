@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 3.1 Màn hình quản trị lazy-load qua adminScreens.jsx, chỉ entry web_admin truyền vào App (AdminScreensContext). Đã build kiểm tra: bundle cổng nhân viên 0/7 dấu hiệu màn hình quản trị, cổng quản trị đủ 7/7; scripts/check_client_bundle.py chạy trong CI
 - [x] 2.5 tests/test_request_catalog_v2.py (13 test): 10 nhóm/58/13/8, mọi loại có cấu hình hợp lệ và nhóm hợp lệ, số cấp = số cấp tối đa của luồng, mọi loại (kể cả 13 loại mới) tạo được route cho 8 phòng (fixture bindings ẩn danh), migration 11/12/13 khớp danh mục, có rollback, catalogV2.js đồng bộ
 - [x] 2.4 Code dùng catalog_v2.json: REQUEST_TYPE_CATEGORIES = 10 nhóm; menu tạo yêu cầu, trọng số/số cấp, nhãn trường, tên loại lấy từ catalog_v2; web_client/src/catalogV2.js sinh bằng scripts/generate_catalog_js.py; IdentityAdmin 10 nhóm; PlanCatalog chế độ 'Danh mục 10 nhóm (58 loại)'
 - [x] 2.3 IT_SUPPORT: migration 13 + rollback công bố release mới với executor EXECUTOR_IT (release cũ bất biến, rollback trỏ lại bản cũ)
@@ -16,10 +17,9 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 3.1 Lazy-load màn hình quản trị
+- [ ] 4.1 Cờ is_system_account cho EAS AI
 
 ## Chưa làm
-- [ ] 4.1 Cờ is_system_account cho EAS AI
 - [ ] 4.2 Xóa ingest_policy / toggle_maintenance cũ
 - [ ] 4.3 Giao diện nạp bộ luật POLICY_ADMIN
 - [ ] 4.4 Ủy quyền duyệt

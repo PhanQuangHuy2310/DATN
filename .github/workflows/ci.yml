@@ -81,6 +81,8 @@ jobs:
         run: npm audit --audit-level=high
       - working-directory: web_admin
         run: npm run build
+      - name: Employee bundle excludes admin screens
+        run: python3 scripts/check_client_bundle.py
 
   container-config:
     runs-on: ubuntu-latest

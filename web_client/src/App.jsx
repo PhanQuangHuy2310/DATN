@@ -4,7 +4,6 @@ import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
 import { canNavigate, canUsePortal } from "./rolePolicy.js";
 import RoleTasks from "./components/RoleTasks.jsx";
-import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
 import {
   ActionForm,
@@ -14,10 +13,6 @@ import {
 } from "./components/ui.jsx";
 import RequestEditor from "./components/RequestEditor.jsx";
 import RequestDetail from "./components/RequestDetail.jsx";
-import IdentityAdmin from "./components/IdentityAdmin.jsx";
-import OrgChart from "./components/OrgChart.jsx";
-import ApiAdministration from "./components/ApiAdministration.jsx";
-import PlanCatalog from "./components/PlanCatalog.jsx";
 import WorkflowDiagrams from "./components/WorkflowDiagrams.jsx";
 import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
 import AiProcessGuide from "./components/AiProcessGuide.jsx";
@@ -25,13 +20,8 @@ import ClientDashboard from "./components/ClientDashboard.jsx";
 import ClientRequests from "./components/ClientRequests.jsx";
 import ClientOrgChart from "./components/ClientOrgChart.jsx";
 import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
-import {
-  AdminEvents,
-  Notifications,
-  Operations,
-  Policy,
-  Profile,
-} from "./components/Admin.jsx";
+import { Notifications, Profile } from "./components/Admin.jsx";
+import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
@@ -488,7 +478,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
       </section>
       <ResourceState resource={r}>
         {page === "ops" ? (
-          <Operations items={filtered} onRefresh={r.reload} />
+          <AdminScreen name="Operations" items={filtered} onRefresh={r.reload} />
         ) : (
           <section className="panel table-panel" id="request-results">
             <div className="table-wrap">
@@ -626,27 +616,28 @@ function renderWorkspaceContent({
     case "acceptance":
       return portal === "client" ? <ClientRequests key={page} initialStage={page === "mine" ? "mine" : page} initialQuery={searchText} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} /> : <RequestList key={page} page={page} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} />;
     case "audit":
-      return <AuditorWorkspace onOpen={(id) => setSelected(id)} />;
+      return <AdminScreen name="AuditorWorkspace" onOpen={(id) => setSelected(id)} />;
     case "identity":
     case "users":
-      return <IdentityAdmin key="users" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />;
+      return <AdminScreen name="IdentityAdmin" key="users" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />;
     case "permissions":
-      return <IdentityAdmin key="memberships" initialKind="memberships" onNavigateOrgChart={() => navigate("org-chart")} />;
+      return <AdminScreen name="IdentityAdmin" key="memberships" initialKind="memberships" onNavigateOrgChart={() => navigate("org-chart")} />;
     case "request-catalog":
-      return <IdentityAdmin key="request-types" initialKind="request-types" />;
+      return <AdminScreen name="IdentityAdmin" key="request-types" initialKind="request-types" />;
     case "org-chart":
-      return <OrgChart navigate={navigate} portal={portal} user={user} />;
+      return <AdminScreen name="OrgChart" navigate={navigate} portal={portal} user={user} />;
     case "api-admin":
-      return <ApiAdministration />;
+      return <AdminScreen name="ApiAdministration" />;
     case "plan-catalog":
-      return <PlanCatalog />;
+      return <AdminScreen name="PlanCatalog" />;
     case "ai-process":
       return <AiProcessGuide user={user} onOpen={setSelected} navigate={navigate} />;
     case "flow-diagrams":
       return <><div className="page-heading"><div><p className="eyebrow">EAS / QUY TRÌNH</p><h1>Sơ đồ luồng</h1><p className="muted">Tra cứu các sơ đồ xử lý và vòng đời yêu cầu.</p></div></div><WorkflowDiagrams /></>;
     case "policy":
       return (
-        <Policy
+        <AdminScreen
+          name="Policy"
           canManageAccess={user.roles.includes("OPS_ADMIN")}
           onManageAccess={() => navigate("identity")}
         />
@@ -656,7 +647,7 @@ function renderWorkspaceContent({
     case "profile":
       return <Profile user={user} />;
     case "events":
-      return <AdminEvents />;
+      return <AdminScreen name="AdminEvents" />;
     default:
       return (
         <RequestList
@@ -942,7 +933,15 @@ function fetchInitialSession() {
   return _bootstrapSessionPromise;
 }
 
-export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unified") }) {
+export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unified"), adminScreens = {} }) {
+  return (
+    <AdminScreensContext.Provider value={adminScreens}>
+      <PortalApp portal={portal} />
+    </AdminScreensContext.Provider>
+  );
+}
+
+function PortalApp({ portal }) {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
   async function load(loginUser) {
