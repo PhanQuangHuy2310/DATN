@@ -3,16 +3,16 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 1.4 Quy định AI lưu DB (eas.ai_policy_version, migration 09 + rollback); API đẩy bản ACTIVE sang AI, AI cache trống thì kéo từ /api/v1/internal/ai-policy/active; lệnh import_ai_policy_file chuyển file cũ
 - [x] 1.3 Bỏ mật khẩu mặc định Admin@123456: EAS_DEV_DEFAULT_PASSWORD không có default; fix_seed_passwords_local.py đọc EAS_SEED_PASSWORD, hash Argon2, buộc đổi khi đăng nhập
 - [x] 1.2 Proxy: cổng nhân viên chặn /api/v1/admin|ops|internal (404); cổng quản trị có nginx.conf riêng, chặn internal; gateway trả 404 cho /api/v1/internal/
 - [x] 1.1 Quy tắc cổng: admin thuần chỉ dùng cổng quản trị; admin có APPROVER/EXECUTOR dùng cả hai (`rolePolicy.canUsePortal`)
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 1.4 Quy định AI lưu DB
+- [ ] 1.5 Hoàn tác AI tự duyệt trong 24h
 
 ## Chưa làm
-- [ ] 1.5 Hoàn tác AI tự duyệt trong 24h
 - [ ] 2.1 Migration 10 nhóm + ngưng 8 loại trùng
 - [ ] 2.2 Migration 13 loại mới
 - [ ] 2.3 IT_SUPPORT người thực hiện IT
@@ -35,4 +35,6 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 (chưa có)
 
 ## Việc tôi phải làm thủ công
-- Chạy trên Supabase SQL Editor theo thứ tự: `database/migrations/07_dev_restore_eas_emails.sql` (đã chạy), `08_ai_system_account.sql`, `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`
+- Chạy trên Supabase SQL Editor theo thứ tự: `database/migrations/07_dev_restore_eas_emails.sql` (đã chạy), `08_ai_system_account.sql`, `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`, `09_ai_policy_store.sql`
+- Sau migration 09, nếu container AI đang có file quy định cũ: `python manage.py import_ai_policy_file ai_service/data/active_enterprise_policy.json --operator <email POLICY_ADMIN>`
+- Rollback: `database/migrations/rollback/`

@@ -69,6 +69,10 @@ class PolicyRulesLatencyTests(unittest.TestCase):
         )
         patcher.start()
         self.addCleanup(patcher.stop)
+        self.real_pull = policy.pull_active_policy
+        no_pull = patch.object(policy, "pull_active_policy", return_value=None)
+        no_pull.start()
+        self.addCleanup(no_pull.stop)
 
     def evaluate(self, weight=1, amount=0.0):
         from routers.auto_approve import AutoApproveInput, evaluate_auto_approve
@@ -126,6 +130,23 @@ class PolicyRulesLatencyTests(unittest.TestCase):
         self.assertEqual(self.evaluate().decision, "escalate_to_human")
         self.publish("QD-04", [])
         self.assertEqual(self.evaluate().decision, "auto_approve")
+
+    def test_empty_cache_pulls_active_version_from_api(self):
+        from unittest.mock import MagicMock, patch
+
+        from routers import policy
+
+        response = MagicMock(status_code=200)
+        response.json.return_value = {
+            "version": "QD-DB",
+            "rules": [{"id": "freeze", "auto_approve": False}],
+        }
+        policy._last_pull["at"] = -1e9
+        with patch("httpx.get", return_value=response) as get:
+            state = self.real_pull(policy.POLICY_FILE)
+        self.assertIn("X-Internal-Secret", get.call_args.kwargs["headers"])
+        self.assertEqual(state.version, "QD-DB")
+        self.assertTrue(os.path.exists(policy.POLICY_FILE))
 
     def test_rule_without_effect_is_rejected(self):
         from pydantic import ValidationError

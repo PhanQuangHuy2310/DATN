@@ -237,6 +237,7 @@ services:
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
+      - EAS_API_INTERNAL_URL=http://api:8000
       - EAS_ENV=${EAS_ENV:-development}
       - OCR_USE_GPU=false
     volumes:

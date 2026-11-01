@@ -51,12 +51,43 @@ class PolicyState(PolicyDocument):
     loaded_at: str | None = None
 
 
+_PULL_RETRY_SECONDS = 60
+_last_pull = {"at": 0.0}
+
+
+def pull_active_policy(path: str | None = None) -> PolicyState | None:
+    """Fill an empty cache from the API (eas.ai_policy_version is the source)."""
+    import time
+
+    if time.monotonic() - _last_pull["at"] < _PULL_RETRY_SECONDS:
+        return None
+    _last_pull["at"] = time.monotonic()
+    try:
+        import httpx
+
+        try:
+            from config import get_settings
+        except (ImportError, AttributeError):
+            from ai_service.config import get_settings
+        settings = get_settings()
+        response = httpx.get(
+            f"{settings.eas_api_internal_url.rstrip('/')}/api/v1/internal/ai-policy/active",
+            headers={"X-Internal-Secret": settings.internal_api_secret},
+            timeout=3.0,
+        )
+        if response.status_code != 200:
+            return None
+        return save_policy(PolicyDocument.model_validate(response.json()), path)
+    except Exception:  # noqa: BLE001 - no policy cache keeps the model defaults
+        return None
+
+
 def load_policy(path: str | None = None) -> PolicyState | None:
     path = path or POLICY_FILE
     try:
         mtime = os.stat(path).st_mtime_ns
     except FileNotFoundError:
-        return None
+        return pull_active_policy(path)
     if _cache["path"] == path and _cache["mtime"] == mtime:
         return _cache["policy"]
     with open(path, encoding="utf-8") as handle:

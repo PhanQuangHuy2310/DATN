@@ -541,7 +541,7 @@ class PolicyPublicationLatencyTests(SimpleTestCase):
         )
         self.assertLess(perf_counter() - started, 0.5)
 
-    def publish(self, roles, applied=None):
+    def publish(self, roles, stored=None):
         from django.test import RequestFactory
 
         from api_core.workflow.policy_views import publish_ai_policy_rules
@@ -553,22 +553,126 @@ class PolicyPublicationLatencyTests(SimpleTestCase):
         )
         request._dont_enforce_csrf_checks = True
         actor = _actor(roles)
+        stored = stored or {
+            "id": str(uuid4()),
+            "version": "QD-2026-11",
+            "rules": [],
+            "activated": True,
+        }
         with (
             patch("api_core.authn.service.load_actor_from_session", return_value=actor),
             patch(
-                "api_core.integrations.ai_service.ai_client_sync.publish_policy_rules",
-                return_value=applied or {"version": "QD-2026-11"},
+                "api_core.workflow.ai_policy.publish_version", return_value=stored
+            ) as store,
+            patch(
+                "api_core.workflow.ai_policy.push_to_ai",
+                return_value={"version": "QD-2026-11"},
             ) as ai,
         ):
-            return publish_ai_policy_rules(request), ai
+            return publish_ai_policy_rules(request), store, ai
 
-    def test_policy_admin_publishes_ai_rules(self):
-        response, ai = self.publish({"POLICY_ADMIN"})
-        self.assertEqual(response.status_code, 200)
+    def test_policy_admin_stores_version_in_db_then_refreshes_ai_cache(self):
+        response, store, ai = self.publish({"POLICY_ADMIN"})
+        self.assertEqual(response.status_code, 201)
+        store.assert_called_once()
         ai.assert_called_once()
-        self.assertIn(b"applied_in_ms", response.content)
+        self.assertIn(b'"ai_cache_refreshed": true', response.content)
+
+    def test_inactive_version_is_not_pushed_to_ai(self):
+        stored = {"id": "x", "version": "v", "rules": [], "activated": False}
+        response, _, ai = self.publish({"POLICY_ADMIN"}, stored=stored)
+        self.assertEqual(response.status_code, 201)
+        ai.assert_not_called()
 
     def test_other_roles_cannot_publish_ai_rules(self):
-        response, ai = self.publish({"APPROVER"})
+        response, store, ai = self.publish({"APPROVER"})
         self.assertEqual(response.status_code, 403)
+        store.assert_not_called()
         ai.assert_not_called()
+
+
+class AiPolicyStoreTests(SimpleTestCase):
+    """Item 1.4: eas.ai_policy_version is the source of truth for AI rules."""
+
+    databases: ClassVar[set[str]] = {"default"}
+
+    def test_document_validation(self):
+        from api_core.workflow.ai_policy import validate_document
+
+        ok = validate_document(
+            {
+                "version": " QD-1 ",
+                "rules": [{"id": "r1", "amount_gt": 5_000_000, "min_risk": 4}],
+            }
+        )
+        self.assertEqual(ok["version"], "QD-1")
+        for bad in (
+            {"version": "v", "rules": [{"id": "r1"}]},
+            {"version": "v", "rules": [{"id": "r1", "min_risk": 9}]},
+            {"version": "v", "rules": [{"id": "r", "auto_approve": False}] * 2},
+            {"version": "v", "rules": [{"id": "r", "auto_approve": False, "x": 1}]},
+            {"version": "", "rules": []},
+            {"rules": []},
+        ):
+            with self.subTest(bad=bad), self.assertRaises(CommandError):
+                validate_document(bad)
+
+    def _store(self, fetches, body):
+        from api_core.workflow import ai_policy
+
+        cursor = MagicMock()
+        cursor.fetchone.side_effect = fetches
+        with (
+            patch("api_core.workflow.ai_policy.transaction.atomic"),
+            patch("api_core.workflow.ai_policy.connection.cursor") as cm,
+            patch("api_core.workflow.ai_policy._append_admin_audit") as audit,
+        ):
+            cm.return_value.__enter__.return_value = cursor
+            result = ai_policy.publish_version(
+                actor=_actor({"POLICY_ADMIN"}), body=body, correlation_id="c"
+            )
+        return result, cursor, audit
+
+    def test_publish_inserts_and_activates_single_version(self):
+        result, cursor, audit = self._store(
+            [None, (str(uuid4()),), ("QD-2",)], {"version": "QD-2", "rules": []}
+        )
+        sql = _sql(cursor)
+        self.assertIn("INSERT INTO eas.ai_policy_version", sql)
+        self.assertIn("SET state='INACTIVE' WHERE state='ACTIVE'", sql)
+        self.assertIn("SET state='ACTIVE'", sql)
+        self.assertTrue(result["activated"])
+        actions = [c.kwargs["action"] for c in audit.call_args_list]
+        self.assertEqual(actions, ["AI_POLICY_CREATED", "AI_POLICY_ACTIVATED"])
+
+    def test_duplicate_version_is_rejected(self):
+        with self.assertRaises(CommandError) as raised:
+            self._store([(1,)], {"version": "QD-2", "rules": []})
+        self.assertEqual(raised.exception.code, "POLICY_VERSION_EXISTS")
+
+    def test_store_without_activation(self):
+        result, cursor, _ = self._store(
+            [None, (str(uuid4()),)], {"version": "QD-3", "rules": [], "activate": False}
+        )
+        self.assertFalse(result["activated"])
+        self.assertNotIn("SET state='ACTIVE'", _sql(cursor))
+
+    def test_internal_endpoint_serves_active_version_to_ai_only(self):
+        from django.test import RequestFactory
+
+        from api_core.workflow.policy_views import internal_active_ai_policy
+
+        factory = RequestFactory()
+        with patch(
+            "api_core.workflow.ai_policy.active_document",
+            return_value={"version": "QD-2", "rules": []},
+        ):
+            denied = internal_active_ai_policy(factory.get("/x"))
+            allowed = internal_active_ai_policy(
+                factory.get(
+                    "/x", HTTP_X_INTERNAL_SECRET=settings.EAS_AI_INTERNAL_SECRET
+                )
+            )
+        self.assertEqual(denied.status_code, 401)
+        self.assertEqual(allowed.status_code, 200)
+        self.assertIn(b"QD-2", allowed.content)

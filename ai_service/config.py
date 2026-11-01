@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     ocr_lang: str = "vi"
     ocr_use_gpu: bool = False
 
+    # --- Policy rules source of truth (api_core, eas.ai_policy_version) ---
+    eas_api_internal_url: str = "http://api:8000"
+
     # --- Auto-Approve ---
     auto_approve_max_risk: int = 2
     auto_approve_only_template_a: bool = True

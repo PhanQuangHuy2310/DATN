@@ -150,6 +150,16 @@ urlpatterns = [
         policy_views.publish_ai_policy_rules,
         name="policy-ai-rules",
     ),
+    path(
+        "policies/ai-rules/<uuid:version_id>/activate",
+        policy_views.activate_ai_policy_version,
+        name="policy-ai-rules-activate",
+    ),
+    path(
+        "internal/ai-policy/active",
+        policy_views.internal_active_ai_policy,
+        name="internal-ai-policy-active",
+    ),
     path("config-releases", views.config_releases_view, name="config-releases"),
     path(
         "config-releases/status",
