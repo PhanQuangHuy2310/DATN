@@ -163,6 +163,18 @@ export const roles = {
   OPS_ADMIN: "Quản trị vận hành",
   AUDITOR: "Người kiểm tra",
 };
+
+export function getPrimaryRoleBadge(userRoles = []) {
+  if (!userRoles || !userRoles.length) return { name: "Thành viên", tone: "badge-default" };
+  if (userRoles.includes("OPS_ADMIN")) return { name: "Quản trị vận hành", tone: "badge-admin" };
+  if (userRoles.includes("POLICY_ADMIN")) return { name: "Quản trị chính sách", tone: "badge-policy" };
+  if (userRoles.includes("AUDITOR")) return { name: "Kiểm toán viên", tone: "badge-audit" };
+  if (userRoles.includes("APPROVER")) return { name: "Người phê duyệt", tone: "badge-approver" };
+  if (userRoles.includes("EXECUTOR")) return { name: "Người thực hiện", tone: "badge-executor" };
+  if (userRoles.includes("ACCEPTOR")) return { name: "Người nghiệm thu", tone: "badge-acceptor" };
+  if (userRoles.includes("REQUESTER")) return { name: "Người gửi yêu cầu", tone: "badge-requester" };
+  return { name: "Thành viên", tone: "badge-default" };
+}
 export const fields = {
   LEAVE: [
     ["title", "Tiêu đề", "text"],

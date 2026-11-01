@@ -1754,3 +1754,237 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   font-size: 13px;
   margin-top: 6px;
 }
+
+/* Topbar user pill & role badges */
+.topbar-user-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.topbar-display-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.topbar-role-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 12px;
+  width: fit-content;
+}
+.topbar-role-badge.badge-admin {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+.topbar-role-badge.badge-policy {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.topbar-role-badge.badge-audit {
+  background: #fef3c7;
+  color: #92400e;
+}
+.topbar-role-badge.badge-approver {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.topbar-role-badge.badge-executor {
+  background: #dcfce7;
+  color: #166534;
+}
+.topbar-role-badge.badge-acceptor {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.topbar-role-badge.badge-requester {
+  background: #f1f5f9;
+  color: #475569;
+}
+.topbar-role-badge.badge-default {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Admin KPI Grid & Feature Tiles (Stitch / Figma Dashboard standards) */
+.admin-overview-header-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #166534;
+}
+.live-pulse {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  animation: pulse-green 2s infinite;
+}
+@keyframes pulse-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 18px 0 28px;
+}
+.stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.stat-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.stat-icon-blue { background: #eff6ff; color: #2563eb; }
+.stat-icon-green { background: #f0fdf4; color: #16a34a; }
+.stat-icon-purple { background: #faf5ff; color: #9333ea; }
+.stat-icon-amber { background: #fffbeb; color: #d97706; }
+
+.stat-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.stat-card-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+.stat-card-sub {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.admin-section-title {
+  margin: 24px 0 14px;
+}
+.admin-section-title h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 4px;
+}
+
+.admin-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 30px;
+}
+.admin-feature-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+.admin-feature-card:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.08);
+}
+.admin-feature-icon {
+  font-size: 24px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.admin-feature-body {
+  flex: 1;
+  min-width: 0;
+}
+.admin-feature-body strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+.admin-feature-body p {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0;
+}
+.admin-feature-arrow {
+  color: #94a3b8;
+  font-size: 16px;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.admin-feature-card:hover .admin-feature-arrow {
+  color: #2563eb;
+  transform: translateX(3px);
+}
+
+/* Navigation item layout fix - prevent vertical word wrapping */
+.nav-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  white-space: nowrap !important;
+}
+.nav-item span:first-child {
+  width: 20px !important;
+  font-size: 18px !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+}
+.nav-item span.nav-text {
+  width: auto !important;
+  font-size: 13px !important;
+  text-align: left !important;
+  flex: 1 !important;
+  white-space: nowrap !important;
+}

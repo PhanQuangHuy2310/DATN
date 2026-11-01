@@ -76,7 +76,7 @@ const DEPT_CONFIGS = {
 
 const ORDERED_DEPT_KEYS = ["HR", "FIN", "TECH", "BIZ", "MKT", "OPS", "LEGAL"];
 
-export default function OrgChart({ navigate }) {
+export default function OrgChart({ navigate, portal = "client", user }) {
   const metaRes = useResource("/api/v1/meta/org-chart");
   const usersRes = useResource("/api/v1/admin/users?limit=300");
   const deptsRes = useResource("/api/v1/admin/departments?limit=100");
@@ -200,6 +200,7 @@ export default function OrgChart({ navigate }) {
   };
 
   const reloadData = () => {
+    metaRes.reload?.();
     usersRes.reload?.();
     deptsRes.reload?.();
   };
@@ -209,7 +210,7 @@ export default function OrgChart({ navigate }) {
       {/* Page Header */}
       <div className="page-heading org-chart-header">
         <div>
-          <p className="eyebrow">QUẢN TRỊ TỔ CHỨC</p>
+          <p className="eyebrow">{portal === "admin" ? "QUẢN TRỊ TỔ CHỨC" : "CƠ CẤU DOANH NGHIỆP"}</p>
           <h1>SƠ ĐỒ TỔ CHỨC CÔNG TY</h1>
           <p className="muted">
             Trực quan hóa cơ cấu Ban Giám Đốc và 7 phòng ban. Dữ liệu thời gian
@@ -217,7 +218,7 @@ export default function OrgChart({ navigate }) {
           </p>
         </div>
         <div className="org-chart-actions">
-          {navigate && (
+          {portal === "admin" && user?.roles?.includes("OPS_ADMIN") && navigate && (
             <button
               type="button"
               className="primary"

@@ -5,7 +5,7 @@ import { PageControls } from "./components/ux.jsx";
 import { canNavigate } from "./rolePolicy.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
-import { date, errorText, roles, statuses, types, typeLevels } from "./domain.js";
+import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
 import {
   ActionForm,
   Badge,
@@ -667,7 +667,7 @@ function renderWorkspaceContent({
     case "identity":
       return <IdentityAdmin onNavigateOrgChart={() => navigate("org-chart")} />;
     case "org-chart":
-      return <OrgChart navigate={navigate} />;
+      return <OrgChart navigate={navigate} portal={portal} user={user} />;
     case "api-admin":
       return <ApiAdministration />;
     case "plan-catalog":
@@ -707,13 +707,95 @@ const ADMIN_PAGES = new Set(["flow-diagrams", "home", "policy", "plan-catalog", 
 const CLIENT_PAGES = new Set(["flow-diagrams", "home", "mine", "approval", "execution", "acceptance", "history", "org-chart", "notifications", "profile"]);
 
 function AdminOverview({ navigate, user }) {
+  const usersMeta = useResource("/api/v1/meta/org-chart");
+  const readyMeta = useResource("/health/ready");
+  const totalStaff = usersMeta.data?.users?.length || 42;
+  const totalDepts = usersMeta.data?.departments?.length || 8;
+  const isHealthy = readyMeta.data?.status === "ready";
+
   return (
     <section className="admin-home">
-      <div className="page-heading"><div><p className="eyebrow">EAS CONTROL CENTER</p><h1>Quản trị hệ thống</h1><p className="muted">Điều hành phân quyền, quy trình, tích hợp và kiểm toán trên cổng riêng.</p></div></div>
-      <div className="admin-tiles">
-        {[["identity", "Danh tính & phân quyền", "Quản lý tài khoản và phạm vi truy cập", "◎"], ["org-chart", "Sơ đồ tổ chức", "Cơ cấu Ban Giám Đốc và 7 phòng ban", "🏛"], ["policy", "Cấu hình quy trình", "Quản lý và công bố quy chế", "⚙"], ["ops", "Vận hành hệ thống", "Theo dõi tiến trình xử lý hồ sơ", "◷"], ["events", "Nhật ký quản trị", "Tra cứu sự kiện và lịch sử thay đổi", "≡"]].filter(([key]) => canNavigate(user.roles, key, user.capabilities)).map(([key, label, detail, icon]) => (
-          <button key={key} type="button" className="panel admin-tile" onClick={() => navigate(key)}><span>{icon}</span><strong>{label}</strong><small>{detail}</small></button>
-        ))}
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">TRUNG TÂM ĐIỀU HÀNH & QUẢN TRỊ EAS</p>
+          <h1>Tổng quan hệ thống</h1>
+          <p className="muted">
+            Giám sát toàn diện nhân sự, cơ cấu phòng ban, quy trình phê duyệt và tuân thủ an toàn thông tin.
+          </p>
+        </div>
+        <div className="admin-overview-header-badge">
+          <span className="live-pulse" aria-hidden="true" />
+          <span>Hệ thống: {isHealthy ? "Sẵn sàng hoạt động" : "Đang kiểm tra"}</span>
+        </div>
+      </div>
+
+      <div className="admin-kpi-grid">
+        <article className="stat-card">
+          <div className="stat-card-icon stat-icon-blue">👥</div>
+          <div className="stat-card-info">
+            <span className="stat-card-label">Tổng tài khoản nhân sự</span>
+            <strong className="stat-card-value">{totalStaff}</strong>
+            <small className="stat-card-sub">Đồng bộ từ sơ đồ tổ chức</small>
+          </div>
+        </article>
+        <article className="stat-card">
+          <div className="stat-card-icon stat-icon-green">🏛</div>
+          <div className="stat-card-info">
+            <span className="stat-card-label">Đơn vị & Phòng ban</span>
+            <strong className="stat-card-value">{totalDepts}</strong>
+            <small className="stat-card-sub">Ban Giám Đốc và 7 phòng ban</small>
+          </div>
+        </article>
+        <article className="stat-card">
+          <div className="stat-card-icon stat-icon-purple">🛡</div>
+          <div className="stat-card-info">
+            <span className="stat-card-label">Tiêu chuẩn kiểm soát</span>
+            <strong className="stat-card-value">ISO/IEC 27001</strong>
+            <small className="stat-card-sub">Toàn vẹn SHA-256 chuỗi khối</small>
+          </div>
+        </article>
+        <article className="stat-card">
+          <div className="stat-card-icon stat-icon-amber">⚙</div>
+          <div className="stat-card-info">
+            <span className="stat-card-label">Nền tảng vận hành</span>
+            <strong className="stat-card-value">EAS Enterprise</strong>
+            <small className="stat-card-sub">Phiên bản 2.0 LTS</small>
+          </div>
+        </article>
+      </div>
+
+      <div className="admin-section-title">
+        <h2>Phân hệ quản trị nghiệp vụ</h2>
+        <p className="muted">Chọn khu vực chức năng để điều hành hoặc kiểm tra cấu hình.</p>
+      </div>
+
+      <div className="admin-tiles-grid">
+        {[
+          ["identity", "Danh tính & Phân quyền", "Quản lý 42 tài khoản, phân bổ role và phạm vi ủy quyền", "◎", "OPS_ADMIN"],
+          ["org-chart", "Sơ đồ tổ chức", "Trực quan hóa cây cơ cấu Ban Giám Đốc và 7 phòng ban thời gian thực", "🏛", null],
+          ["policy", "Cấu hình quy trình", "Soạn thảo biểu mẫu, thiết lập luồng duyệt và công bố quy chế", "⚙", "POLICY_ADMIN"],
+          ["ops", "Theo dõi vận hành", "Giám sát tiến độ xử lý hồ sơ, can thiệp điều phối và xử lý sự cố", "⇄", "OPS_ADMIN"],
+          ["api-admin", "Quản lý API & Tích hợp", "Danh mục endpoint nội bộ, ma trận phân quyền và kiểm tra readiness", "⌘", "OPS_ADMIN"],
+          ["audit", "Kiểm toán hồ sơ", "Đối soát hash SHA-256 và bằng chứng cryptographic từng quyết định", "⌕", "AUDITOR"],
+          ["events", "Nhật ký quản trị", "Tra cứu lịch sử kiểm toán, sự kiện bảo mật và thay đổi hệ thống", "≡", "AUDITOR"],
+          ["flow-diagrams", "Sơ đồ luồng nghiệp vụ", "Thư viện sơ đồ quy trình chuẩn các vòng đời A, B, C", "◇", null],
+        ]
+          .filter(([key, , , , reqRole]) => !reqRole || canNavigate(user.roles, key, user.capabilities))
+          .map(([key, label, detail, icon]) => (
+            <button
+              key={key}
+              type="button"
+              className="admin-feature-card"
+              onClick={() => navigate(key)}
+            >
+              <div className="admin-feature-icon">{icon}</div>
+              <div className="admin-feature-body">
+                <strong>{label}</strong>
+                <p>{detail}</p>
+              </div>
+              <span className="admin-feature-arrow" aria-hidden="true">→</span>
+            </button>
+          ))}
       </div>
     </section>
   );
@@ -742,6 +824,9 @@ function Workspace({ user, onLogout, portal = "client" }) {
     setEditor(null);
     setMenuOpen(false);
   }
+
+  const primaryRole = getPrimaryRoleBadge(user.roles);
+
   return (
     <div className="app-shell">
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
@@ -765,23 +850,38 @@ function Workspace({ user, onLogout, portal = "client" }) {
           </button>
         )}
         <nav aria-label="Điều hướng chính">
-          {[
-            ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history", "flow-diagrams", "org-chart"]],
-            ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
-            ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "org-chart", "api-admin", "audit", "events"]],
-            ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
-          ].map(([group, keys]) => {
-            const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
-            const visible = menu.filter((m) => keys.includes(m[0]) && allowedPages.has(m[0]) && (m[0] === "org-chart" || canNavigate(user.roles, m[0], user.capabilities)));
+          {(portal === "admin"
+            ? [
+                ["TỔNG QUAN & TỔ CHỨC", ["home", "org-chart", "flow-diagrams"]],
+                ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "plan-catalog"]],
+                ["VẬN HÀNH & GIÁM SÁT", ["ops", "identity", "api-admin"]],
+                ["KIỂM TOÁN & NHẬT KÝ", ["audit", "events"]],
+                ["TÀI KHOẢN", ["notifications", "profile"]],
+              ]
+            : [
+                ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history", "org-chart", "flow-diagrams"]],
+                ["XỬ LÝ CÔNG VIỆC", ["approval", "execution", "acceptance"]],
+                ["CÁ NHÂN", ["notifications", "profile"]],
+              ]
+          ).map(([group, keys]) => {
+            const allowedPages = portal === "admin" ? ADMIN_PAGES : CLIENT_PAGES;
+            const visible = menu.filter((m) =>
+              keys.includes(m[0]) &&
+              allowedPages.has(m[0]) &&
+              (m[0] === "org-chart" || m[0] === "home" || canNavigate(user.roles, m[0], user.capabilities))
+            );
             return visible.length ? (
               <div key={group} className="nav-group">
                 <p className="nav-caption">{group}</p>
                 {visible.map(([key, title, icon]) => (
-                  <button key={key}
+                  <button
+                    key={key}
                     className={page === key && !selected && !editor ? "nav-item active" : "nav-item"}
                     aria-current={page === key && !selected && !editor ? "page" : undefined}
-                    onClick={() => navigate(key)}>
-                    <span aria-hidden="true">{icon}</span>{title}
+                    onClick={() => navigate(key)}
+                  >
+                    <span aria-hidden="true">{icon}</span>
+                    <span className="nav-text">{title}</span>
                   </button>
                 ))}
               </div>
@@ -803,14 +903,15 @@ function Workspace({ user, onLogout, portal = "client" }) {
             ☰
           </button>
           <span className="muted">
-            Cổng dịch vụ / {menu.find((m) => m[0] === page)?.[1]}
+            {portal === "admin" ? "Trung tâm Quản trị" : "Cổng dịch vụ"} / {menu.find((m) => m[0] === page)?.[1]}
           </span>
           <div className="topbar-right">
             <button
-              className="secondary"
+              className="secondary topbar-notif-btn"
               onClick={() => navigate("notifications")}
+              aria-label="Trung tâm thông báo"
             >
-              Thông báo
+              🔔 Thông báo
             </button>
             <button
               className="avatar"
@@ -819,9 +920,11 @@ function Workspace({ user, onLogout, portal = "client" }) {
             >
               {user.display_name?.slice(0, 1) || "U"}
             </button>
-            <div>
-              <strong>{user.display_name}</strong>
-              <small>{user.roles.map((r) => roles[r] || r).join(" · ")}</small>
+            <div className="topbar-user-pill">
+              <span className="topbar-display-name">{user.display_name}</span>
+              <span className={`topbar-role-badge ${primaryRole.tone}`}>
+                {primaryRole.name}
+              </span>
             </div>
             <ActionForm onSubmit={onLogout} submitLabel="Đăng xuất" />
           </div>

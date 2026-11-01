@@ -159,15 +159,17 @@ def change_password(
 
 
 def find_user(username: str) -> AuthUser | None:
+    cleaned = (username or "").strip().lower()
+    prefix = cleaned.split("@")[0] if "@" in cleaned else cleaned
     with connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT id::text, username, display_name, department_id::text,
                    password_hash, auth_version, is_active, must_change_password
             FROM eas.app_user
-            WHERE username = %s
+            WHERE username = %s OR username = %s OR email = %s
             """,
-            [username],
+            [cleaned, prefix, cleaned],
         )
         row = cursor.fetchone()
     return AuthUser(*row) if row else None

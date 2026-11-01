@@ -222,7 +222,7 @@ export default function IdentityAdmin({ onNavigateOrgChart }) {
       </div>
     </div>
     {kind === "request-types" && <output className="muted">Báo cáo v1.0 đặt mục tiêu 16 loại yêu cầu. Hệ thống hiện có {total} loại theo bộ lọc đang chọn; loại mới cần được cấp quyền, cấu hình và công bố trước khi tạo hồ sơ.</output>}
-    <div className="identity-explain" role="note"><strong>Bảo mật hệ thống:</strong> chỉ OPS_ADMIN với role membership <code>GLOBAL + ALL</code> mới được gọi API quản lý. Không suy quyền từ chức danh; mọi hành động cần lý do, idempotency và audit; không tự cấp/sửa role của chính mình.</div>
+    <div className="identity-explain" role="note"><strong>Lưu ý bảo mật:</strong> Mọi thao tác cấp quyền hoặc chỉnh sửa tài khoản đều được đối soát chính sách và lưu vết tự động vào nhật ký kiểm toán hệ thống.</div>
     <div className="tabs" aria-label="Mục quản trị danh tính">{Object.entries(entities).map(([k, v]) => <button type="button" className={kind === k ? "active" : "secondary"} key={k} onClick={() => switchKind(k)}>{v}</button>)}</div>
     {notice && <output className="success">{notice}</output>}
     <section className="panel identity-filter-panel" aria-label="Lọc dữ liệu">
@@ -240,7 +240,7 @@ export default function IdentityAdmin({ onNavigateOrgChart }) {
         <div className="identity-filter-reset"><button className="secondary" type="button" onClick={() => { setSearch(""); setStatus(""); setRole(""); setOffset(0); }}>Đặt lại bộ lọc</button></div>
       </div>
     </section>
-    <section className="panel" id="identity-results"><div className="section-head identity-result-head"><div><h2>Danh sách {entities[kind].toLowerCase()}</h2><p className="muted">{total} bản ghi theo bộ lọc hiện tại · Phân trang trực tiếp trên PostgreSQL.</p></div></div>
+    <section className="panel" id="identity-results"><div className="section-head identity-result-head"><div><h2>Danh sách {entities[kind].toLowerCase()}</h2><p className="muted">{total} bản ghi theo bộ lọc hiện tại.</p></div></div>
       <ResourceState resource={r}>
         {kind === "memberships" && <MembershipOverview items={r.data?.items || []}/>}
         <div className="table-wrap"><table className="responsive-records identity-table"><thead><tr><th>Thông tin</th><th>Phòng ban / scope</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
