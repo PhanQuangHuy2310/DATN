@@ -63,6 +63,10 @@ FROM (VALUES
   ('WFH_REQ', 'Làm việc từ xa (WFH)', 'HR', 1, 1, true)
 ) AS v(code, name, category, risk_weight, approval_level, is_active)
 WHERE rt.code = v.code;
+-- Types added after migration 11 (e.g. by 12) have no old category: park them
+-- inactive under GENERAL so the old constraint can be restored.
+UPDATE eas.request_type SET category = 'GENERAL', is_active = false
+WHERE category NOT IN ('HR','IT','FACILITY','PROCUREMENT','ASSET','FINANCE','GENERAL');
 ALTER TABLE eas.request_type ADD CONSTRAINT request_type_category_valid
   CHECK (((category)::text = ANY ((ARRAY['HR'::character varying, 'IT'::character varying, 'FACILITY'::character varying, 'PROCUREMENT'::character varying, 'ASSET'::character varying, 'FINANCE'::character varying, 'GENERAL'::character varying])::text[])));
 UPDATE eas.security_epoch SET version=version+1, updated_at=statement_timestamp() WHERE id=1;
