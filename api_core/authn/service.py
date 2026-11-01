@@ -202,40 +202,35 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
     idle_key = f"eas:idle:{session_id}"
     if cache.get(idle_key) != active_session:
         return None
+    # One round trip: each query to the Supabase pooler costs ~300ms.
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id::text, username, display_name, department_id::text,
-                   auth_version, must_change_password
-            FROM eas.app_user
-            WHERE id = %s AND is_active AND auth_version = %s
+            SELECT u.id::text, u.username, u.display_name, u.department_id::text,
+                   u.auth_version, u.must_change_password,
+                   ARRAY(
+                     SELECT DISTINCT rm.role::text
+                     FROM eas.role_membership rm
+                     WHERE rm.user_id = u.id
+                       AND rm.revoked_at IS NULL
+                       AND rm.valid_from <= statement_timestamp()
+                       AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                   )
+            FROM eas.app_user u
+            WHERE u.id = %s AND u.is_active AND u.auth_version = %s
             """,
             [user_id, auth_version],
         )
         user = cursor.fetchone()
-        if not user:
-            return None
-        if (
-            active_session is None
-            and getattr(settings, "ENVIRONMENT", "") == "development"
-        ):
-            cache.set(
-                f"eas:session:{session_id}",
-                expected_marker,
-                timeout=getattr(settings, "SESSION_COOKIE_AGE", 28800),
-            )
-        cursor.execute(
-            """
-            SELECT DISTINCT role
-            FROM eas.role_membership
-            WHERE user_id = %s
-              AND revoked_at IS NULL
-              AND valid_from <= statement_timestamp()
-              AND (valid_to IS NULL OR valid_to > statement_timestamp())
-            """,
-            [user_id],
+    if not user:
+        return None
+    if active_session is None and getattr(settings, "ENVIRONMENT", "") == "development":
+        cache.set(
+            f"eas:session:{session_id}",
+            expected_marker,
+            timeout=getattr(settings, "SESSION_COOKIE_AGE", 28800),
         )
-        roles = frozenset(row[0] for row in cursor.fetchall())
+    roles = frozenset(user[6] or ())
     # Sliding 30-minute inactivity window, but the original 8-hour absolute
     # session key is NEVER refreshed here. Logout/password reset still revoke.
     cache.set(idle_key, active_session, timeout=settings.EAS_SESSION_IDLE_SECONDS)
@@ -254,7 +249,10 @@ def require_actor(*required_roles: str) -> Callable:
     def decorator(view: Callable) -> Callable:
         @wraps(view)
         def wrapped(request: HttpRequest, *args, **kwargs) -> HttpResponse:
-            actor = load_actor_from_session(request)
+            # Nested decorated views (e.g. request_list_or_create -> request_list)
+            # reuse the actor loaded by the outer decorator in this request
+            # instead of paying another DB round trip; role checks still run.
+            actor = getattr(request, "actor", None) or load_actor_from_session(request)
             if actor is None:
                 request.session.flush()
                 if request.headers.get("X-Auth-Optional") == "1" and request.path in {

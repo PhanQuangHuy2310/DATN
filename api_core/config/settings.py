@@ -79,6 +79,28 @@ else:
     except ValueError:
         raise RuntimeError("EAS_DB_CONN_MAX_AGE must be 0..3600") from None
     DATABASES["default"]["CONN_MAX_AGE"] = _db_max_age
+    # A new TLS connection to the Supabase pooler costs ~2s from Vietnam; a
+    # process-wide pool reuses connections across requests and runserver
+    # threads. Django forbids pooling together with CONN_MAX_AGE > 0.
+    if _db_max_age == 0:
+        # With a pool, CONN_HEALTH_CHECKS pings the DB on every checkout (one
+        # extra ~300ms round trip). TCP keepalives + max_idle retire dead
+        # connections instead; psycopg_pool discards broken ones on return.
+        # ponytail: a connection killed server-side can fail one request (503
+        # + Retry-After); re-enable checks if the pooler drops idle clients.
+        DATABASES["default"]["CONN_HEALTH_CHECKS"] = False
+        DATABASES["default"]["OPTIONS"].update(
+            pool={
+                "min_size": int(os.getenv("EAS_DB_POOL_MIN_SIZE", "2")),
+                "max_size": int(os.getenv("EAS_DB_POOL_MAX_SIZE", "10")),
+                "max_idle": 240,
+                "timeout": 15,
+            },
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=3,
+        )
 
 LANGUAGE_CODE = "vi"
 TIME_ZONE = "Asia/Ho_Chi_Minh"
