@@ -23,6 +23,23 @@ class PortalCodeSplitTests(unittest.TestCase):
         for name in ("AdminEvents", "Operations", "Policy"):
             self.assertNotIn(name, admin_import)
 
+    def test_secondary_client_screens_are_lazy_chunks(self):
+        app = (ROOT / "web_client/src/App.jsx").read_text(encoding="utf-8")
+        static = [line for line in app.splitlines() if line.startswith("import ")]
+        for name in (
+            "RequestEditor",
+            "RequestDetail",
+            "WorkflowDiagrams",
+            "AiProcessGuide",
+            "ClientOrgChart",
+            "DelegationSettings",
+        ):
+            with self.subTest(screen=name):
+                self.assertFalse([line for line in static if f"/{name}.jsx" in line])
+                self.assertIn(
+                    f'const {name} = lazy(() => import("./components/{name}.jsx"))', app
+                )
+
     def test_only_admin_entry_injects_admin_screens(self):
         client = (ROOT / "web_client/src/main.jsx").read_text(encoding="utf-8")
         admin = (ROOT / "web_admin/src/main.jsx").read_text(encoding="utf-8")

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
@@ -12,18 +12,19 @@ import {
   ResourceState,
   useResource,
 } from "./components/ui.jsx";
-import RequestEditor from "./components/RequestEditor.jsx";
-import RequestDetail from "./components/RequestDetail.jsx";
-import WorkflowDiagrams from "./components/WorkflowDiagrams.jsx";
 import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
-import AiProcessGuide from "./components/AiProcessGuide.jsx";
 import ClientDashboard from "./components/ClientDashboard.jsx";
 import ClientRequests from "./components/ClientRequests.jsx";
-import ClientOrgChart from "./components/ClientOrgChart.jsx";
 import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
 import { Notifications, Profile } from "./components/Admin.jsx";
-import DelegationSettings from "./components/DelegationSettings.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
+// Screens opened after the first page load are split into their own chunks.
+const RequestEditor = lazy(() => import("./components/RequestEditor.jsx"));
+const RequestDetail = lazy(() => import("./components/RequestDetail.jsx"));
+const WorkflowDiagrams = lazy(() => import("./components/WorkflowDiagrams.jsx"));
+const AiProcessGuide = lazy(() => import("./components/AiProcessGuide.jsx"));
+const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
+const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
@@ -907,6 +908,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
           </div>
         </header>
         <main id="main" className="content" tabIndex={-1}>
+          <Suspense fallback={<p className="muted" role="status">Đang tải…</p>}>
           {portal === "admin" && page === "home" ? <AdminOverview navigate={navigate} user={user} /> : renderWorkspaceContent({
             editor,
             selected,
@@ -920,6 +922,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
             portal,
             searchText,
           })}
+          </Suspense>
         </main>
         <footer className="page-footer">
           EAS · {portal === "admin" ? "Trung tâm quản trị hệ thống" : "Hệ thống phê duyệt yêu cầu doanh nghiệp"}
