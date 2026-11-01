@@ -15,6 +15,7 @@ import io
 import ipaddress
 import re
 import socket
+import unicodedata
 from urllib.parse import urlparse
 
 try:
@@ -52,78 +53,101 @@ class OCRUrlRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def fold_ocr_text(raw_text: str) -> str:
+    """Uppercase ASCII form of OCR text for robust matching.
+
+    PaddleOCR's Vietnamese model often drops or garbles diacritics
+    ("TỔNG CỘNG" -> "TÓNG CÖNG", "THƯƠNG" -> "THU'O'NG"), so field patterns
+    run on this folded text; accented and unaccented inputs fold the same.
+    """
+    text = unicodedata.normalize("NFD", raw_text or "")
+    text = text.replace("đ", "d").replace("Đ", "D")
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+    text = re.sub(r"(?<=[A-Za-z])'(?=[A-Za-z])", "", text)  # U'O'NG -> UONG
+    return text.upper()
+
+
+def _first_match(patterns, text):
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            return match
+    return None
+
+
 def parse_invoice_fields(raw_text: str) -> dict:
     """
     Trích xuất các trường phổ biến từ raw OCR text bằng regex + heuristics.
-    Hỗ trợ hóa đơn VAT, biên lai, phiếu chi tiêu tiếng Việt.
+    Hỗ trợ hóa đơn VAT, biên lai, phiếu chi tiêu tiếng Việt, kể cả khi OCR
+    làm mất dấu (so khớp trên bản ASCII đã chuẩn hóa).
     """
-    text = raw_text.upper()
+    text = (raw_text or "").upper()
+    folded = fold_ocr_text(raw_text)
     fields = {}
 
     # --- Số tiền ---
     # Ví dụ: "1.500.000 VND", "1,500,000đ", "150.000 vnđ"
     # Totals come first: a bare "<number> VND" is often a unit price.
     number = r"(\d{1,3}(?:[.,]\d{3})+|\d+)"
-    amount_patterns = [
-        rf"TỔNG\s*(?:CỘNG|TIỀN)[^\d\n]*{number}",
-        rf"THÀNH\s*TIỀN[^\d\n]*{number}",
-        rf"AMOUNT[^\d\n]*{number}",
-        r"(\d{1,3}(?:[.,]\d{3})+)\s*(?:VN[DĐ]|Đ|VNĐ|\$|USD)",
-    ]
-    for pattern in amount_patterns:
-        match = re.search(pattern, text)
-        if match:
-            raw_amount = match.group(1).replace(".", "").replace(",", "")
-            try:
-                fields["amount"] = int(raw_amount)
-                break
-            except ValueError:
-                continue
+    match = _first_match(
+        [
+            # OCR may drop the vowel entirely: "TỔNG CỘNG" -> "TONG CNG".
+            rf"TONG\s*(?:C\w{{0,2}}NG|TIEN)[^\d\n]*{number}",
+            rf"THANH\s*TIEN[^\d\n]*{number}",
+            rf"AMOUNT[^\d\n]*{number}",
+            r"(\d{1,3}(?:[.,]\d{3})+)\s*(?:VND|D\b|\$|USD)",
+        ],
+        folded,
+    )
+    if match:
+        raw_amount = match.group(1).replace(".", "").replace(",", "")
+        if raw_amount.isdigit():
+            fields["amount"] = int(raw_amount)
 
     # --- Ngày ---
-    date_patterns = [
-        r"NGÀY\s+(\d{1,2})\s+THÁNG\s+(\d{1,2})\s+NĂM\s+(\d{4})",
-        r"NGÀY\s+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
-        r"DATE[:\s]+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
-        r"(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
-    ]
-    for pattern in date_patterns:
-        match = re.search(pattern, text)
-        if match:
-            groups = match.groups()
-            if len(groups) == 3:
-                fields["invoice_date"] = (
-                    f"{groups[2]}-{groups[1].zfill(2)}-{groups[0].zfill(2)}"
-                )
-                break
+    match = _first_match(
+        [
+            r"NGAY\s+(\d{1,2})\s+THANG\s+(\d{1,2})\s+NAM\s+(\d{4})",
+            r"NGAY\s+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
+            r"DATE[:\s]+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
+            r"(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
+        ],
+        folded,
+    )
+    if match:
+        day, month, year = match.groups()
+        fields["invoice_date"] = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
 
     # --- Số hóa đơn ---
-    invoice_no_patterns = [
-        r"SỐ\s*(?:HÓA ĐƠN|HD|INVOICE)[:\s]+([A-Z0-9\-/]+)",
-        r"INVOICE\s*NO[.:\s]+([A-Z0-9\-/]+)",
-        r"NO[.:\s]+([A-Z0-9\-/]{5,20})",
-    ]
-    for pattern in invoice_no_patterns:
-        match = re.search(pattern, text)
-        if match:
-            fields["invoice_number"] = match.group(1).strip()
-            break
+    match = _first_match(
+        [
+            r"SO\s*(?:HOA DON|HD|INVOICE)[:\s]+([A-Z0-9\-/]+)",
+            r"INVOICE\s*NO[.:\s]+([A-Z0-9\-/]+)",
+            r"NO[.:\s]+([A-Z0-9\-/]{5,20})",
+        ],
+        folded,
+    )
+    if match:
+        fields["invoice_number"] = match.group(1).strip()
 
     # --- Nhà cung cấp / Công ty ---
-    vendor_patterns = [
-        # Read to end of line so Vietnamese diacritics are kept.
-        r"CÔNG TY\s+(?:(?:TNHH MTV|TNHH|CỔ PHẦN|CP)\s+)?([^\n]{3,80})",
-        r"VENDOR[:\s]+([^\n]{3,80})",
-        r"SELLER[:\s]+([^\n]{3,80})",
-    ]
-    for pattern in vendor_patterns:
-        match = re.search(pattern, text)
-        if match:
-            fields["vendor_name"] = match.group(1).strip().title()
-            break
+    # Prefer the original text (keeps diacritics when OCR read them), then
+    # fall back to the folded text when OCR lost the accents.
+    vendor = _first_match(
+        [r"CÔNG TY\s+(?:(?:TNHH MTV|TNHH|CỔ PHẦN|CP)\s+)?([^\n]{3,80})"], text
+    ) or _first_match(
+        [
+            r"CONG TY\s+(?:(?:TNHH MTV|TNHH|CO PHAN|CP)\s+)?([^\n]{3,80})",
+            r"VENDOR[:\s]+([^\n]{3,80})",
+            r"SELLER[:\s]+([^\n]{3,80})",
+        ],
+        folded,
+    )
+    if vendor:
+        fields["vendor_name"] = vendor.group(1).strip().title()
 
     # --- MST (Mã số thuế) ---
-    mst_match = re.search(r"MST[:\s]+(\d{10,13})", text)
+    mst_match = re.search(r"MST[:\s]+(\d{10,13})", folded)
     if mst_match:
         fields["tax_code"] = mst_match.group(1)
 

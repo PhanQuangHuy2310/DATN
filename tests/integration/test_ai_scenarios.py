@@ -192,6 +192,27 @@ class InvoiceFieldExtractionTests(unittest.TestCase):
         self.assertEqual(fields["tax_code"], "0312345678")
         self.assertEqual(fields["invoice_number"], "0001234")
 
+    def test_ocr_text_with_lost_diacritics(self):
+        # Real PaddleOCR "vi" output for the VAT sample (tests/ocr_smoke).
+        raw = (
+            "CONG TY TNHH THU'O'NG MAI DAI PHAT"
+            + chr(10)
+            + "MST: 0312345678"
+            + chr(10)
+            + "Ngäy 15 thäng 03 näm 2026"
+            + chr(10)
+            + "Vän phng phäm 2 250.000 VND"
+            + chr(10)
+            + "Thänh tién: 500.000 VND"
+            + chr(10)
+            + "Tóng cng thanh toán: 1.540.000 VND"
+        )
+        fields = self.parse(raw)
+        self.assertEqual(fields["amount"], 1_540_000)
+        self.assertEqual(fields["invoice_date"], "2026-03-15")
+        self.assertEqual(fields["vendor_name"], "Thuong Mai Dai Phat")
+        self.assertEqual(fields["tax_code"], "0312345678")
+
     def test_receipt_fields(self):
         fields = self.parse(self.RECEIPT)
         self.assertEqual(fields["amount"], 320_000)
