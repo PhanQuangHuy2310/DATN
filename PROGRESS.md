@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 2.3 IT_SUPPORT: migration 13 + rollback công bố release mới với executor EXECUTOR_IT (release cũ bất biến, rollback trỏ lại bản cũ)
 - [x] 2.2 Migration 12 + rollback: 13 loại mới, mỗi loại 1 release PUBLISHED (form/route/SLA), bindings gộp từ release hiện có; đã chạy thử phần đọc trên DB thật và kiểm cấu hình bằng validate_config_release_payload
 - [x] 2.1 Migration 11 + rollback: 10 nhóm (FINANCE, RESOURCE, FACILITY, WORK, HR, TIME, IT, LEGAL, SALES, ADMIN), trọng số/số cấp/tên theo api_core/catalog/catalog_v2.json, ngưng 8 loại trùng
 - [x] 1.5 Hoàn tác AI tự duyệt trong 24h: POST /requests/<id>/ai-approval/revoke (APPROVER trong phạm vi, không phải người tạo), tạo revision mới giao người duyệt gốc, audit AI_AUTO_APPROVE_REVOKED, AI không duyệt lại; nút ẩn sau 24h; migration 10 + rollback. Sửa kèm lỗi idempotency key không phải UUID khiến AI tự duyệt luôn thất bại
@@ -13,10 +14,9 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 2.3 IT_SUPPORT người thực hiện IT
+- [ ] 2.4 Code nhóm/nhãn/JSON danh mục
 
 ## Chưa làm
-- [ ] 2.4 Code nhóm/nhãn/JSON danh mục
 - [ ] 2.5 Test danh mục
 - [ ] 3.1 Lazy-load màn hình quản trị
 - [ ] 4.1 Cờ is_system_account cho EAS AI
@@ -36,6 +36,6 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - 1.5: chỉ hoàn tác được hồ sơ vòng đời A đã COMPLETED (AI chỉ tự duyệt vòng đời A). Bất kỳ APPROVER trong phạm vi phòng/loại (trừ người tạo) đều thu hồi được, không chỉ người duyệt gốc.
 
 ## Việc tôi phải làm thủ công
-- Chạy trên Supabase SQL Editor theo thứ tự: `database/migrations/07_dev_restore_eas_emails.sql` (đã chạy), `08_ai_system_account.sql`, `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`, `09_ai_policy_store.sql`, `10_ai_auto_approve_revoke.sql`, `11_request_category_regroup.sql`, `12_request_types_new.sql`
+- Chạy trên Supabase SQL Editor theo thứ tự: `database/migrations/07_dev_restore_eas_emails.sql` (đã chạy), `08_ai_system_account.sql`, `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`, `09_ai_policy_store.sql`, `10_ai_auto_approve_revoke.sql`, `11_request_category_regroup.sql`, `12_request_types_new.sql`, `13_it_support_executor.sql`
 - Sau migration 09, nếu container AI đang có file quy định cũ: `python manage.py import_ai_policy_file ai_service/data/active_enterprise_policy.json --operator <email POLICY_ADMIN>`
 - Rollback: `database/migrations/rollback/`
