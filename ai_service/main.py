@@ -141,6 +141,12 @@ app.include_router(policy.router, prefix="/ai/policy", tags=["Policy Rules"])
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
+@app.on_event("startup")
+async def warm_up_ocr():
+    # Background thread: /health answers immediately while models load.
+    ocr.start_ocr_warmup()
+
+
 @app.get("/health", tags=["Health"])
 async def health_check():
     return {"status": "ok", "service": "ai-service", "version": app.version}

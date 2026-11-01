@@ -4,6 +4,7 @@ import asyncio
 import os
 import sys
 import unittest
+from pathlib import Path
 
 try:
     import fastapi  # noqa: F401
@@ -153,6 +154,61 @@ class PolicyRulesLatencyTests(unittest.TestCase):
 
         with self.assertRaises(ValidationError):
             self.publish("QD-05", [{"id": "noop", "request_type": "generic"}])
+
+
+@unittest.skipUnless(HAS_ROUTER_DEPS, "fastapi/loguru/pydantic_settings not installed")
+class OcrWarmupTests(unittest.TestCase):
+    """The OCR engine loads once, in the background, at service startup."""
+
+    def setUp(self):
+        from unittest.mock import patch
+
+        from routers import ocr
+
+        self.ocr = ocr
+        patcher = patch.object(ocr, "_ocr_engine", None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_warmup_builds_engine_once_even_with_concurrent_requests(self):
+        import sys
+        import threading
+        import time
+        from types import ModuleType
+        from unittest.mock import patch
+
+        calls = []
+
+        class SlowEngine:
+            def __init__(self, **kwargs):
+                calls.append(kwargs)
+                time.sleep(0.2)
+
+        fake = ModuleType("paddleocr")
+        fake.PaddleOCR = SlowEngine
+        with patch.dict(sys.modules, {"paddleocr": fake}):
+            warm = self.ocr.start_ocr_warmup()
+            others = [
+                threading.Thread(target=self.ocr.get_ocr_engine) for _ in range(3)
+            ]
+            for t in others:
+                t.start()
+            warm.join(2)
+            for t in others:
+                t.join(2)
+        self.assertEqual(len(calls), 1)
+        self.assertIsInstance(self.ocr._ocr_engine, SlowEngine)
+
+    def test_warmup_can_be_disabled(self):
+        from unittest.mock import patch
+
+        with patch.object(self.ocr.settings, "ocr_warmup", False):
+            self.assertIsNone(self.ocr.start_ocr_warmup())
+
+    def test_service_starts_warmup_on_startup(self):
+        main = (Path(AI_SERVICE_DIR) / "main.py").read_text(encoding="utf-8")
+        self.assertIn('@app.on_event("startup")', main)
+        self.assertIn("ocr.start_ocr_warmup()", main)
 
 
 @unittest.skipUnless(HAS_ROUTER_DEPS, "fastapi/loguru/pydantic_settings not installed")

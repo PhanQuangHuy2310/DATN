@@ -247,6 +247,8 @@ services:
     volumes:
       - ./ai_service/models:/app/models        # Persist trained models
       - ./ai_service/training/data:/app/training/data
+      # PaddleOCR models: downloaded once, reused across restarts and rebuilds.
+      - ai_ocr_models:/home/aiuser/.paddleocr
       # Snapshot dữ liệu mock đã chuẩn hóa (scripts/mock_data_normalizer.js) — chỉ đọc
       - ./ai_service/data/mock:/app/data/mock:ro
     healthcheck:
@@ -260,4 +262,5 @@ services:
         condition: service_healthy
 
 volumes:
+  ai_ocr_models:
   clamav-db:

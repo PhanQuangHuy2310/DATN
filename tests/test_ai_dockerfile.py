@@ -11,7 +11,8 @@ DOCKERFILE = (AI / "Dockerfile").read_text(encoding="utf-8")
 class AiDockerfileTests(unittest.TestCase):
     def test_multi_stage_with_lean_runtime(self):
         self.assertEqual(
-            re.findall(r"^FROM .* AS (\w+)$", DOCKERFILE, re.MULTILINE), ["builder", "runtime"]
+            re.findall(r"^FROM .* AS (\w+)$", DOCKERFILE, re.MULTILINE),
+            ["builder", "runtime"],
         )
         runtime = DOCKERFILE.split("AS runtime", 1)[1]
         self.assertIn("COPY --from=builder /opt/venv /opt/venv", runtime)
@@ -49,6 +50,11 @@ class AiDockerfileTests(unittest.TestCase):
         self.assertIn("--home /home/aiuser aiuser", runtime)
         self.assertIn("HOME=/home/aiuser", runtime)
         self.assertIn("/home/aiuser/.paddleocr", runtime)
+
+    def test_ocr_models_persist_in_a_named_volume(self):
+        compose = (AI.parent / "docker-compose.yml").read_text(encoding="utf-8")
+        self.assertIn("ai_ocr_models:/home/aiuser/.paddleocr", compose)
+        self.assertRegex(compose, r"(?m)^volumes:\s+ai_ocr_models:")
 
     def test_dockerignore_keeps_local_venv_out_of_context(self):
         ignored = (AI / ".dockerignore").read_text(encoding="utf-8").split()

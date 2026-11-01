@@ -11,10 +11,14 @@ Fallback: nếu PaddleOCR chưa cài được thì trả về raw text từ Gemi
 
 import asyncio
 import base64
+import contextlib
 import io
 import ipaddress
+import os
 import re
 import socket
+import threading
+import time
 import unicodedata
 from urllib.parse import urlparse
 
@@ -162,16 +166,65 @@ def parse_invoice_fields(raw_text: str) -> dict:
 _ocr_engine = None
 
 
+_ocr_engine_lock = threading.Lock()
+
+
 def get_ocr_engine():
     """Lazy Singleton Cache cho PaddleOCR chống rò rỉ bộ nhớ."""
     global _ocr_engine
     if _ocr_engine is None:
-        from paddleocr import PaddleOCR
+        # The startup warm-up thread and the first request must not both
+        # build an engine (each load costs seconds and hundreds of MB).
+        with _ocr_engine_lock, _model_download_lock():
+            if _ocr_engine is None:
+                from paddleocr import PaddleOCR
 
-        _ocr_engine = PaddleOCR(
-            use_angle_cls=True, lang=settings.ocr_lang, use_gpu=settings.ocr_use_gpu
-        )
+                _ocr_engine = PaddleOCR(
+                    use_angle_cls=True,
+                    lang=settings.ocr_lang,
+                    use_gpu=settings.ocr_use_gpu,
+                )
     return _ocr_engine
+
+
+@contextlib.contextmanager
+def _model_download_lock():
+    """Serialise model download across uvicorn worker processes.
+
+    Each worker warms up at startup; without this two processes download and
+    extract the same model archive at once and one fails (FileNotFoundError).
+    """
+    try:
+        import fcntl
+    except ImportError:  # Windows dev run: single process, nothing to share
+        yield
+        return
+    lock_dir = os.path.join(os.path.expanduser("~"), ".paddleocr")
+    os.makedirs(lock_dir, exist_ok=True)
+    with open(os.path.join(lock_dir, ".init.lock"), "w") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def start_ocr_warmup() -> threading.Thread | None:
+    """Initialise the OCR engine in a background thread (non-blocking)."""
+    if not settings.ocr_warmup:
+        return None
+
+    def _warm():
+        started = time.perf_counter()
+        try:
+            get_ocr_engine()
+            logger.info(f"OCR engine warmed up in {time.perf_counter() - started:.1f}s")
+        except Exception as exc:  # noqa: BLE001 - OCR stays lazy; requests retry
+            logger.warning(f"OCR warm-up skipped: {type(exc).__name__}")
+
+    thread = threading.Thread(target=_warm, name="ocr-warmup", daemon=True)
+    thread.start()
+    return thread
 
 
 def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float]:

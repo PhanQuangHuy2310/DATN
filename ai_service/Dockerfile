@@ -28,6 +28,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Pre-download the Vietnamese OCR models into the image (no network at runtime).
 # Without network the build still succeeds; models then download on first use.
+# If it fails (seen under BuildKit: zlib stream error), the compose volume
+# ai_ocr_models keeps the models after the first runtime download instead.
 RUN (python -c "from paddleocr import PaddleOCR; PaddleOCR(use_angle_cls=True, lang='vi', use_gpu=False)" \
      || echo "OCR model pre-download skipped") \
     && mkdir -p /root/.paddleocr \
