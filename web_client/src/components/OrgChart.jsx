@@ -77,6 +77,7 @@ const DEPT_CONFIGS = {
 const ORDERED_DEPT_KEYS = ["HR", "FIN", "TECH", "BIZ", "MKT", "OPS", "LEGAL"];
 
 export default function OrgChart({ navigate }) {
+  const metaRes = useResource("/api/v1/meta/org-chart");
   const usersRes = useResource("/api/v1/admin/users?limit=300");
   const deptsRes = useResource("/api/v1/admin/departments?limit=100");
   const [selectedNode, setSelectedNode] = useState(null);
@@ -85,8 +86,8 @@ export default function OrgChart({ navigate }) {
 
   // Compute live hierarchical chart data
   const chartData = useMemo(() => {
-    const users = usersRes.data?.items || [];
-    const departments = deptsRes.data?.items || [];
+    const users = metaRes.data?.users || usersRes.data?.items || [];
+    const departments = metaRes.data?.departments || deptsRes.data?.items || [];
 
     // Map user id -> user object
     const userMap = new Map();
@@ -181,7 +182,7 @@ export default function OrgChart({ navigate }) {
       departments: deptGroups,
       totalEmployees: users.filter((u) => u.is_active).length,
     };
-  }, [usersRes.data, deptsRes.data]);
+  }, [usersRes.data, deptsRes.data, metaRes.data]);
 
   // Search filter matching
   const isMatch = (memberList) => {

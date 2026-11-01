@@ -1,11 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { api, getResource, peekResource, invalidateResource, onDataChanged, idempotencyKey } from "../api.js";
-import { labels, errorText } from "../domain.js";
+import { labels, errorText, fieldLabels, humanizeKey, formatCurrency, date } from "../domain.js";
 export function Badge({ value }) {
   return (
     <span className={"badge " + value}>{labels[value] || value || "—"}</span>
   );
 }
+
+const SENSITIVE_KEYS = new Set(["password_hash", "security_epoch", "auth_version", "must_change_password"]);
+
+function formatScalar(key, val) {
+  if (val === null || val === undefined) return "—";
+  if (typeof val === "boolean") return val ? "Có / Đang hoạt động" : "Không / Ngừng";
+  if (typeof val === "number" && (key.includes("amount") || key.includes("price") || key.includes("budget") || key.includes("vnd") || key.includes("cost"))) {
+    return formatCurrency(val);
+  }
+  if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
+    return date(val);
+  }
+  return String(val);
+}
+
 export function Data({ value }) {
   if (value === null || value === undefined)
     return <span className="muted">—</span>;
@@ -24,11 +39,11 @@ export function Data({ value }) {
   if (typeof value === "object")
     return (
       <dl className="data-list">
-        {Object.entries(value).map(([k, v]) => (
+        {Object.entries(value).filter(([k]) => !SENSITIVE_KEYS.has(k)).map(([k, v]) => (
           <div key={k}>
-            <dt>{k}</dt>
+            <dt>{fieldLabels[k] || humanizeKey(k)}</dt>
             <dd>
-              <Data value={v} />
+              {typeof v === "object" && v !== null ? <Data value={v} /> : <span>{formatScalar(k, v)}</span>}
             </dd>
           </div>
         ))}
@@ -81,7 +96,16 @@ export function useResource(url) {
   };
 }
 export function ResourceState({ resource, children }) {
-  if (resource.loading && !resource.data) return <output className="empty" aria-live="polite"><span className="loading-spinner" /> Đang tải dữ liệu…</output>;
+  if (resource.loading && !resource.data) {
+    return (
+      <div className="skeleton-loader-stack" aria-busy="true" aria-label="Đang tải dữ liệu…">
+        <div className="skeleton-line skeleton-title" />
+        <div className="skeleton-line" />
+        <div className="skeleton-line" />
+        <div className="skeleton-line skeleton-short" />
+      </div>
+    );
+  }
   if (resource.error && !resource.data) return <div role="alert" className="error">
     {resource.error} <button type="button" className="secondary" onClick={resource.reload}>Thử lại</button>
   </div>;

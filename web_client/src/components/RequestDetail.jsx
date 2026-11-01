@@ -4,7 +4,7 @@ import { AiSummary } from "./AiAssist.jsx";
 import { requestActionPayload } from "../actionPayload.js";
 import { useState } from "react";
 import { api, API_BASE } from "../api.js";
-import { date, fields, fieldLabels, permissions, types, riskLevels, approvalLevels, resolverLabels, typeLevels } from "../domain.js";
+import { date, fields, fieldLabels, permissions, types, riskLevels, approvalLevels, resolverLabels, typeLevels, formatCurrency, numberToVietnameseWords } from "../domain.js";
 import {
   ActionForm,
   Badge,
@@ -113,11 +113,16 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
             <div className="page-heading">
               <div>
                 <p className="eyebrow">
-                  {r.code} / {types[r.type_code]}
+                  {r.code} / {types[r.type_code] || r.type_code}
                 </p>
-                <h1>{r.payload?.title || r.code}</h1>
-                <p className="muted">
-                  Tạo lúc {date(r.created_at)} · Cập nhật {date(r.updated_at)} · {riskLevels[r.risk_weight || typeLevels[r.type_code]?.risk_weight || 3]} · {approvalLevels[r.approval_level || r.approval_steps?.length || typeLevels[r.type_code]?.approval_level || 1]}
+                <h1>{r.payload?.title || r.title || r.code}</h1>
+                <p className="muted request-meta-line">
+                  <span>Người gửi: <strong>{r.requester_name || "Nhân viên"}</strong></span>
+                  {r.department_name && <span> · Phòng ban: <strong>{r.department_name}</strong></span>}
+                  <span> · Tạo lúc {date(r.created_at)}</span>
+                  <span> · Cập nhật {date(r.updated_at)}</span>
+                  <span> · {riskLevels[r.risk_weight || typeLevels[r.type_code]?.risk_weight || 3]}</span>
+                  <span> · {approvalLevels[r.approval_level || r.approval_steps?.length || typeLevels[r.type_code]?.approval_level || 1]}</span>
                 </p>
               </div>
               <Badge value={r.status} />
@@ -128,7 +133,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                 ["progress", "Tiến trình"],
                 ["diagrams", "Sơ đồ luồng"],
                 ["history", "Phiên bản & tài liệu"],
-                ["audit", "Nhật ký"],
+                ...((user?.roles?.includes("AUDITOR") || user?.roles?.includes("OPS_ADMIN")) ? [["audit", "Nhật ký kiểm toán"]] : []),
               ].map(([key, title]) => (
                 <button
                   key={key}
@@ -148,12 +153,26 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                   <>
                     <h2>Nội dung đề nghị</h2>
                     <dl className="data-list">
-                      {Object.entries(r.payload || {}).map(([name, value]) => (
-                        <div key={name}>
-                          <dt>{fields[r.type_code]?.find(([field]) => field === name)?.[1] || fieldLabels[name] || name.replaceAll("_", " ")}</dt>
-                          <dd>{typeof value === "object" ? JSON.stringify(value) : String(value ?? "—")}</dd>
-                        </div>
-                      ))}
+                      {Object.entries(r.payload || {}).map(([name, value]) => {
+                        const isMonetary = (name.includes("amount") || name.includes("budget") || name.includes("vnd") || name.includes("price") || name.includes("cost") || name.includes("value")) && typeof value === "number";
+                        return (
+                          <div key={name}>
+                            <dt>{fields[r.type_code]?.find(([field]) => field === name)?.[1] || fieldLabels[name] || name.replaceAll("_", " ")}</dt>
+                            <dd>
+                              {isMonetary ? (
+                                <div className="currency-display">
+                                  <strong>{formatCurrency(value)}</strong>
+                                  <span className="currency-words-help"> ({numberToVietnameseWords(value)})</span>
+                                </div>
+                              ) : typeof value === "object" && value !== null ? (
+                                <Data value={value} />
+                              ) : (
+                                String(value ?? "—")
+                              )}
+                            </dd>
+                          </div>
+                        );
+                      })}
                     </dl>
                   </>
                 )}
@@ -165,7 +184,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                         <li key={i}>
                           <strong>Cấp {s.tier_level || s.step_no} / {r.approval_steps?.length || r.approval_level || 1}{s.resolver_code ? ` · ${resolverLabels[s.resolver_code] || s.resolver_code}` : ""}</strong>{" "}
                           <Badge value={s.state} />
-                          <p className="muted">Người xử lý: {s.assignee_name ? `${s.assignee_name} (${s.assignee_id})` : s.assignee_id}</p>
+                          <p className="muted">Người xử lý: {s.assignee_name ? `${s.assignee_name} (${s.assignee_id})` : (s.assignee_id ? (s.assignee_id.length > 20 ? "Đang chờ phân công Quản lý" : s.assignee_id) : "Đang chờ hệ thống phân công")}</p>
                           <small>{date(s.closed_at || s.activated_at)}</small>
                         </li>
                       ))}
@@ -279,7 +298,16 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                       submitLabel="Xác minh nhật ký"
                     />
                   )}
-                  {verify && <Data value={verify} />}
+                  {verify && (
+                    <div className={`audit-verify-card ${verify.verified ? "verified-success" : "verified-warning"}`}>
+                      <div className="verify-badge">
+                        {verify.verified ? "✅ Chuỗi nhật ký kiểm toán hợp lệ" : "⚠️ Cảnh báo: Sai lệch chuỗi nhật ký"}
+                      </div>
+                      <div className="verify-meta">
+                        <small>Thuật toán: {verify.algorithm?.toUpperCase() || "SHA-256"} · {verify.count ?? verify.total ?? 0} sự kiện toàn vẹn</small>
+                      </div>
+                    </div>
+                  )}
                   <AiSummary request={r} />
                 </div>
                 <hr />
@@ -301,8 +329,13 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                   onSubmit={action === "execution" ? execute : decide}
                   danger={["cancel", "reject", "rework"].includes(action)}
                 >
+                  {["cancel", "reject", "rework"].includes(action) && (
+                    <div className="danger-confirm-banner">
+                      <strong>⚠️ Cảnh báo an toàn:</strong> Thao tác này sẽ {actions[action][0].toLowerCase()} trên hồ sơ {r.code}. Hành động này không thể hoàn tác!
+                    </div>
+                  )}
                   <p>
-                    {r.code} · {r.payload?.title}
+                    <strong>{r.code}</strong> · {r.payload?.title || r.title || "—"}
                   </p>
                   {action === "execution" ? (
                     <>

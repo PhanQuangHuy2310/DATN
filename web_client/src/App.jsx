@@ -274,7 +274,7 @@ const menu = [
   ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
   ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
   ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
-  ["org-chart", "Sơ đồ tổ chức", "🏛", "OPS_ADMIN"],
+  ["org-chart", "Sơ đồ tổ chức", "🏛"],
   ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
   ["audit", "Kiểm toán hồ sơ", "⌕", "AUDITOR"],
   ["events", "Nhật ký quản trị", "≡", "AUDITOR"],
@@ -338,18 +338,18 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
             <span className="mini-stat-icon" aria-hidden="true">{icon}</span>
             <span className="mini-stat-label">{label}</span>
             <strong>{code ? items.filter((item) => item.status === code).length : items.length}</strong>
-            <small>trên trang đang tải</small>
+            <small>hồ sơ</small>
           </button>
         ))}
       </section>
       <section className="panel filter-panel">
         <div className="filters">
           <label>
-            Tìm mã yêu cầu (toàn bộ dữ liệu)
+            Tìm kiếm yêu cầu
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ví dụ: REQ-2026-001"
+              placeholder="Tìm theo mã đơn, tiêu đề, người gửi..."
             />
           </label>
           <label>
@@ -447,32 +447,43 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
               <table className="responsive-records">
                 <thead>
                   <tr>
-                    <th>Mã yêu cầu</th>
+                    <th>Mã & Tiêu đề</th>
                     <th>Nghiệp vụ</th>
-                    <th>Trạng thái</th>
-                    <th>Cập nhật</th>
+                    <th>Người gửi & Phòng ban</th>
+                    <th>Trạng thái & Cập nhật</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((i) => (
                     <tr key={i.id}>
-                      <td data-label="Mã yêu cầu" className="request-code">{i.code}</td>
+                      <td data-label="Mã & Tiêu đề" className="request-title-cell">
+                        <span className="request-code">{i.code}</span>
+                        <strong className="request-title">{i.title || i.code}</strong>
+                      </td>
                       <td data-label="Nghiệp vụ">
-                        <span className="type-icon">
-                          {i.type_code === "LEAVE"
-                            ? "◷"
-                            : i.type_code === "ACCESS"
-                              ? "◇"
-                              : "▣"}
-                        </span>
-                        {types[i.type_code] || i.type_code}
-                        <small className="muted" style={{display: "block"}}>Trọng số Cấp {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · Duyệt {i.approval_level || typeLevels[i.type_code]?.approval_level || 1}/5 cấp</small>
+                        <div className="type-badge-inline">
+                          <span className="type-icon">
+                            {i.type_code === "LEAVE"
+                              ? "◷"
+                              : i.type_code === "ACCESS"
+                                ? "◇"
+                                : "▣"}
+                          </span>
+                          <span>{types[i.type_code] || i.type_code}</span>
+                        </div>
+                        <small className="muted" style={{display: "block"}}>
+                          Rủi ro {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · Duyệt {i.approval_level || typeLevels[i.type_code]?.approval_level || 1} cấp
+                        </small>
                       </td>
-                      <td data-label="Trạng thái">
+                      <td data-label="Người gửi & Phòng ban" className="request-sender-cell">
+                        <strong className="sender-name">{i.requester_name || "—"}</strong>
+                        <span className="sender-dept muted">{i.department_name || "—"}</span>
+                      </td>
+                      <td data-label="Trạng thái & Cập nhật">
                         <Badge value={i.status} />
+                        <small className="muted" style={{display: "block", marginTop: "4px"}}>{date(i.updated_at)}</small>
                       </td>
-                      <td data-label="Cập nhật">{date(i.updated_at)}</td>
                       <td data-label="Thao tác">
                         <button type="button" className="link" onClick={() => onOpen(i.id)}>
                           Xem chi tiết →
@@ -576,7 +587,11 @@ function Overview({ navigate, onOpen, user }) {
             {recent.data?.items?.length ? (
               <ul className="dashboard-list">
                 {recent.data.items.map((item) => <li key={item.id}>
-                  <div><strong>{item.code}</strong><small>{types[item.type_code] || item.type_code} · {date(item.updated_at)}</small><Badge value={item.status}/></div>
+                  <div>
+                    <strong>{item.code} {item.title ? `· ${item.title}` : `· ${types[item.type_code] || item.type_code}`}</strong>
+                    <small>{item.requester_name ? `${item.requester_name} (${item.department_name || "—"}) · ` : ""}{date(item.updated_at)}</small>
+                    <Badge value={item.status}/>
+                  </div>
                   <button type="button" className="link" onClick={() => onOpen(item.id)}>Xem chi tiết →</button>
                 </li>)}
               </ul>
@@ -689,7 +704,7 @@ function renderWorkspaceContent({
 
 const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
 const ADMIN_PAGES = new Set(["flow-diagrams", "home", "policy", "plan-catalog", "ops", "identity", "org-chart", "api-admin", "audit", "events", "notifications", "profile"]);
-const CLIENT_PAGES = new Set(["flow-diagrams", "home", "mine", "approval", "execution", "acceptance", "history", "notifications", "profile"]);
+const CLIENT_PAGES = new Set(["flow-diagrams", "home", "mine", "approval", "execution", "acceptance", "history", "org-chart", "notifications", "profile"]);
 
 function AdminOverview({ navigate, user }) {
   return (
@@ -719,7 +734,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
     return () => cancelAnimationFrame(frame);
   }, [page, selected, editor]);
   function navigate(next) {
-    if (!canNavigate(user.roles, next, user.capabilities)) return;
+    if (next !== "org-chart" && !canNavigate(user.roles, next, user.capabilities)) return;
     const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
     if (!allowedPages.has(next)) return;
     setPage(next);
@@ -751,13 +766,13 @@ function Workspace({ user, onLogout, portal = "client" }) {
         )}
         <nav aria-label="Điều hướng chính">
           {[
-            ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history", "flow-diagrams"]],
+            ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history", "flow-diagrams", "org-chart"]],
             ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
             ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "org-chart", "api-admin", "audit", "events"]],
             ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
           ].map(([group, keys]) => {
             const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
-            const visible = menu.filter((m) => keys.includes(m[0]) && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
+            const visible = menu.filter((m) => keys.includes(m[0]) && allowedPages.has(m[0]) && (m[0] === "org-chart" || canNavigate(user.roles, m[0], user.capabilities)));
             return visible.length ? (
               <div key={group} className="nav-group">
                 <p className="nav-caption">{group}</p>

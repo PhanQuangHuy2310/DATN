@@ -331,3 +331,45 @@ def colleague_choices(request):
         )
         choices = [{"id": x, "display_name": y} for x, y in cursor.fetchall()]
     return JsonResponse({"items": choices})
+
+
+@require_GET
+@require_actor()
+def org_chart_data(request):
+    """Read-only organizational chart structure for authenticated users.
+
+    Provides public business hierarchy: active departments and active staff.
+    Does not disclose password hashes, security epochs or private contact info.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT d.id::text, d.code, d.name, d.parent_id::text
+            FROM eas.department d
+            WHERE d.is_active
+            ORDER BY d.code, d.name
+        """)
+        departments = [
+            {"id": row[0], "code": row[1], "name": row[2], "parent_id": row[3]}
+            for row in cursor.fetchall()
+        ]
+        cursor.execute("""
+            SELECT u.id::text, u.username, u.display_name, u.department_id::text,
+                   u.manager_id::text, d.code AS department_code, u.is_active
+            FROM eas.app_user u
+            LEFT JOIN eas.department d ON d.id = u.department_id
+            WHERE u.is_active
+            ORDER BY u.display_name, u.username
+        """)
+        users = [
+            {
+                "id": row[0],
+                "username": row[1],
+                "display_name": row[2],
+                "department_id": row[3],
+                "manager_id": row[4],
+                "department_code": row[5],
+                "is_active": row[6],
+            }
+            for row in cursor.fetchall()
+        ]
+    return JsonResponse({"departments": departments, "users": users})

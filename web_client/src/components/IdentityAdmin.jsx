@@ -150,8 +150,8 @@ function MembershipOverview({ items = [] }) {
     const matching = items.filter((item) => item.role === key);
     return {key, name, total: matching.length, counts: Object.fromEntries(membershipStates.map((state) => [state.key, matching.filter((item) => membershipState(item) === state.key).length]))};
   }).filter((row) => row.total > 0);
-  return <div className="membership-chart" aria-label="Biểu đồ số lượng phân quyền theo vai trò trên trang hiện tại">
-    <div className="membership-chart-head"><div><h3>Phân bổ quyền theo vai trò</h3><p className="muted">{items.length} bản ghi trên trang hiện tại, không phải toàn hệ thống</p></div>
+  return <div className="membership-chart" aria-label="Biểu đồ số lượng phân quyền theo vai trò">
+    <div className="membership-chart-head"><div><h3>Phân bổ quyền theo vai trò</h3><p className="muted">Hiển thị {items.length} phân quyền theo danh sách lọc</p></div>
       <div className="membership-chart-legend">{membershipStates.map((state) => <span key={state.key}><i className={`membership-chart-key ${state.key}`}/>{state.label}</span>)}</div></div>
     <div className="membership-chart-rows">{rows.map((row) => <div className="membership-chart-row" key={row.key}>
       <span>{row.name}</span><div className="membership-chart-track" role="img" aria-label={`${row.name}: ${membershipStates.map((state) => `${row.counts[state.key]} ${state.label}`).join(", ")}`}>

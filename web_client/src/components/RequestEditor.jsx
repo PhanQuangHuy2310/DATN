@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, idempotencyKey } from "../api.js";
-import { fields, fieldLabels, types, errorText, riskLevels, approvalLevels, typeLevels } from "../domain.js";
+import { fields, fieldLabels, types, errorText, riskLevels, approvalLevels, typeLevels, formatCurrency, numberToVietnameseWords } from "../domain.js";
 import { Badge, command } from "./ui.jsx";
 import { AiRequestAssist } from "./AiAssist.jsx";
 import RequestTypeMenu from "./RequestTypeMenu.jsx";
@@ -8,6 +8,33 @@ import RequestTypeMenu from "./RequestTypeMenu.jsx";
 // String properties representing evidence are stored as sanitized filenames in
 // the published schema, while the actual file bytes go through Attachment API.
 const isEvidenceField = (name) => /(?:_file|_files|_pdf|_doc|_images|photo_evidence|board_resolution|handover_doc)$/.test(name);
+function CurrencyNumberField({ name, isRequired, spec, initialValue }) {
+  const [val, setVal] = useState(initialValue != null ? String(initialValue) : "");
+  const num = Number(val);
+  const isValidNum = !isNaN(num) && num > 0;
+  return (
+    <div className="currency-field-wrap">
+      <input
+        name={name}
+        type="number"
+        required={isRequired}
+        min={spec?.minimum ?? 0}
+        max={spec?.maximum}
+        step={1}
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        placeholder="Nhập số tiền (VNĐ)..."
+      />
+      {isValidNum && (
+        <div className="currency-hint">
+          <span className="currency-formatted">{formatCurrency(num)}</span>
+          <span className="currency-words">({numberToVietnameseWords(num)})</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FormFieldControl({
   name,
   kind,
@@ -65,6 +92,16 @@ function FormFieldControl({
         required={isRequired}
         rows={3}
         maxLength={spec?.maxLength}
+      />
+    );
+  }
+  if (kind === "number" && (name.includes("amount") || name.includes("budget") || name.includes("vnd") || name.includes("price") || name.includes("cost") || name.includes("value"))) {
+    return (
+      <CurrencyNumberField
+        name={name}
+        isRequired={isRequired}
+        spec={spec}
+        initialValue={initialValue}
       />
     );
   }

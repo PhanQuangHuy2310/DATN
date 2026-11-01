@@ -128,13 +128,17 @@ def request_list(request: HttpRequest) -> JsonResponse:
         SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                r.updated_at, r.created_at,
                COALESCE(r.risk_weight, rt.risk_weight),
-               COALESCE(r.approval_level, rt.approval_level)
+               COALESCE(r.approval_level, rt.approval_level),
+               u.display_name AS requester_name,
+               d.name AS department_name,
+               COALESCE(r.draft_payload->>'title', v.payload->>'title', r.code) AS title
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
         LEFT JOIN eas.app_user u ON u.id = r.requester_id
+        LEFT JOIN eas.department d ON d.id = COALESCE(v.department_id, u.department_id)
         WHERE (%s::text IS NULL OR r.status = %s)
-          AND (%s::text IS NULL OR STRPOS(LOWER(r.code), LOWER(%s::text)) > 0)
+          AND (%s::text IS NULL OR STRPOS(LOWER(CONCAT(r.code, ' ', COALESCE(r.draft_payload->>'title', v.payload->>'title', ''), ' ', COALESCE(u.display_name, ''))), LOWER(%s::text)) > 0)
           AND (%s::text IS NULL OR rt.code = %s)
           AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
           AND (%s::timestamptz IS NULL OR r.created_at >= %s::timestamptz)
@@ -313,6 +317,9 @@ def request_list(request: HttpRequest) -> JsonResponse:
                 "created_at": row[6].isoformat(),
                 "risk_weight": risk_w,
                 "approval_level": app_lvl,
+                "requester_name": row[9] if len(row) > 9 else None,
+                "department_name": row[10] if len(row) > 10 else None,
+                "title": row[11] if len(row) > 11 else None,
             }
         )
     return JsonResponse(
@@ -347,11 +354,14 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
                    r.requester_id::text, r.draft_payload, v.payload, v.revision_no,
                    r.created_at, r.updated_at,
                    COALESCE(v.risk_weight, r.risk_weight, rt.risk_weight),
-                   COALESCE(v.approval_level, r.approval_level, rt.approval_level)
+                   COALESCE(v.approval_level, r.approval_level, rt.approval_level),
+                   u.display_name AS requester_name,
+                   d.name AS department_name
             FROM eas.request r
             JOIN eas.request_type rt ON rt.id = r.type_id
             LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
             LEFT JOIN eas.app_user u ON u.id = r.requester_id
+            LEFT JOIN eas.department d ON d.id = COALESCE(v.department_id, u.department_id)
             WHERE r.id = %s
               AND (
                 r.requester_id = %s
@@ -470,6 +480,8 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
                 "status": row[3],
                 "lock_version": row[4],
                 "requester_id": row[5],
+                "requester_name": row[13] if len(row) > 13 else None,
+                "department_name": row[14] if len(row) > 14 else None,
                 "payload": effective_payload,
                 "revision_no": row[8],
                 "created_at": row[9].isoformat(),
