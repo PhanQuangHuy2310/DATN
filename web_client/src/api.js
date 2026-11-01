@@ -48,7 +48,8 @@ export async function api(path, options = {}) {
   const attempts = isRead ? 2 : 1;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 9000);
+    // Writes may still be committing to Supabase: wait longer and never retry them.
+    const timeout = setTimeout(() => controller.abort(), isRead ? 15000 : 30000);
     const onAbort = () => controller.abort();
     options.signal?.addEventListener("abort", onAbort, { once: true });
     if (options.signal?.aborted) controller.abort();

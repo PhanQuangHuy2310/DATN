@@ -1,27 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { api, getResource, peekResource, invalidateResource, onDataChanged, idempotencyKey } from "../api.js";
-import { labels, errorText, fieldLabels, humanizeKey, formatCurrency, date } from "../domain.js";
+import { labels, fieldLabels, errorText } from "../domain.js";
 export function Badge({ value }) {
   return (
     <span className={"badge " + value}>{labels[value] || value || "—"}</span>
   );
 }
-
-const SENSITIVE_KEYS = new Set(["password_hash", "security_epoch", "auth_version", "must_change_password"]);
-
-function formatScalar(key, val) {
-  if (val === null || val === undefined) return "—";
-  if (typeof val === "boolean") return val ? "Có / Đang hoạt động" : "Không / Ngừng";
-  if (typeof val === "number" && (key.includes("amount") || key.includes("price") || key.includes("budget") || key.includes("vnd") || key.includes("cost"))) {
-    return formatCurrency(val);
-  }
-  if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
-    return date(val);
-  }
-  return String(val);
-}
-
-export function Data({ value }) {
+const commonLabels = {
+  actor_kind:"Nguồn thao tác", action:"Hành động", created_at:"Ngày tạo", updated_at:"Cập nhật",
+  occurred_at:"Thời điểm", reason:"Lý do", state:"Trạng thái", status:"Trạng thái",
+  display_name:"Họ tên", department:"Phòng ban", role:"Vai trò", request_type:"Loại yêu cầu",
+  result:"Kết quả", notes:"Ghi chú", details:"Chi tiết", score:"Điểm đánh giá",
+  revision_no:"Phiên bản", submitted_at:"Ngày gửi", verified:"Đã xác minh",
+};
+export function Data({ value, technical = false }) {
   if (value === null || value === undefined)
     return <span className="muted">—</span>;
   if (Array.isArray(value))
@@ -29,7 +21,7 @@ export function Data({ value }) {
       <div className="stack">
         {value.map((v, i) => (
           <div className="record" key={i}>
-            <Data value={v} />
+            <Data value={v} technical={technical} />
           </div>
         ))}
       </div>
@@ -39,11 +31,11 @@ export function Data({ value }) {
   if (typeof value === "object")
     return (
       <dl className="data-list">
-        {Object.entries(value).filter(([k]) => !SENSITIVE_KEYS.has(k)).map(([k, v]) => (
+        {Object.entries(value).filter(([k]) => technical || !(["id", "actor_id", "request_id", "user_id", "department_id", "type_id", "assignee_id", "instance_id", "event_id", "step_id", "attempt_id", "correlation_id", "target_id", "revision_id", "workflow_id", "attachment_id", "prev_hash", "hash", "hash_version"].includes(k))).map(([k, v]) => (
           <div key={k}>
-            <dt>{fieldLabels[k] || humanizeKey(k)}</dt>
+            <dt>{fieldLabels[k] || commonLabels[k] || (technical ? k : k.replace(/_/g," "))}</dt>
             <dd>
-              {typeof v === "object" && v !== null ? <Data value={v} /> : <span>{formatScalar(k, v)}</span>}
+              <Data value={v} technical={technical} />
             </dd>
           </div>
         ))}
@@ -78,6 +70,9 @@ export function useResource(url) {
 
   useEffect(() => onDataChanged(() => setMutationVersion((v) => v + 1)), []);
   useEffect(() => {
+    if (!url) {
+      return;
+    }
     let active = true;
     getResource(url).then((data) => {
       if (active) setState({ url, data, error: "", loading: false, refreshing: false });
@@ -96,16 +91,7 @@ export function useResource(url) {
   };
 }
 export function ResourceState({ resource, children }) {
-  if (resource.loading && !resource.data) {
-    return (
-      <div className="skeleton-loader-stack" aria-busy="true" aria-label="Đang tải dữ liệu…">
-        <div className="skeleton-line skeleton-title" />
-        <div className="skeleton-line" />
-        <div className="skeleton-line" />
-        <div className="skeleton-line skeleton-short" />
-      </div>
-    );
-  }
+  if (resource.loading && !resource.data) return <output className="empty" aria-live="polite"><span className="loading-spinner" /> Đang tải dữ liệu…</output>;
   if (resource.error && !resource.data) return <div role="alert" className="error">
     {resource.error} <button type="button" className="secondary" onClick={resource.reload}>Thử lại</button>
   </div>;

@@ -17,7 +17,7 @@ test("each of the seven SRS roles has the correct main worklist", () => {
 
 test("auditors cannot see mutation workspaces", () => {
   const pages = visiblePages(["AUDITOR"]);
-  assert.deepEqual(pages, ["home", "flow-diagrams", "audit", "events", "notifications", "profile"]);
+  assert.deepEqual(pages, ["home", "flow-diagrams", "ai-process", "audit", "events", "notifications", "profile"]);
   assert.ok(!pages.includes("mine"));
   assert.ok(!pages.includes("ops"));
   assert.ok(!pages.includes("policy"));
@@ -58,4 +58,16 @@ test("UC17 API catalog and matrix require GLOBAL+ALL ops capability", () => {
 test("Plan request blueprints are available only to policy/operations admins", () => {
   for (const role of ["POLICY_ADMIN", "OPS_ADMIN"]) assert.equal(canNavigate([role], "plan-catalog"), true);
   for (const role of ["REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR", "AUDITOR"]) assert.equal(canNavigate([role], "plan-catalog"), false);
+});
+
+
+test("new admin workspaces require global identity authority", () => {
+  for (const page of ["users", "permissions", "request-catalog"]) {
+    assert.equal(canNavigate(["OPS_ADMIN"],page),false);
+    assert.equal(canNavigate(["OPS_ADMIN"],page,{identity_manage:true}),true);
+    assert.equal(canNavigate(["REQUESTER"],page,{identity_manage:true}),false);
+  }
+});
+test("AI process guide is available to every recognized role", () => {
+  for (const role of ROLES) assert.equal(canNavigate([role],"ai-process"),true);
 });

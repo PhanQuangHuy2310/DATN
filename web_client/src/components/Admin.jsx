@@ -286,8 +286,6 @@ export function Policy({onManageAccess, canManageAccess=false}) {
 export function Operations({ items, onRefresh }) {
   const [selected, setSelected] = useState(null),
     [target, setTarget] = useState("EXECUTOR");
-  const orgResource = useResource("/api/v1/meta/org-chart");
-  const orgUsers = orgResource.data?.users || [];
   return (
     <>
       <div className="panel">
@@ -296,8 +294,9 @@ export function Operations({ items, onRefresh }) {
           <table>
             <thead>
               <tr>
-                <th>Mã yêu cầu</th>
+                <th>Hồ sơ</th>
                 <th>Trạng thái</th>
+                <th>Người phụ trách</th>
                 <th>Hạn xử lý</th>
                 <th>Thao tác</th>
               </tr>
@@ -305,15 +304,16 @@ export function Operations({ items, onRefresh }) {
             <tbody>
               {items.map((r) => (
                 <tr key={r.id}>
-                  <td data-label="Mã yêu cầu">{r.code}</td>
+                  <td data-label="Hồ sơ"><strong>{r.code}</strong><small className="muted" style={{display:"block"}}>{r.type_name || "Yêu cầu"}</small></td>
                   <td data-label="Trạng thái">
                     <Badge value={r.status} />
                   </td>
+                  <td data-label="Người phụ trách"><strong>{r.responsible?.name || "Chưa phân công"}</strong>
+                    <small className="muted" style={{display:"block"}}>{({APPROVAL:"Đang kiểm duyệt",EXECUTION:"Đang thực hiện",ACCEPTANCE:"Đang nghiệm thu"})[r.responsible?.stage] || "Chưa có người xử lý"}</small>
+                  </td>
                   <td data-label="Hạn xử lý">
-                    {date(r.sla?.due_at)}{" "}
-                    {r.sla?.breached_at && (
-                      <span className="badge REJECTED">Quá hạn</span>
-                    )}
+                    <span>{r.sla?.due_at ? date(r.sla.due_at) : "Chưa có hạn"}</span>{" "}
+                    {(r.overdue || r.sla?.breached_at) && <span className="badge REJECTED" role="status">Quá hạn</span>}
                   </td>
                   <td data-label="Thao tác">
                     <button
@@ -359,14 +359,8 @@ export function Operations({ items, onRefresh }) {
           }}
         >
           <label>
-            ID sự kiện vận hành (Event ID)
-            <input
-              name="event_id"
-              placeholder="Nhập UUID sự kiện, ví dụ: 0192e45f-7c10-7812-98ab-3120cb451000"
-              required
-              pattern="[0-9a-fA-F-]{36}"
-            />
-            <small className="muted">Lấy mã sự kiện từ trang Nhật ký quản trị hoặc hàng đợi Outbox</small>
+            ID sự kiện
+            <input name="event_id" required pattern="[0-9a-fA-F-]{36}" />
           </label>
           <Reason />
         </ActionForm>
@@ -420,22 +414,8 @@ export function Operations({ items, onRefresh }) {
               />
             </label>
             <label>
-              Người nhận điều chuyển mới
-              <input
-                list="operations-user-list"
-                name="new_user_id"
-                placeholder="Chọn nhân sự hoặc nhập UUID..."
-                required
-                pattern="[0-9a-fA-F-]{36}"
-              />
-              <datalist id="operations-user-list">
-                {orgUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.display_name} (@{u.username}) - {u.department_name || "Nội bộ"}
-                  </option>
-                ))}
-              </datalist>
-              <small className="muted">Gợi ý tự động từ danh bạ nhân sự toàn công ty</small>
+              ID người nhận mới
+              <input name="new_user_id" required pattern="[0-9a-fA-F-]{36}" />
             </label>
             <Reason />
           </ActionForm>
@@ -524,64 +504,14 @@ export function AdminEvents() {
 }
 export function Profile({ user, onChanged }) {
   const [done, setDone] = useState(false);
-  const roleNames = {
-    REQUESTER: "Người lập đơn",
-    APPROVER: "Người phê duyệt",
-    EXECUTOR: "Người thực hiện",
-    ACCEPTOR: "Người nghiệm thu",
-    POLICY_ADMIN: "Quản trị quy chế",
-    OPS_ADMIN: "Quản trị vận hành",
-    AUDITOR: "Kiểm toán viên",
-  };
   return (
-    <div className="profile-container">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">HỒ SƠ TÀI KHOẢN</p>
-          <h1>Hồ sơ cá nhân</h1>
-          <p className="muted">Thông tin tài khoản nội bộ và quyền hạn đang kích hoạt trong hệ thống.</p>
-        </div>
-      </div>
-      <section className="panel profile-card">
-        <div className="profile-header">
-          <div className="profile-avatar">
-            {(user.display_name || user.username || "U").slice(0, 2).toUpperCase()}
-          </div>
-          <div className="profile-main-info">
-            <h2>{user.display_name || user.username}</h2>
-            <p className="muted">@{user.username} · {user.email || `${user.username}@eas.internal`}</p>
-            <div className="profile-roles-strip">
-              {(user.roles || []).map((r) => (
-                <span key={r} className="role-pill">
-                  {roleNames[r] || r}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-        <hr />
-        <div className="profile-details-grid">
-          <div className="profile-detail-item">
-            <span className="detail-label">Phòng ban công tác</span>
-            <strong className="detail-value">{user.department_name || "Phòng ban nội bộ"}</strong>
-          </div>
-          <div className="profile-detail-item">
-            <span className="detail-label">Mã định danh (ID)</span>
-            <code className="detail-code">{user.id || "—"}</code>
-          </div>
-          <div className="profile-detail-item">
-            <span className="detail-label">Trạng thái tài khoản</span>
-            <strong className="detail-value status-active">● Đang hoạt động</strong>
-          </div>
-          <div className="profile-detail-item">
-            <span className="detail-label">Tên đăng nhập</span>
-            <strong className="detail-value">{user.username}</strong>
-          </div>
-        </div>
-      </section>
-      <section className="panel">
-        <h2>Đổi mật khẩu tài khoản</h2>
-        <p className="muted">Đổi mật khẩu định kỳ để tăng cường an toàn thông tin doanh nghiệp.</p>
+    <section className="panel">
+      <h2>Hồ sơ cá nhân</h2>
+      <p>{user.display_name}</p>
+      <p className="muted">
+        {user.username} · {user.department_id}
+      </p>
+      <h2>Đổi mật khẩu</h2>
       <ActionForm
         submitLabel="Đổi mật khẩu"
         onSubmit={async (v) => {
@@ -608,8 +538,7 @@ export function Profile({ user, onChanged }) {
           help="15–128 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt; không chứa tên đăng nhập." />
         <PasswordField label="Xác nhận mật khẩu" name="confirm_password" autoComplete="new-password" required />
       </ActionForm>
-      {done && <p className="success">Đã đổi mật khẩu thành công.</p>}
-      </section>
-    </div>
+      {done && <p className="success">Đã đổi mật khẩu.</p>}
+    </section>
   );
 }

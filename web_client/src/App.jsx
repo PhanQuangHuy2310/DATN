@@ -19,6 +19,12 @@ import OrgChart from "./components/OrgChart.jsx";
 import ApiAdministration from "./components/ApiAdministration.jsx";
 import PlanCatalog from "./components/PlanCatalog.jsx";
 import WorkflowDiagrams from "./components/WorkflowDiagrams.jsx";
+import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
+import AiProcessGuide from "./components/AiProcessGuide.jsx";
+import ClientDashboard from "./components/ClientDashboard.jsx";
+import ClientRequests from "./components/ClientRequests.jsx";
+import ClientOrgChart from "./components/ClientOrgChart.jsx";
+import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
 import {
   AdminEvents,
   Notifications,
@@ -141,7 +147,7 @@ function Login({ onLogin, portal = "client" }) {
                     id="login-username"
                     name="username"
                     type="text"
-                    placeholder="Email Address"
+                    placeholder="Tên đăng nhập hoặc email"
                     autoComplete="username"
                     required
                     className="auth-pill-input"
@@ -197,7 +203,7 @@ function Login({ onLogin, portal = "client" }) {
                 className="auth-btn-primary"
                 aria-label="Đăng nhập"
               >
-                {busy ? "Đang xác thực…" : "Login"}
+                {busy ? "Đang xác thực…" : "Đăng nhập"}
               </button>
 
               <button
@@ -205,7 +211,7 @@ function Login({ onLogin, portal = "client" }) {
                 className="auth-forgot-link"
                 onClick={() => setShowForgotModal(true)}
               >
-                Forgot Password
+                Quên mật khẩu
               </button>
             </fieldset>
           </form>
@@ -222,12 +228,8 @@ function Login({ onLogin, portal = "client" }) {
               <button type="button" className="auth-modal-close" onClick={() => setShowInfoModal(false)} aria-label="Đóng">✕</button>
             </div>
             <div className="auth-modal-body">
-              <p><strong>EAS (Enterprise Approval System)</strong> là nền tảng quản trị và phê duyệt quy trình điện tử doanh nghiệp:</p>
-              <ul>
-                <li><strong>ISO 9001 & CMMI:</strong> Số hóa toàn diện quy trình đề xuất, luồng phê duyệt đa cấp và quản lý tài sản, nhân sự.</li>
-                <li><strong>ISO/IEC 27001 & SOC 2:</strong> Phân quyền RBAC nghiêm ngặt, cơ chế chống vượt quyền (Separation of Duties), kiểm toán bất biến (Audit Trail).</li>
-                <li><strong>AI Service:</strong> Tự động phân tích rủi ro, kiểm tra tuân thủ chính sách và tóm tắt nội dung tức thì.</li>
-              </ul>
+              <p>Nền tảng giúp bạn tạo yêu cầu, theo dõi tiến độ và nhận thông báo khi có quyết định xử lý.</p>
+              <ul><li>Quy trình rõ ràng từ tạo yêu cầu đến hoàn thành.</li><li>Phân công người xử lý, hiển thị hạn và lịch sử quyết định.</li><li>Trợ lý AI hỗ trợ tóm tắt và đánh giá rủi ro; người có thẩm quyền vẫn quyết định phê duyệt.</li></ul>
             </div>
             <div className="auth-modal-footer">
               <button type="button" className="auth-btn-primary auth-modal-btn" onClick={() => setShowInfoModal(false)}>Đã hiểu</button>
@@ -244,13 +246,8 @@ function Login({ onLogin, portal = "client" }) {
               <button type="button" className="auth-modal-close" onClick={() => setShowForgotModal(false)} aria-label="Đóng">✕</button>
             </div>
             <div className="auth-modal-body">
-              <p>Để đảm bảo an toàn thông tin theo tiêu chuẩn <strong>ISO/IEC 27001</strong>, hệ thống không cấp phát lại mật khẩu qua email tự động.</p>
-              <p>Vui lòng liên hệ <strong>Bộ phận Quản trị Vận hành (IT Ops / Security Desk)</strong> để được hỗ trợ xác minh danh tính và cấp lại mật khẩu:</p>
-              <div className="auth-support-box">
-                <p><strong>Hotline:</strong> Máy lẻ 108 (Phòng CNTT)</p>
-                <p><strong>Email:</strong> sec-ops@tantrieu.local</p>
-                <p><strong>Giờ làm việc:</strong> 08:00 - 18:00 (Thứ 2 - Thứ 6)</p>
-              </div>
+              <p>Để được cấp lại mật khẩu, hãy liên hệ bộ phận quản trị hệ thống của đơn vị. Quản trị viên sẽ xác minh danh tính và hỗ trợ đặt mật khẩu tạm thời.</p>
+              <p>Không chia sẻ mật khẩu hoặc mã xác minh trong yêu cầu hỗ trợ.</p>
             </div>
             <div className="auth-modal-footer">
               <button type="button" className="auth-btn-primary auth-modal-btn" onClick={() => setShowForgotModal(false)}>Đóng</button>
@@ -268,13 +265,18 @@ const menu = [
   ["approval", "Chờ tôi phê duyệt", "✓", "APPROVER"],
   ["execution", "Công việc thực hiện", "▣", "EXECUTOR"],
   ["acceptance", "Chờ nghiệm thu", "◇", "ACCEPTOR"],
-  ["history", "Hồ sơ liên quan", "◷"],
+
   ["flow-diagrams", "Sơ đồ luồng", "◇"],
+  ["ai-process", "Quy trình AI", "✧"],
+  ["request-catalog", "Quản lý loại yêu cầu", "▦", "OPS_ADMIN"],
+  ["users", "Quản lý người dùng", "♙", "OPS_ADMIN"],
+  ["permissions", "Vai trò & phân quyền", "▦", "OPS_ADMIN"],
   ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
   ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
   ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
   ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
-  ["org-chart", "Sơ đồ tổ chức", "🏛"],
+  ["org-chart", "Sơ đồ tổ chức", "🏛", "OPS_ADMIN"],
+  ["org-client", "Sơ đồ tổ chức", "🏛"],
   ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
   ["audit", "Kiểm toán hồ sơ", "⌕", "AUDITOR"],
   ["events", "Nhật ký quản trị", "≡", "AUDITOR"],
@@ -338,18 +340,18 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
             <span className="mini-stat-icon" aria-hidden="true">{icon}</span>
             <span className="mini-stat-label">{label}</span>
             <strong>{code ? items.filter((item) => item.status === code).length : items.length}</strong>
-            <small>hồ sơ</small>
+            <small>trên trang đang tải</small>
           </button>
         ))}
       </section>
       <section className="panel filter-panel">
         <div className="filters">
           <label>
-            Tìm kiếm yêu cầu
+            Tìm yêu cầu
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tìm theo mã đơn, tiêu đề, người gửi..."
+              placeholder="Ví dụ: REQ-2026-001"
             />
           </label>
           <label>
@@ -386,7 +388,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
               ))}
             </select>
           </label>
-          {page !== "ops" && (
+          {(
             <>
               <label>
                 Từ ngày
@@ -447,43 +449,32 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
               <table className="responsive-records">
                 <thead>
                   <tr>
-                    <th>Mã & Tiêu đề</th>
+                    <th>Mã yêu cầu</th>
                     <th>Nghiệp vụ</th>
-                    <th>Người gửi & Phòng ban</th>
-                    <th>Trạng thái & Cập nhật</th>
+                    <th>Trạng thái</th>
+                    <th>Cập nhật</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((i) => (
                     <tr key={i.id}>
-                      <td data-label="Mã & Tiêu đề" className="request-title-cell">
-                        <span className="request-code">{i.code}</span>
-                        <strong className="request-title">{i.title || i.code}</strong>
-                      </td>
+                      <td data-label="Mã yêu cầu" className="request-code">{i.code}</td>
                       <td data-label="Nghiệp vụ">
-                        <div className="type-badge-inline">
-                          <span className="type-icon">
-                            {i.type_code === "LEAVE"
-                              ? "◷"
-                              : i.type_code === "ACCESS"
-                                ? "◇"
-                                : "▣"}
-                          </span>
-                          <span>{types[i.type_code] || i.type_code}</span>
-                        </div>
-                        <small className="muted" style={{display: "block"}}>
-                          Rủi ro {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · Duyệt {i.approval_level || typeLevels[i.type_code]?.approval_level || 1} cấp
-                        </small>
+                        <span className="type-icon">
+                          {i.type_code === "LEAVE"
+                            ? "◷"
+                            : i.type_code === "ACCESS"
+                              ? "◇"
+                              : "▣"}
+                        </span>
+                        {availableTypes.data?.items?.find(t => t.code === i.type_code)?.name || types[i.type_code] || "Loại yêu cầu"}
+                        <small className="muted" style={{display: "block"}}>Mức rủi ro {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · {i.approval_level || typeLevels[i.type_code]?.approval_level || 1} cấp duyệt</small>
                       </td>
-                      <td data-label="Người gửi & Phòng ban" className="request-sender-cell">
-                        <strong className="sender-name">{i.requester_name || "—"}</strong>
-                        <span className="sender-dept muted">{i.department_name || "—"}</span>
-                      </td>
-                      <td data-label="Trạng thái & Cập nhật">
+                      <td data-label="Trạng thái">
                         <Badge value={i.status} />
-                        <small className="muted" style={{display: "block", marginTop: "4px"}}>{date(i.updated_at)}</small>
                       </td>
+                      <td data-label="Cập nhật">{date(i.updated_at)}</td>
                       <td data-label="Thao tác">
                         <button type="button" className="link" onClick={() => onOpen(i.id)}>
                           Xem chi tiết →
@@ -510,115 +501,33 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
   );
 }
 function Overview({ navigate, onOpen, user }) {
-  const [period] = useState(() => {
-    const end = new Date();
-    return new URLSearchParams({
-      created_from: new Date(end.getTime() - 30 * 86400000).toISOString(),
-      created_to: end.toISOString(),
-    }).toString();
-  });
-  const r = useResource("/api/v1/reports/requests?" + period);
+  const today = () => new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Ho_Chi_Minh"});
+  const [from, setFrom] = useState(() => new Date(Date.now()-29*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Ho_Chi_Minh"}));
+  const [to, setTo] = useState(today);
+  const valid = Boolean(from && to && from <= to && (Date.parse(to)-Date.parse(from)) <= 366*86400000);
+  const params = new URLSearchParams({created_from:`${from}T00:00:00+07:00`, created_to:`${to}T23:59:59+07:00`});
+  const r = useResource(`/api/v1/reports/requests?${params}`);
   const recent = useResource("/api/v1/requests?limit=5&offset=0");
   const report = r.data?.report;
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p>
-          <h1>Tổng quan xử lý yêu cầu</h1>
-          <p className="muted">
-            Thống kê theo phạm vi dữ liệu bạn được phép xem.
-          </p>
-        </div>
-      </div>
-      <ResourceState resource={r}>
-        {report && (
-          <>
-            <p className="muted">
-              Kỳ báo cáo: {date(report.period?.from)} —{" "}
-              {date(report.period?.to)}
-            </p>
-            <div className="stats-grid">
-              {[
-                ["Đã gửi", report.submitted],
-                ["Đã phê duyệt", report.approved],
-                ["Đã hoàn thành", report.completed],
-                [
-                  "Tỷ lệ hoàn thành",
-                  report.completed_rate == null
-                    ? "—"
-                    : Math.round(report.completed_rate * 100) + "%",
-                ],
-              ].map(([label, value]) => (
-                <article className="stat" key={label}>
-                  <span>{label}</span>
-                  <strong>{value ?? 0}</strong>
-                  <small>Trong kỳ báo cáo</small>
-                </article>
-              ))}
-            </div>
-            <section className="panel">
-              <h2>Phân bố trạng thái</h2>
-              <p className="muted">
-                Báo cáo không tính bản nháp; xem bản nháp trong Yêu cầu của tôi.
-              </p>
-              <div className="status-grid">
-                {Object.entries(statuses).map(([key, label]) => (
-                  <div key={key}>
-                    <Badge value={key} />
-                    <strong aria-label={label}>
-                      {key === "DRAFT" ? "—" : report.by_status?.[key] || 0}
-                    </strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
-      </ResourceState>
-      <RoleTasks user={user} navigate={navigate} />
-      <div className="dashboard-board">
-        <section className="panel" aria-label="Hồ sơ cập nhật gần đây">
-          <div className="section-head">
-            <div><h2>Hồ sơ mới cập nhật</h2><p className="muted">Danh sách thực tế trong phạm vi bạn được phép xem.</p></div>
-            <button type="button" className="secondary" onClick={() => navigate("history")}>Xem danh sách →</button>
-          </div>
-          <ResourceState resource={recent}>
-            {recent.data?.items?.length ? (
-              <ul className="dashboard-list">
-                {recent.data.items.map((item) => <li key={item.id}>
-                  <div>
-                    <strong>{item.code} {item.title ? `· ${item.title}` : `· ${types[item.type_code] || item.type_code}`}</strong>
-                    <small>{item.requester_name ? `${item.requester_name} (${item.department_name || "—"}) · ` : ""}{date(item.updated_at)}</small>
-                    <Badge value={item.status}/>
-                  </div>
-                  <button type="button" className="link" onClick={() => onOpen(item.id)}>Xem chi tiết →</button>
-                </li>)}
-              </ul>
-            ) : <p className="muted">Chưa có hồ sơ trong phạm vi quyền xem.</p>}
-          </ResourceState>
-        </section>
-        <aside className="panel">
-          <h2>Truy cập nhanh</h2>
-          <p className="muted">Đi thẳng đến khu vực làm việc, hệ thống tự cuộn về phần thao tác.</p>
-          <div className="dashboard-quick">
-            <button type="button" onClick={() => navigate("mine")}>▤ Yêu cầu của tôi →</button>
-            <button type="button" className="secondary" onClick={() => navigate("notifications")}>◉ Trung tâm thông báo →</button>
-            <button type="button" className="secondary" onClick={() => navigate("history")}>◷ Tra cứu hồ sơ →</button>
-          </div>
-        </aside>
-      </div>
-      <section className="welcome-banner">
-        <div>
-          <h2>Công việc rõ ràng. Tiến độ minh bạch.</h2>
-          <p>Mỗi quyết định được lưu lại xuyên suốt vòng đời yêu cầu.</p>
-        </div>
-        <button type="button" onClick={() => navigate("history")}>
-          Xem hồ sơ liên quan →
-        </button>
-      </section>
-    </>
-  );
+  return <>
+    <div className="page-heading"><div><p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p><h1>Tổng quan yêu cầu</h1>
+      <p className="muted">Nắm nhanh tiến độ, trạng thái hồ sơ và những loại yêu cầu phổ biến trong phạm vi bạn được phép xem.</p></div></div>
+    <PeriodChooser start={from} end={to} setStart={setFrom} setEnd={setTo} reload={r.reload}/>
+    {!valid && <p className="error" role="alert">Vui lòng chọn khoảng thời gian hợp lệ, không quá 12 tháng.</p>}
+    {valid && <ResourceState resource={r}>{report && <PersonalOverviewStats report={report}/>}</ResourceState>}
+    <RoleTasks user={user} navigate={navigate}/>
+    <div className="dashboard-board"><section className="panel" aria-label="Hồ sơ cập nhật gần đây">
+      <div className="section-head"><div><h2>Hồ sơ mới cập nhật</h2><p className="muted">Thông tin bạn được phép xem.</p></div><button type="button" className="secondary" onClick={()=>navigate("history")}>Xem danh sách →</button></div>
+      <ResourceState resource={recent}>{recent.data?.items?.length ? <ul className="dashboard-list">{recent.data.items.map(item=><li key={item.id}>
+        <div><strong>{item.code}</strong><small>{types[item.type_code] || item.type_name || "Yêu cầu"} · {date(item.updated_at)}</small><Badge value={item.status}/></div>
+        <button type="button" className="link" onClick={()=>onOpen(item.id)}>Xem chi tiết →</button>
+      </li>)}</ul> : <p className="muted">Chưa có hồ sơ trong phạm vi quyền xem.</p>}</ResourceState>
+    </section><aside className="panel"><h2>Không gian làm việc</h2><div className="dashboard-quick">
+      <button type="button" onClick={()=>navigate("mine")}>Yêu cầu của tôi →</button>
+      <button className="secondary" type="button" onClick={()=>navigate("notifications")}>Thông báo →</button>
+      <button className="secondary" type="button" onClick={()=>navigate("history")}>Tra cứu hồ sơ →</button>
+    </div></aside></div>
+  </>;
 }
 function renderWorkspaceContent({
   editor,
@@ -631,6 +540,7 @@ function renderWorkspaceContent({
   setEditor,
   setRevision,
   portal,
+  searchText = "",
 }) {
   if (editor) {
     return (
@@ -661,17 +571,31 @@ function renderWorkspaceContent({
   }
   switch (page) {
     case "home":
-      return <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+      return portal === "client" ? (user.roles.includes("REQUESTER") ? <ClientDashboard navigate={navigate} onOpen={setSelected} user={user} /> : <AssignedWorkDashboard navigate={navigate} onOpen={setSelected} user={user}/>) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+    case "org-client":
+      return <ClientOrgChart user={user} />;
+    case "mine":
+    case "approval":
+    case "execution":
+    case "acceptance":
+      return portal === "client" ? <ClientRequests key={page} initialStage={page === "mine" ? "mine" : page} initialQuery={searchText} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} /> : <RequestList key={page} page={page} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} />;
     case "audit":
       return <AuditorWorkspace onOpen={(id) => setSelected(id)} />;
     case "identity":
-      return <IdentityAdmin onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "users":
+      return <IdentityAdmin key="users" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "permissions":
+      return <IdentityAdmin key="memberships" initialKind="memberships" onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "request-catalog":
+      return <IdentityAdmin key="request-types" initialKind="request-types" />;
     case "org-chart":
       return <OrgChart navigate={navigate} portal={portal} user={user} />;
     case "api-admin":
       return <ApiAdministration />;
     case "plan-catalog":
       return <PlanCatalog />;
+    case "ai-process":
+      return <AiProcessGuide user={user} onOpen={setSelected} navigate={navigate} />;
     case "flow-diagrams":
       return <><div className="page-heading"><div><p className="eyebrow">EAS / QUY TRÌNH</p><h1>Sơ đồ luồng</h1><p className="muted">Tra cứu các sơ đồ xử lý và vòng đời yêu cầu.</p></div></div><WorkflowDiagrams /></>;
     case "policy":
@@ -703,8 +627,8 @@ function renderWorkspaceContent({
 }
 
 const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
-const ADMIN_PAGES = new Set(["flow-diagrams", "home", "policy", "plan-catalog", "ops", "identity", "org-chart", "api-admin", "audit", "events", "notifications", "profile"]);
-const CLIENT_PAGES = new Set(["flow-diagrams", "home", "mine", "approval", "execution", "acceptance", "history", "org-chart", "notifications", "profile"]);
+const ADMIN_PAGES = new Set(["flow-diagrams", "ai-process", "home", "policy", "plan-catalog", "request-catalog", "ops", "identity", "users", "permissions", "org-chart", "api-admin", "audit", "events", "notifications"]);
+const CLIENT_PAGES = new Set(["flow-diagrams", "ai-process", "home", "mine", "approval", "execution", "acceptance", "org-client", "notifications", "profile"]);
 
 function AdminOverview({ navigate, user }) {
   const usersMeta = useResource("/api/v1/meta/org-chart");
@@ -805,7 +729,11 @@ function Workspace({ user, onLogout, portal = "client" }) {
     [selected, setSelected] = useState(null),
     [editor, setEditor] = useState(null),
     [revision, setRevision] = useState(0),
-    [menuOpen, setMenuOpen] = useState(false);
+    [menuOpen, setMenuOpen] = useState(false),
+    [quickSearch, setQuickSearch] = useState(""),
+    [searchText, setSearchText] = useState(""),
+    [notificationOpen, setNotificationOpen] = useState(false);
+  const unread = useResource("/api/v1/notifications?limit=1&offset=0");
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const main = document.getElementById("main");
@@ -816,13 +744,23 @@ function Workspace({ user, onLogout, portal = "client" }) {
     return () => cancelAnimationFrame(frame);
   }, [page, selected, editor]);
   function navigate(next) {
-    if (next !== "org-chart" && !canNavigate(user.roles, next, user.capabilities)) return;
+    if (!canNavigate(user.roles, next, user.capabilities)) return;
     const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
     if (!allowedPages.has(next)) return;
     setPage(next);
     setSelected(null);
     setEditor(null);
     setMenuOpen(false);
+    setNotificationOpen(false);
+    if (next !== "mine") setSearchText("");
+  }
+  function searchAll(event) {
+    event.preventDefault();
+    if (!quickSearch.trim()) return;
+    const target = user.roles.includes("REQUESTER") ? "mine" : user.roles.includes("APPROVER") ? "approval" : user.roles.includes("EXECUTOR") ? "execution" : "acceptance";
+    if (portal !== "client" || !canNavigate(user.roles,target,user.capabilities)) return;
+    navigate(target);
+    setSearchText(quickSearch.trim());
   }
 
   const primaryRole = getPrimaryRoleBadge(user.roles);
@@ -850,26 +788,20 @@ function Workspace({ user, onLogout, portal = "client" }) {
           </button>
         )}
         <nav aria-label="Điều hướng chính">
-          {(portal === "admin"
-            ? [
-                ["TỔNG QUAN & TỔ CHỨC", ["home", "org-chart", "flow-diagrams"]],
-                ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "plan-catalog"]],
-                ["VẬN HÀNH & GIÁM SÁT", ["ops", "identity", "api-admin"]],
-                ["KIỂM TOÁN & NHẬT KÝ", ["audit", "events"]],
-                ["TÀI KHOẢN", ["notifications", "profile"]],
-              ]
-            : [
-                ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history", "org-chart", "flow-diagrams"]],
-                ["XỬ LÝ CÔNG VIỆC", ["approval", "execution", "acceptance"]],
-                ["CÁ NHÂN", ["notifications", "profile"]],
-              ]
-          ).map(([group, keys]) => {
-            const allowedPages = portal === "admin" ? ADMIN_PAGES : CLIENT_PAGES;
-            const visible = menu.filter((m) =>
-              keys.includes(m[0]) &&
-              allowedPages.has(m[0]) &&
-              (m[0] === "org-chart" || m[0] === "home" || canNavigate(user.roles, m[0], user.capabilities))
-            );
+          {(portal === "admin" ? [
+            ["TỔNG QUAN & TỔ CHỨC", ["home", "org-chart", "flow-diagrams", "ai-process"]],
+            ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "plan-catalog", "request-catalog"]],
+            ["VẬN HÀNH & GIÁM SÁT", ["ops", "users", "permissions", "api-admin"]],
+            ["KIỂM TOÁN & NHẬT KÝ", ["audit", "events"]],
+            ["TÀI KHOẢN", ["notifications", "profile"]],
+          ] : [
+            ["KHÔNG GIAN CÁ NHÂN", ["home", "mine"]],
+            ["CÔNG VIỆC ĐƯỢC GIAO", ["approval", "execution", "acceptance"]],
+            ["TỔ CHỨC & HƯỚNG DẪN", ["org-client", "flow-diagrams", "ai-process"]],
+            ["TÀI KHOẢN", ["notifications", "profile"]],
+          ]).map(([group, keys]) => {
+            const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
+            const visible = menu.filter((m) => keys.includes(m[0]) && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
             return visible.length ? (
               <div key={group} className="nav-group">
                 <p className="nav-caption">{group}</p>
@@ -903,30 +835,29 @@ function Workspace({ user, onLogout, portal = "client" }) {
             ☰
           </button>
           <span className="muted">
-            {portal === "admin" ? "Trung tâm Quản trị" : "Cổng dịch vụ"} / {menu.find((m) => m[0] === page)?.[1]}
+            {portal === "admin" ? "Trung tâm Quản trị" : "Không gian làm việc"} / {menu.find((m) => m[0] === page)?.[1]}
           </span>
-          <div className="topbar-right">
-            <button
-              className="secondary topbar-notif-btn"
-              onClick={() => navigate("notifications")}
-              aria-label="Trung tâm thông báo"
-            >
-              🔔 Thông báo
-            </button>
-            <button
-              className="avatar"
-              onClick={() => navigate("profile")}
-              aria-label="Hồ sơ cá nhân"
-            >
-              {user.display_name?.slice(0, 1) || "U"}
-            </button>
-            <div className="topbar-user-pill">
-              <span className="topbar-display-name">{user.display_name}</span>
-              <span className={`topbar-role-badge ${primaryRole.tone}`}>
-                {primaryRole.name}
-              </span>
+          {portal === "client" && <form className="client-quick-search" role="search" onSubmit={searchAll}>
+            <label htmlFor="client-global-search" className="sr-only">Tìm mã yêu cầu</label>
+            <span aria-hidden="true">⌕</span><input id="client-global-search" type="search" value={quickSearch} onChange={e=>setQuickSearch(e.target.value)} placeholder="Tìm nhanh mã yêu cầu…" />
+            <button type="submit" className="secondary" aria-label="Tìm kiếm">Tìm</button>
+          </form>}
+          <div className="topbar-right client-topbar-actions">
+            <div className="client-notifications-anchor">
+              <button type="button" className="secondary client-icon-button" onClick={() => setNotificationOpen(value=>!value)} aria-label={`Thông báo${unread.data?.unread_count ? `, ${unread.data.unread_count} chưa đọc` : ""}`} aria-expanded={notificationOpen} title="Thông báo">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9"/><path d="M10 21h4"/></svg>
+                {Number(unread.data?.unread_count)>0&&<span className="client-notification-dot"/>}
+              </button>
+              {notificationOpen&&<div className="client-notification-popover" role="region" aria-label="Thông báo"><strong>Thông báo</strong><p className="muted">{Number(unread.data?.unread_count)||0} thông báo chưa đọc</p><button type="button" className="secondary" onClick={()=>navigate("notifications")}>Mở trung tâm thông báo →</button></div>}
             </div>
-            <ActionForm onSubmit={onLogout} submitLabel="Đăng xuất" />
+            <button type="button" className="client-account-link" onClick={()=>navigate("profile")} aria-label={`Tài khoản ${user.display_name||"người dùng"}`}>
+              <span className="client-avatar">{user.display_name?.slice(0,1)||"U"}</span>
+              <div className="topbar-user-pill">
+                <strong className="topbar-display-name">{user.display_name||"Người dùng"}</strong>
+                <span className={`topbar-role-badge ${primaryRole.tone}`}>{primaryRole.name}</span>
+              </div>
+            </button>
+            <button type="button" className="secondary client-icon-button" aria-label="Đăng xuất" title="Đăng xuất" onClick={onLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
           </div>
         </header>
         <main id="main" className="content" tabIndex={-1}>
@@ -941,6 +872,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
             setEditor,
             setRevision,
             portal,
+            searchText,
           })}
         </main>
         <footer className="page-footer">
@@ -1045,7 +977,7 @@ export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unif
   if (user && portal === "admin" && !user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
     return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
-  if (user && portal === "client" && user.roles?.every((role) => ADMIN_ROLES.includes(role))) {
+  if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
     return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
   return user ? (

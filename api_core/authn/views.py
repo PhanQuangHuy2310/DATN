@@ -214,27 +214,12 @@ def me(request: HttpRequest) -> JsonResponse:
     except (DatabaseError, AttributeError):
         can_manage_identity = False
 
-    department_name = None
-    if actor.department_id:
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT name FROM eas.department WHERE id = %s",
-                    [actor.department_id],
-                )
-                dept_row = cursor.fetchone()
-                if dept_row:
-                    department_name = dept_row[0]
-        except (DatabaseError, AttributeError):
-            department_name = None
-
     payload = {
         "user": {
             "id": actor.id,
             "username": actor.username,
             "display_name": actor.display_name,
             "department_id": actor.department_id,
-            "department_name": department_name,
             "roles": sorted(actor.roles),
             "capabilities": {"identity_manage": can_manage_identity},
             "must_change_password": actor.must_change_password,

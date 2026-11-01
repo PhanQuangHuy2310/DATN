@@ -86,8 +86,8 @@ export default function OrgChart({ navigate, portal = "client", user }) {
 
   // Compute live hierarchical chart data
   const chartData = useMemo(() => {
-    const users = metaRes.data?.users || usersRes.data?.items || [];
-    const departments = metaRes.data?.departments || deptsRes.data?.items || [];
+    const users = usersRes.data?.items || [];
+    const departments = deptsRes.data?.items || [];
 
     // Map user id -> user object
     const userMap = new Map();
@@ -182,7 +182,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
       departments: deptGroups,
       totalEmployees: users.filter((u) => u.is_active).length,
     };
-  }, [usersRes.data, deptsRes.data, metaRes.data]);
+  }, [usersRes.data, deptsRes.data]);
 
   // Search filter matching
   const isMatch = (memberList) => {

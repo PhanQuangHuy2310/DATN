@@ -332,145 +332,7 @@ export const fieldLabels = {
   system_affected: "Hệ thống / Dịch vụ bị ảnh hưởng",
   severity_level: "Mức độ nghiêm trọng (CVSS / P0-P1)",
   hotfix_version: "Phiên bản bản vá / Commit tag",
-  // Thuộc tính hệ thống & CSDL
-  id: "Mã định danh",
-  event_id: "Mã sự kiện",
-  aggregate_id: "Mã đối tượng",
-  actor_id: "Mã người thực hiện",
-  actor_name: "Người thực hiện",
-  actor_role: "Vai trò thực hiện",
-  action: "Hành động",
-  target_type: "Loại đối tượng",
-  target_id: "Mã đối tượng đích",
-  recorded_at: "Thời gian ghi nhận",
-  occurred_at: "Thời gian diễn ra",
-  client_ip: "Địa chỉ IP",
-  user_id: "Mã người dùng",
-  username: "Tên đăng nhập",
-  display_name: "Họ và tên",
-  department_id: "Phòng ban",
-  department_name: "Tên phòng ban",
-  department_code: "Mã phòng ban",
-  manager_id: "Người quản lý trực tiếp",
-  manager_name: "Họ tên người quản lý",
-  is_active: "Trạng thái hoạt động",
-  role: "Vai trò",
-  roles: "Danh sách vai trò",
-  scope_kind: "Phạm vi phòng ban",
-  type_scope: "Phạm vi loại đơn",
-  type_id: "Loại yêu cầu",
-  valid_from: "Hiệu lực từ ngày",
-  valid_to: "Hiệu lực đến ngày",
-  lock_version: "Phiên bản khóa",
-  expected_version: "Phiên bản kỳ vọng",
-  revision: "Phiên bản sửa đổi",
-  revision_no: "Số thứ tự phiên bản",
-  created_at: "Ngày khởi tạo",
-  updated_at: "Ngày cập nhật",
-  submitted_at: "Ngày nộp đơn",
-  approved_at: "Ngày phê duyệt",
-  completed_at: "Ngày hoàn thành",
-  scan_state: "Kiểm tra an toàn tệp",
-  original_name: "Tên tệp gốc",
-  size_bytes: "Dung lượng (bytes)",
-  mime_type: "Định dạng tệp",
-  mime: "Định dạng tệp",
-  checksum_sha256: "Mã kiểm tra tệp (SHA-256)",
-  hash: "Mã băm kiểm toán",
-  prev_hash: "Mã băm sự kiện trước",
-  verified: "Trạng thái xác minh",
-  algorithm: "Thuật toán kiểm tra",
-  chain_hash: "Mã băm chuỗi kiểm toán",
-  count: "Số lượng bản ghi",
-  code: "Mã hiệu",
-  name: "Tên gọi",
-  description: "Mô tả",
-  category: "Nhóm nghiệp vụ",
-  lifecycle: "Mẫu quy trình",
-  risk_weight: "Trọng số rủi ro",
-  approval_level: "Cấp độ phê duyệt",
-  status: "Trạng thái",
-  due_at: "Hạn xử lý",
-  breached_at: "Thời điểm quá hạn",
-  result_note: "Ghi chú kết quả",
-  external_reference: "Mã tham chiếu ngoài",
-  reason: "Lý do",
-  outcome: "Kết quả quyết định",
-  decided_at: "Thời điểm quyết định",
-  attempt_no: "Lần thực hiện",
-  step_no: "Bước phê duyệt",
-  tier_level: "Cấp phê duyệt",
-  resolver_code: "Chức danh xử lý",
 };
-
-export function humanizeKey(key) {
-  if (!key) return "—";
-  if (fieldLabels[key]) return fieldLabels[key];
-  const cleaned = key.replace(/([A-Z])/g, "_$1").toLowerCase();
-  if (fieldLabels[cleaned]) return fieldLabels[cleaned];
-  return key
-    .replace(/_id$/, " (Mã)")
-    .replace(/_at$/, " (Thời gian)")
-    .replace(/_vnd$/, " (VNĐ)")
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-export function formatCurrency(amount) {
-  if (amount === null || amount === undefined || amount === "") return "—";
-  const num = Number(amount);
-  if (isNaN(num)) return String(amount);
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(num);
-}
-
-const VI_UNITS = ["", " nghìn", " triệu", " tỷ", " nghìn tỷ", " triệu tỷ"];
-const VI_DIGITS = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-
-function readGroupThree(group, isFirst) {
-  const h = Math.floor(group / 100);
-  const t = Math.floor((group % 100) / 10);
-  const u = group % 10;
-  if (h === 0 && t === 0 && u === 0) return "";
-  let res = "";
-  if (h > 0 || !isFirst) res += VI_DIGITS[h] + " trăm ";
-  if (t === 0 && u !== 0) {
-    if (h > 0 || !isFirst) res += "lẻ ";
-    res += VI_DIGITS[u];
-  } else if (t === 1) {
-    res += "mười ";
-    if (u === 5) res += "lăm";
-    else if (u > 0) res += VI_DIGITS[u];
-  } else if (t > 1) {
-    res += VI_DIGITS[t] + " mươi ";
-    if (u === 1) res += "mốt";
-    else if (u === 5) res += "lăm";
-    else if (u > 0) res += VI_DIGITS[u];
-  } else if (u > 0) {
-    res += VI_DIGITS[u];
-  }
-  return res.trim();
-}
-
-export function numberToVietnameseWords(amount) {
-  let num = Math.floor(Math.abs(Number(amount)));
-  if (!num || isNaN(num)) return "";
-  if (num === 0) return "Không đồng";
-  const groups = [];
-  while (num > 0) {
-    groups.push(num % 1000);
-    num = Math.floor(num / 1000);
-  }
-  let words = "";
-  for (let i = groups.length - 1; i >= 0; i--) {
-    const g = groups[i];
-    if (g > 0) {
-      const read = readGroupThree(g, i === groups.length - 1);
-      words += (words ? " " : "") + read + VI_UNITS[i];
-    }
-  }
-  const capitalized = words.trim().charAt(0).toUpperCase() + words.trim().slice(1) + " đồng";
-  return capitalized;
-}
 export const labels = {
   ...statuses,
   ACTIVE: "Đang xử lý",
@@ -539,37 +401,12 @@ export function errorText(e) {
     VALIDATION_STALE:
       "Cấu hình đã thay đổi. Hãy kiểm tra lại trước khi công bố.",
     ATTACHMENT_NOT_CLEAN: "Tệp chưa vượt qua kiểm tra. Hãy kiểm tra lại tệp.",
-    SO_D_VIOLATION: "Quy định kiểm soát nội bộ (SoD): Bạn không được tự phê duyệt hoặc xử lý yêu cầu do chính mình khởi tạo.",
-    UNAUTHORIZED_SCOPE: "Tài khoản của bạn không có thẩm quyền trên phòng ban hoặc loại yêu cầu này.",
-    REQUEST_NOT_FOUND: "Không tìm thấy hồ sơ yêu cầu trong hệ thống.",
-    ATTACHMENT_NOT_FOUND: "Không tìm thấy tệp đính kèm yêu cầu.",
-    FILE_TOO_LARGE: "Dung lượng tệp vượt quá giới hạn 10 MB cho phép.",
-    FILE_TYPE_NOT_ALLOWED: "Định dạng tệp không được hỗ trợ (chỉ chấp nhận PDF, JPG, PNG).",
-    IDEMPOTENCY_KEY_REQUIRED: "Thiếu khóa chống gửi trùng lặp (Idempotency Key).",
-    CONSTRAINT_CONFLICT: "Dữ liệu bị xung đột hoặc đã tồn tại trong cơ sở dữ liệu.",
-    USER_NOT_FOUND: "Không tìm thấy thông tin người dùng được chỉ định.",
-    DEPARTMENT_NOT_FOUND: "Không tìm thấy phòng ban được chỉ định.",
-    ACCOUNT_DISABLED: "Tài khoản người dùng hiện đang ở trạng thái ngừng hoạt động.",
-    PASSWORD_MISMATCH: "Mật khẩu xác nhận không khớp với mật khẩu mới.",
-    STEP_NOT_FOUND: "Không tìm thấy bước duyệt tương ứng trong quy trình.",
-    EXECUTION_ALREADY_CLAIMED: "Công việc đã được nhận bởi một người thực hiện khác.",
-    ACCEPTANCE_NOT_READY: "Hồ sơ chưa hoàn thành thực hiện để chuyển sang nghiệm thu.",
   };
-
-  let base = messages[e.message] || (e.status === 401
-    ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
-    : e.message || "Đã xảy ra lỗi không xác định. Vui lòng thử lại sau.");
-
-  if (e.fields && typeof e.fields === "object") {
-    const fieldDetails = Object.entries(e.fields).map(([k, val]) => {
-      const label = fieldLabels[k] || humanizeKey(k);
-      const msg = Array.isArray(val) ? val.join(", ") : String(val);
-      return `${label}: ${msg}`;
-    }).filter(Boolean);
-    if (fieldDetails.length > 0) {
-      base += ` (${fieldDetails.join("; ")})`;
-    }
-  }
-
-  return base;
+  return (
+    (messages[e.message] || (e.status === 401
+      ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+      : e.message)) +
+    (e.fields ? " " + JSON.stringify(e.fields) : "") +
+    (e.correlationId ? ` (Mã lỗi: ${e.correlationId})` : "")
+  );
 }
