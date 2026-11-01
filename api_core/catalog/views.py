@@ -347,13 +347,19 @@ def colleague_choices(request):
         )
         people = [
             {
-                "id": row[0], "display_name": row[1],
-                "manager_id": row[2], "manager_name": row[3],
-                "department_name": row[4], "manages_colleagues": row[5],
+                "id": row[0],
+                "display_name": row[1],
+                "manager_id": row[2],
+                "manager_name": row[3],
+                "department_name": row[4],
+                "manages_colleagues": row[5],
             }
             for row in cursor.fetchall()
         ]
     # Preserve the old form-selector contract: no self-selection, only id/name.
-    choices = [{"id": p["id"], "display_name": p["display_name"]}
-               for p in people if p["id"] != request.actor.id]
+    choices = [
+        {"id": p["id"], "display_name": p["display_name"]}
+        for p in people
+        if p["id"] != request.actor.id
+    ]
     return JsonResponse({"items": choices, "organization": people})

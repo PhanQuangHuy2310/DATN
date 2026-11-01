@@ -112,8 +112,8 @@ def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
         row = cursor.fetchone()
         label = (
             "Công việc được phân công đã quá hạn, vui lòng xử lý"
-            if item.event_type == "SLA_BREACH" else
-            "Công việc được phân công đang đến hạn xử lý"
+            if item.event_type == "SLA_BREACH"
+            else "Công việc được phân công đang đến hạn xử lý"
         )
         return [(row[0], label)] if row and row[0] else []
     if item.event_type == "APPROVAL_REQUESTED":

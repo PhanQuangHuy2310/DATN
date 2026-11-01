@@ -71,11 +71,23 @@ def list_ops_metadata(
     from_filter = (query_params.get("created_from") or "").strip()
     to_filter = (query_params.get("created_to") or "").strip()
     try:
-        from_dt = datetime.fromisoformat(from_filter.replace("Z", "+00:00")) if from_filter else None
-        to_dt = datetime.fromisoformat(to_filter.replace("Z", "+00:00")) if to_filter else None
+        from_dt = (
+            datetime.fromisoformat(from_filter.replace("Z", "+00:00"))
+            if from_filter
+            else None
+        )
+        to_dt = (
+            datetime.fromisoformat(to_filter.replace("Z", "+00:00"))
+            if to_filter
+            else None
+        )
         if (from_dt and from_dt.tzinfo is None) or (to_dt and to_dt.tzinfo is None):
             raise ValueError
-        if from_dt and to_dt and (to_dt <= from_dt or to_dt - from_dt > timedelta(days=366)):
+        if (
+            from_dt
+            and to_dt
+            and (to_dt <= from_dt or to_dt - from_dt > timedelta(days=366))
+        ):
             raise ValueError
     except (ValueError, TypeError):
         raise CommandError("PERIOD_INVALID", status=422) from None
@@ -193,9 +205,12 @@ def list_ops_metadata(
             "updated_at": row[20].isoformat(),
             "type_name": row[25],
             "responsible": (
-                {"name": row[21], "stage": "APPROVAL"} if row[6] and row[21]
-                else {"name": row[22] or row[24], "stage": "EXECUTION"} if row[9] and (row[22] or row[24])
-                else {"name": row[23], "stage": "ACCEPTANCE"} if row[13] and row[23]
+                {"name": row[21], "stage": "APPROVAL"}
+                if row[6] and row[21]
+                else {"name": row[22] or row[24], "stage": "EXECUTION"}
+                if row[9] and (row[22] or row[24])
+                else {"name": row[23], "stage": "ACCEPTANCE"}
+                if row[13] and row[23]
                 else None
             ),
             "overdue": bool(row[18] and row[18] < timezone.now()),

@@ -228,7 +228,9 @@ def get_request_metrics_report(
             "approved_rate": approved_rate,
             "completed_rate": completed_rate,
             "by_status": by_status,
-            "top_types": sorted(by_type.values(), key=lambda item: (-item["count"], item["name"]))[:10],
+            "top_types": sorted(
+                by_type.values(), key=lambda item: (-item["count"], item["name"])
+            )[:10],
         }
     }
 

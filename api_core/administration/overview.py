@@ -3,6 +3,7 @@
 The summary deliberately uses grouped SQL rather than fetching every request into Python.
 No new Supabase tables or migrations are required.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -23,9 +24,18 @@ def _period(request):
     try:
         raw_start = request.GET.get("created_from")
         raw_end = request.GET.get("created_to")
-        start = datetime.fromisoformat(raw_start.replace("Z", "+00:00")) if raw_start else now - timedelta(days=30)
+        start = (
+            datetime.fromisoformat(raw_start.replace("Z", "+00:00"))
+            if raw_start
+            else now - timedelta(days=30)
+        )
         end = datetime.fromisoformat(raw_end.replace("Z", "+00:00")) if raw_end else now
-        if start.tzinfo is None or end.tzinfo is None or end <= start or end - start > timedelta(days=366):
+        if (
+            start.tzinfo is None
+            or end.tzinfo is None
+            or end <= start
+            or end - start > timedelta(days=366)
+        ):
             raise ValueError
     except (TypeError, ValueError):
         raise CommandError("PERIOD_INVALID", status=422) from None
@@ -79,11 +89,15 @@ def system_overview(request):
         item = types.setdefault(code, {"code": code, "name": name, "count": 0})
         item["count"] += count
         overdue += overdue_count
-    return JsonResponse({
-        "period": {"from": start.isoformat(), "to": end.isoformat()},
-        "scope": "authorized_ops_scope",
-        "total": sum(statuses.values()),
-        "overdue": overdue,
-        "by_status": statuses,
-        "top_types": sorted(types.values(), key=lambda item: (-item["count"], item["name"]))[:10],
-    })
+    return JsonResponse(
+        {
+            "period": {"from": start.isoformat(), "to": end.isoformat()},
+            "scope": "authorized_ops_scope",
+            "total": sum(statuses.values()),
+            "overdue": overdue,
+            "by_status": statuses,
+            "top_types": sorted(
+                types.values(), key=lambda item: (-item["count"], item["name"])
+            )[:10],
+        }
+    )
