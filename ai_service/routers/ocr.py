@@ -323,7 +323,7 @@ async def extract_from_url(body: OCRUrlRequest):
 
             image_bytes = resp.content
             content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0]
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning(f"OCR image download failed: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=400, detail="Không tải được ảnh từ URL."
