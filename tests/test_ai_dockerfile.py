@@ -35,6 +35,13 @@ class AiDockerfileTests(unittest.TestCase):
             self.assertIn("--no-install-recommends", run)
         self.assertEqual(DOCKERFILE.count("rm -rf /var/lib/apt/lists/*"), 2)
 
+    def test_opencv_runtime_library_in_both_stages(self):
+        # paddleocr pulls opencv-python, which needs libGL at import time.
+        installs = re.findall(r"apt-get install[^\n]*", DOCKERFILE)
+        self.assertEqual(len(installs), 2)
+        for line in installs:
+            self.assertIn("libgl1", line)
+
     def test_dockerignore_keeps_local_venv_out_of_context(self):
         ignored = (AI / ".dockerignore").read_text(encoding="utf-8").split()
         for entry in (".venv*", "**/__pycache__", ".env", "training/data"):

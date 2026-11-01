@@ -13,7 +13,7 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PATH=/opt/venv/bin:$PATH
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libglib2.0-0 libgomp1 \
+    && apt-get install -y --no-install-recommends libglib2.0-0 libgomp1 libgl1 \
     && rm -rf /var/lib/apt/lists/*
 RUN python -m venv /opt/venv
 
@@ -44,7 +44,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH=/opt/venv/bin:$PATH
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libglib2.0-0 libgomp1 libsm6 libxrender1 libxext6 curl \
+    && apt-get install -y --no-install-recommends libglib2.0-0 libgomp1 libgl1 libsm6 libxrender1 libxext6 curl \
     && rm -rf /var/lib/apt/lists/* \
     && addgroup --system aiuser && adduser --system --ingroup aiuser aiuser
 
