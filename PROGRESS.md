@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 6.x Toàn bộ test đạt (Django 376, run_tests 141, AI 26, OCR thật 3/3, web 52); sửa 2 test email bị .env local ảnh hưởng; PR_DESCRIPTION.md cho PR dat → main (thử gộp với main: không xung đột)
 - [x] 5.3 Redis: REDIS_URL ưu tiên; ngoài Docker dùng EAS_REDIS_HOST/EAS_REDIS_PORT (mặc định 6380); compose publish Redis ra 127.0.0.1:6380 (EAS_REDIS_HOST_PORT) để không đụng Redis có sẵn ở 6379 trên máy; cập nhật .env.example, README
 - [x] 5.2 Test secret-policy cô lập môi trường: project_env bỏ qua .env khi EAS_SKIP_DOTENV=1, probe subprocess đặt cờ này; đạt 4/4 cả khi .env local có EAS_EMAIL_TEST_RECIPIENT
 - [x] 5.1 Menu tự cập nhật: gọi lại /me khi tab focus/hiện lại và sau thao tác đổi quyền (sự kiện eas:permissions-changed từ IdentityAdmin), gộp lời gọi trong 5 giây (sessionRefresh.js, có test)
@@ -27,7 +28,6 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 6.x Test toàn bộ, PR_DESCRIPTION.md
 
 ## Chưa làm
 
