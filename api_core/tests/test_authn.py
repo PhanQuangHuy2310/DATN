@@ -148,6 +148,8 @@ class AuthenticationEndpointTests(SimpleTestCase):
     @override_settings(
         EMAIL_HOST="smtp.test",
         DEFAULT_FROM_EMAIL="EAS Support <mailer@eas.com>",
+        # A developer .env may redirect mail to one inbox; assert real recipients.
+        EAS_EMAIL_TEST_RECIPIENT="",
     )
     @patch("api_core.authn.views.send_mail")
     @patch("api_core.authn.views.connection")
@@ -180,6 +182,8 @@ class AuthenticationEndpointTests(SimpleTestCase):
     @override_settings(
         EMAIL_HOST="smtp.test",
         DEFAULT_FROM_EMAIL="EAS Support <mailer@eas.com>",
+        # A developer .env may redirect mail to one inbox; assert real recipients.
+        EAS_EMAIL_TEST_RECIPIENT="",
     )
     @patch("api_core.authn.views.send_mail")
     @patch("api_core.authn.views.connection")
