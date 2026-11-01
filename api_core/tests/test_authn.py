@@ -1,4 +1,5 @@
 import json
+import os
 from typing import ClassVar
 from unittest.mock import patch
 from uuid import uuid4
@@ -358,3 +359,53 @@ class AuthenticationEndpointTests(SimpleTestCase):
             validate_new_password("Different-Strong-123!", "employee@eas.com"),
             "Different-Strong-123!",
         )
+
+
+class SeedPlaceholderPasswordTests(SimpleTestCase):
+    """Seed placeholder hashes never accept a built-in default password."""
+
+    placeholder = "!UNUSABLE_DEMO_REQUESTER"
+
+    @override_settings(ENVIRONMENT="development")
+    def test_no_default_password_without_env(self):
+        from api_core.authn.service import verify_user_password
+
+        with patch.dict(os.environ, {"EAS_DEV_DEFAULT_PASSWORD": ""}):
+            self.assertFalse(verify_user_password("Admin@123456", self.placeholder))
+            self.assertFalse(verify_user_password("", self.placeholder))
+
+    @override_settings(ENVIRONMENT="development")
+    def test_placeholder_opens_only_with_local_env_password(self):
+        from api_core.authn.service import verify_user_password
+
+        with patch.dict(
+            os.environ, {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pass-2026"}
+        ):
+            self.assertTrue(
+                verify_user_password("Local-Only-Pass-2026", self.placeholder)
+            )
+            self.assertFalse(verify_user_password("Admin@123456", self.placeholder))
+
+    @override_settings(ENVIRONMENT="production")
+    def test_placeholder_never_opens_outside_development(self):
+        from api_core.authn.service import verify_user_password
+
+        with patch.dict(
+            os.environ, {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pass-2026"}
+        ):
+            self.assertFalse(
+                verify_user_password("Local-Only-Pass-2026", self.placeholder)
+            )
+
+
+class SeedPasswordScriptTests(SimpleTestCase):
+    def test_script_has_no_password_and_forces_change(self):
+        from pathlib import Path
+
+        script = (
+            Path(__file__).resolve().parents[2] / "fix_seed_passwords_local.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("Admin@123456", script)
+        self.assertNotIn("pbkdf2_sha256$600000$eas_seed_2026", script)
+        self.assertIn("must_change_password = TRUE", script)
+        self.assertIn('os.getenv("EAS_SEED_PASSWORD"', script)

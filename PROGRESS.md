@@ -3,15 +3,15 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 1.3 Bỏ mật khẩu mặc định Admin@123456: EAS_DEV_DEFAULT_PASSWORD không có default; fix_seed_passwords_local.py đọc EAS_SEED_PASSWORD, hash Argon2, buộc đổi khi đăng nhập
 - [x] 1.2 Proxy: cổng nhân viên chặn /api/v1/admin|ops|internal (404); cổng quản trị có nginx.conf riêng, chặn internal; gateway trả 404 cho /api/v1/internal/
 - [x] 1.1 Quy tắc cổng: admin thuần chỉ dùng cổng quản trị; admin có APPROVER/EXECUTOR dùng cả hai (`rolePolicy.canUsePortal`)
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 1.3 Mật khẩu admin đọc từ biến môi trường
+- [ ] 1.4 Quy định AI lưu DB
 
 ## Chưa làm
-- [ ] 1.4 Quy định AI lưu DB
 - [ ] 1.5 Hoàn tác AI tự duyệt trong 24h
 - [ ] 2.1 Migration 10 nhóm + ngưng 8 loại trùng
 - [ ] 2.2 Migration 13 loại mới
