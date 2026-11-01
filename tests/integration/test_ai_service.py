@@ -335,6 +335,23 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
 class TestAIServiceClientFallback(unittest.TestCase):
     """Kiểm tra khả năng chịu lỗi (fault-tolerance) của ai_client."""
 
+    def setUp(self):
+        # Simulate an unreachable AI service at the HTTP layer: instant and
+        # deterministic, whether or not an AI service is running locally
+        # (a refused localhost connection takes ~3 s on Windows).
+        try:
+            import httpx
+        except ImportError:
+            return
+        from unittest.mock import patch
+
+        def refuse(*_args, **_kwargs):
+            raise httpx.ConnectError("AI service offline (simulated)")
+
+        patcher = patch.object(httpx.AsyncClient, "send", side_effect=refuse)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     @staticmethod
     def _get_client():
         try:
