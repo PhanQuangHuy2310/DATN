@@ -26,7 +26,8 @@ ALIASES = {
 
 def load_project_env(path: Path | None = None) -> None:
     env_file = path or (ROOT / ".env")
-    if env_file.is_file():
+    # EAS_SKIP_DOTENV=1 isolates a process from the local .env (tests, CI probes).
+    if env_file.is_file() and os.environ.get("EAS_SKIP_DOTENV") != "1":
         for line_no, raw in enumerate(env_file.read_text(encoding="utf-8-sig").splitlines(), 1):
             line = raw.strip()
             if not line or line.startswith("#"):

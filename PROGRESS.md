@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 5.2 Test secret-policy cô lập môi trường: project_env bỏ qua .env khi EAS_SKIP_DOTENV=1, probe subprocess đặt cờ này; đạt 4/4 cả khi .env local có EAS_EMAIL_TEST_RECIPIENT
 - [x] 5.1 Menu tự cập nhật: gọi lại /me khi tab focus/hiện lại và sau thao tác đổi quyền (sự kiện eas:permissions-changed từ IdentityAdmin), gộp lời gọi trong 5 giây (sessionRefresh.js, có test)
 - [x] 4.7 Smoke test OCR thật (tests/ocr_smoke): 3 ảnh hóa đơn tự sinh (không dữ liệu thật) chạy qua PaddleOCR + parser; job CI ocr-smoke (OCR_SMOKE_REQUIRED=1). Kết quả chạy local: số tiền/ngày/nhà cung cấp đúng 3/3, độ tin cậy 95.7–96.6%, đọc chữ 97.8–99.2% nhưng giữ dấu chỉ 83–88.5% (model vi làm mất dấu) → sửa parser chuẩn hóa ASCII trước khi so khớp
 - [x] 4.6 Dockerfile ai-service 2 tầng (builder/runtime), PaddlePaddle ở layer riêng (requirements-paddle.txt) với cache mount pip, apt --no-install-recommends + xóa lists, chạy user aiuser; thêm ai_service/.dockerignore (trước đây không có nên .venv-ai bị đưa vào context/image — nghi là nguyên nhân Docker Desktop sập khi build). KHÔNG đo được kích thước trước/sau: Docker Desktop không phản hồi trong phiên này
@@ -25,10 +26,9 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 5.2 Test secret-policy cô lập .env
+- [ ] 5.3 Cổng Redis từ biến môi trường
 
 ## Chưa làm
-- [ ] 5.3 Cổng Redis từ biến môi trường
 - [ ] 6.x Test toàn bộ, PR_DESCRIPTION.md
 
 ## Quyết định cần tôi xác nhận
