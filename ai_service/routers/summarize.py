@@ -9,13 +9,17 @@ Không train model — dùng Gemini 1.5 Flash với prompt engineering.
 """
 
 import json
-import re
 from typing import Any
 
 try:
     from config import get_settings
 except (ImportError, AttributeError):
     from ai_service.config import get_settings
+
+try:
+    from sanitizer import sanitize_prompt_text
+except (ImportError, AttributeError):
+    from ai_service.sanitizer import sanitize_prompt_text
 
 from fastapi import APIRouter
 from loguru import logger
@@ -69,23 +73,6 @@ REQUEST_TYPE_LABELS = {
     "refund": "Hoàn tiền/Đền bù",
     "onboarding": "Onboarding nhân viên mới",
 }
-
-
-_PAN_REGEX = re.compile(r"\b(?:\d[ -]*?){13,16}\b")
-_CCCD_REGEX = re.compile(r"\b0\d{11}\b")
-_SECRET_KEY_REGEX = re.compile(
-    r"(?i)(bearer\s+[a-z0-9_\-\.]{20,}|(api[_-]?key|secret|password|token)\s*[:=]\s*['\"]?[^\s,'\"]+['\"]?)"
-)
-
-
-def sanitize_prompt_text(text: str) -> str:
-    """Mask PII and secrets before dispatching to external LLM (ISO 27001 / SOC 2 Privacy)."""
-    if not text:
-        return text
-    text = _SECRET_KEY_REGEX.sub("[REDACTED_SECRET]", text)
-    text = _PAN_REGEX.sub("[REDACTED_PAN]", text)
-    text = _CCCD_REGEX.sub("[REDACTED_ID]", text)
-    return text
 
 
 def build_summarize_prompt(req: SummarizeRequest) -> str:

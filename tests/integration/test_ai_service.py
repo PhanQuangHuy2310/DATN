@@ -29,6 +29,7 @@ try:
     import fastapi  # noqa: F401
     import loguru  # noqa: F401
     import pydantic  # noqa: F401
+    import pydantic_settings  # noqa: F401
 
     HAS_ROUTER_DEPS = True
 except (ImportError, ModuleNotFoundError):
@@ -384,9 +385,9 @@ class TestPromptSanitization(unittest.TestCase):
 
     def test_sanitize_prompt_text_masks_sensitive_data(self):
         try:
-            from ai_service.routers.summarize import sanitize_prompt_text
+            from ai_service.sanitizer import sanitize_prompt_text
         except ImportError:
-            from routers.summarize import sanitize_prompt_text
+            from sanitizer import sanitize_prompt_text
 
         raw = (
             "Thanh toan the 4111 2222 3333 4444 cho khach hang co CCCD 012345678901 "

@@ -6,7 +6,16 @@ AI Service — Cấu hình chung (config.py)
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+try:
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+except (ImportError, ModuleNotFoundError):
+    try:
+        from pydantic import BaseModel as BaseSettings  # type: ignore[assignment]
+
+        SettingsConfigDict = dict  # type: ignore[assignment]
+    except (ImportError, ModuleNotFoundError):
+        BaseSettings = object  # type: ignore[assignment, misc]
+        SettingsConfigDict = dict  # type: ignore[assignment]
 
 try:
     from project_env import load_project_env
