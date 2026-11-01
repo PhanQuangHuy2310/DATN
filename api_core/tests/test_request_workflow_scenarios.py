@@ -677,3 +677,18 @@ class AiPolicyStoreTests(SimpleTestCase):
         self.assertEqual(denied.status_code, 401)
         self.assertEqual(allowed.status_code, 200)
         self.assertIn(b"QD-2", allowed.content)
+
+
+class LegacyPolicyEndpointTests(SimpleTestCase):
+    """Item 4.2: CSRF-exempt legacy policy/maintenance views are gone."""
+
+    def test_legacy_views_removed(self):
+        from api_core.workflow import policy_views
+
+        for name in (
+            "ingest_policy",
+            "toggle_maintenance",
+            "maintenance_status",
+            "_trigger_ai_retraining",
+        ):
+            self.assertFalse(hasattr(policy_views, name), name)
