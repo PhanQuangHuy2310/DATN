@@ -1,3 +1,4 @@
+import { catalogTypeLevels, catalogTypeNames } from "./catalogV2.js";
 export const statuses = {
   DRAFT: "Bản nháp",
   PENDING_APPROVAL: "Chờ phê duyệt",
@@ -154,6 +155,9 @@ export const typeLevels = {
   BUDGET_REALLOCATION: { risk_weight: 5, approval_level: 5 },
   SECURITY_INCIDENT_HOTFIX: { risk_weight: 5, approval_level: 5 },
 };
+// The approved 10-group catalogue overrides older names and levels.
+Object.assign(types, catalogTypeNames);
+Object.assign(typeLevels, catalogTypeLevels);
 export const roles = {
   REQUESTER: "Người gửi yêu cầu",
   APPROVER: "Người phê duyệt",

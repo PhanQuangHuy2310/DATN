@@ -4,6 +4,7 @@ import unittest
 from uuid import uuid4
 
 from api_core.catalog.plan_catalog import (
+    catalog_v2_item,
     enterprise_catalog,
     enterprise_item,
     enterprise_items,
@@ -52,7 +53,12 @@ class EnterpriseFiveLevelCatalogTests(unittest.TestCase):
             rw, al = resolve_five_level_metadata(code)
             self.assertTrue(1 <= rw <= 5, f"Invalid risk_weight for {code}")
             self.assertTrue(1 <= al <= 5, f"Invalid approval_level for {code}")
-            self.assertEqual((rw, al), (meta["risk_weight"], meta["approval_level"]))
+            # The approved 10-group catalogue (catalog_v2.json) overrides the
+            # legacy matrix; the matrix stays as the fallback for other codes.
+            source = catalog_v2_item(code) or meta
+            self.assertEqual(
+                (rw, al), (source["risk_weight"], source["approval_level"])
+            )
 
     def test_four_and_five_level_route_resolution(self):
         dept = str(uuid4())
@@ -103,7 +109,9 @@ class EnterpriseFiveLevelCatalogTests(unittest.TestCase):
             "BUDGET_REALLOCATION",
             {"source_budget_code": "FIN-Q4", "target_budget_code": "fin-q4"},
         )
-        self.assertIn("SOURCE_AND_TARGET_BUDGET_MUST_DIFFER", errs.get("target_budget_code", []))
+        self.assertIn(
+            "SOURCE_AND_TARGET_BUDGET_MUST_DIFFER", errs.get("target_budget_code", [])
+        )
 
         errs2 = plan_business_errors(
             "SPECIAL_DISCOUNT",
@@ -114,4 +122,3 @@ class EnterpriseFiveLevelCatalogTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

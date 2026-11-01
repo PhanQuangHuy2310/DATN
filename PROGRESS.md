@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 2.4 Code dùng catalog_v2.json: REQUEST_TYPE_CATEGORIES = 10 nhóm; menu tạo yêu cầu, trọng số/số cấp, nhãn trường, tên loại lấy từ catalog_v2; web_client/src/catalogV2.js sinh bằng scripts/generate_catalog_js.py; IdentityAdmin 10 nhóm; PlanCatalog chế độ 'Danh mục 10 nhóm (58 loại)'
 - [x] 2.3 IT_SUPPORT: migration 13 + rollback công bố release mới với executor EXECUTOR_IT (release cũ bất biến, rollback trỏ lại bản cũ)
 - [x] 2.2 Migration 12 + rollback: 13 loại mới, mỗi loại 1 release PUBLISHED (form/route/SLA), bindings gộp từ release hiện có; đã chạy thử phần đọc trên DB thật và kiểm cấu hình bằng validate_config_release_payload
 - [x] 2.1 Migration 11 + rollback: 10 nhóm (FINANCE, RESOURCE, FACILITY, WORK, HR, TIME, IT, LEGAL, SALES, ADMIN), trọng số/số cấp/tên theo api_core/catalog/catalog_v2.json, ngưng 8 loại trùng
@@ -14,10 +15,9 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 2.4 Code nhóm/nhãn/JSON danh mục
+- [ ] 2.5 Test danh mục
 
 ## Chưa làm
-- [ ] 2.5 Test danh mục
 - [ ] 3.1 Lazy-load màn hình quản trị
 - [ ] 4.1 Cờ is_system_account cho EAS AI
 - [ ] 4.2 Xóa ingest_policy / toggle_maintenance cũ

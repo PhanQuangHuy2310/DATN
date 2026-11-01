@@ -16,21 +16,15 @@ from django.db import connection, transaction
 
 from api_core.audit import canonical_sha256
 from api_core.authn.service import PasswordChangeError, validate_new_password
+from api_core.catalog.plan_catalog import CATALOG_V2_GROUPS
 from api_core.workflow.service import (
     CommandError,
     _append_admin_audit,
     _execute_idempotent,
 )
 
-REQUEST_TYPE_CATEGORIES = {
-    "HR",
-    "IT",
-    "FACILITY",
-    "PROCUREMENT",
-    "ASSET",
-    "FINANCE",
-    "GENERAL",
-}
+# Must match eas.request_type_category_valid (migration 11).
+REQUEST_TYPE_CATEGORIES = set(CATALOG_V2_GROUPS)
 
 ROLES = {
     "REQUESTER",
