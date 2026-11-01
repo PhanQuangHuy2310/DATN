@@ -1523,6 +1523,19 @@ def _validate_approval_decision_input(
     return outcome, reason, expected_version
 
 
+# Attendance rows match accounts by HRM employee code; email is the fallback
+# when either side has no code. Read via to_jsonb so the query works before
+# migrations 16 (app_user.employee_code) and mock 005 (attendance.employee_code).
+SQL_ATTENDANCE_MATCH = """
+    CASE
+      WHEN to_jsonb(a)->>'employee_code' IS NOT NULL
+       AND to_jsonb(u)->>'employee_code' IS NOT NULL
+      THEN to_jsonb(a)->>'employee_code' = to_jsonb(u)->>'employee_code'
+      ELSE a.employee_email = u.email
+    END
+"""
+
+
 def _table_readable(cursor, relation: str) -> bool:
     """Optional tables (later migrations) are used only once they exist."""
     cursor.execute(
@@ -1542,8 +1555,12 @@ def _attendance_status(cursor, user_id: str) -> str | None:
     cursor.execute(
         """
         SELECT a.status FROM mock_hr.attendance a
-        JOIN eas.app_user u ON u.email = a.employee_email
+        JOIN eas.app_user u ON """
+        + SQL_ATTENDANCE_MATCH
+        + """
         WHERE u.id = %s AND a.work_date = CURRENT_DATE
+        ORDER BY (to_jsonb(a)->>'employee_code') IS NULL
+        LIMIT 1
         """,
         [user_id],
     )
@@ -1679,8 +1696,12 @@ def _pick_present_executor(
     cursor.execute(
         """
         SELECT a.status FROM mock_hr.attendance a
-        JOIN eas.app_user u ON u.email = a.employee_email
+        JOIN eas.app_user u ON """
+        + SQL_ATTENDANCE_MATCH
+        + """
         WHERE u.id = %s AND a.work_date = CURRENT_DATE
+        ORDER BY (to_jsonb(a)->>'employee_code') IS NULL
+        LIMIT 1
         """,
         [planned_executor_id],
     )
@@ -1692,7 +1713,9 @@ def _pick_present_executor(
         SELECT u.id::text
         FROM eas.app_user u
         LEFT JOIN mock_hr.attendance a
-          ON a.employee_email = u.email AND a.work_date = CURRENT_DATE
+          ON a.work_date = CURRENT_DATE AND """
+        + SQL_ATTENDANCE_MATCH
+        + """
         WHERE u.is_active
           AND u.department_id = (SELECT department_id FROM eas.app_user WHERE id = %s)
           AND u.id <> ALL(%s::uuid[])

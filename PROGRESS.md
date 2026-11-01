@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 4.5 Chấm công khớp theo mã nhân viên trước, email dự phòng (SQL_ATTENDANCE_MATCH, chạy được cả trước migration); migration 16 (app_user.employee_code) + mock 005 (attendance.employee_code) kèm rollback; lệnh sync_employee_codes (chạy thử mặc định, --apply để ghi) báo số không khớp. Chạy thử trên DB thật: 42 tài khoản/55 nhân viên HRM, khớp 2 (theo tên), 40 tài khoản không khớp
 - [x] 4.4 Ủy quyền duyệt: bảng eas.approval_delegation (migration 15 + rollback), API /api/v1/delegations (tạo/xem/thu hồi/ứng viên), giao diện ở trang Tài khoản; khi bước duyệt kích hoạt: ưu tiên người được ủy quyền, không có thì người duyệt vắng (chấm công) chuyển lên quản lý trực tiếp; REWORK thay người thực hiện vắng; audit APPROVER_SUBSTITUTED
 - [x] 4.3 Trang 'Bộ luật quy định AI' (khu quản trị, chỉ POLICY_ADMIN): tải tệp JSON, danh sách phiên bản, kích hoạt/khôi phục; dùng API lưu DB của 1.4; lazy-load, không có trong bundle cổng nhân viên
 - [x] 4.2 Đã xóa ingest_policy, toggle_maintenance, maintenance_status, _trigger_ai_retraining (grep xác nhận không còn nơi gọi, không gắn URL); có test chặn quay lại
@@ -21,10 +22,9 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 4.5 Chấm công khớp mã nhân viên
+- [ ] 4.6 Dockerfile ai-service multi-stage
 
 ## Chưa làm
-- [ ] 4.6 Dockerfile ai-service multi-stage
 - [ ] 4.7 Smoke test OCR trong CI
 - [ ] 5.1 Menu tự cập nhật /me
 - [ ] 5.2 Test secret-policy cô lập .env
@@ -32,11 +32,12 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [ ] 6.x Test toàn bộ, PR_DESCRIPTION.md
 
 ## Quyết định cần tôi xác nhận
+- 4.5: dữ liệu HRM giả lập (mock_hr.employee_directory, 55 người, email @example.test) không trùng 42 tài khoản @eas.com; sync chỉ khớp 2 theo tên, 40 tài khoản không khớp. Chấm công vẫn chạy nhờ dự phòng email. Muốn khớp mã thật cần seed lại HRM theo 42 tài khoản.
 - 4.2: `api_core/workflow/maintenance.py` không còn nơi gọi sau khi xóa các hàm cũ (khác `api_core/maintenance.py` đang dùng). Giữ lại vì ngoài phạm vi; có thể xóa nếu bạn đồng ý.
 - 1.5: hàm DB `eas.ai_revocable` ghi cứng id tài khoản AI `00000002-0000-4000-8000-0000000000a1` (khớp migration 08 và mặc định `EAS_AI_SYSTEM_USER_ID`). Nếu đổi biến này phải sửa hàm.
 - 1.5: chỉ hoàn tác được hồ sơ vòng đời A đã COMPLETED (AI chỉ tự duyệt vòng đời A). Bất kỳ APPROVER trong phạm vi phòng/loại (trừ người tạo) đều thu hồi được, không chỉ người duyệt gốc.
 
 ## Việc tôi phải làm thủ công
-- Chạy trên Supabase SQL Editor theo thứ tự: `database/migrations/07_dev_restore_eas_emails.sql` (đã chạy), `08_ai_system_account.sql`, `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`, `09_ai_policy_store.sql`, `10_ai_auto_approve_revoke.sql`, `11_request_category_regroup.sql`, `12_request_types_new.sql`, `13_it_support_executor.sql`, `14_system_account_flag.sql`, `15_approval_delegation.sql`
+- Chạy trên Supabase SQL Editor theo thứ tự: `database/migrations/07_dev_restore_eas_emails.sql` (đã chạy), `08_ai_system_account.sql`, `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`, `09_ai_policy_store.sql`, `10_ai_auto_approve_revoke.sql`, `11_request_category_regroup.sql`, `12_request_types_new.sql`, `13_it_support_executor.sql`, `14_system_account_flag.sql`, `15_approval_delegation.sql`, `16_employee_code.sql`; mock: `005_attendance_employee_code.sql` (sau 004); rồi `python manage.py sync_employee_codes --apply`
 - Sau migration 09, nếu container AI đang có file quy định cũ: `python manage.py import_ai_policy_file ai_service/data/active_enterprise_policy.json --operator <email POLICY_ADMIN>`
 - Rollback: `database/migrations/rollback/`

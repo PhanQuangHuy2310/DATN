@@ -195,7 +195,7 @@ class MigrationConsistencyTests(unittest.TestCase):
         self.assertIn("SET active_release_id", sql)
 
     def test_every_migration_has_a_rollback(self):
-        for number in ("08", "09", "10", "11", "12", "13", "14", "15"):
+        for number in ("08", "09", "10", "11", "12", "13", "14", "15", "16"):
             with self.subTest(migration=number):
                 self.assertTrue(
                     list((MIGRATIONS / "rollback").glob(f"{number}_*_rollback.sql"))
