@@ -32,7 +32,7 @@ from .service import (
     find_user,
     load_actor_from_session,
     require_actor,
-    verify_user_password,
+    verify_login_password,
 )
 
 logger = logging.getLogger(__name__)
@@ -159,10 +159,7 @@ def login(request: HttpRequest) -> JsonResponse:
         )
 
     user = find_user(email)
-    valid = bool(
-        user and user.is_active and verify_user_password(password, user.password_hash)
-    )
-    if not valid:
+    if not verify_login_password(user, password):
         register_login_failure(
             cache, keys, window_seconds=settings.EAS_LOGIN_WINDOW_SECONDS
         )
@@ -259,7 +256,7 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
     cooldown_key = f"{throttle_key}:cooldown"
     ip_digest = hmac.new(
         settings.SECRET_KEY.encode(),
-        (request.META.get("REMOTE_ADDR", "unknown").strip() or "unknown").encode(),
+        (client_ip(request).strip() or "unknown").encode(),
         "sha256",
     ).hexdigest()
     ip_key = f"eas:password-reset:ip:{ip_digest}"
@@ -654,6 +651,21 @@ def password(request: HttpRequest) -> JsonResponse:
     allowed_keys = {"current_password", "old_password", "new_password"}
     if not set(body).issubset(allowed_keys):
         return api_error(request, "INVALID_PASSWORD_CHANGE", status=400)
+    # A stolen session must not become an oracle for guessing the current
+    # password: reuse the login account+IP budget for wrong current passwords.
+    keys = throttle_keys(actor.email, client_ip(request))
+    if is_throttled(
+        cache,
+        keys,
+        account_limit=settings.EAS_LOGIN_MAX_ATTEMPTS,
+        ip_limit=getattr(settings, "EAS_LOGIN_MAX_IP_ATTEMPTS", 30),
+    ):
+        return api_error(
+            request,
+            "PASSWORD_CHANGE_RATE_LIMITED",
+            status=429,
+            headers={"Retry-After": str(settings.EAS_LOGIN_WINDOW_SECONDS)},
+        )
     try:
         new_version = change_password(
             actor=actor,
@@ -663,8 +675,13 @@ def password(request: HttpRequest) -> JsonResponse:
         )
     except PasswordChangeError as exc:
         code = str(exc)
-        status = 401 if code == "INVALID_CURRENT_PASSWORD" else 400
-        return api_error(request, code, status=status)
+        if code == "INVALID_CURRENT_PASSWORD":
+            register_login_failure(
+                cache, keys, window_seconds=settings.EAS_LOGIN_WINDOW_SECONDS
+            )
+            return api_error(request, code, status=401)
+        return api_error(request, code, status=400)
+    clear_account_failures(cache, keys)
     request.session["auth_version"] = new_version
     session_id = request.session.get("session_id")
     if not isinstance(session_id, str):

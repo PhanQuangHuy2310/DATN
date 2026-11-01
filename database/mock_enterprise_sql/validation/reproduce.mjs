@@ -30,14 +30,22 @@ try {
   if (Object.values(counts).some(value => value < 2)) throw new Error(`Insufficient fixtures: ${JSON.stringify(counts)}`);
 
   try {
-    await db.exec("INSERT INTO mock_assets.asset_loan(id,asset_id,borrower_employee_id,starts_at,due_at,status) VALUES ('32000000-0000-4000-8000-000000000002','31000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000003',now(),now()+interval '1 day','ACTIVE')");
+    await db.exec("INSERT INTO mock_assets.asset_loan(id,asset_id,borrower_employee_id,starts_at,due_at,status) VALUES ('32000000-0000-4000-8000-0000000000ff','31000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000003','2026-10-10T00:00:00Z','2026-10-12T00:00:00Z','ACTIVE')");
     throw new Error('Open-loan uniqueness constraint was bypassed');
   } catch (error) {
     if (!String(error.message).includes('asset loan overlaps')) throw error;
     await db.exec('ROLLBACK;');
   }
 
-  console.log(JSON.stringify({result: 'PASS', counts, checks: ['fresh install', 'synthetic seed', 'read-only verification', 'open-loan concurrency invariant'], limits: 'Single PostgreSQL WASM backend; no Supabase deployment or multi-session concurrency.'}, null, 2));
+  const rlsGaps = (await db.query(`
+    SELECT n.nspname || '.' || c.relname AS relation
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relkind = 'r' AND n.nspname LIKE 'mock\_%'
+      AND (NOT c.relrowsecurity OR NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid))
+  `)).rows;
+  if (rlsGaps.length) throw new Error(`Mock tables without RLS/policy: ${JSON.stringify(rlsGaps)}`);
+
+  console.log(JSON.stringify({result: 'PASS', counts, checks: ['fresh install', 'synthetic seed', 'read-only verification', 'open-loan concurrency invariant', 'row level security on every mock table'], limits: 'Single PostgreSQL WASM backend; no Supabase deployment or multi-session concurrency.'}, null, 2));
 } catch (error) {
   console.error(JSON.stringify({result: 'FAIL', message: error.message, sqlstate: error.code, detail: error.detail}, null, 2));
   process.exitCode = 1;

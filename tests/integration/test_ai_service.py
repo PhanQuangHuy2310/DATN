@@ -212,6 +212,10 @@ class TestMockDataSnapshots(unittest.TestCase):
             "file:///etc/passwd",
             "ftp://fileserver/invoice.png",
             "http://metadata.google.internal/computeMetadata/v1/",
+            "http://100.64.0.1/carrier-grade-nat",
+            "http://0.0.0.0:8001/health",
+            "http://[::ffff:127.0.0.1]/mapped-loopback",
+            "http://[::1]/ipv6-loopback",
         ]
         for url in blocked_urls:
             with self.subTest(url=url), self.assertRaises(HTTPException):

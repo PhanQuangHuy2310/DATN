@@ -205,6 +205,18 @@ def live(request):
 
 @require_GET
 def ready(request):
+    env = getattr(settings, "ENVIRONMENT", "development")
+    cache_ttl = (
+        0 if env == "test" else int(getattr(settings, "EAS_HEALTH_CACHE_SECONDS", 5))
+    )
+    cache_key = "eas:health:ready_payload"
+    if cache_ttl > 0:
+        try:
+            cached = cache.get(cache_key)
+            if cached and isinstance(cached, dict):
+                return JsonResponse(cached["body"], status=cached["status"])
+        except (RedisError, OSError, TypeError, ValueError) as exc:
+            log.debug("Health cache read failed: %s", exc)
     try:
         is_ready, checks, catalog = database_readiness()
     except DatabaseError as exc:
@@ -234,12 +246,18 @@ def ready(request):
         checks["shared_security_cache"] = False
     checks.update(storage_readiness())
     is_ready = is_ready and all(bool(value) for value in checks.values())
-    return JsonResponse(
-        {
-            "status": "ready" if is_ready else "not_ready",
-            "service": "eas-api",
-            "checks": checks,
-            "catalog": catalog,
-        },
-        status=200 if is_ready else 503,
-    )
+    status_code = 200 if is_ready else 503
+    body = {
+        "status": "ready" if is_ready else "not_ready",
+        "service": "eas-api",
+        "checks": checks,
+        "catalog": catalog,
+    }
+    if cache_ttl > 0 and is_ready:
+        try:
+            cache.set(
+                cache_key, {"body": body, "status": status_code}, timeout=cache_ttl
+            )
+        except (RedisError, OSError, TypeError, ValueError) as exc:
+            log.debug("Health cache write failed: %s", exc)
+    return JsonResponse(body, status=status_code)

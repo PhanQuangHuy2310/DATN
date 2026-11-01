@@ -397,6 +397,7 @@ export function errorText(e) {
     PASSWORD_REUSE_NOT_ALLOWED: "Mật khẩu mới phải khác mật khẩu cũ.",
     PASSWORD_POLICY_VIOLATION: "Mật khẩu mới phải có 15–128 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt và không chứa tên đăng nhập.",
     LOGIN_RATE_LIMITED: "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.",
+    PASSWORD_CHANGE_RATE_LIMITED: "Bạn đã nhập sai mật khẩu hiện tại quá nhiều lần. Vui lòng thử lại sau.",
     VALIDATION_FAILED: "Dữ liệu chưa hợp lệ.",
     VALIDATION_STALE:
       "Cấu hình đã thay đổi. Hãy kiểm tra lại trước khi công bố.",

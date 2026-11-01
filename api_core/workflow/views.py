@@ -6,6 +6,7 @@ from uuid import UUID
 
 from django.db import connection
 from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.authn.service import require_actor
@@ -880,13 +881,15 @@ def attachment_download(request: HttpRequest, attachment_id: str) -> HttpRespons
 
     safe_mime = (
         "application/octet-stream"
-        if mime in ("text/html", "application/xhtml+xml", "text/xml")
+        if mime in ("text/html", "application/xhtml+xml", "text/xml", "image/svg+xml")
         else mime
     )
     response = HttpResponse(
         data, content_type=safe_mime
     )  # NOSONAR pythonsecurity:S5131
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    # RFC 6266 quoting/encoding: Vietnamese names survive and a stored name
+    # cannot inject extra header parameters.
+    response["Content-Disposition"] = content_disposition_header(True, filename)
     response["Content-Security-Policy"] = "default-src 'none'"
     response["Cache-Control"] = "no-store"
     response["X-Content-Type-Options"] = "nosniff"
@@ -1071,7 +1074,7 @@ def request_audit_verify_view(request: HttpRequest, request_id: str) -> JsonResp
 
 
 @require_GET
-@require_actor()
+@require_actor("AUDITOR", "POLICY_ADMIN", "OPS_ADMIN")
 def admin_events_view(request: HttpRequest) -> JsonResponse:
     try:
         res = list_admin_events(actor=request.actor, query_params=request.GET.dict())

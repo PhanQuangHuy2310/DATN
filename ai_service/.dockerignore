@@ -1,0 +1,9 @@
+# Build context is ./ai_service and the Dockerfile runs `COPY . .`:
+# never bake local secrets, virtualenvs or caches into the image.
+.env
+.env.*
+!.env.example
+.venv*
+**/__pycache__
+**/*.pyc
+*.log

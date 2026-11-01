@@ -205,9 +205,10 @@ async def ocr_with_gemini_vision(
     try:
         return await asyncio.to_thread(_call_gemini)
     except Exception as e:
-        logger.error(f"Gemini Vision error: {e}")
+        logger.error(f"Gemini Vision error: {type(e).__name__}: {e}")
+        # Library/provider details stay in server logs, never in the response.
         raise HTTPException(
-            status_code=500, detail=f"Cả PaddleOCR và Gemini Vision đều lỗi: {e}"
+            status_code=502, detail="Không bóc tách được nội dung ảnh."
         ) from e
 
 
@@ -286,7 +287,7 @@ def validate_safe_image_url(url: str) -> None:
         addr_info = socket.getaddrinfo(hostname, None)
     except socket.gaierror as exc:
         raise HTTPException(
-            status_code=400, detail=f"Không thể phân giải tên miền {hostname}: {exc}"
+            status_code=400, detail="Không thể phân giải tên miền của URL."
         ) from exc
 
     for entry in addr_info:
@@ -296,14 +297,9 @@ def validate_safe_image_url(url: str) -> None:
         except ValueError:
             continue
 
-        if (
-            ip.is_private
-            or ip.is_loopback
-            or ip.is_link_local
-            or ip.is_reserved
-            or ip.is_multicast
-            or (ip.version == 4 and ip_str.startswith("169.254."))
-        ):
+        # is_global rejects private, loopback, link-local (cloud metadata),
+        # CGNAT 100.64/10, reserved, unspecified and IPv4-mapped variants.
+        if not ip.is_global or ip.is_multicast:
             raise HTTPException(
                 status_code=400,
                 detail=f"Địa chỉ IP mục tiêu {ip_str} thuộc dải mạng bị cấm (SSRF protection).",
@@ -328,7 +324,10 @@ async def extract_from_url(body: OCRUrlRequest):
             image_bytes = resp.content
             content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0]
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=400, detail=f"Không tải được ảnh từ URL: {e}")
+        logger.warning(f"OCR image download failed: {type(e).__name__}: {e}")
+        raise HTTPException(
+            status_code=400, detail="Không tải được ảnh từ URL."
+        ) from e
 
     engine = "paddleocr"
     try:

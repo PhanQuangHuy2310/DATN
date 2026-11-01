@@ -316,22 +316,12 @@ def list_admin_events(actor: Actor, query_params: dict[str, str]) -> dict[str, A
     if not 1 <= limit <= 100 or not 0 <= offset <= 10_000:
         raise CommandError("INVALID_PAGINATION", status=400)
 
+    # Role gate: the view's @require_actor(...) already enforces an active
+    # AUDITOR/POLICY_ADMIN/OPS_ADMIN membership (actor.roles uses the same
+    # validity predicate); the query below scopes rows to that membership.
+    if not actor.roles.intersection({"AUDITOR", "POLICY_ADMIN", "OPS_ADMIN"}):
+        raise CommandError("FORBIDDEN", status=403)
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT EXISTS (
-              SELECT 1 FROM eas.role_membership
-              WHERE user_id = %s AND role IN ('AUDITOR', 'POLICY_ADMIN', 'OPS_ADMIN')
-                AND revoked_at IS NULL
-                AND valid_from <= statement_timestamp()
-                AND (valid_to IS NULL OR valid_to > statement_timestamp())
-            )
-            """,
-            [actor.id],
-        )
-        if not cursor.fetchone()[0]:
-            raise CommandError("FORBIDDEN", status=403)
-
         cursor.execute(
             """
             SELECT e.id::text, e.seq, e.actor_id::text, e.actor_kind, e.action,

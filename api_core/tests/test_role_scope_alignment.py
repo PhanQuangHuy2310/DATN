@@ -94,9 +94,30 @@ class AuditEventScopeTests(SimpleTestCase):
         )
         result = list_admin_events(actor, {"limit": "20", "offset": "0"})
         self.assertEqual(result["items"], [])
-        self.assertEqual(len(cursor.calls), 2)
-        query, params = cursor.calls[1]
+        self.assertEqual(len(cursor.calls), 1)
+        query, params = cursor.calls[0]
         self.assertIn("rm.scope_kind = 'GLOBAL'", query)
         self.assertIn("rm.department_id = e.department_id", query)
         self.assertIn("rm.type_id = e.type_id", query)
         self.assertIn(actor.id, params)
+
+
+class AdminEventsRoleGateTests(SimpleTestCase):
+    """vibe-check #3: the admin role is enforced by the decorator, before the
+    handler or any query runs."""
+
+    @patch("api_core.workflow.views.list_admin_events")
+    @patch("api_core.authn.service.load_actor_from_session")
+    def test_operational_user_gets_403_without_reaching_handler(self, load, handler):
+        load.return_value = Actor(
+            id=str(uuid4()),
+            email="requester@eas.com",
+            display_name="Requester",
+            department_id=str(uuid4()),
+            auth_version=1,
+            roles=frozenset({"REQUESTER", "APPROVER"}),
+            must_change_password=False,
+        )
+        response = self.client.get("/api/v1/admin-events")
+        self.assertEqual(response.status_code, 403)
+        handler.assert_not_called()

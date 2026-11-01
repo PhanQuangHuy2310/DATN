@@ -17,7 +17,16 @@ class SecurityHeadersTests(SimpleTestCase):
     def test_defense_in_depth_headers_are_present(self):
         response = ApiSecurityHeadersMiddleware(_ok)(RequestFactory().get("/api/v1/x"))
         self.assertEqual(response["X-Content-Type-Options"], "nosniff")
-        self.assertIn("frame-ancestors 'none'", response["Content-Security-Policy"])
+        csp = response["Content-Security-Policy"]
+        for directive in (
+            "default-src 'none'",
+            "object-src 'none'",
+            "base-uri 'none'",
+            "frame-ancestors 'none'",
+            "form-action 'none'",
+        ):
+            self.assertIn(directive, csp)
+        self.assertNotIn("127.0.0.1", csp)
         self.assertIn("camera=()", response["Permissions-Policy"])
         self.assertEqual(response["Cross-Origin-Opener-Policy"], "same-origin")
 

@@ -2,7 +2,7 @@ import hmac
 import os
 from collections.abc import Callable
 from datetime import datetime, timezone
-from functools import wraps
+from functools import lru_cache, wraps
 from uuid import UUID, uuid4
 
 from django.conf import settings
@@ -36,9 +36,28 @@ def verify_user_password(password: str, password_hash: str) -> bool:
         password_hash in SEED_PLACEHOLDER_HASHES
         or password_hash.startswith("!UNUSABLE_DEMO_")
     ):
-        fallback_pwd = os.getenv("EAS_DEV_DEFAULT_PASSWORD", "Admin@123456")
-        return hmac.compare_digest(password, fallback_pwd)
+        # Seed accounts only, development only, and only with an explicitly
+        # configured password: no well-known default lives in source code.
+        fallback_pwd = os.getenv("EAS_DEV_DEFAULT_PASSWORD", "")
+        return bool(fallback_pwd) and hmac.compare_digest(password, fallback_pwd)
     return False
+
+
+@lru_cache(maxsize=1)
+def _timing_equalizer_hash() -> str:
+    return make_password(uuid4().hex, hasher="argon2")
+
+
+def verify_login_password(user: AuthUser | None, password: str) -> bool:
+    """Check a login attempt in constant work whether or not the account exists.
+
+    Unknown or inactive accounts still pay one Argon2 verification, so response
+    time does not reveal which employee emails are registered.
+    """
+    if user is None or not user.is_active:
+        check_password(password, _timing_equalizer_hash())
+        return False
+    return verify_user_password(password, user.password_hash)
 
 
 class PasswordChangeError(ValueError):
