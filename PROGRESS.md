@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] Tối ưu & Docker 02/11: OCR làm nóng khi khởi động + volume model (request đầu 21,3 s → 1,6 s); bundle cổng nhân viên 390,8 → 335,1 KB (6 màn hình lazy); test fallback AI ~10 s → 2 s; sửa libgl1 + HOME aiuser (OCR container trước đó hỏng); kiểm tra stack thật: 8080/8081/8088 chặn đúng, Redis 6380, OCR container 3/3; dọn Docker ~23 GB (image cũ 8,5 GB + build cache, giữ 5 GB cache gần nhất)
 - [x] Dọn dẹp 02/11: xóa __pycache__, .ruff_cache, web dist (≈12 MB, tạo lại được); .dockerignore gốc loại ai_service/, database/, tests/, scripts/... khỏi build context (có test). Docker chưa dọn được vì engine không phản hồi
 - [x] Phiên 02/11 — A: cập nhật số commit/file trong PR_DESCRIPTION.md (db4299b). C1: đo image ai-service 8,5 GB → 3,41 GB, context 21,7 MB; build thật phát hiện thiếu libgl1 → đã sửa (e19b12a)
 - [x] 6.x Toàn bộ test đạt (Django 376, run_tests 141, AI 26, OCR thật 3/3, web 52); sửa 2 test email bị .env local ảnh hưởng; PR_DESCRIPTION.md cho PR dat → main (thử gộp với main: không xung đột)
@@ -30,10 +31,8 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] C. Docker: build lại ai-service (bản có libgl1) — Docker Desktop sập (EOF) ở bước xuất image; sau đó chạy compose và kiểm tra 8080/8081/8088 trả 404, Redis 6380, OCR trong container. Image cũ giữ tag `eas-ai-service:before-multistage` để so sánh/quay lại.
 
 ## Chưa làm
-- [ ] Dọn Docker khi engine chạy lại: `docker image rm eas-ai-service:before-multistage` (8,5 GB) và `docker builder prune -f` (≈6,7 GB). KHÔNG đụng image/container của project khác (xc-tickets, mysql)
 - [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→16, mock 004→005 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)
 - [ ] D. Chờ quyết định trưởng nhóm cho 4 mục bên dưới
 - [ ] Tạo PR trên GitHub: máy không có gh CLI, tạo tay qua https://github.com/PhanQuangHuy2310/DATN/compare/main...dat?expand=1

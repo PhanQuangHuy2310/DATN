@@ -1,6 +1,6 @@
 # Kiểm thử luồng yêu cầu, bảo mật cổng, AI tự duyệt và danh mục 10 nhóm
 
-Nhánh `dat` → `main`. 31 commit, 110 file (kể cả commit cập nhật mô tả này). Đã thử gộp với `main` hiện tại: **không xung đột**.
+Nhánh `dat` → `main`. 36 commit, 111 file (kể cả commit cập nhật mô tả này). Đã thử gộp với `main` hiện tại: **không xung đột**.
 
 > ⚠️ **Trước khi deploy phải chạy migration trên Supabase** (mục "Việc cần làm khi deploy"). Code đã viết để vẫn chạy được khi migration chưa áp dụng: các tính năng mới chỉ tự bật sau khi bảng/cột tương ứng tồn tại.
 
@@ -40,14 +40,28 @@ Nhánh `dat` → `main`. 31 commit, 110 file (kể cả commit cập nhật mô 
 - Test secret-policy và test email không còn bị `.env` local ảnh hưởng (`EAS_SKIP_DOTENV`).
 - Cổng Redis lấy từ biến môi trường; Redis của Docker publish ra `127.0.0.1:6380` để không đụng Redis có sẵn ở 6379 trên máy.
 
-## Kết quả kiểm thử (chạy local ngày 01/11/2026)
+### Phần 7 — Tối ưu hiệu năng & Docker (02/11)
+
+| Hạng mục | Trước | Sau |
+|---|---|---|
+| Request OCR đầu tiên sau khi khởi động AI service | 21,3 s | **1,6 s** (các lần sau 0,8 s) |
+| Bundle JS cổng nhân viên (tải lần đầu) | 451,6 KB (gzip ~130 KB) | **335,1 KB** (gzip 99,6 KB), 6 màn hình phụ thành chunk lazy |
+| Image ai-service | 8,5 GB | **3,69 GB** |
+| Build context của api/worker/web/web-admin | cả repo (+~2,2 GB venv AI và dữ liệu huấn luyện) | ≤ 5,4 MB; build 5 image mất 1 phút 27 giây |
+| 3 test fallback của AI client | ~10 s, phụ thuộc AI service có chạy hay không | ~2 s, kết quả cố định |
+
+- **Làm nóng OCR:** AI service khởi tạo PaddleOCR trong luồng nền khi khởi động (`/health` không bị chặn); khóa trong tiến trình + khóa file giữa các worker uvicorn để không tải model trùng; model lưu trong volume `ai_ocr_models` nên chỉ tải một lần. Tắt bằng `OCR_WARMUP=false`.
+- **Sửa 2 lỗi chỉ lộ ra khi chạy container thật:** thiếu `libgl1` (OpenCV của PaddleOCR không import được) và user `aiuser` có `HOME=/nonexistent` nên PaddleOCR không ghi được model → OCR trong container đều lỗi. Đã sửa, kèm test.
+- **Đã kiểm tra trên stack Docker thật:** cổng nhân viên 8080 trả 404 cho `/api/v1/admin/`, `/api/v1/ops/`, `/api/v1/internal/`; cổng quản trị 8081 vẫn tới được API admin (401 khi chưa đăng nhập); gateway 8088 trả 404 cho `/api/v1/internal/`; API trả 401 cho `/internal` khi thiếu secret; Redis trả lời ở `127.0.0.1:6380`; OCR trong container đọc đúng 3/3 hóa đơn mẫu.
+
+## Kết quả kiểm thử (chạy local ngày 02/11/2026)
 
 | Bộ kiểm thử | Kết quả |
 |---|---|
-| Django `python manage.py test` | **376 đạt**, 1 bỏ qua (smoke OCR khi Python không có PaddleOCR) |
-| `python tests/run_tests.py` | **141 đạt** |
-| AI `tests.integration` (scenarios + service) | **26 đạt** |
-| Smoke OCR với PaddleOCR thật (`tests/ocr_smoke`) | **3/3 đạt** — số tiền, ngày, nhà cung cấp đúng 3/3 ảnh |
+| Django `python manage.py test` | **385 đạt**, 1 bỏ qua (smoke OCR khi Python không có PaddleOCR) |
+| `python tests/run_tests.py` | **150 đạt** |
+| AI `tests.integration` (scenarios + service) | **29 đạt** |
+| Smoke OCR với PaddleOCR thật (`tests/ocr_smoke`) | **3/3 đạt** — số tiền, ngày, nhà cung cấp đúng 3/3 ảnh; chạy được cả trong container ai-service |
 | Frontend `web_client` `npm test` | **52 đạt**; lint sạch; build OK |
 | `web_admin` build | OK |
 | Kiểm tra bundle cổng nhân viên | Không chứa màn hình quản trị |
@@ -55,7 +69,7 @@ Nhánh `dat` → `main`. 31 commit, 110 file (kể cả commit cập nhật mô 
 
 Số liệu OCR: độ tin cậy 95,7–96,6%; đọc đúng chữ 97,8–99,2% nhưng **giữ đúng dấu chỉ 83,1–88,5%** (giới hạn của model PaddleOCR `vi`), nên tên nhà cung cấp trả về không dấu.
 
-Chưa kiểm thử được: chạy trên Supabase thật sau migration (cần chạy migration trước); chạy các container sau khi build (Docker Desktop sập ở bước xuất image khi build lại bản có `libgl1`, xem mục "Chưa hoàn thành").
+Chưa kiểm thử được: chạy trên Supabase thật sau migration (cần chạy migration trước).
 
 ## Danh mục loại yêu cầu mới
 
@@ -155,7 +169,6 @@ Rollback chạy **ngược thứ tự** (ví dụ rollback 12 trước 11).
 
 - 13 script chẩn đoán/khởi động ở thư mục gốc không được file nào tham chiếu (`check_approval_menu_readonly.py`, `check_schema_contract.py`, `diagnose_supabase.py`, `diagnose_eas_lists_readonly.py`, `diagnose_readiness_readonly.py`, `recover_admin_password_interactive.py`, `report_conformance.py`, `verify_admin_password_local.py`, `check_local.cmd`, `setup_local.cmd`, `start_backend.ps1`, `start_frontend.ps1`…). Có thể gom vào `scripts/` hoặc xóa nếu không còn ai dùng.
 - Dữ liệu huấn luyện sinh tự động `ai_service/training/data/partitions` (801 MB, đã gitignore) tạo lại được bằng `enterprise_bigdata_generator.py`, nhưng dữ liệu sinh ngẫu nhiên nên lần sau sẽ khác.
-- Trên máy dev: khi Docker chạy lại, xóa image cũ `eas-ai-service:before-multistage` (8,5 GB) và build cache (khoảng 6,7 GB): `docker image rm eas-ai-service:before-multistage && docker builder prune -f`.
 
 ## Quyết định cần trưởng nhóm xác nhận
 
@@ -166,8 +179,7 @@ Rollback chạy **ngược thứ tự** (ví dụ rollback 12 trước 11).
 
 ## Chưa hoàn thành
 
-- Đã đo image ai-service: trước 8,5 GB (Dockerfile cũ, image dựng 01/11), sau 3,41 GB (Dockerfile nhiều tầng, chưa có `libgl1`). Bản có `libgl1` build qua hết các bước nhưng Docker Desktop sập (EOF) khi xuất image, nên chưa có số đo cuối và chưa chạy kiểm tra container: cổng 8080/8081/8088 trả 404 đúng đường dẫn, Redis ở 6380, OCR trong container.
-- Lần build đó, bước tải trước model OCR báo `zlib ... inconsistent stream state` (file tải về hỏng, khả năng do mạng) và được bỏ qua; model sẽ tự tải khi OCR chạy lần đầu.
+- Tải trước model OCR lúc build luôn lỗi `zlib ... inconsistent stream state` dưới BuildKit (lúc chạy container thì tải được); đã xử lý bằng volume `ai_ocr_models` + làm nóng lúc khởi động, nhưng lần khởi động đầu trên máy mới vẫn tải model (~20 s, chạy nền).
 - Kiểm thử end-to-end trên Supabase thật cho các tính năng cần migration (thực hiện sau khi chạy migration).
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
