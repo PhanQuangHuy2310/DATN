@@ -94,7 +94,14 @@ class RevokeAiAutoApprovalTests(SimpleTestCase):
 
     def test_revoke_within_24h_returns_request_to_manual_approval(self):
         result, cursor, audit = self.revoke(
-            [self.request_row(), self.ai_decision(), (True,)]
+            [
+                self.request_row(),
+                self.ai_decision(),
+                (True,),  # actor is an approver in scope
+                (str(uuid4()), self.human_approver),  # re-created first step
+                (False,),  # delegation table not installed
+                (False,),  # attendance feed not installed
+            ]
         )
         self.assertEqual(result[0]["request"]["status"], "PENDING_APPROVAL")
         calls = [c.args for c in cursor.execute.call_args_list]

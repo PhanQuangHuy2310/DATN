@@ -73,6 +73,17 @@ urlpatterns = [
         name="attachment-download",
     ),
     # Decisions & Cancellation
+    path("delegations", views.delegations_view, name="delegations"),
+    path(
+        "delegations/candidates",
+        views.delegation_candidates_view,
+        name="delegation-candidates",
+    ),
+    path(
+        "delegations/<uuid:delegation_id>/revoke",
+        views.delegation_revoke_view,
+        name="delegation-revoke",
+    ),
     path(
         "requests/<uuid:request_id>/ai-approval/revoke",
         views.revoke_ai_approval_view,

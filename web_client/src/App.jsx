@@ -21,6 +21,7 @@ import ClientRequests from "./components/ClientRequests.jsx";
 import ClientOrgChart from "./components/ClientOrgChart.jsx";
 import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
 import { Notifications, Profile } from "./components/Admin.jsx";
+import DelegationSettings from "./components/DelegationSettings.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
@@ -648,7 +649,12 @@ function renderWorkspaceContent({
     case "notifications":
       return <Notifications onOpen={setSelected} />;
     case "profile":
-      return <Profile user={user} />;
+      return (
+        <>
+          <Profile user={user} />
+          {user.roles.includes("APPROVER") && <DelegationSettings />}
+        </>
+      );
     case "events":
       return <AdminScreen name="AdminEvents" />;
     default:

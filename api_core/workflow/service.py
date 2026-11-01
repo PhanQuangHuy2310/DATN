@@ -1413,6 +1413,15 @@ def submit_request(
             risk_weight=eff_risk_w,
             approval_level=eff_app_lvl,
         )
+        _substitute_approver(
+            cursor,
+            step_id=first_step_id,
+            request_id=request_id,
+            requester_id=actor.id,
+            department_id=actor.department_id,
+            type_id=type_id,
+            correlation_id=correlation_id,
+        )
 
         cursor.execute(
             """
@@ -1514,16 +1523,144 @@ def _validate_approval_decision_input(
     return outcome, reason, expected_version
 
 
-def _attendance_available(cursor) -> bool:
-    # The HRM attendance feed is optional; without it everyone counts as present.
+def _table_readable(cursor, relation: str) -> bool:
+    """Optional tables (later migrations) are used only once they exist."""
     cursor.execute(
-        """
-        SELECT to_regclass('mock_hr.attendance') IS NOT NULL
-           AND has_table_privilege('mock_hr.attendance', 'SELECT')
-        """
+        "SELECT to_regclass(%s) IS NOT NULL AND has_table_privilege(%s, 'SELECT')",
+        [relation, relation],
     )
     row = cursor.fetchone()
     return bool(row and row[0])
+
+
+def _attendance_available(cursor) -> bool:
+    # The HRM attendance feed is optional; without it everyone counts as present.
+    return _table_readable(cursor, "mock_hr.attendance")
+
+
+def _attendance_status(cursor, user_id: str) -> str | None:
+    cursor.execute(
+        """
+        SELECT a.status FROM mock_hr.attendance a
+        JOIN eas.app_user u ON u.email = a.employee_email
+        WHERE u.id = %s AND a.work_date = CURRENT_DATE
+        """,
+        [user_id],
+    )
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+def _eligible_approver(
+    cursor,
+    *,
+    candidate_id: str | None,
+    instance_id: str,
+    requester_id: str | None,
+    department_id: str,
+    type_id: str,
+) -> bool:
+    if not candidate_id or candidate_id == requester_id:
+        return False
+    cursor.execute(
+        "SELECT 1 FROM eas.approval_step WHERE instance_id=%s AND assignee_id=%s",
+        [instance_id, candidate_id],
+    )
+    if cursor.fetchone():
+        return False  # SoD: one person cannot hold two steps of a route
+    return _is_actor_valid_for_role(
+        cursor,
+        actor_id=candidate_id,
+        role="APPROVER",
+        department_id=department_id,
+        type_id=type_id,
+    )
+
+
+def _substitute_approver(
+    cursor,
+    *,
+    step_id: str,
+    request_id: str,
+    requester_id: str | None,
+    department_id: str,
+    type_id: str,
+    correlation_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Hand an activated step to the approver's delegate, or (approver absent
+    and no delegate) to the approver's direct manager. Returns the change."""
+    cursor.execute(
+        "SELECT instance_id::text, assignee_id::text FROM eas.approval_step WHERE id=%s",
+        [step_id],
+    )
+    row = cursor.fetchone()
+    if not row:
+        return None
+    instance_id, assignee_id = row
+    eligibility = {
+        "instance_id": instance_id,
+        "requester_id": requester_id,
+        "department_id": department_id,
+        "type_id": type_id,
+    }
+    candidate = reason = None
+    if _table_readable(cursor, "eas.approval_delegation"):
+        cursor.execute(
+            """
+            SELECT delegate_id::text FROM eas.approval_delegation
+            WHERE delegator_id=%s AND revoked_at IS NULL
+              AND starts_at <= statement_timestamp() AND ends_at > statement_timestamp()
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            [assignee_id],
+        )
+        delegate = cursor.fetchone()
+        if delegate and _eligible_approver(
+            cursor, candidate_id=delegate[0], **eligibility
+        ):
+            candidate, reason = delegate[0], "DELEGATED"
+    if candidate is None and _attendance_available(cursor):
+        status = _attendance_status(cursor, assignee_id)
+        if status in {"ABSENT", "LEAVE"}:
+            cursor.execute(
+                "SELECT manager_id::text FROM eas.app_user WHERE id=%s", [assignee_id]
+            )
+            manager = cursor.fetchone()
+            if manager and _eligible_approver(
+                cursor, candidate_id=manager[0], **eligibility
+            ):
+                candidate, reason = manager[0], f"APPROVER_{status}_ESCALATED"
+    if candidate is None:
+        return None
+    cursor.execute(
+        "UPDATE eas.approval_step SET assignee_id=%s WHERE id=%s AND state IN ('ACTIVE','WAITING')",
+        [candidate, step_id],
+    )
+    cursor.execute(
+        """
+        INSERT INTO eas.request_participant(request_id,user_id,joined_as)
+        VALUES (%s,%s,'APPROVER') ON CONFLICT (request_id, user_id) DO NOTHING
+        """,
+        [request_id, candidate],
+    )
+    change = {
+        "step_id": step_id,
+        "original_assignee_id": assignee_id,
+        "assignee_id": candidate,
+        "reason": reason,
+    }
+    _append_request_audit(
+        cursor,
+        request_id=request_id,
+        actor_id=None,
+        actor_kind="SYSTEM",
+        action="APPROVER_SUBSTITUTED",
+        target_type="approval_step",
+        target_id=step_id,
+        details=change,
+        correlation_id=correlation_id or str(uuid4()),
+    )
+    return change
 
 
 def _pick_present_executor(
@@ -1661,6 +1798,16 @@ def _handle_approval_approved(
         raise CommandError("EXECUTOR_ASSIGNMENT_NOT_ALLOWED", status=409)
     if next_step:
         next_step_id, next_assignee_id = next_step
+        substitution = _substitute_approver(
+            cursor,
+            step_id=next_step_id,
+            request_id=request_id,
+            requester_id=requester_id,
+            department_id=department_id,
+            type_id=type_id,
+        )
+        if substitution:
+            next_assignee_id = substitution["assignee_id"]
         if not _is_actor_valid_for_role(
             cursor,
             actor_id=next_assignee_id,
@@ -2428,6 +2575,30 @@ def _apply_acceptance_decision(
         )
         return "COMPLETED", now, None
 
+    cursor.execute(
+        """
+        SELECT r.requester_id::text, i.acceptor_id::text
+        FROM eas.request r JOIN eas.workflow_instance i ON i.id=%s
+        WHERE r.id=%s
+        """,
+        [instance_id, request_id],
+    )
+    people = cursor.fetchone()
+    executor_id, _reason = _pick_present_executor(
+        cursor,
+        planned_executor_id=planned_executor_id,
+        instance_id=instance_id,
+        requester_id=people[0] if people else None,
+        acceptor_id=people[1] if people else None,
+        department_id=department_id,
+        type_id=type_id,
+    )
+    if executor_id != planned_executor_id:
+        cursor.execute(
+            "UPDATE eas.workflow_instance SET planned_executor_id=%s WHERE id=%s",
+            [executor_id, instance_id],
+        )
+        planned_executor_id = executor_id
     if not _is_actor_valid_for_role(
         cursor,
         actor_id=planned_executor_id,

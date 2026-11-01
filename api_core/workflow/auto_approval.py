@@ -29,6 +29,7 @@ from api_core.workflow.service import (
     _create_submission_workflow,
     _execute_idempotent,
     _is_actor_valid_for_role,
+    _substitute_approver,
     decide_approval,
 )
 
@@ -351,6 +352,15 @@ def revoke_ai_auto_approval(
             now=now,
             risk_weight=risk_weight or 3,
             approval_level=approval_level or 1,
+        )
+        _substitute_approver(
+            cursor,
+            step_id=first_step_id,
+            request_id=request_id,
+            requester_id=requester_id,
+            department_id=department_id,
+            type_id=type_id,
+            correlation_id=correlation_id,
         )
         cursor.execute(
             """

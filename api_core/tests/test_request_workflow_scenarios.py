@@ -326,6 +326,8 @@ class RejectPathTests(SimpleTestCase):
     @patch("api_core.workflow.service._is_actor_valid_for_role", return_value=True)
     def test_acceptor_rework_returns_to_previous_step_executor(self, _valid):
         cursor = MagicMock()
+        # requester/acceptor lookup, then no attendance feed: executor kept
+        cursor.fetchone.side_effect = [(str(uuid4()), None), (False,)]
         executor = str(uuid4())
         status, completed_at, attempt_id = _apply_acceptance_decision(
             cursor,
@@ -342,8 +344,11 @@ class RejectPathTests(SimpleTestCase):
         self.assertEqual(status, "READY_FOR_EXECUTION")
         self.assertIsNone(completed_at)
         self.assertIsNotNone(attempt_id)
-        insert = cursor.execute.call_args_list[0]
-        self.assertIn("INSERT INTO eas.execution_attempt", insert.args[0])
+        insert = next(
+            c
+            for c in cursor.execute.call_args_list
+            if "INSERT INTO eas.execution_attempt" in c.args[0]
+        )
         self.assertEqual(insert.args[1][3:], [2, executor])
 
     def test_acceptor_has_no_terminal_reject_outcome(self):

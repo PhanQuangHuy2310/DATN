@@ -603,6 +603,62 @@ def submit(request: HttpRequest, request_id: str | None = None) -> JsonResponse:
     return response
 
 
+@require_actor("APPROVER")
+def delegations_view(request: HttpRequest) -> JsonResponse:
+    from api_core.http import JsonBodyError as _BodyError
+    from api_core.workflow import delegation
+
+    try:
+        if request.method == "GET":
+            result = delegation.list_delegations(actor=request.actor)
+            status = 200
+        elif request.method == "POST":
+            result = delegation.create_delegation(
+                actor=request.actor,
+                body=parse_json_object(request),
+                correlation_id=correlation_id(request),
+            )
+            status = 201
+        else:
+            return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    except _BodyError as exc:
+        return api_error(request, str(exc), status=400)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse(
+        {**result, "correlation_id": correlation_id(request)}, status=status
+    )
+
+
+@require_GET
+@require_actor("APPROVER")
+def delegation_candidates_view(request: HttpRequest) -> JsonResponse:
+    from api_core.workflow import delegation
+
+    return JsonResponse(
+        {
+            **delegation.delegate_candidates(actor=request.actor),
+            "correlation_id": correlation_id(request),
+        }
+    )
+
+
+@require_POST
+@require_actor("APPROVER")
+def delegation_revoke_view(request: HttpRequest, delegation_id) -> JsonResponse:
+    from api_core.workflow import delegation
+
+    try:
+        result = delegation.revoke_delegation(
+            actor=request.actor,
+            delegation_id=str(delegation_id),
+            correlation_id=correlation_id(request),
+        )
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse({**result, "correlation_id": correlation_id(request)})
+
+
 @require_POST
 @require_actor("APPROVER")
 def revoke_ai_approval_view(request: HttpRequest, request_id: str) -> JsonResponse:
