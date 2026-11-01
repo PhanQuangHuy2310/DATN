@@ -9,6 +9,7 @@ from django.core.validators import validate_email
 from project_env import load_project_env
 
 from .database import DatabaseUrlError, parse_database_url
+from .redis_url import resolve_redis_url
 
 load_project_env()
 
@@ -107,7 +108,7 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.Argon2PasswordHasher",
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
 ]
-REDIS_URL = os.getenv("REDIS_URL", "").strip()
+REDIS_URL = resolve_redis_url(os.environ)
 if ENVIRONMENT == "production" and not REDIS_URL:
     raise RuntimeError("REDIS_URL is required in production for shared security state")
 if REDIS_URL and ENVIRONMENT != "test":

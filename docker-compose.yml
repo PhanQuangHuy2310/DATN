@@ -176,6 +176,10 @@ services:
 
   redis:
     image: redis:8.0.3-alpine
+    # Published on 6380 for processes running outside Docker (manage.py,
+    # run_worker_local.py) so it never collides with a host Redis on 6379.
+    ports:
+      - "127.0.0.1:${EAS_REDIS_HOST_PORT:-6380}:6379"
     command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
     read_only: true
     tmpfs:

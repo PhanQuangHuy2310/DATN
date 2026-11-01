@@ -49,6 +49,15 @@ Hai cổng web được expose ở port 8080 và 8081. Compose khởi tạo Redi
 
 Installer baseline, kiểm tra chỉ đọc, seed/regression dành riêng cho development và hướng dẫn migration nằm trong [database/README.md](./database/README.md). Thay đổi production phải dùng migration tăng dần đã review; không chạy lại installer baseline trên database có dữ liệu.
 
+### Redis khi chạy ngoài Docker
+
+Redis của Docker Compose được publish ra máy tại `127.0.0.1:6380` (đổi bằng `EAS_REDIS_HOST_PORT`) để không đụng Redis khác đang chạy ở cổng 6379 trên máy — không cần gỡ Redis đó. Khi chạy `manage.py`/`run_worker_local.py` ngoài Docker, đặt trong `.env` một trong hai cách:
+
+- `REDIS_URL=redis://127.0.0.1:6380/0`, hoặc
+- `EAS_REDIS_PORT=6380` (tùy chọn `EAS_REDIS_HOST`, mặc định `127.0.0.1`).
+
+`REDIS_URL` luôn được ưu tiên; để trống tất cả thì môi trường development dùng cache trong bộ nhớ.
+
 ### Mật khẩu tài khoản seed và admin
 
 Repo không chứa mật khẩu mặc định nào. Tài khoản seed (hash giữ chỗ) chỉ đăng nhập được khi bạn tự đặt trong `.env` local:
