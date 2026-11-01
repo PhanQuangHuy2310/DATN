@@ -24,7 +24,7 @@ class RootDockerContextTests(unittest.TestCase):
             text = (ROOT / name).read_text(encoding="utf-8")
             sources = [
                 src
-                for line in re.findall(r"^COPY (?!--from)(.+)$", text, re.M)
+                for line in re.findall(r"^COPY (?!--from)(.+)$", text, re.MULTILINE)
                 for src in line.split()[:-1]
                 if not src.startswith("--")
             ]
