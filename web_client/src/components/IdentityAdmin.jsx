@@ -177,7 +177,7 @@ function UserDetail({ kind, item }) {
   </ResourceState>;
 }
 
-export default function IdentityAdmin() {
+export default function IdentityAdmin({ onNavigateOrgChart }) {
   const [kind, setKind] = useState("users");
   const [offset, setOffset] = useState(0);
   const [limit, setLimit] = useState(20);
@@ -212,7 +212,14 @@ export default function IdentityAdmin() {
   }
   return <>
     <div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ DANH TÍNH</p><h1>Người dùng & ma trận phân quyền</h1><p className="muted">Quản trị tài khoản, quan hệ quản lý, phòng ban, vai trò có thời hạn và phạm vi áp dụng; không xóa user có dữ liệu lịch sử.</p></div>
-      <button type="button" aria-label="+ Thêm mới" onClick={() => setModal({mode: "edit", record: null})}>+ {({ users: "Tạo người dùng", memberships: "Cấp quyền", "request-types": "Tạo loại yêu cầu" })[kind] || "Thêm mới"}</button>
+      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        {onNavigateOrgChart && (
+          <button type="button" className="secondary" onClick={onNavigateOrgChart}>
+            🏛 Sơ đồ tổ chức
+          </button>
+        )}
+        <button type="button" aria-label="+ Thêm mới" onClick={() => setModal({mode: "edit", record: null})}>+ {({ users: "Tạo người dùng", memberships: "Cấp quyền", "request-types": "Tạo loại yêu cầu" })[kind] || "Thêm mới"}</button>
+      </div>
     </div>
     {kind === "request-types" && <output className="muted">Báo cáo v1.0 đặt mục tiêu 16 loại yêu cầu. Hệ thống hiện có {total} loại theo bộ lọc đang chọn; loại mới cần được cấp quyền, cấu hình và công bố trước khi tạo hồ sơ.</output>}
     <div className="identity-explain" role="note"><strong>Bảo mật hệ thống:</strong> chỉ OPS_ADMIN với role membership <code>GLOBAL + ALL</code> mới được gọi API quản lý. Không suy quyền từ chức danh; mọi hành động cần lý do, idempotency và audit; không tự cấp/sửa role của chính mình.</div>

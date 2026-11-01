@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
-import { PasswordField, PageControls } from "./components/ux.jsx";
+import { PageControls } from "./components/ux.jsx";
 import { canNavigate } from "./rolePolicy.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
@@ -15,6 +15,7 @@ import {
 import RequestEditor from "./components/RequestEditor.jsx";
 import RequestDetail from "./components/RequestDetail.jsx";
 import IdentityAdmin from "./components/IdentityAdmin.jsx";
+import OrgChart from "./components/OrgChart.jsx";
 import ApiAdministration from "./components/ApiAdministration.jsx";
 import PlanCatalog from "./components/PlanCatalog.jsx";
 import WorkflowDiagrams from "./components/WorkflowDiagrams.jsx";
@@ -25,45 +26,242 @@ import {
   Policy,
   Profile,
 } from "./components/Admin.jsx";
+function getRealtimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
+  if (hour >= 12 && hour < 18) return "Chào buổi chiều!";
+  return "Chào buổi tối!";
+}
+
 function Login({ onLogin, portal = "client" }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [greeting, setGreeting] = useState(getRealtimeGreeting);
+
+  useEffect(() => {
+    const timer = setInterval(() => setGreeting(getRealtimeGreeting()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    const values = Object.fromEntries(new FormData(e.currentTarget));
+    setBusy(true);
+    setError("");
+    try {
+      await initializeCsrf();
+      const result = await api("/api/v1/auth/login", {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+      await onLogin(result.user);
+    } catch (err) {
+      if (err?.code === "INVALID_CREDENTIALS" || err?.message?.includes("INVALID_CREDENTIALS") || String(err?.code).includes("CREDENTIALS") || err?.status === 401) {
+        setError("Thông tin đăng nhập không hợp lệ.");
+      } else {
+        setError(errorText(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <main id="main" className="auth-shell">
-      <section className="auth-intro">
-        <div className="brand-mark">E</div>
-        <p className="eyebrow">ENTERPRISE APPROVAL SYSTEM</p>
-        <h1>
-          {portal === "admin" ? <>Kiểm soát hệ thống.<br />Vận hành an toàn.</> : <>Mọi yêu cầu.<br />Một quy trình rõ ràng.</>}
-        </h1>
-        <p>{portal === "admin" ? "Quản lý danh tính, cấu hình, quyền truy cập và vận hành trên cổng chuyên biệt." : "Kết nối đề xuất, phê duyệt và thực hiện trong một không gian làm việc."}</p>
-        <div className="login-steps">
-          {portal === "admin" ? "Danh tính · Chính sách · Giám sát" : "01 · Đề xuất　　02 · Phê duyệt　　03 · Hoàn thành"}
+    <main id="main" className="auth-shell auth-split-layout">
+      <div className="auth-split-card">
+      {/* Left Pane: Branding / Hero matching design */}
+      <section className="auth-hero-pane" aria-label="Giới thiệu hệ thống">
+        <div className="auth-hero-arcs-wrap" aria-hidden="true">
+          <svg className="auth-hero-arcs" viewBox="0 0 500 500">
+            <circle cx="40" cy="460" r="180" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+            <circle cx="40" cy="460" r="290" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="1.5" />
+            <circle cx="40" cy="460" r="400" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5" />
+            <circle cx="40" cy="460" r="520" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1.5" />
+          </svg>
+        </div>
+
+        <div className="auth-hero-content">
+          <div className="auth-hero-brand">
+            <img src="/logo_white.png" alt="EAS Logo" className="auth-hero-logo-img" />
+          </div>
+          <h1 className="auth-hero-title">
+            {portal === "admin" ? "Enterprise Admin" : "Enterprise Approval"}
+          </h1>
+          <p className="auth-hero-subtitle">
+            {portal === "admin"
+              ? "Cổng quản trị hệ thống và kiểm soát bảo mật"
+              : "Hệ thống phê duyệt và quản lý quy trình doanh nghiệp"}
+          </p>
+          <button
+            type="button"
+            className="auth-hero-btn"
+            onClick={() => setShowInfoModal(true)}
+          >
+            <span>Tìm hiểu thêm</span>
+          </button>
         </div>
       </section>
-      <section className="panel auth-card">
-        <p className="eyebrow">CHÀO MỪNG TRỞ LẠI</p>
-        <h2>{portal === "admin" ? "Đăng nhập quản trị hệ thống" : "Đăng nhập EAS Portal"}</h2>
-        <p className="muted">Sử dụng tài khoản doanh nghiệp của bạn.</p>
-        <ActionForm
-          submitLabel="Đăng nhập"
-          onSubmit={async (values) => {
-            await initializeCsrf();
-            const result = await api("/api/v1/auth/login", {
-              method: "POST",
-              body: JSON.stringify(values),
-            });
-            await onLogin(result.user);
-          }}
-        >
-          <label>
-            Tên đăng nhập
-            <input name="username" autoComplete="username" required />
-          </label>
-          <PasswordField label="Mật khẩu" name="password" autoComplete="current-password" required />
-        </ActionForm>
+
+      {/* Right Pane: Login Form matching design */}
+      <section className="auth-form-pane" aria-label="Màn hình đăng nhập">
+        <div className="auth-card-clean">
+          <div className="auth-header">
+            <div className="auth-form-brand">
+              <img src="/logo.png" alt="EAS Logo" className="auth-form-logo-img" />
+            </div>
+            <h1 className="auth-greeting">
+              {greeting}
+              <span className="sr-only"> - {portal === "admin" ? "Đăng nhập Quản trị hệ thống" : "Đăng nhập EAS Portal"}</span>
+            </h1>
+          </div>
+
+          <form onSubmit={submit} noValidate>
+            <fieldset disabled={busy} className="auth-fieldset">
+              {error && (
+                <div role="alert" className="auth-error-banner">
+                  {error}
+                </div>
+              )}
+
+              <div className="auth-field-group">
+                <label htmlFor="login-username" className="sr-only">
+                  Tên đăng nhập
+                </label>
+                <div className="auth-input-wrapper">
+                  <span className="auth-field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </span>
+                  <input
+                    id="login-username"
+                    name="username"
+                    type="text"
+                    placeholder="Tên đăng nhập"
+                    autoComplete="username"
+                    required
+                    className="auth-pill-input"
+                  />
+                </div>
+              </div>
+
+              <div className="auth-field-group">
+                <label htmlFor="login-password" className="sr-only">
+                  Mật khẩu
+                </label>
+                <div className="auth-input-wrapper">
+                  <span className="auth-field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </span>
+                  <input
+                    id="login-password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Mật khẩu"
+                    autoComplete="current-password"
+                    required
+                    className="auth-pill-input auth-password-input"
+                  />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? "Ẩn ký tự" : "Hiện ký tự"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="auth-btn-primary"
+                aria-label="Đăng nhập"
+              >
+                {busy ? "Đang xác thực…" : "Login"}
+              </button>
+
+              <button
+                type="button"
+                className="auth-forgot-link"
+                onClick={() => setShowForgotModal(true)}
+              >
+                Forgot Password
+              </button>
+            </fieldset>
+          </form>
+        </div>
       </section>
+      </div>
+
+      {/* Modals */}
+      {showInfoModal && (
+        <div className="auth-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+          <div className="auth-modal-card">
+            <div className="auth-modal-header">
+              <h3 id="info-modal-title">{portal === "admin" ? "Enterprise Admin Portal" : "Enterprise Approval System"}</h3>
+              <button type="button" className="auth-modal-close" onClick={() => setShowInfoModal(false)} aria-label="Đóng">✕</button>
+            </div>
+            <div className="auth-modal-body">
+              <p><strong>EAS (Enterprise Approval System)</strong> là nền tảng quản trị và phê duyệt quy trình điện tử doanh nghiệp:</p>
+              <ul>
+                <li><strong>ISO 9001 & CMMI:</strong> Số hóa toàn diện quy trình đề xuất, luồng phê duyệt đa cấp và quản lý tài sản, nhân sự.</li>
+                <li><strong>ISO/IEC 27001 & SOC 2:</strong> Phân quyền RBAC nghiêm ngặt, cơ chế chống vượt quyền (Separation of Duties), kiểm toán bất biến (Audit Trail).</li>
+                <li><strong>AI Service:</strong> Tự động phân tích rủi ro, kiểm tra tuân thủ chính sách và tóm tắt nội dung tức thì.</li>
+              </ul>
+            </div>
+            <div className="auth-modal-footer">
+              <button type="button" className="auth-btn-primary auth-modal-btn" onClick={() => setShowInfoModal(false)}>Đã hiểu</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showForgotModal && (
+        <div className="auth-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="forgot-modal-title">
+          <div className="auth-modal-card">
+            <div className="auth-modal-header">
+              <h3 id="forgot-modal-title">Cấp lại mật khẩu</h3>
+              <button type="button" className="auth-modal-close" onClick={() => setShowForgotModal(false)} aria-label="Đóng">✕</button>
+            </div>
+            <div className="auth-modal-body">
+              <p>Để đảm bảo an toàn thông tin theo tiêu chuẩn <strong>ISO/IEC 27001</strong>, hệ thống không cấp phát lại mật khẩu qua email tự động.</p>
+              <p>Vui lòng liên hệ <strong>Bộ phận Quản trị Vận hành (IT Ops / Security Desk)</strong> để được hỗ trợ xác minh danh tính và cấp lại mật khẩu:</p>
+              <div className="auth-support-box">
+                <p><strong>Hotline:</strong> Máy lẻ 108 (Phòng CNTT)</p>
+                <p><strong>Email:</strong> sec-ops@tantrieu.local</p>
+                <p><strong>Giờ làm việc:</strong> 08:00 - 18:00 (Thứ 2 - Thứ 6)</p>
+              </div>
+            </div>
+            <div className="auth-modal-footer">
+              <button type="button" className="auth-btn-primary auth-modal-btn" onClick={() => setShowForgotModal(false)}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
+
 const menu = [
   ["home", "Tổng quan", "◫"],
   ["mine", "Yêu cầu của tôi", "▤", "REQUESTER"],
@@ -76,6 +274,7 @@ const menu = [
   ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
   ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
   ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
+  ["org-chart", "Sơ đồ tổ chức", "🏛", "OPS_ADMIN"],
   ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
   ["audit", "Kiểm toán hồ sơ", "⌕", "AUDITOR"],
   ["events", "Nhật ký quản trị", "≡", "AUDITOR"],
@@ -451,7 +650,9 @@ function renderWorkspaceContent({
     case "audit":
       return <AuditorWorkspace onOpen={(id) => setSelected(id)} />;
     case "identity":
-      return <IdentityAdmin />;
+      return <IdentityAdmin onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "org-chart":
+      return <OrgChart navigate={navigate} />;
     case "api-admin":
       return <ApiAdministration />;
     case "plan-catalog":
@@ -487,7 +688,7 @@ function renderWorkspaceContent({
 }
 
 const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
-const ADMIN_PAGES = new Set(["flow-diagrams", "home", "policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events", "notifications", "profile"]);
+const ADMIN_PAGES = new Set(["flow-diagrams", "home", "policy", "plan-catalog", "ops", "identity", "org-chart", "api-admin", "audit", "events", "notifications", "profile"]);
 const CLIENT_PAGES = new Set(["flow-diagrams", "home", "mine", "approval", "execution", "acceptance", "history", "notifications", "profile"]);
 
 function AdminOverview({ navigate, user }) {
@@ -495,7 +696,7 @@ function AdminOverview({ navigate, user }) {
     <section className="admin-home">
       <div className="page-heading"><div><p className="eyebrow">EAS CONTROL CENTER</p><h1>Quản trị hệ thống</h1><p className="muted">Điều hành phân quyền, quy trình, tích hợp và kiểm toán trên cổng riêng.</p></div></div>
       <div className="admin-tiles">
-        {[["identity", "Danh tính & phân quyền", "Quản lý tài khoản và phạm vi truy cập", "◎"], ["policy", "Cấu hình quy trình", "Quản lý và công bố quy chế", "⚙"], ["ops", "Vận hành hệ thống", "Theo dõi tiến trình xử lý hồ sơ", "◷"], ["events", "Nhật ký quản trị", "Tra cứu sự kiện và lịch sử thay đổi", "≡"]].filter(([key]) => canNavigate(user.roles, key, user.capabilities)).map(([key, label, detail, icon]) => (
+        {[["identity", "Danh tính & phân quyền", "Quản lý tài khoản và phạm vi truy cập", "◎"], ["org-chart", "Sơ đồ tổ chức", "Cơ cấu Ban Giám Đốc và 7 phòng ban", "🏛"], ["policy", "Cấu hình quy trình", "Quản lý và công bố quy chế", "⚙"], ["ops", "Vận hành hệ thống", "Theo dõi tiến trình xử lý hồ sơ", "◷"], ["events", "Nhật ký quản trị", "Tra cứu sự kiện và lịch sử thay đổi", "≡"]].filter(([key]) => canNavigate(user.roles, key, user.capabilities)).map(([key, label, detail, icon]) => (
           <button key={key} type="button" className="panel admin-tile" onClick={() => navigate(key)}><span>{icon}</span><strong>{label}</strong><small>{detail}</small></button>
         ))}
       </div>
@@ -531,7 +732,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")}>
         <a className="brand" href="#main" onClick={(event) => { event.preventDefault(); navigate("home"); }}>
-          <span className="brand-mark">E</span>
+          <img src="/logo.png" alt="EAS Logo" className="brand-logo-img" />
           <span>
             {portal === "admin" ? "EAS Admin" : "EAS Portal"}<small>{portal === "admin" ? "SYSTEM CONTROL" : "ENTERPRISE APPROVAL"}</small>
           </span>
@@ -552,7 +753,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
           {[
             ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history", "flow-diagrams"]],
             ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
-            ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events"]],
+            ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "org-chart", "api-admin", "audit", "events"]],
             ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
           ].map(([group, keys]) => {
             const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
