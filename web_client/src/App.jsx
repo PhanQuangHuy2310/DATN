@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
-import { canNavigate } from "./rolePolicy.js";
+import { canNavigate, canUsePortal } from "./rolePolicy.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
@@ -672,7 +672,6 @@ function renderWorkspaceContent({
   }
 }
 
-const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
 const ADMIN_PAGES = new Set(["flow-diagrams", "ai-process", "home", "policy", "plan-catalog", "request-catalog", "ops", "identity", "users", "permissions", "org-chart", "api-admin", "audit", "events", "notifications"]);
 const CLIENT_PAGES = new Set(["flow-diagrams", "ai-process", "home", "mine", "approval", "execution", "acceptance", "org-client", "notifications", "profile"]);
 
@@ -1020,10 +1019,10 @@ export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unif
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );
-  if (user && portal === "admin" && !user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
+  if (user && portal === "admin" && !canUsePortal(user.roles, "admin")) {
     return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
-  if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
+  if (user && portal === "client" && !canUsePortal(user.roles, "client")) {
     return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
   return user ? (
