@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import hmac
+import logging
+import secrets
+import smtplib
 from typing import Any
 from uuid import uuid4
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db import DatabaseError, connection
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.core.validators import validate_email
+from django.db import DatabaseError, connection, transaction
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
@@ -28,6 +35,27 @@ from .service import (
     verify_user_password,
 )
 
+logger = logging.getLogger(__name__)
+
+
+def _email_recipients(recipients: list[str]) -> list[str]:
+    test_recipient = settings.EAS_EMAIL_TEST_RECIPIENT
+    return [test_recipient] if test_recipient else recipients
+
+
+def _normalized_login_email(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    email = value.strip().lower()
+    accepted_domains = {settings.EAS_LOGIN_EMAIL_DOMAIN, "eas.com"}
+    if not any(email.endswith(f"@{domain}") for domain in accepted_domains):
+        return None
+    try:
+        validate_email(email)
+    except ValidationError:
+        return None
+    return email
+
 
 @ensure_csrf_cookie
 @require_GET
@@ -40,13 +68,13 @@ def _parse_credentials(request: HttpRequest) -> tuple[str, str] | JsonResponse:
         body = parse_json_object(request, max_bytes=8 * 1024)
     except JsonBodyError as exc:
         return api_error(request, str(exc), status=400)
-    if set(body) != {"username", "password"}:
+    if set(body) != {"email", "password"}:
         return api_error(request, "INVALID_CREDENTIALS", status=401)
-    username = body.get("username")
+    email = _normalized_login_email(body.get("email"))
     password = body.get("password")
-    if not isinstance(username, str) or not isinstance(password, str):
+    if email is None or not isinstance(password, str):
         return api_error(request, "INVALID_CREDENTIALS", status=401)
-    return username.strip().lower(), password
+    return email, password
 
 
 def _check_maintenance_login(
@@ -114,9 +142,9 @@ def login(request: HttpRequest) -> JsonResponse:
     parsed = _parse_credentials(request)
     if isinstance(parsed, JsonResponse):
         return parsed
-    username, password = parsed
+    email, password = parsed
 
-    keys = throttle_keys(username, client_ip(request))
+    keys = throttle_keys(email, client_ip(request))
     if is_throttled(
         cache,
         keys,
@@ -130,7 +158,7 @@ def login(request: HttpRequest) -> JsonResponse:
             headers={"Retry-After": str(settings.EAS_LOGIN_WINDOW_SECONDS)},
         )
 
-    user = find_user(username)
+    user = find_user(email)
     valid = bool(
         user and user.is_active and verify_user_password(password, user.password_hash)
     )
@@ -150,7 +178,7 @@ def login(request: HttpRequest) -> JsonResponse:
     payload = {
         "user": {
             "id": user.id,
-            "username": user.username,
+            "email": user.email,
             "display_name": user.display_name,
             "must_change_password": user.must_change_password,
         },
@@ -159,6 +187,370 @@ def login(request: HttpRequest) -> JsonResponse:
     if m_payload:
         payload["maintenance"] = m_payload
     return JsonResponse(payload)
+
+
+def _password_reset_request_key(email: str) -> str:
+    digest = hmac.new(
+        settings.SECRET_KEY.encode(), email.encode(), "sha256"
+    ).hexdigest()
+    return f"eas:password-reset-request:{digest}"
+
+
+def _temporary_password(email: str) -> str:
+    import string
+
+    from .service import validate_new_password
+
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*_-+="
+    for _ in range(10):
+        password = "".join(secrets.choice(alphabet) for _ in range(28))
+        try:
+            validate_new_password(password, email)
+            return password
+        except PasswordChangeError:
+            continue
+    raise RuntimeError("Unable to generate a valid temporary password.")
+
+
+def _global_ops_admin(request: HttpRequest) -> bool:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """SELECT EXISTS (
+                 SELECT 1 FROM eas.role_membership
+                 WHERE user_id=%s AND role='OPS_ADMIN'
+                   AND scope_kind='GLOBAL' AND type_scope='ALL'
+                   AND revoked_at IS NULL
+                   AND valid_from <= statement_timestamp()
+                   AND (valid_to IS NULL OR valid_to > statement_timestamp())
+               )""",
+            [request.actor.id],
+        )
+        return bool(cursor.fetchone()[0])
+
+
+def _password_reset_admin_emails(cursor) -> list[str]:
+    cursor.execute(
+        """SELECT DISTINCT u.email
+           FROM eas.app_user u
+           JOIN eas.role_membership rm ON rm.user_id=u.id
+           WHERE u.is_active AND rm.role='OPS_ADMIN'
+             AND rm.scope_kind='GLOBAL' AND rm.type_scope='ALL'
+             AND rm.revoked_at IS NULL
+             AND rm.valid_from <= statement_timestamp()
+             AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+           ORDER BY u.email"""
+    )
+    return [row[0] for row in cursor.fetchall()]
+
+
+@require_POST
+def password_reset_request(request: HttpRequest) -> JsonResponse:
+    try:
+        body = parse_json_object(request, max_bytes=8 * 1024)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    email = _normalized_login_email(body.get("email"))
+    if email is None:
+        return api_error(request, "INVALID_EMAIL", status=400)
+    if not settings.EMAIL_HOST or not settings.DEFAULT_FROM_EMAIL:
+        return api_error(request, "EMAIL_DELIVERY_UNAVAILABLE", status=503)
+
+    throttle_key = _password_reset_request_key(email)
+    cooldown_key = f"{throttle_key}:cooldown"
+    ip_digest = hmac.new(
+        settings.SECRET_KEY.encode(),
+        (request.META.get("REMOTE_ADDR", "unknown").strip() or "unknown").encode(),
+        "sha256",
+    ).hexdigest()
+    ip_key = f"eas:password-reset:ip:{ip_digest}"
+    if not cache.add(ip_key, 1, timeout=3600):
+        try:
+            if cache.incr(ip_key) > 20:
+                return JsonResponse(
+                    {
+                        "status": "accepted",
+                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                    },
+                    status=202,
+                )
+        except ValueError:
+            cache.add(ip_key, 1, timeout=3600)
+    if not cache.add(cooldown_key, "1", timeout=300):
+        return JsonResponse(
+            {
+                "status": "accepted",
+                "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+            },
+            status=202,
+        )
+
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT id::text, display_name FROM eas.app_user WHERE email=%s AND is_active",
+                [email],
+            )
+            user = cursor.fetchone()
+            if not user:
+                return JsonResponse(
+                    {
+                        "status": "accepted",
+                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                    },
+                    status=202,
+                )
+            cursor.execute(
+                """UPDATE eas.password_reset_request
+                   SET status='EXPIRED', resolved_at=statement_timestamp()
+                   WHERE user_id=%s AND status='PENDING'
+                     AND expires_at <= statement_timestamp()""",
+                [user[0]],
+            )
+            cursor.execute(
+                """SELECT id::text FROM eas.password_reset_request
+                   WHERE user_id=%s AND status='PENDING'
+                     AND expires_at > statement_timestamp()
+                   FOR UPDATE""",
+                [user[0]],
+            )
+            existing = cursor.fetchone()
+            if existing:
+                request_id = existing[0]
+            else:
+                cursor.execute(
+                    """INSERT INTO eas.password_reset_request
+                       (user_id, requested_email, expires_at)
+                       VALUES (%s,%s,statement_timestamp()+interval '24 hours')
+                       ON CONFLICT (user_id) WHERE status='PENDING' DO NOTHING
+                       RETURNING id::text""",
+                    [user[0], email],
+                )
+                created = cursor.fetchone()
+                if created:
+                    request_id = created[0]
+                else:
+                    cursor.execute(
+                        """SELECT id::text FROM eas.password_reset_request
+                           WHERE user_id=%s AND status='PENDING'
+                             AND expires_at > statement_timestamp()""",
+                        [user[0]],
+                    )
+                    pending = cursor.fetchone()
+                    if not pending:
+                        raise DatabaseError(
+                            "Password reset request conflict was not recoverable."
+                        )
+                    request_id = pending[0]
+            admin_emails = _password_reset_admin_emails(cursor)
+            if not admin_emails:
+                logger.error(
+                    "password_reset_admin_unavailable",
+                    extra={"correlation_id": correlation_id(request)},
+                )
+                return JsonResponse(
+                    {
+                        "status": "accepted",
+                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                    },
+                    status=202,
+                )
+        try:
+            send_mail(
+                subject="Yêu cầu xác nhận đặt lại mật khẩu EAS",
+                message=(
+                    f"Nhân viên {user[1]} ({email}) đã yêu cầu đặt lại mật khẩu.\n"
+                    "Hãy đăng nhập cổng quản trị EAS, mở Danh tính & phân quyền "
+                    "và xác minh danh tính trước khi phê duyệt.\n"
+                    f"Mã yêu cầu: {request_id}\n"
+                    "Không trả lời email này để gửi mật khẩu."
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=_email_recipients(admin_emails),
+                fail_silently=False,
+            )
+        except (OSError, smtplib.SMTPException) as exc:
+            cache.delete(cooldown_key)
+            logger.error(
+                "password_reset_admin_notification_failed",
+                extra={
+                    "correlation_id": correlation_id(request),
+                    "error_type": type(exc).__name__,
+                },
+            )
+            return JsonResponse(
+                {
+                    "status": "accepted",
+                    "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                },
+                status=202,
+            )
+    except DatabaseError:
+        cache.delete(cooldown_key)
+        raise
+
+    return JsonResponse(
+        {
+            "status": "accepted",
+            "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+        },
+        status=202,
+    )
+
+
+@require_GET
+@require_actor("OPS_ADMIN")
+def password_reset_requests(request: HttpRequest) -> JsonResponse:
+    if not _global_ops_admin(request):
+        return api_error(request, "FORBIDDEN", status=403)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(
+            """SELECT pr.id::text, u.email, u.display_name, d.name,
+                      pr.requested_at, pr.expires_at
+               FROM eas.password_reset_request pr
+               JOIN eas.app_user u ON u.id=pr.user_id
+               JOIN eas.department d ON d.id=u.department_id
+               WHERE pr.status='PENDING'
+                 AND pr.expires_at > statement_timestamp()
+               ORDER BY pr.requested_at, pr.id"""
+        )
+        rows = cursor.fetchall()
+    return JsonResponse(
+        {
+            "items": [
+                {
+                    "id": row[0],
+                    "email": row[1],
+                    "display_name": row[2],
+                    "department": row[3],
+                    "requested_at": row[4].isoformat(),
+                    "expires_at": row[5].isoformat(),
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@require_POST
+@require_actor("OPS_ADMIN")
+def password_reset_approve(request: HttpRequest, request_id: str) -> JsonResponse:
+    if not _global_ops_admin(request):
+        return api_error(request, "FORBIDDEN", status=403)
+    try:
+        body = parse_json_object(request, max_bytes=8 * 1024)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    reason = body.get("reason")
+    if (
+        set(body) != {"reason"}
+        or not isinstance(reason, str)
+        or not 10 <= len(reason.strip()) <= 2000
+    ):
+        return api_error(request, "RESET_APPROVAL_REASON_REQUIRED", status=400)
+
+    from django.contrib.auth.hashers import make_password
+    from django.db import transaction
+
+    from api_core.workflow.service import _append_admin_audit
+
+    temporary_password = None
+    target_email = ""
+    target_name = ""
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute("SELECT eas.lock_security(true)")
+        cursor.execute(
+            """SELECT pr.user_id::text, pr.requested_email, u.email,
+                      u.display_name, u.department_id::text, u.auth_version
+               FROM eas.password_reset_request pr
+               JOIN eas.app_user u ON u.id=pr.user_id
+               WHERE pr.id=%s AND pr.status='PENDING'
+                 AND pr.expires_at > statement_timestamp()
+                 AND u.is_active
+               FOR UPDATE OF pr,u""",
+            [request_id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            return api_error(request, "RESET_REQUEST_NOT_FOUND_OR_EXPIRED", status=404)
+        (
+            user_id,
+            requested_email,
+            target_email,
+            target_name,
+            department_id,
+            auth_version,
+        ) = row
+        if request.actor.id == user_id:
+            return api_error(request, "CANNOT_APPROVE_OWN_RESET", status=403)
+        if target_email != requested_email:
+            return api_error(request, "RESET_REQUEST_EMAIL_CHANGED", status=409)
+        temporary_password = _temporary_password(target_email)
+        new_version = auth_version + 1
+        cursor.execute(
+            """UPDATE eas.app_user
+               SET password_hash=%s, auth_version=%s, must_change_password=true
+               WHERE id=%s""",
+            [make_password(temporary_password, hasher="argon2"), new_version, user_id],
+        )
+        cursor.execute(
+            """UPDATE eas.password_reset_request
+               SET status='APPROVED', resolved_at=statement_timestamp(),
+                   resolved_by=%s, resolution_reason=%s
+               WHERE id=%s""",
+            [request.actor.id, reason.strip(), request_id],
+        )
+        cursor.execute(
+            "UPDATE eas.security_epoch SET version=version+1,updated_at=statement_timestamp() WHERE id=1"
+        )
+        _append_admin_audit(
+            cursor,
+            actor_id=request.actor.id,
+            actor_kind="HUMAN",
+            action="PASSWORD_RESET_APPROVED",
+            target_type="app_user",
+            target_id=user_id,
+            department_id=department_id,
+            details={"request_id": request_id, "auth_version": new_version},
+            reason=reason.strip(),
+            correlation_id=correlation_id(request),
+        )
+
+    try:
+        send_mail(
+            subject="Mật khẩu tạm thời cho tài khoản EAS",
+            message=(
+                f"Xin chào {target_name},\n\n"
+                "Yêu cầu đặt lại mật khẩu của bạn đã được quản trị viên xác nhận.\n"
+                f"Mật khẩu tạm thời: {temporary_password}\n\n"
+                "Đăng nhập bằng email nhân viên và mật khẩu tạm này. Hệ thống sẽ "
+                "bắt buộc bạn đổi mật khẩu riêng ngay sau khi đăng nhập.\n"
+                "Nếu bạn không yêu cầu thay đổi, hãy liên hệ quản trị viên."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=_email_recipients([target_email]),
+            fail_silently=False,
+        )
+    except (OSError, smtplib.SMTPException) as exc:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute("SELECT eas.lock_security(true)")
+            cursor.execute(
+                """UPDATE eas.password_reset_request
+                   SET status='PENDING', resolved_at=NULL, resolved_by=NULL
+                   WHERE id=%s AND status='APPROVED'""",
+                [request_id],
+            )
+        logger.error(
+            "password_reset_temporary_password_delivery_failed",
+            extra={
+                "correlation_id": correlation_id(request),
+                "request_id": request_id,
+                "error_type": type(exc).__name__,
+            },
+        )
+        return api_error(request, "PASSWORD_RESET_DELIVERY_FAILED", status=503)
+
+    return JsonResponse({"status": "approved", "email": target_email})
 
 
 @require_POST
@@ -217,7 +609,7 @@ def me(request: HttpRequest) -> JsonResponse:
     payload = {
         "user": {
             "id": actor.id,
-            "username": actor.username,
+            "email": actor.email,
             "display_name": actor.display_name,
             "department_id": actor.department_id,
             "roles": sorted(actor.roles),

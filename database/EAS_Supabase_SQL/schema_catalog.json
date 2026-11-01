@@ -1,7 +1,7 @@
 {
   "schema": "eas",
   "version": "2.0.1",
-  "source": "03_Du_lieu_va_API_v2.docx / DB01-DB30",
+  "source": "EAS 2.0.1 baseline schema catalog / DB01-DB30; see migrations 04_current_schema_upgrade.sql and 05_email_login_and_password_reset.sql for current additions",
   "tables": [
     {
       "id": "DB01",
@@ -246,8 +246,8 @@
         {
           "table_name": "app_user",
           "ordinal": 2,
-          "column_name": "username",
-          "data_type": "character varying(80)",
+          "column_name": "email",
+          "data_type": "character varying(254)",
           "nullable": false,
           "default_expression": null
         },
@@ -403,21 +403,21 @@
         },
         {
           "table_name": "app_user",
-          "name": "app_user_username_check",
+          "name": "app_user_email_check",
           "kind": "c",
-          "definition": "CHECK (username::text = lower(btrim(username::text)) AND length(username::text) > 0)"
+          "definition": "CHECK (email = lower(btrim(email)) AND email ~ '^[^@[:space:]]+@eas[.]com$')"
         },
         {
           "table_name": "app_user",
-          "name": "app_user_username_key",
+          "name": "app_user_email_key",
           "kind": "u",
-          "definition": "UNIQUE (username)"
+          "definition": "UNIQUE (email)"
         },
         {
           "table_name": "app_user",
-          "name": "app_user_username_not_null",
+          "name": "app_user_email_not_null",
           "kind": "n",
-          "definition": "NOT NULL username"
+          "definition": "NOT NULL email"
         },
         {
           "table_name": "app_user",
@@ -440,8 +440,8 @@
         },
         {
           "table_name": "app_user",
-          "indexname": "app_user_username_key",
-          "indexdef": "CREATE UNIQUE INDEX app_user_username_key ON eas.app_user USING btree (username)"
+          "indexname": "app_user_email_key",
+          "indexdef": "CREATE UNIQUE INDEX app_user_email_key ON eas.app_user USING btree (email)"
         },
         {
           "table_name": "app_user",

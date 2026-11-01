@@ -140,7 +140,7 @@ def database_readiness() -> tuple[bool, dict[str, object], dict[str, object]]:
             WHERE n.nspname = 'eas' AND c.relkind IN ('r', 'p')
             """
         )
-        checks["schema_has_30_tables"] = has_required_eas_tables(
+        checks["schema_has_required_tables"] = has_required_eas_tables(
             {row[0] for row in cursor.fetchall()}
         )
 

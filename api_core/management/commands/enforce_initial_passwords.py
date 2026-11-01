@@ -27,7 +27,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--operator",
             required=True,
-            help="Operator username or UUID authoring this compliance operation.",
+            help="Operator email or UUID authoring this compliance operation.",
         )
         parser.add_argument(
             "--approval",
@@ -37,7 +37,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--exclude",
             default="admin",
-            help="Comma-separated usernames to exclude (default: 'admin').",
+            help="Comma-separated emails or email local parts to exclude (default: 'admin').",
         )
         parser.add_argument(
             "--dry-run",
@@ -66,13 +66,18 @@ class Command(BaseCommand):
 
             cursor.execute(
                 """
-                SELECT id::text, username, department_id::text, auth_version
+                SELECT id::text, email, department_id::text, auth_version
                 FROM eas.app_user
                 WHERE is_active = TRUE AND must_change_password = FALSE
                 """
             )
             rows = cursor.fetchall()
-            candidates = [r for r in rows if r[1].casefold() not in exclude_list]
+            candidates = [
+                r
+                for r in rows
+                if r[1].casefold() not in exclude_list
+                and r[1].split("@")[0].casefold() not in exclude_list
+            ]
 
             if dry_run:
                 self.stdout.write(
@@ -89,15 +94,15 @@ class Command(BaseCommand):
                 sys.exit(0)
 
             cursor.execute(
-                "SELECT id::text FROM eas.app_user WHERE username = %s OR id::text = %s",
-                [operator, operator],
+                "SELECT id::text FROM eas.app_user WHERE email = %s OR id::text = %s",
+                [operator.lower(), operator],
             )
             op_row = cursor.fetchone()
             operator_id = op_row[0] if op_row else None
 
             updated_count = 0
             for r in candidates:
-                user_id, username, dept_id, auth_version = r
+                user_id, email, dept_id, auth_version = r
                 new_version = auth_version + 1
                 cursor.execute(
                     """
@@ -117,7 +122,7 @@ class Command(BaseCommand):
                     department_id=dept_id,
                     reason=f"Mandatory commercial pre-delivery rotation: {approval}",
                     details={
-                        "username": username,
+                        "email": email,
                         "auth_version": new_version,
                         "change_ticket": approval,
                     },

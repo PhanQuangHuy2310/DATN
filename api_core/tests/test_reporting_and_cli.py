@@ -25,7 +25,7 @@ class ReportingBoundaryAndLogicTests(SimpleTestCase):
     def setUp(self):
         self.actor = Actor(
             id=str(uuid4()),
-            username="analyst",
+            email="analyst@eas.com",
             display_name="Analyst",
             department_id=str(uuid4()),
             auth_version=1,
@@ -56,6 +56,42 @@ class ReportingBoundaryAndLogicTests(SimpleTestCase):
                 },
             )
         self.assertEqual(raised.exception.code, "PERIOD_INVALID")
+
+    @patch("api_core.workflow.reporting.connection.cursor")
+    def test_metrics_report_aggregates_counts_by_status(self, mock_cursor_ctx):
+        mock_cursor = MagicMock()
+        mock_cursor_ctx.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = [
+            ("IT_ACCESS", "IT access", "COMPLETED", 3, 3, 3),
+            ("IT_ACCESS", "IT access", "PENDING_APPROVAL", 2, 2, 0),
+            ("HR_LEAVE", "HR leave", "REJECTED", 1, 1, 0),
+        ]
+
+        result = get_request_metrics_report(
+            self.actor,
+            {
+                "created_from": "2026-01-01T00:00:00Z",
+                "created_to": "2026-06-01T00:00:00Z",
+            },
+        )["report"]
+
+        self.assertEqual(result["submitted"], 6)
+        self.assertEqual(result["approved"], 3)
+        self.assertEqual(result["completed"], 3)
+        self.assertEqual(
+            result["by_status"],
+            {"COMPLETED": 3, "PENDING_APPROVAL": 2, "REJECTED": 1},
+        )
+        self.assertEqual(result["approved_rate"], 0.5)
+        self.assertEqual(result["completed_rate"], 0.5)
+        self.assertEqual(
+            result["top_types"],
+            [
+                {"code": "IT_ACCESS", "name": "IT access", "count": 5},
+                {"code": "HR_LEAVE", "name": "HR leave", "count": 1},
+            ],
+        )
+        self.assertNotIn("LIMIT 100000", mock_cursor.execute.call_args.args[0])
 
     @patch("api_core.workflow.reporting.connection.cursor")
     def test_audit_verify_hash_chain_success(self, mock_cursor_ctx):
@@ -203,7 +239,7 @@ class ReportingHttpContractTests(SimpleTestCase):
     def setUp(self):
         self.actor = Actor(
             id=str(uuid4()),
-            username="user1",
+            email="user1@eas.com",
             display_name="User One",
             department_id=str(uuid4()),
             auth_version=1,

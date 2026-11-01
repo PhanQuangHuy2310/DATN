@@ -1,5 +1,5 @@
 {
-  "request_types": [
+  "request_type": [
     "access_permission",
     "advance_payment",
     "budget_approval",
@@ -17,7 +17,7 @@
     "vehicle_booking",
     "vpn_access"
   ],
-  "departments": [
+  "department": [
     "finance",
     "hr",
     "it",
@@ -26,7 +26,7 @@
     "operations",
     "sales"
   ],
-  "templates": [
+  "lifecycle_template": [
     "A",
     "B",
     "C"

@@ -1,6 +1,6 @@
 # EAS Mobile (Flutter) — P1 quick approval client
 
-Ứng dụng di động dựa theo nghiệp vụ trong báo cáo DATN và hợp đồng API thực tế của `api_core`. **Không được tính là UAT P0 đã hoàn tất.** Giao diện gồm: đăng nhập + CSRF + session cookie trong RAM, buộc đổi mật khẩu lần đầu, danh sách **Của tôi / Cần duyệt / Thực hiện / Nghiệm thu**, chi tiết hồ sơ, các quyết định với lý do bắt buộc, thông báo và đăng xuất. Mọi thao tác ghi có `expected_version` và `Idempotency-Key`; Django vẫn thực thi RBAC/SoD, không tin điều kiện hiển thị Flutter.
+Ứng dụng mobile cung cấp client giới hạn theo contract của `api_core`; không được xem là bằng chứng hoàn tất UAT P0. Chức năng gồm đăng nhập/session có CSRF, đổi mật khẩu lần đầu, danh sách/chi tiết yêu cầu, quyết định có lý do, thông báo và đăng xuất. Lệnh ghi có `expected_version` và `Idempotency-Key`; Django vẫn chịu trách nhiệm RBAC và separation of duties.
 
 Cài Flutter SDK 3.x, sau đó chạy trong `mobile_app`:
 

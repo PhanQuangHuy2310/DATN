@@ -103,7 +103,7 @@ class MockSourceApiTests(SimpleTestCase):
     def setUp(self):
         self.actor = Actor(
             id=str(uuid4()),
-            username="requester",
+            email="requester@eas.com",
             display_name="Requester",
             department_id=str(uuid4()),
             auth_version=1,

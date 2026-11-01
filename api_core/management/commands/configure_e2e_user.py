@@ -13,7 +13,7 @@ from psycopg.types.json import Jsonb
 
 from api_core.audit import canonical_sha256
 
-DEMO_USERNAME = "demo_requester"
+DEMO_EMAIL = "demo_requester@eas.com"
 DISABLED_HASH = "!UNUSABLE_DEMO_REQUESTER"
 
 
@@ -44,9 +44,9 @@ class Command(BaseCommand):
             cursor.execute(
                 """
                 SELECT id::text,department_id::text,password_hash,auth_version,must_change_password
-                FROM eas.app_user WHERE username=%s AND is_active FOR UPDATE
+                FROM eas.app_user WHERE email=%s AND is_active FOR UPDATE
                 """,
-                [DEMO_USERNAME],
+                [DEMO_EMAIL],
             )
             row = cursor.fetchone()
             if not row:
@@ -91,7 +91,7 @@ class Command(BaseCommand):
             reason = "Temporary browser-test credential lifecycle operation."
             details = {
                 "auth_version": new_version,
-                "fixture": DEMO_USERNAME,
+                "fixture": DEMO_EMAIL,
                 "mode": mode,
             }
             occurred_at = now.isoformat(timespec="microseconds").replace("+00:00", "Z")

@@ -1,29 +1,36 @@
-# EAS 2.0.1 — Bộ SQL PostgreSQL cho Supabase
+# EAS — Bộ SQL PostgreSQL cho Supabase
 
-Ngày phát hành: 22/09/2026. Căn cứ: sáu tài liệu EAS v2.0, đặc biệt `03_Du_lieu_va_API_v2.docx`, danh mục DB01–DB30. Đây là bộ cài đặt **lớp cơ sở dữ liệu của phạm vi P0**. Có đủ 30 bảng, 260 cột theo mô hình, khóa chính/ngoại, chỉ mục, ràng buộc, guard, quyền DB và dữ liệu tham chiếu tối thiểu. Không có placeholder trong script cài đặt.
+`00_eas_supabase_schema.sql` cài baseline EAS 2.0.1 (30 bảng); migration 04 bổ sung catalog lifecycle/role (32 bảng); migration 05 chuyển đăng nhập sang email và thêm reset mật khẩu (33 bảng). Từ điển/catalog DB01–DB30 mô tả baseline, không phải danh mục đầy đủ của ba bảng mở rộng.
 
 ## 1. Chọn đúng file
 
 | File | Mục đích | Môi trường |
 |---|---|---|
 | `00_eas_supabase_schema.sql` | Cài toàn bộ schema, quyền và seed tham chiếu trong một transaction | Supabase/PostgreSQL mới, chưa có schema/role EAS |
-| `02_verify_installation_READ_ONLY.sql` | Đọc và kiểm cấu trúc, seed, FK, guard, RLS, quyền | Sau khi cài; dùng được trên production |
-| `03_database_regression_DEV_ONLY.sql` | Fixture tự tạo; kiểm dữ liệu hợp lệ/bị từ chối; ROLLBACK cuối file | DB thử nghiệm riêng, đã chạy 00 nhưng chưa chạy 01 |
-| `01_demo_seed_DEV_ONLY.sql` | Hai phòng, 10 tài khoản, 12 phân quyền, ba cấu hình mẫu đã publish | Chỉ DB development trống; tùy chọn |
+| `../migrations/04_current_schema_upgrade.sql` | Bổ sung catalog lifecycle/role và loại yêu cầu | Sau 00; chạy một lần bằng schema owner |
+| `../migrations/05_email_login_and_password_reset.sql` | Chuyển username sang email và thêm luồng reset mật khẩu | Sau migration 04; chạy một lần bằng schema owner |
+| `../migrations/06_dev_gmail_aliases.sql` | Tùy chọn đổi tài khoản thử nghiệm sang Gmail aliases của cùng inbox | Chỉ sau khi triển khai backend hỗ trợ `gmail.com`; chỉ dữ liệu thử nghiệm |
+| `02_verify_installation_READ_ONLY.sql` | Đọc và kiểm cấu trúc core, seed, FK, guard, RLS, quyền | Sau 00, 04, 05 và tùy chọn 06; dùng được trên production |
+| `03_database_regression_DEV_ONLY.sql` | Fixture tự tạo; kiểm dữ liệu hợp lệ/bị từ chối; ROLLBACK cuối file | DB thử nghiệm riêng; chạy trên baseline ngay sau 00 |
+| `01_demo_seed_DEV_ONLY.sql` | Hai phòng, 10 tài khoản, 12 phân quyền, ba cấu hình mẫu đã publish | Chỉ DB development trống sau 04; tùy chọn |
 | `DATA_DICTIONARY.md`, `schema_catalog.json` | Danh mục đầy đủ cột, nullable, default, constraint và index | Tham chiếu developer/DA/DE |
-| `source_coverage.json` | Đối chiếu trực tiếp tên bảng/cột với DOCX nguồn: 30 bảng, 260 cột, không thiếu/thừa | Bằng chứng bao phủ mô hình |
-| `VALIDATION_REPORT.md`, `validation_results.json` | Kết quả đã chạy và phạm vi chưa kiểm chứng | Bằng chứng kiểm thử DB |
 | `demo_canonical_hash_vectors.json` | Chuỗi byte chuẩn và hash của seed để đối chiếu | Fixture, không phải thư viện canonicalization |
 | `validation/` | Chạy lại SQL bằng PostgreSQL WASM trong DB tạm | Máy developer có Node.js |
-| `source_manifest.json`, `SHA256SUMS.txt` | Truy nguyên tài liệu nguồn và kiểm tra file bàn giao | Quản lý phiên bản |
+| `source_manifest.json` | Hash của tài liệu đầu vào dùng khi tạo schema; nội dung tài liệu không được đóng gói cùng repository | Truy nguyên phiên bản |
 
 ## 2. Cài trên Supabase
 
 1. Dùng project thử nghiệm trước. Mở **SQL Editor** bằng tài khoản quản trị DB `postgres`. Kiểm tra phiên bản PostgreSQL từ 15 trở lên. Script không cần extension.
-2. Chạy **toàn bộ** `00_eas_supabase_schema.sql` một lần. Kết quả cuối phải có `EAS 2.0.1 installed`, `domain_tables = 30`. Không chạy từng đoạn vì có FK vòng và quyền phụ thuộc thứ tự.
-3. Chạy `02_verify_installation_READ_ONLY.sql`. Kết quả đầu phải `PASS: EAS 2.0.1 schema checks`. Trong Table Editor/Database chọn schema **eas** để xem bảng.
-4. Khi chỉ cần thử dữ liệu: trên DB development mới, chạy 03 trước, rồi tùy chọn 01. File 03 tự rollback dữ liệu nhưng sequence có thể tăng. File 01 cố ý từ chối khi đã có người dùng, release hoặc request; không dùng trên production.
-5. Trước khi backend sử dụng production, nạp phòng/người/quyền thật, tạo password hash bằng backend, validate và publish cấu hình đã được duyệt cho cả ba loại, rồi gắn `request_type.active_release_id`. File 02 sẽ báo `REQUIRES_APPROVED_CONFIG_BEFORE_USE` khi chưa có cấu hình; đó là việc thiết lập còn thiếu, không phải lỗi cài bảng.
+2. Chạy **toàn bộ** `00_eas_supabase_schema.sql` một lần. Kết quả phải có `EAS 2.0.1 installed`, `domain_tables = 30`.
+3. Trên DB development riêng, có thể chạy `03_database_regression_DEV_ONLY.sql` trước khi nâng cấp; file tự rollback dữ liệu nhưng sequence có thể tăng.
+4. Backup database, review rồi chạy một lần `../migrations/04_current_schema_upgrade.sql` bằng tài khoản `postgres`/schema owner để thêm lifecycle/role và catalog mở rộng.
+5. Chạy một lần `../migrations/05_email_login_and_password_reset.sql` bằng database owner. Lệnh này **không reset hoặc xóa dữ liệu**; username cũ được chuyển thành `<username>@eas.com`, phiên đăng nhập hiện tại bị vô hiệu hóa qua `auth_version`, và yêu cầu reset được lưu trong `eas.password_reset_request`.
+6. Chạy `02_verify_installation_READ_ONLY.sql`; kết quả đầu phải `PASS: EAS core schema checks`. Sau đó, chỉ trên development trống, có thể chạy tùy chọn `01_demo_seed_DEV_ONLY.sql` rồi chạy verify lần nữa.
+7. Trước khi backend sử dụng production, nạp phòng/người/quyền thật, tạo password hash bằng backend, validate và publish cấu hình đã được duyệt cho các loại yêu cầu rồi gắn `request_type.active_release_id`. Verify sẽ báo `REQUIRES_APPROVED_CONFIG_BEFORE_USE` khi chưa có cấu hình; đó là việc thiết lập còn thiếu, không phải lỗi cài bảng.
+
+Với một project khác đã có lifecycle/role và catalog 2.1.0 nhưng còn `app_user.username`, hãy backup, chạy migration 05 một lần rồi chạy verify. Không chạy lại installer 00 hoặc migration 04 trên schema đã có catalog.
+
+**Trạng thái project DATN:** migrations 04/05 và migration thử nghiệm 06 đã được áp dụng trên project `emnusiybdkpibtqsplta`. Kiểm tra chỉ đọc sau migration xác nhận 33 bảng EAS, 42/42 tài khoản có alias Gmail duy nhất, không còn địa chỉ `@eas.com`, constraint domain và RLS/policy của bảng reset vẫn đúng, không có yêu cầu reset chờ. `auth_version` đã tăng để vô hiệu hóa phiên cũ. API Docker local báo ready; SMTP từ container được Gmail chấp nhận. Không chạy lại migrations 04/05/06 trên project DATN. Mọi alias cùng nhận thư tại một inbox thử nghiệm; không dùng cho tài khoản thật.
 
 **Schema đã tồn tại:** bộ cài từ chối và rollback, không dùng `DROP`, không ghi đè dữ liệu và không giả vờ cập nhật bằng `CREATE TABLE IF NOT EXISTS`. Nếu gặp lỗi trong phiên giữ transaction, chạy `ROLLBACK;`, sửa nguyên nhân rồi cài lại trên DB mới. Nâng cấp một hệ thống đang có dữ liệu cần migration chênh lệch được review riêng.
 
@@ -43,7 +50,7 @@ Tài liệu quy định backend Django quản lý session và tài khoản `app_
 
 Cả năm là **NOLOGIN, NOBYPASSRLS**. Quản trị tạo login kết nối với secret quản lý riêng, rồi cấp đúng một nhóm quyền tương ứng. Ví dụ `GRANT eas_api TO eas_backend_login;` chỉ chạy sau khi login này đã được tạo; giữ `INHERIT`, không cấp đồng thời migration/privacy. Không dùng login `postgres` hoặc Supabase `service_role` làm tài khoản runtime của ứng dụng.
 
-RLS bật trên 30 bảng, chỉ cho nhóm backend/worker/privacy và backup được chỉ định; quyền SQL tiếp tục giới hạn thao tác. Policy cho nhóm backend tin cậy được phép truy cập toàn phạm vi DB vì quyền người dùng cuối được kiểm tại service theo thiết kế gốc. **Đây không phải bộ RLS theo từng người dùng cho frontend truy cập trực tiếp.** `anon`, `authenticated`, `service_role` không được cấp quyền schema/bảng/hàm EAS.
+RLS bật trên 30 bảng DB01–DB30 và ba bảng bổ sung (`lifecycle`, `role`, `password_reset_request`); quyền SQL tiếp tục giới hạn thao tác. Migration 05 chỉ cấp policy cho backend trên bảng reset. Policy cho nhóm backend tin cậy được phép truy cập toàn phạm vi DB vì quyền người dùng cuối được kiểm tại service theo thiết kế gốc. **Đây không phải bộ RLS theo từng người dùng cho frontend truy cập trực tiếp.** `anon`, `authenticated`, `service_role` không được cấp quyền schema/bảng/hàm EAS.
 
 Mọi tài khoản demo có hash bắt đầu `!UNUSABLE_DEMO_`; chúng không đăng nhập được. Không có mật khẩu mặc định. Backend cần dùng Argon2 tương thích cấu hình thực tế, quy trình đổi mật khẩu và `auth_version` đúng SRS.
 
@@ -107,7 +114,7 @@ Purge: đặt `SET LOCAL ROLE eas_privacy` và `SET LOCAL eas.privacy_case_id='U
 
 ## 8. Kiểm thử và bằng chứng
 
-`VALIDATION_REPORT.md` liệt kê kết quả thực tế. Các file SQL đã được thực thi bởi PostgreSQL engine, không chỉ kiểm cú pháp bằng chuỗi. Để chạy lại độc lập:
+Các file SQL được kiểm tra bằng PostgreSQL engine, không chỉ kiểm cú pháp bằng chuỗi. Để chạy lại độc lập:
 
 ```bash
 cd validation
@@ -117,11 +124,11 @@ npm test
 
 Runner tạo DB tạm trong bộ nhớ, cài schema, kiểm tra read-only, chạy regression và rollback, chạy demo rồi kiểm tra lại. Không cần Supabase key và không kết nối project của khách hàng.
 
-Đã kiểm DB invariants, seed, phân quyền, các luồng dữ liệu chính và nhánh lỗi. **Chưa chạy trên một project Supabase thật; chưa có kiểm thử đa phiên đồng thời, tải, restore, worker/storage/API hoặc 100 ca nghiệm thu của tài liệu 04.** Vì vậy không đổi trạng thái những ca đó thành PASS và không dùng báo cáo này thay biên bản go-live.
+**Chưa có bằng chứng hiện hành trong repository về kiểm thử đa phiên đồng thời, tải, restore, worker/storage/API hoặc UAT.** Không xem SQL validation cục bộ là bằng chứng go-live. Xác minh lại trên phiên bản PostgreSQL và project đích trước khi triển khai.
 
 ## 9. Nguồn kỹ thuật chính thức
 
-Đối chiếu ngày 22/09/2026; tài liệu EAS là nguồn yêu cầu nghiệp vụ, các trang dưới đây là nguồn cho cơ chế nền tảng.
+Đối chiếu ngày 22/09/2026; các trang dưới đây là nguồn tham khảo cho cơ chế nền tảng.
 
 - Supabase, Database roles: https://supabase.com/docs/guides/database/postgres/roles
 - Supabase, Securing your API: https://supabase.com/docs/guides/api/securing-your-api

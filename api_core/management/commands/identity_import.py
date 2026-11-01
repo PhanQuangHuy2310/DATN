@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from django.conf import settings
 from django.core.cache import cache
 from django.core.management.base import BaseCommand
 from django.db import connection, transaction
@@ -83,18 +84,23 @@ def _validate_departments_manifest(departments: list[dict]) -> list[str]:
 
 def _validate_users_manifest(users: list[dict]) -> list[str]:
     errors: list[str] = []
-    usernames = set()
+    emails = set()
     user_ids = set()
     user_managers: dict[str, str | None] = {}
     for idx, u in enumerate(users):
         u_id = u.get("id")
-        username = u.get("username")
-        if not username or not str(username).strip():
-            errors.append(f"User [{idx}]: username must be non-empty.")
-        elif username in usernames:
-            errors.append(f"User [{idx}]: duplicate username '{username}'.")
+        email = str(u.get("email", "")).strip().lower()
+        if (
+            not email.endswith(f"@{settings.EAS_LOGIN_EMAIL_DOMAIN}")
+            or email.count("@") != 1
+        ):
+            errors.append(
+                f"User [{idx}]: email must use the @{settings.EAS_LOGIN_EMAIL_DOMAIN} domain."
+            )
+        elif email in emails:
+            errors.append(f"User [{idx}]: duplicate email '{email}'.")
         else:
-            usernames.add(username)
+            emails.add(email)
 
         if u_id:
             try:
@@ -153,7 +159,7 @@ def _apply_identity_changes(
     cursor.execute("SELECT eas.lock_security(true)")
 
     cursor.execute(
-        "SELECT id::text FROM eas.app_user WHERE username = %s OR id::text = %s",
+        "SELECT id::text FROM eas.app_user WHERE email = %s OR id::text = %s",
         [operator, operator],
     )
     op_row = cursor.fetchone()
@@ -177,10 +183,10 @@ def _apply_identity_changes(
         is_active = u.get("is_active", True)
         cursor.execute(
             """
-            INSERT INTO eas.app_user(id, username, display_name, department_id, manager_id, is_active, password_hash, auth_version)
+            INSERT INTO eas.app_user(id, email, display_name, department_id, manager_id, is_active, password_hash, auth_version)
             VALUES (%s, %s, %s, %s, %s, %s, '!TEMP_IMPORT_PASSWORD', 1)
             ON CONFLICT (id) DO UPDATE
-            SET username = EXCLUDED.username,
+            SET email = EXCLUDED.email,
                 display_name = EXCLUDED.display_name,
                 department_id = EXCLUDED.department_id,
                 manager_id = EXCLUDED.manager_id,
@@ -189,7 +195,7 @@ def _apply_identity_changes(
             """,
             [
                 uid,
-                u["username"],
+                u["email"].strip().lower(),
                 u["display_name"],
                 u.get("department_id"),
                 u.get("manager_id"),

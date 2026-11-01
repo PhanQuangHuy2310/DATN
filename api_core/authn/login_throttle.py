@@ -1,9 +1,9 @@
 """Fail-closed dual-dimension login throttling (SRS NFR01).
 
 Each *account* is limited across all IPs, and each *IP* is limited across all
-usernames. Only the trusted socket address is used: client-provided XFF must
+email addresses. Only the trusted socket address is used: client-provided XFF must
 not be trusted unless middleware has already established a trusted peer.
-Keys never contain raw usernames or IP addresses; TTL is a fixed window.
+Keys never contain raw email addresses or IP addresses; TTL is a fixed window.
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ from __future__ import annotations
 from hashlib import sha256
 
 
-def throttle_keys(username: str, remote_addr: str) -> tuple[str, str]:
-    normalized_name = username.strip().casefold()
+def throttle_keys(email: str, remote_addr: str) -> tuple[str, str]:
+    normalized_name = email.strip().casefold()
     addr = remote_addr.strip() or "unknown"
     user_digest = sha256(normalized_name.encode("utf-8")).hexdigest()
     ip_digest = sha256(addr.encode("utf-8")).hexdigest()

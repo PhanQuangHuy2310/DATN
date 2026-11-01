@@ -62,7 +62,7 @@ COMMENT ON TABLE eas.department IS 'DB02 — Phòng ban; scope phòng không t�
 -- DB03 app_user
 CREATE TABLE eas.app_user (
 id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-username varchar(80) NOT NULL UNIQUE CHECK (username=lower(btrim(username)) AND length(username)>0),
+email varchar(254) NOT NULL UNIQUE CHECK (email=lower(btrim(email)) AND email ~ '^[^@[:space:]]+@eas[.]com$'),
 display_name varchar(150) NOT NULL CHECK (length(btrim(display_name))>0),
 department_id uuid NOT NULL REFERENCES eas.department(id) ON DELETE RESTRICT,
 manager_id uuid REFERENCES eas.app_user(id) ON DELETE RESTRICT,
