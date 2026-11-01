@@ -1,0 +1,12 @@
+# Build context is ./ai_service: keep local environments and runtime data out
+# of the context and the image (the local venv alone is several GB).
+.venv*
+venv
+**/__pycache__
+**/*.pyc
+.env
+.env.*
+training/data
+data/active_enterprise_policy.json
+*.log
+.pytest_cache

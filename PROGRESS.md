@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 4.6 Dockerfile ai-service 2 tầng (builder/runtime), PaddlePaddle ở layer riêng (requirements-paddle.txt) với cache mount pip, apt --no-install-recommends + xóa lists, chạy user aiuser; thêm ai_service/.dockerignore (trước đây không có nên .venv-ai bị đưa vào context/image — nghi là nguyên nhân Docker Desktop sập khi build). KHÔNG đo được kích thước trước/sau: Docker Desktop không phản hồi trong phiên này
 - [x] 4.5 Chấm công khớp theo mã nhân viên trước, email dự phòng (SQL_ATTENDANCE_MATCH, chạy được cả trước migration); migration 16 (app_user.employee_code) + mock 005 (attendance.employee_code) kèm rollback; lệnh sync_employee_codes (chạy thử mặc định, --apply để ghi) báo số không khớp. Chạy thử trên DB thật: 42 tài khoản/55 nhân viên HRM, khớp 2 (theo tên), 40 tài khoản không khớp
 - [x] 4.4 Ủy quyền duyệt: bảng eas.approval_delegation (migration 15 + rollback), API /api/v1/delegations (tạo/xem/thu hồi/ứng viên), giao diện ở trang Tài khoản; khi bước duyệt kích hoạt: ưu tiên người được ủy quyền, không có thì người duyệt vắng (chấm công) chuyển lên quản lý trực tiếp; REWORK thay người thực hiện vắng; audit APPROVER_SUBSTITUTED
 - [x] 4.3 Trang 'Bộ luật quy định AI' (khu quản trị, chỉ POLICY_ADMIN): tải tệp JSON, danh sách phiên bản, kích hoạt/khôi phục; dùng API lưu DB của 1.4; lazy-load, không có trong bundle cổng nhân viên
@@ -22,10 +23,9 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 4.6 Dockerfile ai-service multi-stage
+- [ ] 4.7 Smoke test OCR trong CI
 
 ## Chưa làm
-- [ ] 4.7 Smoke test OCR trong CI
 - [ ] 5.1 Menu tự cập nhật /me
 - [ ] 5.2 Test secret-policy cô lập .env
 - [ ] 5.3 Cổng Redis từ biến môi trường

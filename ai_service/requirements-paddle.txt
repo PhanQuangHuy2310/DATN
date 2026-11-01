@@ -1,0 +1,6 @@
+# Heavy OCR stack, installed in its own cached Docker layer (see Dockerfile).
+# Pinned together with numpy/opencv because paddle wheels depend on them.
+numpy==1.26.4
+paddlepaddle==2.6.2
+paddleocr==2.8.1
+opencv-python-headless==4.10.0.84
