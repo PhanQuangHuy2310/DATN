@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 # One distinctive string per admin screen (IdentityAdmin, PlanCatalog,
-# ApiAdministration, OrgChart, Operations, AdminEvents, Policy).
+# ApiAdministration, OrgChart, Operations, AdminEvents, Policy, AiPolicyAdmin).
 ADMIN_MARKERS = (
     "Yêu cầu đặt lại mật khẩu",
     "Danh mục 10 nhóm (58 loại)",
@@ -18,6 +18,7 @@ ADMIN_MARKERS = (
     "ops/outbox",
     "/api/v1/admin-events",
     "config-releases",
+    "Tải bộ luật mới",
 )
 
 

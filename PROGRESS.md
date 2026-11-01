@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] 4.3 Trang 'Bộ luật quy định AI' (khu quản trị, chỉ POLICY_ADMIN): tải tệp JSON, danh sách phiên bản, kích hoạt/khôi phục; dùng API lưu DB của 1.4; lazy-load, không có trong bundle cổng nhân viên
 - [x] 4.2 Đã xóa ingest_policy, toggle_maintenance, maintenance_status, _trigger_ai_retraining (grep xác nhận không còn nơi gọi, không gắn URL); có test chặn quay lại
 - [x] 4.1 Cờ is_system_account (migration 14 + rollback); API admin ẩn tài khoản hệ thống mặc định (include_system=true để xem), từ chối sửa/vô hiệu hóa/đổi quyền (403 SYSTEM_ACCOUNT_LOCKED); UI có ô 'Hiện tài khoản hệ thống', nhãn và khóa nút. Hoạt động cả trước khi chạy migration 14 (nhận diện qua EAS_AI_SYSTEM_USER_ID)
 - [x] 3.1 Màn hình quản trị lazy-load qua adminScreens.jsx, chỉ entry web_admin truyền vào App (AdminScreensContext). Đã build kiểm tra: bundle cổng nhân viên 0/7 dấu hiệu màn hình quản trị, cổng quản trị đủ 7/7; scripts/check_client_bundle.py chạy trong CI
@@ -19,10 +20,9 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 - [x] Mốc nền (6101da8): AI tự duyệt, giao việc xuống cấp dưới, thay người vắng, nạp quy định AI, migration 07/08/mock 004
 
 ## Đang làm
-- [ ] 4.3 Giao diện nạp bộ luật POLICY_ADMIN
+- [ ] 4.4 Ủy quyền duyệt
 
 ## Chưa làm
-- [ ] 4.4 Ủy quyền duyệt
 - [ ] 4.5 Chấm công khớp mã nhân viên
 - [ ] 4.6 Dockerfile ai-service multi-stage
 - [ ] 4.7 Smoke test OCR trong CI

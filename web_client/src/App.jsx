@@ -308,6 +308,7 @@ const menu = [
   ["users", "Quản lý người dùng", "♙", "OPS_ADMIN"],
   ["permissions", "Vai trò & phân quyền", "▦", "OPS_ADMIN"],
   ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
+  ["ai-policy", "Bộ luật quy định AI", "✧", "POLICY_ADMIN"],
   ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
   ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
   ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
@@ -642,6 +643,8 @@ function renderWorkspaceContent({
           onManageAccess={() => navigate("identity")}
         />
       );
+    case "ai-policy":
+      return <AdminScreen name="AiPolicyAdmin" />;
     case "notifications":
       return <Notifications onOpen={setSelected} />;
     case "profile":
@@ -663,7 +666,7 @@ function renderWorkspaceContent({
   }
 }
 
-const ADMIN_PAGES = new Set(["flow-diagrams", "ai-process", "home", "policy", "plan-catalog", "request-catalog", "ops", "identity", "users", "permissions", "org-chart", "api-admin", "audit", "events", "notifications"]);
+const ADMIN_PAGES = new Set(["flow-diagrams", "ai-process", "home", "policy", "ai-policy", "plan-catalog", "request-catalog", "ops", "identity", "users", "permissions", "org-chart", "api-admin", "audit", "events", "notifications"]);
 const CLIENT_PAGES = new Set(["flow-diagrams", "ai-process", "home", "mine", "approval", "execution", "acceptance", "org-client", "notifications", "profile"]);
 
 function AdminOverview({ navigate, user }) {
@@ -826,7 +829,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
         <nav aria-label="Điều hướng chính">
           {(portal === "admin" ? [
             ["TỔNG QUAN & TỔ CHỨC", ["home", "org-chart", "flow-diagrams", "ai-process"]],
-            ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "plan-catalog", "request-catalog"]],
+            ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "ai-policy", "plan-catalog", "request-catalog"]],
             ["VẬN HÀNH & GIÁM SÁT", ["ops", "users", "permissions", "api-admin"]],
             ["KIỂM TOÁN & NHẬT KÝ", ["audit", "events"]],
             ["TÀI KHOẢN", ["notifications", "profile"]],

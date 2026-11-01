@@ -31,7 +31,13 @@ class PortalCodeSplitTests(unittest.TestCase):
 
     def test_lazy_map_covers_every_admin_screen(self):
         lazy = (ROOT / "web_client/src/adminScreens.jsx").read_text(encoding="utf-8")
-        for name in (*ADMIN_SCREENS, "AdminEvents", "Operations", "Policy"):
+        for name in (
+            *ADMIN_SCREENS,
+            "AdminEvents",
+            "Operations",
+            "Policy",
+            "AiPolicyAdmin",
+        ):
             self.assertIn(name.replace(".jsx", ""), lazy)
 
     def test_built_employee_bundle_has_no_admin_code_when_present(self):
