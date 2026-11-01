@@ -23,6 +23,7 @@ from api_core.domain import (
 )
 from api_core.domain.routing import RoutingError, extract_amount_vnd
 from api_core.workflow.constants import (
+    ERR_ASSIGNEE_INVALID,
     ERR_REQUEST_NOT_FOUND,
     ERR_STATE_CONFLICT,
     ERR_VERSION_CONFLICT,
@@ -1483,9 +1484,21 @@ def submit_request(
 def _validate_approval_decision_input(
     body: dict[str, Any],
 ) -> tuple[str, str | None, int]:
-    if set(body) != {"outcome", "reason", "expected_version"}:
+    keys = set(body)
+    if (
+        not {"outcome", "reason", "expected_version"}
+        <= keys
+        <= {
+            "outcome",
+            "reason",
+            "expected_version",
+            "executor_id",
+        }
+    ):
         raise CommandError("INVALID_DECISION")
     outcome = body.get("outcome")
+    if "executor_id" in body and outcome != "APPROVE":
+        raise CommandError("INVALID_DECISION")
     reason = body.get("reason")
     expected_version = body.get("expected_version")
     if outcome not in {"APPROVE", "REJECT", "NEEDS_INFO"}:
@@ -1501,6 +1514,122 @@ def _validate_approval_decision_input(
     return outcome, reason, expected_version
 
 
+def _attendance_available(cursor) -> bool:
+    # The HRM attendance feed is optional; without it everyone counts as present.
+    cursor.execute(
+        """
+        SELECT to_regclass('mock_hr.attendance') IS NOT NULL
+           AND has_table_privilege('mock_hr.attendance', 'SELECT')
+        """
+    )
+    row = cursor.fetchone()
+    return bool(row and row[0])
+
+
+def _pick_present_executor(
+    cursor,
+    *,
+    planned_executor_id: str,
+    instance_id: str,
+    requester_id: str,
+    acceptor_id: str | None,
+    department_id: str,
+    type_id: str,
+) -> tuple[str, str | None]:
+    """Return (executor, substitution reason) honouring today's HRM attendance."""
+    if not _attendance_available(cursor):
+        return planned_executor_id, None
+    cursor.execute(
+        """
+        SELECT a.status FROM mock_hr.attendance a
+        JOIN eas.app_user u ON u.email = a.employee_email
+        WHERE u.id = %s AND a.work_date = CURRENT_DATE
+        """,
+        [planned_executor_id],
+    )
+    row = cursor.fetchone()
+    if not row or row[0] == "PRESENT":
+        return planned_executor_id, None
+    cursor.execute(
+        """
+        SELECT u.id::text
+        FROM eas.app_user u
+        LEFT JOIN mock_hr.attendance a
+          ON a.employee_email = u.email AND a.work_date = CURRENT_DATE
+        WHERE u.is_active
+          AND u.department_id = (SELECT department_id FROM eas.app_user WHERE id = %s)
+          AND u.id <> ALL(%s::uuid[])
+          AND COALESCE(a.status, 'PRESENT') = 'PRESENT'
+          AND NOT EXISTS (
+            SELECT 1 FROM eas.approval_step s
+            WHERE s.instance_id = %s AND s.assignee_id = u.id
+          )
+          AND EXISTS (
+            SELECT 1 FROM eas.role_membership rm
+            WHERE rm.user_id = u.id AND rm.role = 'EXECUTOR'
+              AND rm.revoked_at IS NULL
+              AND rm.valid_from <= statement_timestamp()
+              AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+              AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = %s)
+              AND (rm.type_scope = 'ALL' OR rm.type_id = %s)
+          )
+        ORDER BY (
+          SELECT count(*) FROM eas.execution_attempt ea
+          WHERE ea.executor_id = u.id AND ea.state IN ('READY', 'RUNNING')
+        ), u.id
+        LIMIT 1
+        """,
+        [
+            planned_executor_id,
+            [x for x in (planned_executor_id, requester_id, acceptor_id) if x],
+            instance_id,
+            department_id,
+            type_id,
+        ],
+    )
+    substitute = cursor.fetchone()
+    if not substitute:
+        return planned_executor_id, "NO_PRESENT_SUBSTITUTE"
+    return substitute[0], f"PLANNED_EXECUTOR_{row[0]}"
+
+
+def _validate_assigned_executor(
+    cursor,
+    *,
+    approver_id: str,
+    candidate_id: object,
+    instance_id: str,
+    requester_id: str,
+    acceptor_id: str | None,
+    department_id: str,
+    type_id: str,
+) -> str:
+    """The final approver may hand the work down to one direct report."""
+    candidate_id = _canonical_uuid(candidate_id, "INVALID_EXECUTOR")
+    if candidate_id in {requester_id, acceptor_id, approver_id}:
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
+    cursor.execute(
+        """
+        SELECT 1 FROM eas.app_user
+        WHERE id = %s AND manager_id = %s AND is_active
+          AND NOT EXISTS (
+            SELECT 1 FROM eas.approval_step
+            WHERE instance_id = %s AND assignee_id = %s
+          )
+        """,
+        [candidate_id, approver_id, instance_id, candidate_id],
+    )
+    if not cursor.fetchone() or not _is_actor_valid_for_role(
+        cursor,
+        actor_id=candidate_id,
+        role="EXECUTOR",
+        department_id=department_id,
+        type_id=type_id,
+    ):
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
+    return candidate_id
+
+
 def _handle_approval_approved(
     cursor,
     request_id: str,
@@ -1512,6 +1641,11 @@ def _handle_approval_approved(
     acceptor_id: str | None,
     sla: dict[str, Any],
     now: datetime,
+    *,
+    approver_id: str | None = None,
+    requester_id: str | None = None,
+    assigned_executor_id: str | None = None,
+    assignment: dict[str, Any] | None = None,
 ) -> tuple[str, datetime | None, datetime | None, str | None]:
     cursor.execute(
         """
@@ -1522,6 +1656,9 @@ def _handle_approval_approved(
         [instance_id],
     )
     next_step = cursor.fetchone()
+    if assigned_executor_id is not None and (next_step or lifecycle == "A"):
+        # Work can only be handed down once the last approval is given.
+        raise CommandError("EXECUTOR_ASSIGNMENT_NOT_ALLOWED", status=409)
     if next_step:
         next_step_id, next_assignee_id = next_step
         if not _is_actor_valid_for_role(
@@ -1546,6 +1683,42 @@ def _handle_approval_approved(
         return "PENDING_APPROVAL", None, None, next_step_id
 
     if lifecycle in {"B", "C"}:
+        planned_executor_id = executor_id
+        if assigned_executor_id is not None:
+            executor_id = _validate_assigned_executor(
+                cursor,
+                approver_id=approver_id,
+                candidate_id=assigned_executor_id,
+                instance_id=instance_id,
+                requester_id=requester_id,
+                acceptor_id=acceptor_id,
+                department_id=department_id,
+                type_id=type_id,
+            )
+            reason = "ASSIGNED_BY_APPROVER"
+        else:
+            executor_id, reason = _pick_present_executor(
+                cursor,
+                planned_executor_id=executor_id,
+                instance_id=instance_id,
+                requester_id=requester_id,
+                acceptor_id=acceptor_id,
+                department_id=department_id,
+                type_id=type_id,
+            )
+        if executor_id != planned_executor_id:
+            cursor.execute(
+                "UPDATE eas.workflow_instance SET planned_executor_id=%s WHERE id=%s",
+                [executor_id, instance_id],
+            )
+        if reason and assignment is not None:
+            assignment.update(
+                {
+                    "planned_executor_id": planned_executor_id,
+                    "executor_id": executor_id,
+                    "reason": reason,
+                }
+            )
         if not _is_actor_valid_for_role(
             cursor,
             actor_id=executor_id,
@@ -1654,7 +1827,7 @@ def decide_approval(
             """
             SELECT r.status,r.lock_version,r.type_id::text,v.department_id::text,
                    i.id::text,i.lifecycle,i.planned_executor_id::text,i.acceptor_id::text,
-                   cr.sla_profile
+                   cr.sla_profile,r.requester_id::text
             FROM eas.request r
             JOIN eas.request_revision v ON v.id=r.current_revision_id
             JOIN eas.workflow_instance i ON i.revision_id=v.id AND i.state='ACTIVE'
@@ -1677,6 +1850,7 @@ def decide_approval(
             executor_id,
             acceptor_id,
             sla,
+            requester_id,
         ) = current
         if status != "PENDING_APPROVAL":
             raise CommandError(ERR_STATE_CONFLICT, status=409)
@@ -1731,6 +1905,7 @@ def decide_approval(
             [now, request_id],
         )
 
+        assignment: dict[str, Any] = {}
         if outcome == "APPROVE":
             (
                 next_status,
@@ -1748,6 +1923,10 @@ def decide_approval(
                 acceptor_id=acceptor_id,
                 sla=sla,
                 now=now,
+                approver_id=actor.id,
+                requester_id=requester_id,
+                assigned_executor_id=body.get("executor_id"),
+                assignment=assignment,
             )
         else:
             next_status = _handle_approval_rejected_or_needs_info(
@@ -1777,6 +1956,7 @@ def decide_approval(
                 "step_no": step_no,
                 "next_status": next_status,
                 **({"reason": reason} if reason else {}),
+                **({"executor_assignment": assignment} if assignment else {}),
             },
             correlation_id=correlation_id,
             occurred_at=now,
@@ -1815,6 +1995,71 @@ def decide_approval(
         command_body=body,
         operation=operation,
     )
+
+
+def list_assignable_executors(*, actor: Actor, request_id: str) -> dict[str, Any]:
+    """Direct reports the final approver may hand the work down to."""
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT i.id::text, i.lifecycle, v.department_id::text, r.type_id::text,
+                   r.requester_id::text, i.acceptor_id::text, i.planned_executor_id::text,
+                   (SELECT count(*) FROM eas.approval_step w
+                    WHERE w.instance_id=i.id AND w.state='WAITING')
+            FROM eas.request r
+            JOIN eas.request_revision v ON v.id=r.current_revision_id
+            JOIN eas.workflow_instance i ON i.revision_id=v.id AND i.state='ACTIVE'
+            JOIN eas.approval_step s ON s.instance_id=i.id AND s.state='ACTIVE'
+            WHERE r.id=%s AND r.status='PENDING_APPROVAL' AND s.assignee_id=%s
+            """,
+            [request_id, actor.id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise CommandError("FORBIDDEN", status=403)
+        (
+            instance_id,
+            lifecycle,
+            department_id,
+            type_id,
+            requester,
+            acceptor,
+            planned,
+            waiting,
+        ) = row
+        if lifecycle == "A" or waiting:
+            return {"items": [], "planned_executor_id": planned}
+        cursor.execute(
+            """
+            SELECT u.id::text, u.display_name
+            FROM eas.app_user u
+            WHERE u.manager_id=%s AND u.is_active
+              AND u.id <> ALL(%s::uuid[])
+              AND NOT EXISTS (
+                SELECT 1 FROM eas.approval_step s
+                WHERE s.instance_id=%s AND s.assignee_id=u.id
+              )
+              AND EXISTS (
+                SELECT 1 FROM eas.role_membership rm
+                WHERE rm.user_id=u.id AND rm.role='EXECUTOR' AND rm.revoked_at IS NULL
+                  AND rm.valid_from <= statement_timestamp()
+                  AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                  AND (rm.scope_kind='GLOBAL' OR rm.department_id=%s)
+                  AND (rm.type_scope='ALL' OR rm.type_id=%s)
+              )
+            ORDER BY u.display_name
+            """,
+            [
+                actor.id,
+                [x for x in (requester, acceptor) if x],
+                instance_id,
+                department_id,
+                type_id,
+            ],
+        )
+        items = [{"id": r[0], "display_name": r[1]} for r in cursor.fetchall()]
+    return {"items": items, "planned_executor_id": planned}
 
 
 def start_execution(

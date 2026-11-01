@@ -16,7 +16,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
-from routers import auto_approve, classify, mock_context, ocr, risk, summarize
+from routers import auto_approve, classify, mock_context, ocr, policy, risk, summarize
 
 settings = get_settings()
 
@@ -135,6 +135,7 @@ app.include_router(
 app.include_router(ocr.router, prefix="/ai/ocr", tags=["OCR"])
 app.include_router(summarize.router, prefix="/ai/summarize", tags=["Summarize"])
 app.include_router(mock_context.router, prefix="/ai/mock", tags=["Mock Data Context"])
+app.include_router(policy.router, prefix="/ai/policy", tags=["Policy Rules"])
 
 
 # ---------------------------------------------------------------------------

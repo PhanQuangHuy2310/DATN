@@ -62,11 +62,13 @@ def parse_invoice_fields(raw_text: str) -> dict:
 
     # --- Số tiền ---
     # Ví dụ: "1.500.000 VND", "1,500,000đ", "150.000 vnđ"
+    # Totals come first: a bare "<number> VND" is often a unit price.
+    number = r"(\d{1,3}(?:[.,]\d{3})+|\d+)"
     amount_patterns = [
+        rf"TỔNG\s*(?:CỘNG|TIỀN)[^\d\n]*{number}",
+        rf"THÀNH\s*TIỀN[^\d\n]*{number}",
+        rf"AMOUNT[^\d\n]*{number}",
         r"(\d{1,3}(?:[.,]\d{3})+)\s*(?:VN[DĐ]|Đ|VNĐ|\$|USD)",
-        r"TỔNG\s*(?:CỘNG|TIỀN)[^:]*:\s*([\d.,]+)",
-        r"THÀNH\s*TIỀN[^:]*:\s*([\d.,]+)",
-        r"AMOUNT[^:]*:\s*([\d.,]+)",
     ]
     for pattern in amount_patterns:
         match = re.search(pattern, text)
@@ -80,6 +82,7 @@ def parse_invoice_fields(raw_text: str) -> dict:
 
     # --- Ngày ---
     date_patterns = [
+        r"NGÀY\s+(\d{1,2})\s+THÁNG\s+(\d{1,2})\s+NĂM\s+(\d{4})",
         r"NGÀY\s+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
         r"DATE[:\s]+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
         r"(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
@@ -108,9 +111,10 @@ def parse_invoice_fields(raw_text: str) -> dict:
 
     # --- Nhà cung cấp / Công ty ---
     vendor_patterns = [
-        r"CÔNG TY\s+(?:TNHH|CỔ PHẦN|CP|TNHH MTV)?\s*([A-Z\s]{5,40})",
-        r"VENDOR[:\s]+([A-Z\s]{5,40})",
-        r"SELLER[:\s]+([A-Z\s]{5,40})",
+        # Read to end of line so Vietnamese diacritics are kept.
+        r"CÔNG TY\s+(?:(?:TNHH MTV|TNHH|CỔ PHẦN|CP)\s+)?([^\n]{3,80})",
+        r"VENDOR[:\s]+([^\n]{3,80})",
+        r"SELLER[:\s]+([^\n]{3,80})",
     ]
     for pattern in vendor_patterns:
         match = re.search(pattern, text)

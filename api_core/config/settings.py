@@ -249,6 +249,30 @@ if ENVIRONMENT == "production" and (
         "EAS_AI_INTERNAL_SECRET must be a random secret of at least 32 characters in production"
     )
 EAS_AI_TIMEOUT_SECONDS = float(os.getenv("EAS_AI_TIMEOUT_SECONDS", "5.0"))
+# Non-login account that records AI auto-approval decisions (migration 08).
+EAS_AI_SYSTEM_USER_ID = os.getenv(
+    "EAS_AI_SYSTEM_USER_ID", "00000002-0000-4000-8000-0000000000a1"
+)
+EAS_AI_AUTO_APPROVE_ENABLED = (
+    os.getenv("EAS_AI_AUTO_APPROVE_ENABLED", "true").lower() == "true"
+)
+EAS_AI_AUTO_APPROVE_MAX_WEIGHT = int(os.getenv("EAS_AI_AUTO_APPROVE_MAX_WEIGHT", "2"))
+# The least-privilege worker cannot write approvals; it asks the API to run
+# AI auto-approval through this internal, secret-protected endpoint.
+EAS_API_INTERNAL_URL = os.getenv(
+    "EAS_API_INTERNAL_URL",
+    "http://127.0.0.1:8000" if ENVIRONMENT == "development" else "http://api:8000",
+).rstrip("/")
+EAS_WORKER_INTERNAL_SECRET = os.getenv("EAS_WORKER_INTERNAL_SECRET", "")
+if not EAS_WORKER_INTERNAL_SECRET and ENVIRONMENT in {"development", "test"}:
+    EAS_WORKER_INTERNAL_SECRET = "eas-local-dev-worker-internal-secret-2026"
+if ENVIRONMENT == "production" and (
+    len(EAS_WORKER_INTERNAL_SECRET) < 32
+    or EAS_WORKER_INTERNAL_SECRET == "eas-local-dev-worker-internal-secret-2026"
+):
+    raise RuntimeError(
+        "EAS_WORKER_INTERNAL_SECRET must be a random secret of at least 32 characters in production"
+    )
 
 LOGGING = {
     "version": 1,

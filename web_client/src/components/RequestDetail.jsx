@@ -52,6 +52,23 @@ function Audit({ id }) {
     </ResourceState>
   );
 }
+function AssignDownSelect({ requestId }) {
+  const resource = useResource(`/api/v1/requests/${requestId}/assignable-executors`);
+  const items = resource.data?.items || [];
+  if (!items.length) return null;
+  return (
+    <label>
+      Giao việc cho cấp dưới (tùy chọn)
+      <select name="executor_id" defaultValue="">
+        <option value="">Người thực hiện theo cấu hình</option>
+        {items.map((item) => (
+          <option key={item.id} value={item.id}>{item.display_name}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export default function RequestDetail({ id, user, onBack, onEdit, onChanged, initialTab = "info" }) {
   const resource = useResource(`/api/v1/requests/${id}`),
     [tab, setTab] = useState(initialTab),
@@ -350,7 +367,10 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                       )}
                     </>
                   ) : (
-                    <p>Xác nhận thực hiện thao tác trên hồ sơ này?</p>
+                    <>
+                      <p>Xác nhận thực hiện thao tác trên hồ sơ này?</p>
+                      {action === "approve" && <AssignDownSelect requestId={id} />}
+                    </>
                   )}
                 </ActionForm>
               </Modal>

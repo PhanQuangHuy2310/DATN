@@ -164,3 +164,41 @@ def ingest_policy(request: HttpRequest) -> JsonResponse:
         },
         status=202,
     )
+
+
+@require_POST
+def publish_ai_policy_rules(request: HttpRequest) -> JsonResponse:
+    """POLICY_ADMIN nạp bộ luật quy định; AI áp dụng ngay ở request kế tiếp."""
+    from time import perf_counter
+
+    from api_core.authn.service import require_actor
+    from api_core.http import correlation_id
+    from api_core.integrations.ai_service import ai_client_sync
+
+    @require_actor("POLICY_ADMIN")
+    def _publish(req: HttpRequest) -> JsonResponse:
+        try:
+            body = parse_json_object(req)
+        except JsonBodyError as exc:
+            return api_error(req, str(exc), status=400)
+        if set(body) != {"version", "rules"} or not isinstance(body["rules"], list):
+            return api_error(req, "INVALID_POLICY_RULES", status=422)
+        started = perf_counter()
+        try:
+            applied = ai_client_sync.publish_policy_rules(
+                document=body, correlation_id=correlation_id(req)
+            )
+        except RuntimeError as exc:
+            return api_error(req, str(exc), status=502)
+        logger.info(
+            "AI policy %s published by %s", applied.get("version"), req.actor.email
+        )
+        return JsonResponse(
+            {
+                "policy": applied,
+                "applied_in_ms": round((perf_counter() - started) * 1000, 1),
+                "correlation_id": correlation_id(req),
+            }
+        )
+
+    return _publish(request)

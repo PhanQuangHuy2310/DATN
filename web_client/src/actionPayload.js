@@ -17,6 +17,7 @@ export function requestActionPayload(action, expectedVersion, values = {}) {
       ...body,
       outcome,
       reason: ["approve", "accept"].includes(action) ? null : values.reason,
+      ...(action === "approve" && values.executor_id ? { executor_id: values.executor_id } : {}),
     };
   }
   if (action === "cancel") return { ...body, reason: values.reason };

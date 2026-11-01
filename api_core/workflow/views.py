@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import hmac
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from django.conf import settings
 from django.db import connection
 from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.authn.service import require_actor
@@ -47,6 +50,7 @@ from api_core.workflow.service import (
     create_draft,
     decide_acceptance,
     decide_approval,
+    list_assignable_executors,
     report_execution_issue,
     start_execution,
     submit_execution,
@@ -331,6 +335,37 @@ def request_list_or_create(request: HttpRequest) -> JsonResponse:
     elif request.method == "GET":
         return request_list(request)
     return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+
+
+@csrf_exempt  # machine-to-machine call from the outbox worker, no browser session
+@require_POST
+def internal_auto_approve_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    from api_core.workflow.auto_approval import try_auto_approve
+
+    supplied = request.headers.get("X-Internal-Secret") or ""
+    expected = settings.EAS_WORKER_INTERNAL_SECRET
+    if not expected or not hmac.compare_digest(supplied, expected):
+        return api_error(request, "UNAUTHORIZED", status=401)
+    result = try_auto_approve(str(request_id), correlation_id(request))
+    return JsonResponse(
+        {
+            "approved": result is not None,
+            "result": result,
+            "correlation_id": correlation_id(request),
+        }
+    )
+
+
+@require_actor("APPROVER")
+def assignable_executors_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    try:
+        result = list_assignable_executors(
+            actor=request.actor, request_id=str(request_id)
+        )
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    result["correlation_id"] = correlation_id(request)
+    return JsonResponse(result)
 
 
 @require_actor()

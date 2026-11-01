@@ -32,3 +32,11 @@ test("unrecognized action and missing expected_version fail closed", () => {
   assert.throws(() => requestActionPayload("publish", 1), /Unsupported/);
   assert.throws(() => requestActionPayload("approve", null), /expected_version/);
 });
+test("approve may hand the work down to a chosen executor", () => {
+  assert.deepEqual(requestActionPayload("approve", 6, { executor_id: "e1" }), {
+    expected_version: 6, outcome: "APPROVE", reason: null, executor_id: "e1",
+  });
+  assert.deepEqual(requestActionPayload("approve", 6, { executor_id: "" }), {
+    expected_version: 6, outcome: "APPROVE", reason: null,
+  });
+});

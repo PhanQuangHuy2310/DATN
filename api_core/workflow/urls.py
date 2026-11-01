@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import history_views, views
+from . import history_views, policy_views, views
 
 urlpatterns = [
     path("requests/<uuid:request_id>/history", history_views.history),
@@ -51,6 +51,16 @@ urlpatterns = [
         "requests/<uuid:request_id>/execution/attachments",
         views.execution_attachment,
         name="execution-attachment-upload",
+    ),
+    path(
+        "internal/requests/<uuid:request_id>/auto-approve",
+        views.internal_auto_approve_view,
+        name="internal-auto-approve",
+    ),
+    path(
+        "requests/<uuid:request_id>/assignable-executors",
+        views.assignable_executors_view,
+        name="request-assignable-executors",
     ),
     path(
         "attachments/<uuid:attachment_id>",
@@ -135,6 +145,11 @@ urlpatterns = [
         name="ops-outbox-replay",
     ),
     # Policy & Config Release
+    path(
+        "policies/ai-rules",
+        policy_views.publish_ai_policy_rules,
+        name="policy-ai-rules",
+    ),
     path("config-releases", views.config_releases_view, name="config-releases"),
     path(
         "config-releases/status",

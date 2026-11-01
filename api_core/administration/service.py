@@ -611,7 +611,9 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
         else:
             upd_sql = f"UPDATE eas.{table} SET {','.join(f + '=%s' for f in fields)} WHERE id=%s"  # NOSONAR python:S2077
             c.execute(upd_sql, [v[f] for f in fields] + [id])  # NOSONAR python:S2077
-        if kind == "memberships":
+        # Roles are re-read from the database on every request, so grants and
+        # edits apply immediately; only a revocation ends existing sessions.
+        if kind == "memberships" and method == "DELETE":
             c.execute(
                 "UPDATE eas.app_user SET auth_version=auth_version+1 WHERE id=%s",
                 [v["user_id"]],
