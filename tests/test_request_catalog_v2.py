@@ -161,45 +161,63 @@ class PublishedConfigurationTests(unittest.TestCase):
         self.assertEqual(failures, [])
 
 
+CATALOG_SQL = (MIGRATIONS / "09_request_catalog_v2.sql").read_text(encoding="utf-8")
+
+
+def catalog_part(number: int) -> str:
+    """Section 'Part N' of the consolidated catalogue migration."""
+    start = CATALOG_SQL.index(f"-- ==== Part {number}:")
+    nxt = CATALOG_SQL.find(f"-- ==== Part {number + 1}:", start)
+    return CATALOG_SQL[start : nxt if nxt != -1 else len(CATALOG_SQL)]
+
+
 class MigrationConsistencyTests(unittest.TestCase):
-    def test_regroup_migration_covers_existing_types_and_ten_groups(self):
-        sql = (MIGRATIONS / "11_request_category_regroup.sql").read_text(
-            encoding="utf-8"
-        )
+    def test_regroup_covers_every_type_and_ten_groups(self):
+        part = catalog_part(1)
+        # All 66 codes, including the 13 new ones (restores them after a rollback).
         for item in CATALOG["items"]:
-            if not item["new"]:
-                active = "true" if item["status"] == "ACTIVE" else "false"
-                self.assertIn(
-                    f"('{item['code']}', '{item['name']}', '{item['category']}', "
-                    f"{item['risk_weight']}, {item['approval_level']}, {active})",
-                    sql,
-                )
+            active = "true" if item["status"] == "ACTIVE" else "false"
+            self.assertIn(
+                f"('{item['code']}', '{item['name']}', '{item['category']}', "
+                f"{item['risk_weight']}, {item['approval_level']}, {active})",
+                part,
+            )
         constraint = re.search(
-            r"ADD CONSTRAINT request_type_category_valid\s+(CHECK.*);", sql
+            r"ADD CONSTRAINT request_type_category_valid\s+(CHECK.*);", part
         ).group(1)
         self.assertEqual(
             re.findall(r"'([A-Z]+)'::character varying", constraint), GROUPS
         )
 
-    def test_new_types_migration_inserts_exactly_the_13_types(self):
-        sql = (MIGRATIONS / "12_request_types_new.sql").read_text(encoding="utf-8")
-        values = sql[sql.index("(VALUES") : sql.index(") AS v(")]
+    def test_new_types_part_inserts_exactly_the_13_types(self):
+        part = catalog_part(2)
+        values = part[part.index("(VALUES") : part.index(") AS v(")]
         self.assertEqual(
             set(re.findall(r"^\s+\('([A-Z_]+)'", values, re.MULTILINE)), NEW_CODES
         )
-        self.assertIn("'PUBLISHED'", sql)
+        self.assertIn("'PUBLISHED'", part)
 
-    def test_it_support_migration_publishes_it_executor(self):
-        sql = (MIGRATIONS / "13_it_support_executor.sql").read_text(encoding="utf-8")
-        self.assertIn('"EXECUTOR_IT"', sql)
-        self.assertIn("SET active_release_id", sql)
+    def test_it_support_part_publishes_it_executor(self):
+        part = catalog_part(3)
+        self.assertIn('"EXECUTOR_IT"', part)
+        self.assertIn("SET active_release_id", part)
 
     def test_every_migration_has_a_rollback(self):
-        for number in ("08", "09", "10", "11", "12", "13", "14", "15", "16"):
-            with self.subTest(migration=number):
+        for name in sorted(p.stem for p in MIGRATIONS.glob("*.sql")):
+            if name < "08":
+                continue  # 04-07 were applied before rollbacks were required
+            with self.subTest(migration=name):
                 self.assertTrue(
-                    list((MIGRATIONS / "rollback").glob(f"{number}_*_rollback.sql"))
+                    (MIGRATIONS / "rollback" / f"{name}_rollback.sql").exists()
                 )
+
+    def test_consolidated_migrations_are_single_transactions(self):
+        for path in [*MIGRATIONS.glob("0[89]_*.sql"), *MIGRATIONS.glob("1*_*.sql")]:
+            sql = path.read_text(encoding="utf-8")
+            with self.subTest(migration=path.name):
+                self.assertEqual(sql.count("\nBEGIN;"), 1)
+                self.assertEqual(sql.count("\nCOMMIT;"), 1)
+                self.assertEqual(sql.count("security_epoch"), 1)
 
 
 class FrontendCatalogSyncTests(unittest.TestCase):

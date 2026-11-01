@@ -2,7 +2,7 @@
 
 Match order: exact work email, then unique normalized full name. Accounts and
 employees that do not match are reported, never guessed. Dry run by default;
---apply writes eas.app_user.employee_code (migration 16 required).
+--apply writes eas.app_user.employee_code (migration 10 required).
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ class Command(BaseCommand):
             )
             if not cursor.fetchone():
                 raise CommandError(
-                    "Run database/migrations/16_employee_code.sql first."
+                    "Run database/migrations/10_approval_delegation_and_employee_code.sql first."
                 )
             for account_id, (code, _how) in matches.items():
                 cursor.execute(

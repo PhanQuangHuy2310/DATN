@@ -1,8 +1,30 @@
--- Rollback of 11_request_category_regroup.sql: restores the 7 old categories
--- and each type's previous name, weight, approval level and active flag.
--- Run 12's rollback first if migration 12 was applied (new types use new categories).
+-- Rollback of 09_request_catalog_v2.sql.
+-- Runs the former per-feature rollbacks in reverse order: 13_it_support_executor_rollback, 12_request_types_new_rollback, 11_request_category_regroup_rollback.
 BEGIN;
 SET LOCAL ROLE eas_migration;
+
+-- ==== 13_it_support_executor_rollback =============================
+-- Rollback of 13_it_support_executor.sql: re-activate the previous IT_SUPPORT
+-- release (executor EXECUTOR_ADMIN). The newer release stays as history.
+UPDATE eas.request_type rt
+SET active_release_id = prev.id
+FROM (
+  SELECT cr.id, cr.type_id FROM eas.config_release cr
+  JOIN eas.request_type t ON t.id = cr.type_id AND t.code = 'IT_SUPPORT'
+  WHERE cr.state = 'PUBLISHED' AND cr.route_rules->>'executor' <> 'EXECUTOR_IT'
+  ORDER BY cr.version DESC LIMIT 1
+) prev
+WHERE rt.id = prev.type_id;
+
+-- ==== 12_request_types_new_rollback ===============================
+-- Rollback of 12_request_types_new.sql. Published releases are immutable and
+-- may already be referenced by requests, so the 13 types are deactivated
+-- (hidden from menus, history kept) instead of deleted.
+UPDATE eas.request_type SET is_active = false WHERE code IN ('SALARY_ADVANCE', 'RESOURCE_REVOKE', 'VEHICLE_BOOKING', 'CROSS_DEPT_SUPPORT', 'PROJECT_INITIATION', 'TASK_REQUEST', 'DISCIPLINE_REQ', 'HR_CERTIFICATE', 'PROMOTION_REQ', 'REWARD_REQ', 'SALARY_ADJUSTMENT', 'DOCUMENT_SEAL', 'POLICY_ISSUANCE');
+
+-- ==== 11_request_category_regroup_rollback ========================
+-- Rollback of 11_request_category_regroup.sql: restores the 7 old categories
+-- and each type's previous name, weight, approval level and active flag.
 ALTER TABLE eas.request_type DROP CONSTRAINT request_type_category_valid;
 UPDATE eas.request_type rt
 SET name = v.name, category = v.category, risk_weight = v.risk_weight,
@@ -69,5 +91,6 @@ UPDATE eas.request_type SET category = 'GENERAL', is_active = false
 WHERE category NOT IN ('HR','IT','FACILITY','PROCUREMENT','ASSET','FINANCE','GENERAL');
 ALTER TABLE eas.request_type ADD CONSTRAINT request_type_category_valid
   CHECK (((category)::text = ANY ((ARRAY['HR'::character varying, 'IT'::character varying, 'FACILITY'::character varying, 'PROCUREMENT'::character varying, 'ASSET'::character varying, 'FINANCE'::character varying, 'GENERAL'::character varying])::text[])));
+
 UPDATE eas.security_epoch SET version=version+1, updated_at=statement_timestamp() WHERE id=1;
 COMMIT;

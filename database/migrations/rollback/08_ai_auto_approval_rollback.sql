@@ -1,7 +1,11 @@
--- Rollback of 10_ai_auto_approve_revoke.sql: restores the original
--- eas.guard_request (terminal requests fully immutable) and drops eas.ai_revocable.
+-- Rollback of 08_ai_auto_approval.sql.
+-- Runs the former per-feature rollbacks in reverse order: 10_ai_auto_approve_revoke_rollback, 09_ai_policy_store_rollback, 14_system_account_flag_rollback, 08_ai_system_account_rollback.
 BEGIN;
 SET LOCAL ROLE eas_migration;
+
+-- ==== 10_ai_auto_approve_revoke_rollback ==========================
+-- Rollback of 10_ai_auto_approve_revoke.sql: restores the original
+-- eas.guard_request (terminal requests fully immutable) and drops eas.ai_revocable.
 CREATE OR REPLACE FUNCTION eas.guard_request()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -47,5 +51,23 @@ BEGIN
  RETURN NEW;
 END $function$;
 DROP FUNCTION IF EXISTS eas.ai_revocable(uuid);
+
+-- ==== 09_ai_policy_store_rollback =================================
+-- Rollback of 09_ai_policy_store.sql. Drops stored AI policy versions:
+-- export them first if they must be kept (SELECT version, document FROM eas.ai_policy_version).
+DROP TABLE IF EXISTS eas.ai_policy_version;
+
+-- ==== 14_system_account_flag_rollback =============================
+-- Rollback of 14_system_account_flag.sql. The API still treats the AI account
+-- (EAS_AI_SYSTEM_USER_ID) as a system account without this column.
+ALTER TABLE eas.app_user DROP COLUMN IF EXISTS is_system_account;
+
+-- ==== 08_ai_system_account_rollback ===============================
+-- Rollback of 08_ai_system_account.sql. Fails (FK RESTRICT) if the AI account
+-- already recorded approval decisions; those are audit history and must stay.
+UPDATE eas.role_membership SET revoked_at=statement_timestamp()
+WHERE user_id='00000002-0000-4000-8000-0000000000a1' AND revoked_at IS NULL;
+UPDATE eas.app_user SET is_active=false WHERE id='00000002-0000-4000-8000-0000000000a1';
+
 UPDATE eas.security_epoch SET version=version+1, updated_at=statement_timestamp() WHERE id=1;
 COMMIT;

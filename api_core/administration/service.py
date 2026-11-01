@@ -23,7 +23,7 @@ from api_core.workflow.service import (
     _execute_idempotent,
 )
 
-# Must match eas.request_type_category_valid (migration 11).
+# Must match eas.request_type_category_valid (migration 09).
 REQUEST_TYPE_CATEGORIES = set(CATALOG_V2_GROUPS)
 
 ROLES = {
@@ -146,9 +146,9 @@ def serialize(columns, row):
 
 
 def system_account_sql(alias: str) -> str:
-    """True for system accounts (eas.app_user.is_system_account, migration 14).
+    """True for system accounts (eas.app_user.is_system_account, migration 08).
 
-    Read through to_jsonb so the query also works before migration 14; the AI
+    Read through to_jsonb so the query also works before migration 08; the AI
     account id from settings is always treated as a system account.
     """
     return (

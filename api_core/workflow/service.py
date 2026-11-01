@@ -1525,7 +1525,7 @@ def _validate_approval_decision_input(
 
 # Attendance rows match accounts by HRM employee code; email is the fallback
 # when either side has no code. Read via to_jsonb so the query works before
-# migrations 16 (app_user.employee_code) and mock 005 (attendance.employee_code).
+# migration 10 (app_user.employee_code) and mock 004 (attendance.employee_code).
 SQL_ATTENDANCE_MATCH = """
     CASE
       WHEN to_jsonb(a)->>'employee_code' IS NOT NULL

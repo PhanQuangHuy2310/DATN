@@ -1,5 +1,5 @@
 """Move a file-based AI policy (ai_service/data/active_enterprise_policy.json)
-into eas.ai_policy_version, the database source of truth (migration 09)."""
+into eas.ai_policy_version, the database source of truth (migration 08)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Approval delegation (migration 15): an approver hands their approval steps
+"""Approval delegation (migration 10): an approver hands their approval steps
 to a colleague for a time window. Steps are reassigned when they activate
 (see service._substitute_approver)."""
 
