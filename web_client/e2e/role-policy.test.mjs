@@ -88,3 +88,10 @@ test("portal access: pure admins stay in the admin portal, admins with duties us
   assert.equal(canUsePortal(employee, "admin"), false);
   assert.equal(canUsePortal(undefined, "client"), true);
 });
+
+test("only POLICY_ADMIN reaches the AI policy page", () => {
+  assert.equal(canNavigate(["POLICY_ADMIN"], "ai-policy"), true);
+  for (const role of ["OPS_ADMIN", "AUDITOR", "APPROVER", "REQUESTER"]) {
+    assert.equal(canNavigate([role], "ai-policy"), false);
+  }
+});

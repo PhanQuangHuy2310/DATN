@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { date, errorText } from "../domain.js";
 import { ResourceState, command, useResource } from "./ui.jsx";
-import { parsePolicyFile } from "../aiPolicy.js";
+import { parsePolicyFile } from "../actionPayload.js";
 
 /** POLICY_ADMIN: upload AI policy rules, list stored versions, activate/restore. */
 export default function AiPolicyAdmin() {

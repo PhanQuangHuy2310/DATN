@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { date, errorText } from "../domain.js";
-import { delegationActive, delegationBody } from "../delegation.js";
+import { delegationActive, delegationBody } from "../actionPayload.js";
 import { ResourceState, command, useResource } from "./ui.jsx";
 
 /** Approver hands approval steps to a colleague for a time window. */

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { requestActionPayload } from "../src/actionPayload.js";
+import { delegationActive, delegationBody, parsePolicyFile, requestActionPayload } from "../src/actionPayload.js";
 
 test("approve always supplies nullable reason for strict Django validator", () => {
   assert.deepEqual(requestActionPayload("approve", 6), {
@@ -44,4 +44,31 @@ test("revoking an AI approval carries the mandatory reason", () => {
   assert.deepEqual(requestActionPayload("revokeAi", 9, { reason: "AI duyệt sai quy định." }), {
     expected_version: 9, reason: "AI duyệt sai quy định.",
   });
+});
+test("delegation form values become an ISO window", () => {
+  const body = delegationBody({ delegate_id: "d1", starts_at: "2026-11-03T08:00", ends_at: "2026-11-10T17:00", reason: " Nghỉ phép năm " });
+  assert.equal(body.delegate_id, "d1");
+  assert.equal(body.reason, "Nghỉ phép năm");
+  assert.ok(body.starts_at.endsWith("Z") && body.ends_at > body.starts_at);
+});
+test("delegation end must be after start", () => {
+  assert.throws(() => delegationBody({ delegate_id: "d", starts_at: "2026-11-10T08:00", ends_at: "2026-11-03T08:00", reason: "Nghỉ" }), /kết thúc/);
+  assert.throws(() => delegationBody({ delegate_id: "d", starts_at: "", ends_at: "2026-11-03T08:00", reason: "Nghỉ" }), /không hợp lệ/);
+});
+test("delegation is active only inside the window and when not revoked", () => {
+  const item = { starts_at: "2026-11-03T00:00:00Z", ends_at: "2026-11-10T00:00:00Z", revoked_at: null };
+  assert.equal(delegationActive(item, Date.parse("2026-11-05T00:00:00Z")), true);
+  assert.equal(delegationActive(item, Date.parse("2026-11-11T00:00:00Z")), false);
+  assert.equal(delegationActive({ ...item, revoked_at: "2026-11-04T00:00:00Z" }, Date.parse("2026-11-05T00:00:00Z")), false);
+});
+test("policy file is parsed into the API body", () => {
+  const text = JSON.stringify({ version: "QD-1", rules: [{ id: "r", auto_approve: false }] });
+  assert.deepEqual(parsePolicyFile(text), { version: "QD-1", rules: [{ id: "r", auto_approve: false }] });
+  assert.equal(parsePolicyFile(text, " QD-2 ").version, "QD-2");
+  assert.deepEqual(parsePolicyFile("[]", "QD-3"), { version: "QD-3", rules: [] });
+});
+test("invalid policy files are rejected with a readable message", () => {
+  assert.throws(() => parsePolicyFile("{not json"), /JSON/);
+  assert.throws(() => parsePolicyFile(JSON.stringify({ version: "v" })), /rules/);
+  assert.throws(() => parsePolicyFile(JSON.stringify({ rules: [] })), /version/);
 });
