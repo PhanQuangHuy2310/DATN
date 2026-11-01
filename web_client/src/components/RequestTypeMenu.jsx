@@ -30,10 +30,10 @@ export default function RequestTypeMenu({ options = [], onSelect, disabled = fal
   return (
     <div className="request-menu" aria-label="Chọn loại yêu cầu">
       <div className="request-menu-intro">
-        <p className="eyebrow">DANH MỤC YÊU CẦU 5 CẤP</p>
+        <p className="eyebrow">CÁC LOẠI YÊU CẦU</p>
         <h2>Chọn loại yêu cầu</h2>
         <p className="muted">Lọc theo nhóm nghiệp vụ, cấp độ phê duyệt (Cấp 1–5) hoặc tìm tên, sau đó chọn biểu mẫu. Chỉ các loại đã công bố và được cấp quyền mới có thể tạo.</p>
-        <div className="request-menu-counts" aria-label="Tổng quan danh mục"><span>{options.length} lựa chọn</span><span>{available} có thể tạo</span><span>Chuẩn phân quyền 5 cấp</span></div>
+        <div className="request-menu-counts" aria-label="Tổng quan danh mục"><span>{options.length} lựa chọn</span><span>{available} có thể tạo</span></div>
       </div>
       <div className="request-menu-category-scroll" aria-label="Nhóm nghiệp vụ, cuộn ngang để xem các nhóm khác">
         <div className="request-menu-categories">
@@ -67,6 +67,12 @@ export default function RequestTypeMenu({ options = [], onSelect, disabled = fal
         {(query || group !== "Tất cả" || availability !== "all" || levelFilter !== "all") &&
           <button className="secondary request-menu-clear" type="button" onClick={() => { setQuery(""); setGroup("Tất cả"); setAvailability("all"); setLevelFilter("all"); setExpanded(true); }}>Xóa bộ lọc</button>}
       </div>
+      <section className="client-other-request" aria-label="Yêu cầu ngoài danh mục mẫu có sẵn">
+        <div><strong>Tạo yêu cầu khác</strong><p className="muted">Dành cho loại yêu cầu linh hoạt được quản trị viên cấu hình và công bố trên hệ thống.</p></div>
+        {options.some(item => ["OTHER", "OTHER_REQUEST", "CUSTOM_REQUEST", "GENERAL_REQUEST"].includes(item.code) && item.available)
+          ? <button type="button" onClick={() => onSelect(options.find(item => ["OTHER", "OTHER_REQUEST", "CUSTOM_REQUEST", "GENERAL_REQUEST"].includes(item.code) && item.available))}>Tạo yêu cầu khác →</button>
+          : <small className="client-other-unavailable">Chưa có mẫu linh hoạt được công bố. Hãy liên hệ quản trị để tạo và công bố loại yêu cầu này.</small>}
+      </section>
       <section className="request-menu-dropdown" aria-label="Danh sách biểu mẫu">
         <button type="button" className="request-menu-dropdown-toggle" disabled={disabled}
           aria-expanded={expanded} aria-controls={menuId} onClick={() => setExpanded((current) => !current)}>
@@ -86,9 +92,9 @@ export default function RequestTypeMenu({ options = [], onSelect, disabled = fal
                   <div className="request-menu-option-meta">
                     <span>{item.group || "Khác"}</span>
                     <span>Mẫu {item.lifecycle || "—"}</span>
-                    <span title={riskLevels[riskW] || `Trọng số rủi ro ${riskW}`}>Trọng số: Cấp {riskW}/5</span>
+                    <span title={riskLevels[riskW] || `Trọng số rủi ro ${riskW}`}>Rủi ro: Cấp {riskW}/5</span>
                     <span title={approvalLevels[appLvl] || `Phê duyệt ${appLvl} cấp`}>Duyệt: {appLvl}/5 cấp</span>
-                    <code>{item.code}</code>
+                    
                   </div>
                   {!item.available && <small className="request-menu-warning">{item.disabled_reason || "Chưa công bố quy chế hoặc chưa được cấp quyền"}</small>}
                 </div>

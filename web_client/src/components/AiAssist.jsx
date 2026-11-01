@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, notify } from "../api.js";
-import { errorText } from "../domain.js";
+import { errorText, types } from "../domain.js";
 
 function riskLevel(score) {
   if (score <= 2) return "low";
@@ -103,10 +103,10 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
       )}
       {classify && (
         <p>
-          Loại đề xuất: <strong>{classify.predicted_request_type}</strong> (độ
+          Loại đề xuất: <strong>{types[classify.predicted_request_type] || "Yêu cầu được phân loại"}</strong> (độ
           tin cậy{" "}
           {Math.round((classify.confidence_request_type || 0) * 100)}%) · Phòng
-          ban: <strong>{classify.predicted_department}</strong>
+          ban: <strong>{({HR:"Nhân sự",FINANCE:"Tài chính",IT:"Công nghệ thông tin",OPS:"Vận hành",LEGAL:"Pháp chế",GENERAL:"Bộ phận liên quan"})[classify.predicted_department] || "Bộ phận liên quan"}</strong>
           {classify.workflow_suggestion && (
             <>
               <br />
@@ -121,7 +121,7 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
           <span className={`badge badge-${riskLevel(risk.risk_score)}`}>
             {risk.risk_score}/5 ({risk.risk_label})
           </span>{" "}
-          · Đủ điều kiện duyệt nhanh:{" "}
+          · Có thể ưu tiên xem xét:{" "}
           <strong>{risk.auto_approve_eligible ? "Có" : "Không"}</strong>
         </p>
       )}

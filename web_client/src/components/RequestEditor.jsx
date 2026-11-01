@@ -274,8 +274,9 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
         (typeof monetaryAmount === "number" && Number.isInteger(monetaryAmount) && monetaryAmount > 0 && !["LEAVE", "ACCESS"].includes(type))
       )
         body.amount_vnd = payload.amount_vnd || monetaryAmount;
-      await command(`request-drafts/${r.id}`, body, "PATCH");
-      r = (await api(`/api/v1/requests/${r.id}`)).request;
+      const saved = await command(`request-drafts/${r.id}`, body, "PATCH");
+      // A successful write returns the new lock_version; avoid an extra Supabase read.
+      r = { ...r, lock_version: saved.request?.lock_version ?? saved.lock_version ?? r.lock_version };
       setRecord(r);
       if (send) {
         await command("requests/submit", {

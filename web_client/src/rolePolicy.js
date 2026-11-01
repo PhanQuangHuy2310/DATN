@@ -2,16 +2,16 @@
  * Authorization always remains enforced on the Django API with role + scope + SoD.
  */
 export const ROLE_NAVIGATION = Object.freeze({
-  REQUESTER: ["home", "flow-diagrams", "mine", "history", "notifications", "profile"],
-  APPROVER: ["home", "flow-diagrams", "approval", "history", "notifications", "profile"],
-  EXECUTOR: ["home", "flow-diagrams", "execution", "history", "notifications", "profile"],
-  ACCEPTOR: ["home", "flow-diagrams", "acceptance", "history", "notifications", "profile"],
-  POLICY_ADMIN: ["home", "flow-diagrams", "policy", "plan-catalog", "notifications", "profile"],
-  OPS_ADMIN: ["home", "flow-diagrams", "ops", "identity", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
-  AUDITOR: ["home", "flow-diagrams", "audit", "events", "notifications", "profile"],
+  REQUESTER: ["home", "flow-diagrams", "ai-process", "mine", "org-client", "notifications", "profile"],
+  APPROVER: ["home", "flow-diagrams", "ai-process", "org-client", "approval", "notifications", "profile"],
+  EXECUTOR: ["home", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
+  ACCEPTOR: ["home", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
+  POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "plan-catalog", "notifications", "profile"],
+  OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "identity", "users", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
+  AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "notifications", "profile"],
 });
 
-const NAV_ORDER = ["home", "flow-diagrams", "mine", "approval", "execution", "acceptance", "history", "policy", "plan-catalog", "ops", "identity", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
+const NAV_ORDER = ["home", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "history", "policy", "plan-catalog", "ops", "identity", "users", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
 
 export function visiblePages(roles = [], capabilities = {}) {
   const enabled = new Set(["home", "notifications", "profile"]);
@@ -19,7 +19,7 @@ export function visiblePages(roles = [], capabilities = {}) {
     for (const page of ROLE_NAVIGATION[role] || []) enabled.add(page);
   }
   // UC17: identity management is restricted to GLOBAL + ALL OPS admins.
-  if (!capabilities.identity_manage) { enabled.delete("identity"); enabled.delete("org-chart"); enabled.delete("api-admin"); }
+  if (!capabilities.identity_manage) { enabled.delete("identity"); enabled.delete("users"); enabled.delete("permissions"); enabled.delete("request-catalog"); enabled.delete("org-chart"); enabled.delete("api-admin"); }
   return NAV_ORDER.filter((page) => enabled.has(page));
 }
 

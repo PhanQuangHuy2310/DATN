@@ -313,21 +313,47 @@ def plan_request_type_blueprints(request):
 
 
 @require_GET
-@require_actor("REQUESTER")
+@require_actor("REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR")
 def colleague_choices(request):
-    """For form UUID references: only active coworkers from the requester's department.
+    """Read-only organization chart limited to the actor's own department.
 
-    No email, password, role grants or cross-department information is returned.
-    This is only a convenience list, NOT authorization for approval assignment.
+    Manager relationships come from app_user.manager_id; do not infer job
+    titles or roles from an arbitrary APPROVER grant. Never expose other
+    departments, work email, login names or security-role memberships.
     """
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id::text, display_name FROM eas.app_user
-            WHERE is_active AND department_id=%s AND id<>%s
-            ORDER BY display_name, id LIMIT 300
-        """,
-            [request.actor.department_id, request.actor.id],
+            SELECT u.id::text, u.display_name,
+                   CASE WHEN m.department_id = u.department_id AND m.is_active
+                        THEN m.id::text ELSE NULL END AS manager_id,
+                   CASE WHEN m.department_id = u.department_id AND m.is_active
+                        THEN m.display_name ELSE NULL END AS manager_name,
+                   d.name AS department_name,
+                   EXISTS (
+                     SELECT 1 FROM eas.app_user subordinate
+                     WHERE subordinate.manager_id = u.id
+                       AND subordinate.department_id = u.department_id
+                       AND subordinate.is_active
+                   ) AS manages_colleagues
+            FROM eas.app_user u
+            JOIN eas.department d ON d.id = u.department_id
+            LEFT JOIN eas.app_user m ON m.id = u.manager_id
+            WHERE u.is_active AND u.department_id = %s
+            ORDER BY u.display_name, u.id
+            LIMIT 300
+            """,
+            [request.actor.department_id],
         )
-        choices = [{"id": x, "display_name": y} for x, y in cursor.fetchall()]
-    return JsonResponse({"items": choices})
+        people = [
+            {
+                "id": row[0], "display_name": row[1],
+                "manager_id": row[2], "manager_name": row[3],
+                "department_name": row[4], "manages_colleagues": row[5],
+            }
+            for row in cursor.fetchall()
+        ]
+    # Preserve the old form-selector contract: no self-selection, only id/name.
+    choices = [{"id": p["id"], "display_name": p["display_name"]}
+               for p in people if p["id"] != request.actor.id]
+    return JsonResponse({"items": choices, "organization": people})

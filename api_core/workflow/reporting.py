@@ -132,6 +132,10 @@ def get_request_metrics_report(
     if duration.total_seconds() > 366 * 86400:
         raise CommandError("PERIOD_INVALID", status=422)
 
+    scope = (query_params.get("scope") or "").strip() or None
+    if scope not in (None, "mine"):
+        raise CommandError("INVALID_SCOPE", status=422)
+
     type_code_filter = (query_params.get("type_code") or "").strip() or None
     dept_filter = (query_params.get("department_id") or "").strip() or None
 
@@ -143,7 +147,10 @@ def get_request_metrics_report(
             raise CommandError("INVALID_DEPARTMENT_ID", status=400)
 
     sql = """
-        SELECT r.id::text, r.status, r.current_revision_id, r.approved_at
+        SELECT rt.code, rt.name, r.status,
+               COUNT(*)::integer AS total,
+               COUNT(*) FILTER (WHERE r.current_revision_id IS NOT NULL)::integer AS submitted,
+               COUNT(*) FILTER (WHERE r.approved_at IS NOT NULL)::integer AS approved
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         JOIN eas.app_user u ON u.id = r.requester_id
@@ -153,6 +160,7 @@ def get_request_metrics_report(
           AND r.created_at <= %s
           AND (%s::text IS NULL OR rt.code = %s)
           AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
+          AND (%s::text IS NULL OR (%s::text = 'mine' AND r.requester_id = %s::uuid))
           AND (
             (r.requester_id = %s)
             OR (
@@ -175,7 +183,7 @@ def get_request_metrics_report(
               )
             )
           )
-        LIMIT 100000
+        GROUP BY rt.code, rt.name, r.status
     """
     params = [
         dt_from,
@@ -184,6 +192,9 @@ def get_request_metrics_report(
         type_code_filter,
         dept_uuid,
         dept_uuid,
+        scope,
+        scope,
+        actor.id,
         actor.id,
         actor.id,
         actor.id,
@@ -194,14 +205,16 @@ def get_request_metrics_report(
         cursor.execute(sql, params)
         rows = cursor.fetchall()
 
-    submitted = sum(1 for row in rows if row[2] is not None)
-    approved = sum(1 for row in rows if row[3] is not None)
-    completed = sum(1 for row in rows if row[1] == "COMPLETED")
+    submitted = sum(row[4] for row in rows)
+    approved = sum(row[5] for row in rows)
+    completed = sum(row[3] for row in rows if row[2] == "COMPLETED")
 
     by_status: dict[str, int] = {}
-    for row in rows:
-        st = row[1]
-        by_status[st] = by_status.get(st, 0) + 1
+    by_type: dict[str, dict[str, object]] = {}
+    for code, name, status, count, _sub, _app in rows:
+        by_status[status] = by_status.get(status, 0) + count
+        item = by_type.setdefault(code, {"code": code, "name": name, "count": 0})
+        item["count"] += count
 
     approved_rate = round(approved / submitted, 4) if submitted > 0 else None
     completed_rate = round(completed / submitted, 4) if submitted > 0 else None
@@ -215,6 +228,7 @@ def get_request_metrics_report(
             "approved_rate": approved_rate,
             "completed_rate": completed_rate,
             "by_status": by_status,
+            "top_types": sorted(by_type.values(), key=lambda item: (-item["count"], item["name"]))[:10],
         }
     }
 

@@ -48,7 +48,7 @@ function Audit({ id }) {
   const r = useResource(`/api/v1/requests/${id}/audit`);
   return (
     <ResourceState resource={r}>
-      <Data value={r.data?.items || r.data} />
+      <Data value={r.data?.items || r.data} technical />
     </ResourceState>
   );
 }
@@ -163,9 +163,9 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                     <ol className="timeline">
                       {r.approval_steps?.map((s, i) => (
                         <li key={i}>
-                          <strong>Cấp {s.tier_level || s.step_no} / {r.approval_steps?.length || r.approval_level || 1}{s.resolver_code ? ` · ${resolverLabels[s.resolver_code] || s.resolver_code}` : ""}</strong>{" "}
+                          <strong>Cấp {s.tier_level || s.step_no} / {r.approval_steps?.length || r.approval_level || 1}{s.resolver_code ? ` · ${resolverLabels[s.resolver_code] || "Người phê duyệt"}` : ""}</strong>{" "}
                           <Badge value={s.state} />
-                          <p className="muted">Người xử lý: {s.assignee_name ? `${s.assignee_name} (${s.assignee_id})` : s.assignee_id}</p>
+                          <p className="muted">Người xử lý: {s.assignee_name || "Đang phân công"}</p>
                           <small>{date(s.closed_at || s.activated_at)}</small>
                         </li>
                       ))}

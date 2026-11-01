@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { api, getResource, peekResource, invalidateResource, onDataChanged, idempotencyKey } from "../api.js";
-import { labels, errorText } from "../domain.js";
+import { labels, fieldLabels, errorText } from "../domain.js";
 export function Badge({ value }) {
   return (
     <span className={"badge " + value}>{labels[value] || value || "—"}</span>
   );
 }
-export function Data({ value }) {
+const commonLabels = {
+  actor_kind:"Nguồn thao tác", action:"Hành động", created_at:"Ngày tạo", updated_at:"Cập nhật",
+  occurred_at:"Thời điểm", reason:"Lý do", state:"Trạng thái", status:"Trạng thái",
+  display_name:"Họ tên", department:"Phòng ban", role:"Vai trò", request_type:"Loại yêu cầu",
+  result:"Kết quả", notes:"Ghi chú", details:"Chi tiết", score:"Điểm đánh giá",
+  revision_no:"Phiên bản", submitted_at:"Ngày gửi", verified:"Đã xác minh",
+};
+export function Data({ value, technical = false }) {
   if (value === null || value === undefined)
     return <span className="muted">—</span>;
   if (Array.isArray(value))
@@ -14,7 +21,7 @@ export function Data({ value }) {
       <div className="stack">
         {value.map((v, i) => (
           <div className="record" key={i}>
-            <Data value={v} />
+            <Data value={v} technical={technical} />
           </div>
         ))}
       </div>
@@ -24,11 +31,11 @@ export function Data({ value }) {
   if (typeof value === "object")
     return (
       <dl className="data-list">
-        {Object.entries(value).map(([k, v]) => (
+        {Object.entries(value).filter(([k]) => technical || !(["id", "actor_id", "request_id", "user_id", "department_id", "type_id", "assignee_id", "instance_id", "event_id", "step_id", "attempt_id", "correlation_id", "target_id", "revision_id", "workflow_id", "attachment_id", "prev_hash", "hash", "hash_version"].includes(k))).map(([k, v]) => (
           <div key={k}>
-            <dt>{k}</dt>
+            <dt>{fieldLabels[k] || commonLabels[k] || (technical ? k : k.replace(/_/g," "))}</dt>
             <dd>
-              <Data value={v} />
+              <Data value={v} technical={technical} />
             </dd>
           </div>
         ))}
@@ -63,6 +70,10 @@ export function useResource(url) {
 
   useEffect(() => onDataChanged(() => setMutationVersion((v) => v + 1)), []);
   useEffect(() => {
+    if (!url) {
+      setState({ url, data: null, error: "", loading: false, refreshing: false });
+      return;
+    }
     let active = true;
     getResource(url).then((data) => {
       if (active) setState({ url, data, error: "", loading: false, refreshing: false });
