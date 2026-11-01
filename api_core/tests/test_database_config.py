@@ -4,8 +4,11 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
-from api_core.config.database import DatabaseUrlError, parse_database_url
-from api_core.config.redis_url import resolve_redis_url
+from api_core.config.database import (
+    DatabaseUrlError,
+    parse_database_url,
+    resolve_redis_url,
+)
 
 
 class DatabaseUrlTests(SimpleTestCase):

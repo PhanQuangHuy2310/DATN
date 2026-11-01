@@ -8,8 +8,7 @@ from django.core.validators import validate_email
 
 from project_env import load_project_env
 
-from .database import DatabaseUrlError, parse_database_url
-from .redis_url import resolve_redis_url
+from .database import DatabaseUrlError, parse_database_url, resolve_redis_url
 
 load_project_env()
 
