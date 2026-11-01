@@ -1,4 +1,5 @@
 import { CATALOG_GROUPS, CATEGORY_LABELS } from "../catalogV2.js";
+import { notifyPermissionsChanged } from "../sessionRefresh.js";
 import { useEffect, useState } from "react";
 import { PasswordField, PageControls } from "./ux.jsx";
 import { roles, date } from "../domain.js";
@@ -245,6 +246,7 @@ export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users
     if (!body.password) delete body.password;
     if (modal.record) body.expected_revision = modal.record.revision;
     await command(`admin/${kind}${modal.record ? "/" + modal.record.id : ""}`, body, modal.record ? "PATCH" : "POST");
+    if (kind === "memberships" || kind === "users") notifyPermissionsChanged();
     setModal(null);
     setNotice("Đã lưu thay đổi. Quản trị được ghi vào audit và cập nhật security_epoch.");
     setOffset(0);
@@ -306,6 +308,7 @@ export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users
       {modal.mode === "view" ? <><UserDetail kind={kind} item={modal.record}/>{modal.record.valid_to && <p>Hiệu lực đến: {date(modal.record.valid_to)}</p>}</> :
         <ActionForm onSubmit={modal.mode === "delete" ? async (v) => {
           await command(`admin/${kind}/${modal.record.id}`, {reason:v.reason, expected_revision:modal.record.revision}, "DELETE");
+          if (kind === "memberships" || kind === "users") notifyPermissionsChanged();
           setModal(null); setNotice("Đã vô hiệu hóa hoặc thu hồi. Lịch sử vẫn được giữ lại."); r.reload();
         } : save} danger={modal.mode === "delete"}>
           {modal.mode === "delete" ? <p>Không xóa dữ liệu nghiệp vụ. Khi vô hiệu user hoặc thu hồi role, các phiên đăng nhập cũ sẽ không còn hợp lệ.</p> : <Editor kind={kind} record={modal.record} initialRole={selectedRole || "REQUESTER"}/>}

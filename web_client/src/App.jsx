@@ -3,6 +3,7 @@ import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
 import { canNavigate, canUsePortal } from "./rolePolicy.js";
+import { PERMISSIONS_CHANGED, createRefresher } from "./sessionRefresh.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
 import {
@@ -967,6 +968,27 @@ function PortalApp({ portal }) {
       else setError(errorText(e));
     }
   }
+  const signedIn = Boolean(user && !user.must_change_password);
+  useEffect(() => {
+    if (!signedIn) return undefined;
+    const refresher = createRefresher(() => {
+      api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } })
+        .then((r) => r?.user && setUser(r.user))
+        .catch((e) => {
+          if (e.status === 401) setUser(null);
+        });
+    });
+    const onVisible = () => document.visibilityState === "visible" && refresher.trigger();
+    window.addEventListener("focus", refresher.trigger);
+    window.addEventListener(PERMISSIONS_CHANGED, refresher.trigger);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      refresher.dispose();
+      window.removeEventListener("focus", refresher.trigger);
+      window.removeEventListener(PERMISSIONS_CHANGED, refresher.trigger);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [signedIn]);
   useEffect(() => {
     let active = true;
     fetchInitialSession()
