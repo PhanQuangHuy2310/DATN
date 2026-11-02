@@ -35,7 +35,7 @@ thead { position:sticky; top:0; z-index:1; }
 .password-control { display:flex; align-items:center; position:relative; }
 .password-control input { padding-right:92px; width:100%; margin:0; }
 .password-control .password-toggle { position:absolute; right:5px; top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:5px; background:#f0f4fc; color:#183a93; border:1px solid #dae5f6; padding:6px 9px; border-radius:6px; font-size:12px; }
-.password-control .password-toggle:hover { background:#e5eeff; }
+.password-control .password-toggle:hover { background:#173bb0; color:#ffffff; border-color:#173bb0; }
 .password-hint { display:block; margin:7px 0 0; color:#61728b; }
 .nav-backdrop { display:none; }
 .dashboard-board { display:grid; grid-template-columns:minmax(0,2fr) minmax(250px,1fr); align-items:start; gap:20px; }
@@ -610,6 +610,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .auth-input-wrapper .auth-field-icon {
   position: absolute;
   left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 20px;
   height: 20px;
   color: #94a3b8;
@@ -652,23 +654,34 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .auth-password-toggle {
   position: absolute;
   right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
   background: transparent;
   border: none;
-  padding: 8px;
+  padding: 0;
   color: #94a3b8;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: color 0.18s ease;
+  transition: all 0.2s ease;
 }
 .auth-password-toggle:hover {
-  color: #173bb0;
+  background: #173bb0;
+  color: #ffffff;
+}
+.auth-password-toggle:hover svg {
+  color: #ffffff;
+  stroke: #ffffff;
 }
 .auth-password-toggle svg {
   width: 19px;
   height: 19px;
+  stroke: currentColor;
+  transition: stroke 0.2s ease, color 0.2s ease;
 }
 
 .auth-btn-primary {

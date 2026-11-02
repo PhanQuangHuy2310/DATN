@@ -18,6 +18,10 @@ import ClientRequests from "./components/ClientRequests.jsx";
 import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
 import { Notifications, Profile } from "./components/Admin.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
+
+function AdminDashboard(props) {
+  return <AdminScreen name="AdminDashboard" {...props} />;
+}
 // Screens opened after the first page load are split into their own chunks.
 const RequestEditor = lazy(() => import("./components/RequestEditor.jsx"));
 const RequestDetail = lazy(() => import("./components/RequestDetail.jsx"));
