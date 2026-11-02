@@ -441,8 +441,7 @@ def team_report(actor: Actor, params: dict[str, str]) -> dict[str, Any]:
         LIMIT 1000
     """
     with connection.cursor() as cursor:
-        # NOSONAR python:S2077 - fragments are constants; values are parameters
-        cursor.execute(
+        cursor.execute(  # NOSONAR python:S2077 - fragments are constants; values are parameters
             sql,
             [actor.id, actor.id, start, end, dept, dept, actor.id, actor.id, actor.id],
         )
@@ -575,7 +574,7 @@ def org_chart(actor: Actor) -> dict[str, Any]:
 
 
 def _readable_request(cursor, actor: Actor, request_id: str):
-    cursor.execute(
+    cursor.execute(  # NOSONAR python:S2077 - READ_SCOPE_SQL is a constant fragment
         f"""
         SELECT r.id::text, r.code, r.status, r.requester_id::text, rt.code, rt.name,
                rt.lifecycle, COALESCE(v.risk_weight, r.risk_weight, rt.risk_weight),
@@ -739,29 +738,27 @@ def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]
     reasons += list(advice.get("detail_reasons") or [])
     if missing:
         reasons = [f"Thiếu trường bắt buộc: {', '.join(missing)}", *reasons]
-    stages.append(
-        {
-            "key": "RECOMMENDATION",
-            "status": "FALLBACK" if fallback else "DONE",
-            # /ai/auto-approve/evaluate applies documented business rules; it is
-            # not a trained model, so say so instead of implying ML output.
-            "method": "unavailable" if fallback else "rule_based",
-            "decision": advice.get("decision") or "escalate_to_human",
-            "reasons": [str(item)[:300] for item in reasons][:8],
-        }
-    )
-    stages.append(
-        {
-            "key": "HUMAN_REVIEW",
-            "status": "PENDING" if status == "PENDING_APPROVAL" else "DONE",
-        }
-    )
-    stages.append(
-        {
-            "key": "DECISION",
-            "status": "PENDING" if status in OPEN_STATUSES else "DONE",
-            "request_status": status,
-        }
+    stages.extend(
+        [
+            {
+                "key": "RECOMMENDATION",
+                "status": "FALLBACK" if fallback else "DONE",
+                # /ai/auto-approve/evaluate applies documented business rules; it is
+                # not a trained model, so say so instead of implying ML output.
+                "method": "unavailable" if fallback else "rule_based",
+                "decision": advice.get("decision") or "escalate_to_human",
+                "reasons": [str(item)[:300] for item in reasons][:8],
+            },
+            {
+                "key": "HUMAN_REVIEW",
+                "status": "PENDING" if status == "PENDING_APPROVAL" else "DONE",
+            },
+            {
+                "key": "DECISION",
+                "status": "PENDING" if status in OPEN_STATUSES else "DONE",
+                "request_status": status,
+            },
+        ]
     )
     any_fallback = any(stage["status"] == "FALLBACK" for stage in stages)
     details = {

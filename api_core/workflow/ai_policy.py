@@ -103,8 +103,8 @@ def _serialize(row) -> dict[str, Any]:
 
 def list_versions(*, limit: int = 50) -> dict[str, Any]:
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"SELECT {SELECT_COLUMNS} FROM eas.ai_policy_version "  # NOSONAR python:S2077
+        cursor.execute(  # NOSONAR python:S2077 - SELECT_COLUMNS is a constant fragment
+            f"SELECT {SELECT_COLUMNS} FROM eas.ai_policy_version "
             "ORDER BY created_at DESC LIMIT %s",
             [limit],
         )

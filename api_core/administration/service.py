@@ -276,9 +276,9 @@ def list_records(actor, kind, query):
         c.execute(count_sql, params)  # NOSONAR python:S2077
         total = int(c.fetchone()[0])
         select_sql = f"SELECT {fields} FROM eas.{table} t{where} ORDER BY {order} LIMIT %s OFFSET %s"  # NOSONAR python:S2077
-        c.execute(
+        c.execute(  # NOSONAR python:S2077
             select_sql, select_params + params + [limit, offset]
-        )  # NOSONAR python:S2077
+        )
         rows = c.fetchall()
     return {
         "items": [
@@ -519,8 +519,8 @@ def check_cycle(c, table, parent_field, id, parent):
 
 def _assert_not_system_account(c, user_id):
     """System accounts (EAS AI) cannot be edited, disabled or re-permissioned."""
-    c.execute(
-        f"SELECT {system_account_sql('t')} FROM eas.app_user t WHERE t.id=%s",  # NOSONAR python:S2077
+    c.execute(  # NOSONAR python:S2077
+        f"SELECT {system_account_sql('t')} FROM eas.app_user t WHERE t.id=%s",
         [settings.EAS_AI_SYSTEM_USER_ID, user_id],
     )
     row = c.fetchone()

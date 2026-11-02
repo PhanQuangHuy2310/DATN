@@ -114,7 +114,7 @@ def list_delegations(*, actor: Actor) -> dict[str, Any]:
 def delegate_candidates(*, actor: Actor) -> dict[str, Any]:
     """Active approvers of the actor's department plus the actor's manager."""
     with connection.cursor() as cursor:
-        cursor.execute(
+        cursor.execute(  # NOSONAR python:S2077 - constant SQL fragment
             f"""
             SELECT u.id::text, u.display_name FROM eas.app_user u
             WHERE u.is_active AND u.id <> %s
@@ -123,7 +123,7 @@ def delegate_candidates(*, actor: Actor) -> dict[str, Any]:
               AND {SQL_APPROVER_ACTIVE}
               AND NOT COALESCE((to_jsonb(u)->>'is_system_account')::boolean, false)
             ORDER BY u.display_name
-            """,  # NOSONAR python:S2077 - constant SQL fragment
+            """,
             [actor.id, actor.department_id, actor.id],
         )
         return {
@@ -137,8 +137,8 @@ def create_delegation(
     data = validate_delegation(actor, body)
     with transaction.atomic(), connection.cursor() as cursor:
         _ensure_ready(cursor)
-        cursor.execute(
-            f"SELECT 1 FROM eas.app_user u WHERE u.id = %s AND u.is_active AND {SQL_APPROVER_ACTIVE}",  # NOSONAR python:S2077
+        cursor.execute(  # NOSONAR python:S2077 - constant SQL fragment
+            f"SELECT 1 FROM eas.app_user u WHERE u.id = %s AND u.is_active AND {SQL_APPROVER_ACTIVE}",
             [data["delegate_id"]],
         )
         if not cursor.fetchone():

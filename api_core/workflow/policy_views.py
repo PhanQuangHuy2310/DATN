@@ -4,14 +4,15 @@ import logging
 
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from api_core.http import JsonBodyError, api_error, parse_json_object
 
 logger = logging.getLogger(__name__)
 
 
+@require_http_methods(["GET", "POST"])
+@require_http_methods(["GET", "POST"])
 def publish_ai_policy_rules(request: HttpRequest) -> JsonResponse:
     """POLICY_ADMIN: GET lists versions; POST stores (and activates) a version."""
     from api_core.authn.service import require_actor
@@ -85,7 +86,7 @@ def activate_ai_policy_version(request: HttpRequest, version_id) -> JsonResponse
     return _handle(request)
 
 
-@csrf_exempt  # called by the AI service over the Docker network
+# called by the AI service over the Docker network
 @require_GET
 def internal_active_ai_policy(request: HttpRequest) -> JsonResponse:
     """AI service pulls the active version when its cache is empty."""

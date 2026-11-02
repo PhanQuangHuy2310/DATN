@@ -211,8 +211,9 @@ def get_request_metrics_report(
     ]
 
     with connection.cursor() as cursor:
-        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
-        cursor.execute(sql, params)
+        cursor.execute(  # NOSONAR python:S2077 - query parameterized with psycopg placeholders
+            sql, params
+        )
         rows = cursor.fetchall()
 
     submitted = sum(row[4] for row in rows)

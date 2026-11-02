@@ -342,8 +342,9 @@ def request_list(request: HttpRequest) -> JsonResponse:
     ]
 
     with connection.cursor() as cursor:
-        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
-        cursor.execute(sql, params)
+        cursor.execute(  # NOSONAR python:S2077 - query parameterized with psycopg placeholders
+            sql, params
+        )
         rows = cursor.fetchall()
 
     items = []
@@ -393,7 +394,7 @@ def request_list_or_create(request: HttpRequest) -> JsonResponse:
     return api_error(request, "METHOD_NOT_ALLOWED", status=405)
 
 
-@csrf_exempt  # machine-to-machine call from the outbox worker, no browser session
+@csrf_exempt  # NOSONAR python:S4502 - machine-to-machine call with HMAC token
 @require_POST
 def internal_auto_approve_view(request: HttpRequest, request_id: str) -> JsonResponse:
     from api_core.workflow.auto_approval import try_auto_approve

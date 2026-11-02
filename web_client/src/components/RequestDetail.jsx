@@ -134,6 +134,46 @@ function AssignDownSelect({ requestId }) {
   );
 }
 
+function DetailTabContent({ tab, r, id, user, verify, setVerify }) {
+  if (tab === "info") return <><h2>Nội dung đề nghị</h2><PayloadList typeCode={r.type_code} payload={r.payload} /></>;
+  if (tab === "progress") return (
+    <>
+      <h2>Tiến trình xử lý</h2>
+      <WorkflowTimeline items={timelineItems(r)} />
+      {r.workflow?.attempt && (
+        <div className="record">
+          <strong>Lần thực hiện {r.workflow.attempt.attempt_no}</strong> <Badge value={r.workflow.attempt.state} />
+          <p>{r.workflow.attempt.result_note || "Chưa nộp kết quả."}</p>
+          {r.workflow.attempt.external_reference && <p className="muted">Mã tham chiếu: {r.workflow.attempt.external_reference}</p>}
+        </div>
+      )}
+      <FullHistory id={id} />
+    </>
+  );
+  if (tab === "approvers") return <><h2>Người phê duyệt</h2><ApproversTable request={r} /></>;
+  if (tab === "files") return <><h2>Tệp đính kèm</h2><Attachments id={id} typeCode={r.type_code} /></>;
+  if (tab === "ai" && r.status !== "DRAFT") return (
+    <>
+      <AiAssessmentPanel requestId={id} canRun={r.progress?.stage !== "CLOSED" && !user.roles.some((role) => ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"].includes(role))} />
+      <AiSummary request={r} />
+    </>
+  );
+  if (tab === "activity") return (
+    <>
+      <h2>Lịch sử hoạt động</h2>
+      {user.roles.includes("AUDITOR") && (
+        <div className="record">
+          <ActionForm onSubmit={async () => setVerify(await api(`/api/v1/requests/${id}/audit/verify`))} submitLabel="Xác minh tính toàn vẹn nhật ký" />
+          {verify && <p role="status"><Badge value={verify.status === "PASS" ? "COMPLETED" : "REJECTED"} /> {verify.status === "PASS" ? "Chuỗi nhật ký toàn vẹn." : verify.status === "FAIL" ? "Phát hiện sai lệch trong chuỗi nhật ký." : "Chưa đủ dữ liệu để kết luận."}</p>}
+        </div>
+      )}
+      <ActivityLog id={id} userId={user.id} />
+    </>
+  );
+  if (tab === "diagrams") return <WorkflowDiagrams request={r} embedded />;
+  return null;
+}
+
 export default function RequestDetail({ id, user, onBack, onEdit, onChanged, initialTab = "info" }) {
   const resource = useResource(`/api/v1/requests/${id}`),
     [tab, setTab] = useState(initialTab),
@@ -220,32 +260,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
             ]} />
             <div className={tab === "diagrams" ? "detail-grid flow-detail-grid" : "detail-grid"} id="request-detail-content">
               <div className="panel">
-                {tab === "info" && <><h2>Nội dung đề nghị</h2><PayloadList typeCode={r.type_code} payload={r.payload} /></>}
-                {tab === "progress" && <>
-                  <h2>Tiến trình xử lý</h2>
-                  <WorkflowTimeline items={timelineItems(r)} />
-                  {r.workflow?.attempt && <div className="record">
-                    <strong>Lần thực hiện {r.workflow.attempt.attempt_no}</strong> <Badge value={r.workflow.attempt.state} />
-                    <p>{r.workflow.attempt.result_note || "Chưa nộp kết quả."}</p>
-                    {r.workflow.attempt.external_reference && <p className="muted">Mã tham chiếu: {r.workflow.attempt.external_reference}</p>}
-                  </div>}
-                  <FullHistory id={id} />
-                </>}
-                {tab === "approvers" && <><h2>Người phê duyệt</h2><ApproversTable request={r} /></>}
-                {tab === "files" && <><h2>Tệp đính kèm</h2><Attachments id={id} typeCode={r.type_code} /></>}
-                {tab === "ai" && r.status !== "DRAFT" && <>
-                  <AiAssessmentPanel requestId={id} canRun={r.progress?.stage !== "CLOSED" && !user.roles.some((role) => ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"].includes(role))} />
-                  <AiSummary request={r} />
-                </>}
-                {tab === "activity" && <>
-                  <h2>Lịch sử hoạt động</h2>
-                  {user.roles.includes("AUDITOR") && <div className="record">
-                    <ActionForm onSubmit={async () => setVerify(await api(`/api/v1/requests/${id}/audit/verify`))} submitLabel="Xác minh tính toàn vẹn nhật ký" />
-                    {verify && <p role="status"><Badge value={verify.status === "PASS" ? "COMPLETED" : "REJECTED"} /> {verify.status === "PASS" ? "Chuỗi nhật ký toàn vẹn." : verify.status === "FAIL" ? "Phát hiện sai lệch trong chuỗi nhật ký." : "Chưa đủ dữ liệu để kết luận."}</p>}
-                  </div>}
-                  <ActivityLog id={id} userId={user.id} />
-                </>}
-                {tab === "diagrams" && <WorkflowDiagrams request={r} embedded />}
+                <DetailTabContent tab={tab} r={r} id={id} user={user} verify={verify} setVerify={setVerify} />
               </div>
               <aside className="panel">
                 <p className="eyebrow">XỬ LÝ HỒ SƠ</p>

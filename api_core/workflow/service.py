@@ -124,8 +124,7 @@ def _is_actor_valid_for_role(
     department_id: str,
     type_id: str,
 ) -> bool:
-    # NOSONAR python:S2077 - SQL_NOT_ADMINISTRATIVE is a constant fragment
-    cursor.execute(
+    cursor.execute(  # NOSONAR python:S2077 - SQL_NOT_ADMINISTRATIVE is a constant fragment
         f"""
         SELECT EXISTS (
           SELECT 1 FROM eas.app_user u
@@ -1049,8 +1048,7 @@ def _resolve_and_verify_route_actors(
         routed_actors.add(decision.executor_id)
     if decision.acceptor_id:
         routed_actors.add(decision.acceptor_id)
-    # NOSONAR python:S2077 - SQL_NOT_ADMINISTRATIVE is a constant fragment
-    cursor.execute(
+    cursor.execute(  # NOSONAR python:S2077 - SQL_NOT_ADMINISTRATIVE is a constant fragment
         f"""
         SELECT count(*) FROM eas.app_user u
         WHERE u.is_active AND u.id = ANY(%s::uuid[])
@@ -1571,7 +1569,7 @@ def _attendance_available(cursor) -> bool:
 
 
 def _attendance_status(cursor, user_id: str) -> str | None:
-    cursor.execute(
+    cursor.execute(  # NOSONAR python:S2077 - SQL_ATTENDANCE_MATCH is a constant fragment
         """
         SELECT a.status FROM mock_hr.attendance a
         JOIN eas.app_user u ON """
@@ -1712,7 +1710,7 @@ def _pick_present_executor(
     """Return (executor, substitution reason) honouring today's HRM attendance."""
     if not _attendance_available(cursor):
         return planned_executor_id, None
-    cursor.execute(
+    cursor.execute(  # NOSONAR python:S2077 - SQL_ATTENDANCE_MATCH is a constant fragment
         """
         SELECT a.status FROM mock_hr.attendance a
         JOIN eas.app_user u ON """
@@ -1727,7 +1725,7 @@ def _pick_present_executor(
     row = cursor.fetchone()
     if not row or row[0] == "PRESENT":
         return planned_executor_id, None
-    cursor.execute(
+    cursor.execute(  # NOSONAR python:S2077 - SQL_ATTENDANCE_MATCH is a constant fragment
         """
         SELECT u.id::text
         FROM eas.app_user u
