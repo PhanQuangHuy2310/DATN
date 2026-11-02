@@ -4,6 +4,7 @@ from typing import ClassVar
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+from django.conf import settings
 from django.core.management import call_command
 from django.test import RequestFactory, SimpleTestCase, override_settings
 
@@ -217,6 +218,7 @@ class AdministrationTests(SimpleTestCase):
         c.fetchone.side_effect = [
             (True,),
             old,
+            (False,),  # target is not a system account
             old[:-1] + (datetime.now(timezone.utc),),
         ]
         with (
@@ -256,9 +258,11 @@ class AdministrationTests(SimpleTestCase):
         self.assertNotIn(injected, clause)
         self.assertIn("ILIKE %s", clause)
         self.assertIn("rm.role=%s", clause)
-        self.assertEqual(params[0], f"%{injected}%")
-        self.assertEqual(params[2], True)
-        self.assertEqual(params[3], "APPROVER")
+        # params[0] hides system accounts (EAS AI) unless include_system=true.
+        self.assertEqual(params[0], settings.EAS_AI_SYSTEM_USER_ID)
+        self.assertEqual(params[1], f"%{injected}%")
+        self.assertEqual(params[3], True)
+        self.assertEqual(params[4], "APPROVER")
         with self.assertRaises(CommandError):
             _list_filters("users", {"role": "ROOT"})
         with self.assertRaises(CommandError):
@@ -361,3 +365,100 @@ class AdministrationTests(SimpleTestCase):
                 "Successfully enforced password rotation on 1 accounts", out.getvalue()
             )
             audit.assert_called_once()
+
+
+class SystemAccountTests(SimpleTestCase):
+    """Item 4.1: the EAS AI account is hidden by default and cannot be changed."""
+
+    databases: ClassVar[set[str]] = {"default"}
+
+    def setUp(self):
+        self.actor = Actor(
+            str(uuid4()), "ops", "Ops", str(uuid4()), 1, frozenset({"OPS_ADMIN"}), False
+        )
+
+    def test_system_accounts_hidden_unless_requested(self):
+        from api_core.administration.service import _list_filters
+
+        hidden, params = _list_filters("users", {})
+        self.assertIn("NOT (COALESCE((to_jsonb(t)->>'is_system_account')", hidden)
+        self.assertEqual(params, [settings.EAS_AI_SYSTEM_USER_ID])
+        shown, params = _list_filters("users", {"include_system": "true"})
+        self.assertEqual((shown, params), ("", []))
+        memberships, _ = _list_filters("memberships", {})
+        self.assertIn("eas.app_user su", memberships)
+        with self.assertRaises(CommandError):
+            _list_filters("departments", {"include_system": "true"})
+
+    def _mutate_system(self, kind, record_id, body, method):
+        c = MagicMock()
+        fetches = [(True,)]
+        if method != "POST":
+            fetches.append(self.old_row(kind))
+        fetches.append((True,))  # target is the system account
+        c.fetchone.side_effect = fetches
+        with (
+            patch("api_core.administration.service.transaction.atomic"),
+            patch("api_core.administration.service.connection.cursor") as cm,
+            patch(
+                "api_core.administration.service._execute_idempotent",
+                side_effect=lambda **kw: kw["operation"](c),
+            ),
+            patch("api_core.administration.service._append_admin_audit"),
+        ):
+            cm.return_value.__enter__.return_value = c
+            with self.assertRaises(CommandError) as raised:
+                mutate(self.actor, kind, record_id, body, method, "k", "c")
+        return raised.exception
+
+    DEPARTMENT = "00000001-0000-4000-8000-000000000001"
+
+    def old_row(self, kind):
+        if kind == "users":
+            return (
+                settings.EAS_AI_SYSTEM_USER_ID,
+                "ai.system@eas.com",
+                "EAS AI",
+                self.DEPARTMENT,
+                None,
+                True,
+                0,
+                False,
+            )
+        return (
+            str(uuid4()),
+            settings.EAS_AI_SYSTEM_USER_ID,
+            "APPROVER",
+            "GLOBAL",
+            None,
+            "ALL",
+            None,
+            datetime.now(timezone.utc),
+            None,
+            None,
+        )
+
+    def test_cannot_disable_system_account(self):
+        old = serialize(TABLES["users"][1], self.old_row("users"))
+        error = self._mutate_system(
+            "users",
+            settings.EAS_AI_SYSTEM_USER_ID,
+            {"reason": "Disable the AI account", "expected_revision": old["revision"]},
+            "DELETE",
+        )
+        self.assertEqual((error.code, error.status), ("SYSTEM_ACCOUNT_LOCKED", 403))
+
+    def test_cannot_grant_roles_to_system_account(self):
+        error = self._mutate_system(
+            "memberships",
+            None,
+            {
+                "reason": "Grant ops admin to the AI",
+                "user_id": settings.EAS_AI_SYSTEM_USER_ID,
+                "role": "OPS_ADMIN",
+                "scope_kind": "GLOBAL",
+                "type_scope": "ALL",
+            },
+            "POST",
+        )
+        self.assertEqual(error.code, "SYSTEM_ACCOUNT_LOCKED")

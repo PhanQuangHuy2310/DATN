@@ -6,12 +6,23 @@ export const ROLE_NAVIGATION = Object.freeze({
   APPROVER: ["home", "flow-diagrams", "ai-process", "org-client", "approval", "notifications", "profile"],
   EXECUTOR: ["home", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
   ACCEPTOR: ["home", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
-  POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "plan-catalog", "notifications", "profile"],
+  POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "ai-policy", "plan-catalog", "notifications", "profile"],
   OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "identity", "users", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
   AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "notifications", "profile"],
 });
 
-const NAV_ORDER = ["home", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "history", "policy", "plan-catalog", "ops", "identity", "users", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
+const NAV_ORDER = ["home", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "history", "policy", "ai-policy", "plan-catalog", "ops", "identity", "users", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
+
+export const ADMIN_ROLES = Object.freeze(["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"]);
+const WORKFLOW_DUTY_ROLES = ["APPROVER", "EXECUTOR"];
+
+/** Admin portal: any admin role. Employee portal: everyone except pure admins;
+ * an admin who also approves or executes keeps access to process requests. */
+export function canUsePortal(roles = [], portal = "client") {
+  const isAdmin = roles.some((role) => ADMIN_ROLES.includes(role));
+  if (portal === "admin") return isAdmin;
+  return !isAdmin || roles.some((role) => WORKFLOW_DUTY_ROLES.includes(role));
+}
 
 export function visiblePages(roles = [], capabilities = {}) {
   const enabled = new Set(["home", "notifications", "profile"]);

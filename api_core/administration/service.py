@@ -16,21 +16,15 @@ from django.db import connection, transaction
 
 from api_core.audit import canonical_sha256
 from api_core.authn.service import PasswordChangeError, validate_new_password
+from api_core.catalog.plan_catalog import CATALOG_V2_GROUPS
 from api_core.workflow.service import (
     CommandError,
     _append_admin_audit,
     _execute_idempotent,
 )
 
-REQUEST_TYPE_CATEGORIES = {
-    "HR",
-    "IT",
-    "FACILITY",
-    "PROCUREMENT",
-    "ASSET",
-    "FINANCE",
-    "GENERAL",
-}
+# Must match eas.request_type_category_valid (migration 09).
+REQUEST_TYPE_CATEGORIES = set(CATALOG_V2_GROUPS)
 
 ROLES = {
     "REQUESTER",
@@ -151,6 +145,18 @@ def serialize(columns, row):
     return value
 
 
+def system_account_sql(alias: str) -> str:
+    """True for system accounts (eas.app_user.is_system_account, migration 08).
+
+    Read through to_jsonb so the query also works before migration 08; the AI
+    account id from settings is always treated as a system account.
+    """
+    return (
+        f"(COALESCE((to_jsonb({alias})->>'is_system_account')::boolean, false)"
+        f" OR {alias}.id = %s::uuid)"
+    )
+
+
 def _validate_filter_query(kind, query):
     q = str(query.get("q", "")).strip()
     if len(q) > 100:
@@ -176,13 +182,31 @@ def _validate_filter_query(kind, query):
         kind != "memberships" or state not in {"ACTIVE", "REVOKED", "EXPIRED", "FUTURE"}
     ):
         raise CommandError("INVALID_FILTER", status=422)
-    return q, role, active, user_id, dept_id, state
+    include_system = query.get("include_system", "")
+    if include_system not in ("", "true", "false") or (
+        include_system and kind not in {"users", "memberships"}
+    ):
+        raise CommandError("INVALID_FILTER", status=422)
+    return q, role, active, user_id, dept_id, state, include_system == "true"
 
 
 def _list_filters(kind, query):
     """Parameterize values; only fields from a fixed allowlist reach SQL."""
-    q, role, active, user_id, department_id, state = _validate_filter_query(kind, query)
+    q, role, active, user_id, department_id, state, include_system = (
+        _validate_filter_query(kind, query)
+    )
     clauses, params = [], []
+    # System accounts (EAS AI) are hidden unless explicitly requested.
+    if kind == "users" and not include_system:
+        clauses.append("NOT " + system_account_sql("t"))
+        params.append(settings.EAS_AI_SYSTEM_USER_ID)
+    if kind == "memberships" and not include_system:
+        clauses.append(
+            "NOT EXISTS (SELECT 1 FROM eas.app_user su WHERE su.id = t.user_id AND "
+            + system_account_sql("su")
+            + ")"
+        )
+        params.append(settings.EAS_AI_SYSTEM_USER_ID)
     state_sql = {
         "REVOKED": "t.revoked_at IS NOT NULL",
         "ACTIVE": "t.revoked_at IS NULL AND t.valid_from<=statement_timestamp() AND (t.valid_to IS NULL OR t.valid_to>statement_timestamp())",
@@ -235,6 +259,10 @@ def list_records(actor, kind, query):
         raise CommandError("INVALID_PAGINATION", status=400) from None
     where, params = _list_filters(kind, query)
     fields = ",".join("t." + field for field in columns)
+    select_params = []
+    if kind == "users":
+        fields += "," + system_account_sql("t")
+        select_params.append(settings.EAS_AI_SYSTEM_USER_ID)
     order = {
         "users": "t.email,t.id",
         "departments": "t.code,t.id",
@@ -248,10 +276,18 @@ def list_records(actor, kind, query):
         c.execute(count_sql, params)  # NOSONAR python:S2077
         total = int(c.fetchone()[0])
         select_sql = f"SELECT {fields} FROM eas.{table} t{where} ORDER BY {order} LIMIT %s OFFSET %s"  # NOSONAR python:S2077
-        c.execute(select_sql, params + [limit, offset])  # NOSONAR python:S2077
+        c.execute(
+            select_sql, select_params + params + [limit, offset]
+        )  # NOSONAR python:S2077
         rows = c.fetchall()
     return {
-        "items": [serialize(columns, r) for r in rows],
+        "items": [
+            # The flag is display-only: the revision hash covers the real columns.
+            {**serialize(columns, r[:-1]), "is_system_account": bool(r[-1])}
+            if kind == "users"
+            else serialize(columns, r)
+            for r in rows
+        ],
         "total": total,
         "limit": limit,
         "offset": offset,
@@ -481,6 +517,17 @@ def check_cycle(c, table, parent_field, id, parent):
         raise CommandError("HIERARCHY_CYCLE", status=422)
 
 
+def _assert_not_system_account(c, user_id):
+    """System accounts (EAS AI) cannot be edited, disabled or re-permissioned."""
+    c.execute(
+        f"SELECT {system_account_sql('t')} FROM eas.app_user t WHERE t.id=%s",  # NOSONAR python:S2077
+        [settings.EAS_AI_SYSTEM_USER_ID, user_id],
+    )
+    row = c.fetchone()
+    if row and row[0] is True:
+        raise CommandError("SYSTEM_ACCOUNT_LOCKED", status=403)
+
+
 def mutate(actor, kind, record_id, body, method, key, correlation_id):
     table, columns = TABLES[kind]
     if (
@@ -514,6 +561,8 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 v["is_active"] = False
         else:
             v = validate(kind, body, old)
+        if kind in {"users", "memberships"}:
+            _assert_not_system_account(c, id if kind == "users" else v["user_id"])
         if kind == "users":
             if id == actor.id:
                 raise CommandError("SELF_ADMIN_CHANGE_FORBIDDEN", status=403)
@@ -611,7 +660,9 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
         else:
             upd_sql = f"UPDATE eas.{table} SET {','.join(f + '=%s' for f in fields)} WHERE id=%s"  # NOSONAR python:S2077
             c.execute(upd_sql, [v[f] for f in fields] + [id])  # NOSONAR python:S2077
-        if kind == "memberships":
+        # Roles are re-read from the database on every request, so grants and
+        # edits apply immediately; only a revocation ends existing sessions.
+        if kind == "memberships" and method == "DELETE":
             c.execute(
                 "UPDATE eas.app_user SET auth_version=auth_version+1 WHERE id=%s",
                 [v["user_id"]],

@@ -11,10 +11,15 @@ Fallback: nếu PaddleOCR chưa cài được thì trả về raw text từ Gemi
 
 import asyncio
 import base64
+import contextlib
 import io
 import ipaddress
+import os
 import re
 import socket
+import threading
+import time
+import unicodedata
 from urllib.parse import urlparse
 
 try:
@@ -52,74 +57,101 @@ class OCRUrlRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def fold_ocr_text(raw_text: str) -> str:
+    """Uppercase ASCII form of OCR text for robust matching.
+
+    PaddleOCR's Vietnamese model often drops or garbles diacritics
+    ("TỔNG CỘNG" -> "TÓNG CÖNG", "THƯƠNG" -> "THU'O'NG"), so field patterns
+    run on this folded text; accented and unaccented inputs fold the same.
+    """
+    text = unicodedata.normalize("NFD", raw_text or "")
+    text = text.replace("đ", "d").replace("Đ", "D")
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+    text = re.sub(r"(?<=[A-Za-z])'(?=[A-Za-z])", "", text)  # U'O'NG -> UONG
+    return text.upper()
+
+
+def _first_match(patterns, text):
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            return match
+    return None
+
+
 def parse_invoice_fields(raw_text: str) -> dict:
     """
     Trích xuất các trường phổ biến từ raw OCR text bằng regex + heuristics.
-    Hỗ trợ hóa đơn VAT, biên lai, phiếu chi tiêu tiếng Việt.
+    Hỗ trợ hóa đơn VAT, biên lai, phiếu chi tiêu tiếng Việt, kể cả khi OCR
+    làm mất dấu (so khớp trên bản ASCII đã chuẩn hóa).
     """
-    text = raw_text.upper()
+    text = (raw_text or "").upper()
+    folded = fold_ocr_text(raw_text)
     fields = {}
 
     # --- Số tiền ---
     # Ví dụ: "1.500.000 VND", "1,500,000đ", "150.000 vnđ"
-    amount_patterns = [
-        r"(\d{1,3}(?:[.,]\d{3})+)\s*(?:VN[DĐ]|Đ|VNĐ|\$|USD)",
-        r"TỔNG\s*(?:CỘNG|TIỀN)[^:]*:\s*([\d.,]+)",
-        r"THÀNH\s*TIỀN[^:]*:\s*([\d.,]+)",
-        r"AMOUNT[^:]*:\s*([\d.,]+)",
-    ]
-    for pattern in amount_patterns:
-        match = re.search(pattern, text)
-        if match:
-            raw_amount = match.group(1).replace(".", "").replace(",", "")
-            try:
-                fields["amount"] = int(raw_amount)
-                break
-            except ValueError:
-                continue
+    # Totals come first: a bare "<number> VND" is often a unit price.
+    number = r"(\d{1,3}(?:[.,]\d{3})+|\d+)"
+    match = _first_match(
+        [
+            # OCR may drop the vowel entirely: "TỔNG CỘNG" -> "TONG CNG".
+            rf"TONG\s*(?:C\w{{0,2}}NG|TIEN)[^\d\n]*{number}",
+            rf"THANH\s*TIEN[^\d\n]*{number}",
+            rf"AMOUNT[^\d\n]*{number}",
+            r"(\d{1,3}(?:[.,]\d{3})+)\s*(?:VND|D\b|\$|USD)",
+        ],
+        folded,
+    )
+    if match:
+        raw_amount = match.group(1).replace(".", "").replace(",", "")
+        if raw_amount.isdigit():
+            fields["amount"] = int(raw_amount)
 
     # --- Ngày ---
-    date_patterns = [
-        r"NGÀY\s+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
-        r"DATE[:\s]+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
-        r"(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
-    ]
-    for pattern in date_patterns:
-        match = re.search(pattern, text)
-        if match:
-            groups = match.groups()
-            if len(groups) == 3:
-                fields["invoice_date"] = (
-                    f"{groups[2]}-{groups[1].zfill(2)}-{groups[0].zfill(2)}"
-                )
-                break
+    match = _first_match(
+        [
+            r"NGAY\s+(\d{1,2})\s+THANG\s+(\d{1,2})\s+NAM\s+(\d{4})",
+            r"NGAY\s+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
+            r"DATE[:\s]+(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
+            r"(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})",
+        ],
+        folded,
+    )
+    if match:
+        day, month, year = match.groups()
+        fields["invoice_date"] = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
 
     # --- Số hóa đơn ---
-    invoice_no_patterns = [
-        r"SỐ\s*(?:HÓA ĐƠN|HD|INVOICE)[:\s]+([A-Z0-9\-/]+)",
-        r"INVOICE\s*NO[.:\s]+([A-Z0-9\-/]+)",
-        r"NO[.:\s]+([A-Z0-9\-/]{5,20})",
-    ]
-    for pattern in invoice_no_patterns:
-        match = re.search(pattern, text)
-        if match:
-            fields["invoice_number"] = match.group(1).strip()
-            break
+    match = _first_match(
+        [
+            r"SO\s*(?:HOA DON|HD|INVOICE)[:\s]+([A-Z0-9\-/]+)",
+            r"INVOICE\s*NO[.:\s]+([A-Z0-9\-/]+)",
+            r"NO[.:\s]+([A-Z0-9\-/]{5,20})",
+        ],
+        folded,
+    )
+    if match:
+        fields["invoice_number"] = match.group(1).strip()
 
     # --- Nhà cung cấp / Công ty ---
-    vendor_patterns = [
-        r"CÔNG TY\s+(?:TNHH|CỔ PHẦN|CP|TNHH MTV)?\s*([A-Z\s]{5,40})",
-        r"VENDOR[:\s]+([A-Z\s]{5,40})",
-        r"SELLER[:\s]+([A-Z\s]{5,40})",
-    ]
-    for pattern in vendor_patterns:
-        match = re.search(pattern, text)
-        if match:
-            fields["vendor_name"] = match.group(1).strip().title()
-            break
+    # Prefer the original text (keeps diacritics when OCR read them), then
+    # fall back to the folded text when OCR lost the accents.
+    vendor = _first_match(
+        [r"CÔNG TY\s+(?:(?:TNHH MTV|TNHH|CỔ PHẦN|CP)\s+)?([^\n]{3,80})"], text
+    ) or _first_match(
+        [
+            r"CONG TY\s+(?:(?:TNHH MTV|TNHH|CO PHAN|CP)\s+)?([^\n]{3,80})",
+            r"VENDOR[:\s]+([^\n]{3,80})",
+            r"SELLER[:\s]+([^\n]{3,80})",
+        ],
+        folded,
+    )
+    if vendor:
+        fields["vendor_name"] = vendor.group(1).strip().title()
 
     # --- MST (Mã số thuế) ---
-    mst_match = re.search(r"MST[:\s]+(\d{10,13})", text)
+    mst_match = re.search(r"MST[:\s]+(\d{10,13})", folded)
     if mst_match:
         fields["tax_code"] = mst_match.group(1)
 
@@ -134,16 +166,65 @@ def parse_invoice_fields(raw_text: str) -> dict:
 _ocr_engine = None
 
 
+_ocr_engine_lock = threading.Lock()
+
+
 def get_ocr_engine():
     """Lazy Singleton Cache cho PaddleOCR chống rò rỉ bộ nhớ."""
     global _ocr_engine
     if _ocr_engine is None:
-        from paddleocr import PaddleOCR
+        # The startup warm-up thread and the first request must not both
+        # build an engine (each load costs seconds and hundreds of MB).
+        with _ocr_engine_lock, _model_download_lock():
+            if _ocr_engine is None:
+                from paddleocr import PaddleOCR
 
-        _ocr_engine = PaddleOCR(
-            use_angle_cls=True, lang=settings.ocr_lang, use_gpu=settings.ocr_use_gpu
-        )
+                _ocr_engine = PaddleOCR(
+                    use_angle_cls=True,
+                    lang=settings.ocr_lang,
+                    use_gpu=settings.ocr_use_gpu,
+                )
     return _ocr_engine
+
+
+@contextlib.contextmanager
+def _model_download_lock():
+    """Serialise model download across uvicorn worker processes.
+
+    Each worker warms up at startup; without this two processes download and
+    extract the same model archive at once and one fails (FileNotFoundError).
+    """
+    try:
+        import fcntl
+    except ImportError:  # Windows dev run: single process, nothing to share
+        yield
+        return
+    lock_dir = os.path.join(os.path.expanduser("~"), ".paddleocr")
+    os.makedirs(lock_dir, exist_ok=True)
+    with open(os.path.join(lock_dir, ".init.lock"), "w") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def start_ocr_warmup() -> threading.Thread | None:
+    """Initialise the OCR engine in a background thread (non-blocking)."""
+    if not settings.ocr_warmup:
+        return None
+
+    def _warm():
+        started = time.perf_counter()
+        try:
+            get_ocr_engine()
+            logger.info(f"OCR engine warmed up in {time.perf_counter() - started:.1f}s")
+        except Exception as exc:  # noqa: BLE001 - OCR stays lazy; requests retry
+            logger.warning(f"OCR warm-up skipped: {type(exc).__name__}")
+
+    thread = threading.Thread(target=_warm, name="ocr-warmup", daemon=True)
+    thread.start()
+    return thread
 
 
 def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float]:

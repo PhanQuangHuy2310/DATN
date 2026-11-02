@@ -36,8 +36,8 @@ def verify_user_password(password: str, password_hash: str) -> bool:
         password_hash in SEED_PLACEHOLDER_HASHES
         or password_hash.startswith("!UNUSABLE_DEMO_")
     ):
-        # Seed accounts only, development only, and only with an explicitly
-        # configured password: no well-known default lives in source code.
+        # Seed accounts only, development only: seed placeholders only open
+        # when EAS_DEV_DEFAULT_PASSWORD is set locally (never committed).
         fallback_pwd = os.getenv("EAS_DEV_DEFAULT_PASSWORD", "")
         return bool(fallback_pwd) and hmac.compare_digest(password, fallback_pwd)
     return False

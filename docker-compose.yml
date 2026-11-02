@@ -108,6 +108,7 @@ services:
       # Kết nối nội bộ tới AI service (api_core/integrations/ai_service.py)
       EAS_AI_SERVICE_URL: ${EAS_AI_SERVICE_URL:-http://ai-service:8001}
       EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
+      EAS_WORKER_INTERNAL_SECRET: ${EAS_WORKER_INTERNAL_SECRET:-}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5}
     ports:
       - "127.0.0.1:8000:8000"
@@ -155,6 +156,9 @@ services:
       EAS_CLAMAV_HOST: clamav
       EAS_CLAMAV_PORT: "3310"
       LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
+      EAS_API_INTERNAL_URL: http://api:8000
+      EAS_WORKER_INTERNAL_SECRET: ${EAS_WORKER_INTERNAL_SECRET:-}
+      EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5.0}
       REDIS_URL: redis://redis:6379/0
     read_only: true
     tmpfs:
@@ -172,6 +176,10 @@ services:
 
   redis:
     image: redis:8.0.3-alpine
+    # Published on 6380 for processes running outside Docker (manage.py,
+    # run_worker_local.py) so it never collides with a host Redis on 6379.
+    ports:
+      - "127.0.0.1:${EAS_REDIS_HOST_PORT:-6380}:6379"
     command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
     read_only: true
     tmpfs:
@@ -233,11 +241,14 @@ services:
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
+      - EAS_API_INTERNAL_URL=http://api:8000
       - EAS_ENV=${EAS_ENV:-development}
       - OCR_USE_GPU=false
     volumes:
       - ./ai_service/models:/app/models        # Persist trained models
       - ./ai_service/training/data:/app/training/data
+      # PaddleOCR models: downloaded once, reused across restarts and rebuilds.
+      - ai_ocr_models:/home/aiuser/.paddleocr
       # Snapshot dữ liệu mock đã chuẩn hóa (scripts/mock_data_normalizer.js) — chỉ đọc
       - ./ai_service/data/mock:/app/data/mock:ro
     healthcheck:
@@ -251,4 +262,5 @@ services:
         condition: service_healthy
 
 volumes:
+  ai_ocr_models:
   clamav-db:

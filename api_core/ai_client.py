@@ -305,6 +305,24 @@ class AIServiceClient:
                 "evaluated_at": "",
             }
 
+    async def publish_policy_rules(
+        self, document: dict, correlation_id: str | None = None
+    ) -> dict:
+        """Gọi AI /policy/rules; ném RuntimeError nếu AI không nhận bộ luật."""
+        if httpx is None:
+            raise RuntimeError("AI_CLIENT_UNAVAILABLE")
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+                resp = await client.post(
+                    f"{self.base_url}/ai/policy/rules",
+                    json=document,
+                    headers=self._get_headers(correlation_id),
+                )
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as e:
+            raise RuntimeError("AI_POLICY_UNAVAILABLE") from e
+
     async def summarize_request(
         self,
         title: str,
@@ -511,6 +529,9 @@ class SyncAIServiceClient:
 
     def evaluate_auto_approve(self, **kwargs) -> dict:
         return self._run(self._async_client.evaluate_auto_approve(**kwargs))
+
+    def publish_policy_rules(self, **kwargs) -> dict:
+        return self._run(self._async_client.publish_policy_rules(**kwargs))
 
     def summarize_request(self, **kwargs) -> dict:
         return self._run(self._async_client.summarize_request(**kwargs))

@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     # --- OCR ---
     ocr_lang: str = "vi"
     ocr_use_gpu: bool = False
+    # Load the OCR models in the background at startup so the first user
+    # request does not pay the ~20 s model initialisation.
+    ocr_warmup: bool = True
+
+    # --- Policy rules source of truth (api_core, eas.ai_policy_version) ---
+    eas_api_internal_url: str = "http://api:8000"
 
     # --- Auto-Approve ---
     auto_approve_max_risk: int = 2

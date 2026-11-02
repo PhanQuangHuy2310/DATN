@@ -49,6 +49,23 @@ Hai cổng web được expose ở port 8080 và 8081. Compose khởi tạo Redi
 
 Installer baseline, kiểm tra chỉ đọc, seed/regression dành riêng cho development và hướng dẫn migration nằm trong [database/README.md](./database/README.md). Thay đổi production phải dùng migration tăng dần đã review; không chạy lại installer baseline trên database có dữ liệu.
 
+### Redis khi chạy ngoài Docker
+
+Redis của Docker Compose được publish ra máy tại `127.0.0.1:6380` (đổi bằng `EAS_REDIS_HOST_PORT`) để không đụng Redis khác đang chạy ở cổng 6379 trên máy — không cần gỡ Redis đó. Khi chạy `manage.py`/`run_worker_local.py` ngoài Docker, đặt trong `.env` một trong hai cách:
+
+- `REDIS_URL=redis://127.0.0.1:6380/0`, hoặc
+- `EAS_REDIS_PORT=6380` (tùy chọn `EAS_REDIS_HOST`, mặc định `127.0.0.1`).
+
+`REDIS_URL` luôn được ưu tiên; để trống tất cả thì môi trường development dùng cache trong bộ nhớ.
+
+### Mật khẩu tài khoản seed và admin
+
+Repo không chứa mật khẩu mặc định nào. Tài khoản seed (hash giữ chỗ) chỉ đăng nhập được khi bạn tự đặt trong `.env` local:
+
+- `EAS_DEV_DEFAULT_PASSWORD` — chỉ có hiệu lực ở `EAS_ENV=development`, cho phép đăng nhập tài khoản còn hash giữ chỗ. Để trống thì không ai đăng nhập được bằng hash giữ chỗ.
+- `EAS_SEED_PASSWORD` (≥15 ký tự) — dùng cho `python fix_seed_passwords_local.py`: thay hash giữ chỗ bằng hash Argon2 của mật khẩu này và **bắt buộc đổi mật khẩu ở lần đăng nhập đầu**.
+- Admin: dùng `python set_temporary_admin_password.py` (sinh mật khẩu tạm ngẫu nhiên, buộc đổi khi đăng nhập). Không ghi mật khẩu thật vào code, commit hay log.
+
 Migration đăng nhập email/reset và migration Gmail aliases [đã được áp dụng và xác minh](./database/EAS_Supabase_SQL/README_VI.md) trên Supabase DATN. 42 tài khoản thử nghiệm hiện dùng alias Gmail riêng, tất cả chuyển về cùng inbox; phiên cũ đã bị vô hiệu hóa. API và hai web portal đã được rebuild local bằng Docker Compose; API báo ready. Gmail đã chấp nhận email thử nghiệm SMTP. Hướng dẫn và giới hạn nằm trong [API Core](./api_core/README.md) và [database migrations](./database/README.md).
 
 ## Kiểm thử và mức sẵn sàng

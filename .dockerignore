@@ -13,3 +13,19 @@ database/EAS_Supabase_SQL/validation/node_modules
 **/node_modules
 **/dist
 changelogs
+
+# Root-context images (api, worker, web, web-admin) copy only api_core/,
+# manage.py, project_env.py, web_client/ and web_admin/. Everything below is
+# never copied, so keep it out of the build context (the AI venv and training
+# data alone are several GB). ai-service builds from ./ai_service with its own
+# ai_service/.dockerignore.
+ai_service/
+mobile_app/
+database/
+tests/
+scripts/
+plans/
+.idea/
+.vscode/
+.ruff_cache/
+**/*.log

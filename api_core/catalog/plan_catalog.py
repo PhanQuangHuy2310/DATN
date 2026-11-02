@@ -39,6 +39,50 @@ def enterprise_catalog():
     return data
 
 
+CATALOG_V2_GROUPS = (
+    "FINANCE",
+    "RESOURCE",
+    "FACILITY",
+    "WORK",
+    "HR",
+    "TIME",
+    "IT",
+    "LEGAL",
+    "SALES",
+    "ADMIN",
+)
+
+
+@lru_cache(maxsize=1)
+def catalog_v2():
+    """Approved 10-group catalogue (58 active types, 8 deprecated duplicates)."""
+    data = json.loads(
+        Path(__file__).with_name("catalog_v2.json").read_text(encoding="utf-8")
+    )
+    items = data.get("items", [])
+    active = [x for x in items if x.get("status") == "ACTIVE"]
+    if (
+        tuple(g["code"] for g in data.get("groups", [])) != CATALOG_V2_GROUPS
+        or len(active) != 58
+        or len({x["code"] for x in items}) != len(items)
+        or any(x["category"] not in CATALOG_V2_GROUPS for x in items)
+    ):
+        raise RuntimeError("Invalid 10-group request catalogue")
+    return data
+
+
+def catalog_v2_item(code):
+    return next((x for x in catalog_v2()["items"] if x["code"] == code), None)
+
+
+def catalog_v2_active():
+    return [x for x in catalog_v2()["items"] if x["status"] == "ACTIVE"]
+
+
+def category_label(code):
+    return next((g["label"] for g in catalog_v2()["groups"] if g["code"] == code), code)
+
+
 def enterprise_items():
     return enterprise_catalog()["items"]
 
@@ -57,7 +101,7 @@ def resolve_five_level_metadata(
     db_approval_level: int | None = None,
 ) -> tuple[int, int]:
     matrix = enterprise_catalog().get("type_level_matrix", {})
-    default_entry = matrix.get(code, {})
+    default_entry = catalog_v2_item(code) or matrix.get(code, {})
     risk_w = (
         int(db_risk_weight)
         if isinstance(db_risk_weight, int) and 1 <= db_risk_weight <= 5

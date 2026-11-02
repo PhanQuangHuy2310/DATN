@@ -1,0 +1,17 @@
+{
+ "invoice_vat.png": {
+  "amount": 1540000,
+  "invoice_date": "2026-03-15",
+  "vendor_name": "Thương Mại Đại Phát"
+ },
+ "receipt_service.png": {
+  "amount": 320000,
+  "invoice_date": "2026-11-02",
+  "vendor_name": "Dịch Vụ Âu Lạc"
+ },
+ "invoice_supplies.png": {
+  "amount": 850000,
+  "invoice_date": "2026-10-28",
+  "vendor_name": "Khánh Hưng"
+ }
+}

@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
-import { canNavigate } from "./rolePolicy.js";
+import { canNavigate, canUsePortal } from "./rolePolicy.js";
+import { PERMISSIONS_CHANGED, createRefresher } from "./sessionRefresh.js";
 import RoleTasks from "./components/RoleTasks.jsx";
-import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
 import {
   ActionForm,
@@ -12,26 +12,19 @@ import {
   ResourceState,
   useResource,
 } from "./components/ui.jsx";
-import RequestEditor from "./components/RequestEditor.jsx";
-import RequestDetail from "./components/RequestDetail.jsx";
-import IdentityAdmin from "./components/IdentityAdmin.jsx";
-import OrgChart from "./components/OrgChart.jsx";
-import ApiAdministration from "./components/ApiAdministration.jsx";
-import PlanCatalog from "./components/PlanCatalog.jsx";
-import WorkflowDiagrams from "./components/WorkflowDiagrams.jsx";
 import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
-import AiProcessGuide from "./components/AiProcessGuide.jsx";
 import ClientDashboard from "./components/ClientDashboard.jsx";
 import ClientRequests from "./components/ClientRequests.jsx";
-import ClientOrgChart from "./components/ClientOrgChart.jsx";
 import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
-import {
-  AdminEvents,
-  Notifications,
-  Operations,
-  Policy,
-  Profile,
-} from "./components/Admin.jsx";
+import { Notifications, Profile } from "./components/Admin.jsx";
+import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
+// Screens opened after the first page load are split into their own chunks.
+const RequestEditor = lazy(() => import("./components/RequestEditor.jsx"));
+const RequestDetail = lazy(() => import("./components/RequestDetail.jsx"));
+const WorkflowDiagrams = lazy(() => import("./components/WorkflowDiagrams.jsx"));
+const AiProcessGuide = lazy(() => import("./components/AiProcessGuide.jsx"));
+const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
+const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
@@ -318,6 +311,7 @@ const menu = [
   ["users", "Quản lý người dùng", "♙", "OPS_ADMIN"],
   ["permissions", "Vai trò & phân quyền", "▦", "OPS_ADMIN"],
   ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
+  ["ai-policy", "Bộ luật quy định AI", "✧", "POLICY_ADMIN"],
   ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
   ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
   ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
@@ -488,7 +482,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
       </section>
       <ResourceState resource={r}>
         {page === "ops" ? (
-          <Operations items={filtered} onRefresh={r.reload} />
+          <AdminScreen name="Operations" items={filtered} onRefresh={r.reload} />
         ) : (
           <section className="panel table-panel" id="request-results">
             <div className="table-wrap">
@@ -626,37 +620,45 @@ function renderWorkspaceContent({
     case "acceptance":
       return portal === "client" ? <ClientRequests key={page} initialStage={page === "mine" ? "mine" : page} initialQuery={searchText} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} /> : <RequestList key={page} page={page} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} />;
     case "audit":
-      return <AuditorWorkspace onOpen={(id) => setSelected(id)} />;
+      return <AdminScreen name="AuditorWorkspace" onOpen={(id) => setSelected(id)} />;
     case "identity":
     case "users":
-      return <IdentityAdmin key="users" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />;
+      return <AdminScreen name="IdentityAdmin" key="users" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />;
     case "permissions":
-      return <IdentityAdmin key="memberships" initialKind="memberships" onNavigateOrgChart={() => navigate("org-chart")} />;
+      return <AdminScreen name="IdentityAdmin" key="memberships" initialKind="memberships" onNavigateOrgChart={() => navigate("org-chart")} />;
     case "request-catalog":
-      return <IdentityAdmin key="request-types" initialKind="request-types" />;
+      return <AdminScreen name="IdentityAdmin" key="request-types" initialKind="request-types" />;
     case "org-chart":
-      return <OrgChart navigate={navigate} portal={portal} user={user} />;
+      return <AdminScreen name="OrgChart" navigate={navigate} portal={portal} user={user} />;
     case "api-admin":
-      return <ApiAdministration />;
+      return <AdminScreen name="ApiAdministration" />;
     case "plan-catalog":
-      return <PlanCatalog />;
+      return <AdminScreen name="PlanCatalog" />;
     case "ai-process":
       return <AiProcessGuide user={user} onOpen={setSelected} navigate={navigate} />;
     case "flow-diagrams":
       return <><div className="page-heading"><div><p className="eyebrow">EAS / QUY TRÌNH</p><h1>Sơ đồ luồng</h1><p className="muted">Tra cứu các sơ đồ xử lý và vòng đời yêu cầu.</p></div></div><WorkflowDiagrams /></>;
     case "policy":
       return (
-        <Policy
+        <AdminScreen
+          name="Policy"
           canManageAccess={user.roles.includes("OPS_ADMIN")}
           onManageAccess={() => navigate("identity")}
         />
       );
+    case "ai-policy":
+      return <AdminScreen name="AiPolicyAdmin" />;
     case "notifications":
       return <Notifications onOpen={setSelected} />;
     case "profile":
-      return <Profile user={user} />;
+      return (
+        <>
+          <Profile user={user} />
+          {user.roles.includes("APPROVER") && <DelegationSettings />}
+        </>
+      );
     case "events":
-      return <AdminEvents />;
+      return <AdminScreen name="AdminEvents" />;
     default:
       return (
         <RequestList
@@ -672,8 +674,7 @@ function renderWorkspaceContent({
   }
 }
 
-const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
-const ADMIN_PAGES = new Set(["flow-diagrams", "ai-process", "home", "policy", "plan-catalog", "request-catalog", "ops", "identity", "users", "permissions", "org-chart", "api-admin", "audit", "events", "notifications"]);
+const ADMIN_PAGES = new Set(["flow-diagrams", "ai-process", "home", "policy", "ai-policy", "plan-catalog", "request-catalog", "ops", "identity", "users", "permissions", "org-chart", "api-admin", "audit", "events", "notifications"]);
 const CLIENT_PAGES = new Set(["flow-diagrams", "ai-process", "home", "mine", "approval", "execution", "acceptance", "org-client", "notifications", "profile"]);
 
 function AdminOverview({ navigate, user }) {
@@ -836,7 +837,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
         <nav aria-label="Điều hướng chính">
           {(portal === "admin" ? [
             ["TỔNG QUAN & TỔ CHỨC", ["home", "org-chart", "flow-diagrams", "ai-process"]],
-            ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "plan-catalog", "request-catalog"]],
+            ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "ai-policy", "plan-catalog", "request-catalog"]],
             ["VẬN HÀNH & GIÁM SÁT", ["ops", "users", "permissions", "api-admin"]],
             ["KIỂM TOÁN & NHẬT KÝ", ["audit", "events"]],
             ["TÀI KHOẢN", ["notifications", "profile"]],
@@ -907,6 +908,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
           </div>
         </header>
         <main id="main" className="content" tabIndex={-1}>
+          <Suspense fallback={<p className="muted" role="status">Đang tải…</p>}>
           {portal === "admin" && page === "home" ? <AdminOverview navigate={navigate} user={user} /> : renderWorkspaceContent({
             editor,
             selected,
@@ -920,6 +922,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
             portal,
             searchText,
           })}
+          </Suspense>
         </main>
         <footer className="page-footer">
           EAS · {portal === "admin" ? "Trung tâm quản trị hệ thống" : "Hệ thống phê duyệt yêu cầu doanh nghiệp"}
@@ -943,7 +946,15 @@ function fetchInitialSession() {
   return _bootstrapSessionPromise;
 }
 
-export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unified") }) {
+export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unified"), adminScreens = {} }) {
+  return (
+    <AdminScreensContext.Provider value={adminScreens}>
+      <PortalApp portal={portal} />
+    </AdminScreensContext.Provider>
+  );
+}
+
+function PortalApp({ portal }) {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
   async function load(loginUser) {
@@ -960,6 +971,27 @@ export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unif
       else setError(errorText(e));
     }
   }
+  const signedIn = Boolean(user && !user.must_change_password);
+  useEffect(() => {
+    if (!signedIn) return undefined;
+    const refresher = createRefresher(() => {
+      api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } })
+        .then((r) => r?.user && setUser(r.user))
+        .catch((e) => {
+          if (e.status === 401) setUser(null);
+        });
+    });
+    const onVisible = () => document.visibilityState === "visible" && refresher.trigger();
+    window.addEventListener("focus", refresher.trigger);
+    window.addEventListener(PERMISSIONS_CHANGED, refresher.trigger);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      refresher.dispose();
+      window.removeEventListener("focus", refresher.trigger);
+      window.removeEventListener(PERMISSIONS_CHANGED, refresher.trigger);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [signedIn]);
   useEffect(() => {
     let active = true;
     fetchInitialSession()
@@ -1020,10 +1052,10 @@ export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unif
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );
-  if (user && portal === "admin" && !user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
+  if (user && portal === "admin" && !canUsePortal(user.roles, "admin")) {
     return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
-  if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
+  if (user && portal === "client" && !canUsePortal(user.roles, "client")) {
     return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
   return user ? (

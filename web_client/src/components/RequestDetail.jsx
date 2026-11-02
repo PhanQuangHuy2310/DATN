@@ -52,6 +52,23 @@ function Audit({ id }) {
     </ResourceState>
   );
 }
+function AssignDownSelect({ requestId }) {
+  const resource = useResource(`/api/v1/requests/${requestId}/assignable-executors`);
+  const items = resource.data?.items || [];
+  if (!items.length) return null;
+  return (
+    <label>
+      Giao việc cho cấp dưới (tùy chọn)
+      <select name="executor_id" defaultValue="">
+        <option value="">Người thực hiện theo cấu hình</option>
+        {items.map((item) => (
+          <option key={item.id} value={item.id}>{item.display_name}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export default function RequestDetail({ id, user, onBack, onEdit, onChanged, initialTab = "info" }) {
   const resource = useResource(`/api/v1/requests/${id}`),
     [tab, setTab] = useState(initialTab),
@@ -69,6 +86,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
     reject: ["Từ chối yêu cầu", "approval-decisions", "REJECT"],
     info: ["Yêu cầu bổ sung", "approval-decisions", "NEEDS_INFO"],
     cancel: ["Hủy yêu cầu", "cancel"],
+    revokeAi: ["Thu hồi duyệt tự động của AI", "ai-approval/revoke"],
     claim: ["Nhận công việc", "execution/start"],
     accept: ["Chấp nhận nghiệm thu", "acceptance-decisions", "ACCEPT"],
     rework: ["Yêu cầu làm lại", "acceptance-decisions", "REWORK"],
@@ -264,6 +282,15 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                       Hủy yêu cầu
                     </button>
                   )}
+                  {p.revokeAi && (
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => setAction("revokeAi")}
+                    >
+                      Thu hồi duyệt tự động của AI
+                    </button>
+                  )}
                   {!Object.values(p).some(Boolean) && (
                     <p className="muted">
                       Hồ sơ ở chế độ xem theo quyền và trạng thái hiện tại.
@@ -299,7 +326,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
               >
                 <ActionForm
                   onSubmit={action === "execution" ? execute : decide}
-                  danger={["cancel", "reject", "rework"].includes(action)}
+                  danger={["cancel", "reject", "rework", "revokeAi"].includes(action)}
                 >
                   <p>
                     {r.code} · {r.payload?.title}
@@ -336,7 +363,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                         kiểm tra, chờ rồi nộp lại.
                       </p>
                     </>
-                  ) : ["reject", "info", "cancel", "rework", "issue"].includes(
+                  ) : ["reject", "info", "cancel", "rework", "issue", "revokeAi"].includes(
                       action,
                     ) ? (
                     <>
@@ -350,7 +377,10 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                       )}
                     </>
                   ) : (
-                    <p>Xác nhận thực hiện thao tác trên hồ sơ này?</p>
+                    <>
+                      <p>Xác nhận thực hiện thao tác trên hồ sơ này?</p>
+                      {action === "approve" && <AssignDownSelect requestId={id} />}
+                    </>
                   )}
                 </ActionForm>
               </Modal>
