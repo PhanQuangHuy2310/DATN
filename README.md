@@ -54,8 +54,9 @@ Migration đăng nhập email/reset và migration Gmail aliases [đã được �
 ## Kiểm thử và mức sẵn sàng
 
 - API: từ thư mục gốc chạy `.\.venv\Scripts\python.exe manage.py test`.
-- Web nhân viên: trong `web_client`, chạy `npm run lint`, `npm test`, `npm run build`.
+- Web nhân viên: trong `web_client`, chạy `npm run lint`, `npm test`, `npm run build`; kiểm thử trình duyệt hai cổng: `npm run test:portal`.
 - Web quản trị: trong `web_admin`, chạy `npm run build`.
+- Bộ kiểm thử gốc: `.\.venv\Scripts\python.exe tests\run_tests.py`; lint theo CI: `ruff check api_core manage.py test_logger.py scripts tests` và `ruff format --check api_core manage.py test_logger.py scripts`.
 - SQL validation: làm theo [hướng dẫn gói EAS Supabase SQL](./database/EAS_Supabase_SQL/README_VI.md).
 
 Test local pass không đồng nghĩa hệ thống đã sẵn sàng production. Migration Supabase, SMTP, E2E staging, load, backup/restore và kiểm tra triển khai cần được xác minh riêng.
@@ -73,6 +74,93 @@ Giữ hướng dẫn chi tiết cạnh các phân hệ phức tạp:
 - Trong **chi tiết hồ sơ**, tab **Sơ đồ luồng** nằm cạnh **Tiến trình**, tự chọn vòng đời A/B/C từ `request.workflow.lifecycle` trả về bởi Django. Nếu hồ sơ chưa có workflow, fallback theo đúng 18 mã trong `api_core/catalog/plan_types.json`; không phỏng đoán vòng đời nếu thiếu thông tin. Thư viện chung vẫn hiển thị.
 - Tệp ảnh được tối ưu tại `web_client/public/flow-diagrams/`. `web_admin/vite.config.js` dùng `web_client/public` làm nguồn public chung để hai app dùng một bộ ảnh. Mọi sơ đồ chỉ là **hình minh họa tổng quan**, không thay thế chính sách đã công bố hoặc trạng thái xử lý hiện thời từ Supabase.
 - Kiểm tra sau khi giải nén: `cd web_client && npm ci && npm run build && npm test`, sau đó `cd ..\web_admin && npm ci && npm run build`; mở một hồ sơ, chuyển sang **Sơ đồ luồng**, thử phóng to và tải ảnh.
+
+## 02/11/2026 — Hệ thống thiết kế thống nhất cho hai cổng web
+
+**Hệ thống thiết kế**
+
+- `web_client/src/design-system.css` được nạp **sau cùng** ở cả hai cổng: biến màu (xanh navy chủ đạo; xanh lá/cam/đỏ/xám theo ngữ nghĩa), khoảng cách bội số 8px, bo góc 8–12px, chuyển động 150–250ms, hỗ trợ `prefers-reduced-motion`, viền focus rõ ràng. Các file CSS cũ vẫn giữ để không vỡ trang chưa chuyển hết; quy tắc mới ghi đè có chủ đích.
+- Thành phần dùng chung trong `components/design.jsx`: `PageHeader`, `PageTabs`, `StatCard`, `StatusBadge`, `EmptyState`, `Skeleton`, `ConfirmDialog`, `WorkflowTimeline`, `SearchInput`. `ClientPageHeader`/`ClientStatCard` cũ trỏ về cùng thành phần. Trạng thái tải dùng skeleton thay vì vòng xoay.
+- Khung ứng dụng: header dính (breadcrumb, tìm kiếm hồ sơ theo **mã hoặc tiêu đề** trong đúng phạm vi quyền, chuông thông báo có số chưa đọc và danh sách 6 thông báo mới — bấm để mở hồ sơ và đánh dấu đã đọc), sidebar theo nhóm có thể thu gọn nhóm và thu gọn cả thanh (ghi nhớ trên trình duyệt), ngăn kéo trên di động có nút đóng và phím Esc. Trang quản trị (người dùng, tổ chức, vận hành…) được tách gói tải riêng, nhân viên không phải tải.
+
+**Điều hướng**
+
+| Cổng nhân viên | Cổng quản trị |
+|---|---|
+| Không gian cá nhân: Tổng quan, Yêu cầu của tôi | Tổng quan: Tổng quan hệ thống, Theo dõi vận hành |
+| Công việc được giao: Chờ phê duyệt, Công việc thực hiện, Chờ nghiệm thu | Người dùng & tổ chức: Quản lý người dùng, Phòng ban, Ma trận phân quyền, Sơ đồ tổ chức |
+| Quản lý phòng ban (APPROVER/AUDITOR): Tổng quan phòng ban, Nhân viên phòng ban | Cấu hình nghiệp vụ: Danh mục yêu cầu, Quy chế & quy trình (phiên bản quy chế, 18 mẫu, sơ đồ luồng), SLA & thông báo |
+| Tổ chức & công cụ: Sơ đồ tổ chức, Sơ đồ luồng, Quy trình AI | Giám sát & kiểm toán: Quy trình AI, Nhật ký kiểm toán (hồ sơ + quản trị), Báo cáo phòng ban |
+| Tài khoản: Tài khoản cá nhân | Hệ thống: Cấu hình hệ thống (bảo trì, API & tích hợp) |
+
+Cổng quản trị không có chức năng tạo yêu cầu. Theo UC05, quản trị vận hành chỉ xem **thông tin điều phối**: tìm kiếm và thông báo dẫn tới bảng vận hành; chỉ kiểm toán viên mở được chi tiết hồ sơ.
+
+**Màn hình**
+
+- **Chi tiết hồ sơ:** khối tình trạng (giai đoạn, người đang xử lý, bước kế tiếp, hạn/quá hạn, lý do quyết định) và các tab Thông tin · Tiến trình xử lý (dòng thời gian) · Người phê duyệt · Tệp đính kèm · Đánh giá AI · Lịch sử hoạt động · Sơ đồ luồng. Nhật ký hoạt động hiển thị bằng tiếng Việt, không còn bảng kỹ thuật (hash, mã định danh).
+- **Tạo yêu cầu:** hộp xác nhận trước khi gửi phê duyệt; dữ liệu đã nhập được giữ nguyên nếu hủy hoặc lỗi.
+- **Tổng quan hệ thống:** lọc theo thời gian, phòng ban, loại yêu cầu, trạng thái; KPI (tổng, chờ duyệt, đang thực hiện, hoàn thành, từ chối/hủy, quá hạn, người dùng hoạt động); so sánh phòng ban; tình trạng API, cơ sở dữ liệu, bộ nhớ đệm, dịch vụ AI và hàng đợi thông báo.
+- **Theo dõi vận hành:** bảng Hồ sơ | Người tạo | Người đang xử lý | Phòng ban | Giai đoạn | Hạn | Quá hạn | Trạng thái | Thao tác; dòng quá hạn được tô viền đỏ. Điều chuyển chọn người nhận từ danh sách tài khoản đang hoạt động có đúng vai trò — không còn ô nhập mã định danh.
+- **SLA & thông báo:** số bước đang tính hạn/quá hạn, nhắc hạn 24 giờ, trạng thái hàng đợi; danh sách thông báo gửi lỗi kèm nút gửi lại (bắt buộc lý do).
+- Thông báo kết quả (toast) nêu rõ thao tác: điều chuyển, gửi lại, gửi yêu cầu, lưu nháp, bảo trì…
+
+**API bổ sung (chỉ đọc)**
+
+- `GET /api/v1/admin/overview`: thêm bộ lọc `department_id`, `type_code`, `status`; thêm `by_department`, `users` (đang hoạt động/tổng). Một truy vấn nhóm duy nhất.
+- `GET /api/v1/admin/diagnostics` (OPS_ADMIN GLOBAL): số sự kiện outbox theo trạng thái, độ trễ hàng đợi, 20 sự kiện gửi lỗi, số bước SLA mở/quá hạn, nhắc hạn 24 giờ, kiểm tra dịch vụ AI (tối đa 3 giây). `worker.backlog_ok` chỉ cho biết **không có tồn đọng quá 5 phút**, không khẳng định worker đang chạy.
+- `GET /api/v1/requests` và `GET /api/v1/ops/requests`: `q` tìm cả tiêu đề; danh sách vận hành trả thêm `requester_name`, `department_name`.
+
+**Kiểm tra**
+
+- `npm run lint`, `npm test` (51 bài), `npm run build` ở `web_client`; `npm run build` ở `web_admin`; `manage.py test` (284 bài, 5 bỏ qua); `tests/run_tests.py`; ruff và secret gate đều đạt.
+- Kiểm thử trình duyệt mới, API giả lập, chạy cả hai cổng: `cd web_client && npm run test:portal` (đặt `EAS_CHROMIUM_PATH` tới Chrome/Edge nếu chưa cài trình duyệt của Playwright). 15/15 đạt trên Chrome: không tràn ngang và header không che tiêu đề ở 1440/1024/768/375px; điều hướng theo cổng; tìm kiếm; chuông thông báo; đủ 7 tab chi tiết; từ chối bắt buộc lý do; điều chuyển gửi đúng bước và phiên bản; không có lỗi trợ năng mức *critical* (axe). Đặt `EAS_SHOTS=1` để lưu ảnh chụp.
+- `npm run test:ui` (`e2e/ui.spec.js`) là bộ kiểm thử cũ viết cho giao diện trước các đợt thiết kế lại (ví dụ chờ tiêu đề "Tổng quan xử lý yêu cầu" không còn tồn tại từ trước phiên này) và đang thất bại 17/18; bộ `test:portal` thay thế cho giao diện hiện tại.
+- Chưa kiểm chứng trên dữ liệu thật qua trình duyệt (cần mật khẩu tài khoản thử nghiệm), chưa kiểm thử Safari/Firefox và thiết bị di động thật.
+
+## 02/11/2026 — Rà soát toàn hệ thống: tiến trình hồ sơ, AI lưu vết, báo cáo phòng ban
+
+**Lỗi gốc đã sửa**
+
+- **Cổng nhân viên chạy sai chế độ:** `web_client/src/main.jsx` không truyền `portal`, nên ứng dụng rơi về chế độ "unified" — bảng tổng quan cá nhân, Kanban "Yêu cầu của tôi", tìm nhanh và chặn tài khoản quản trị không hoạt động. Nay cố định `portal="client"`.
+- **Tài khoản quản trị chỉ dùng cho hệ thống (theo quyết định nghiệp vụ):** API vẫn từ chối tài khoản OPS_ADMIN/POLICY_ADMIN/AUDITOR ở endpoint nghiệp vụ. Bổ sung phía định tuyến: khi gửi yêu cầu, chuyển bước, nghiệm thu hoặc điều phối lại, hệ thống **không giao việc cho tài khoản quản trị** (trả `ROUTE_ACTOR_INACTIVE` / `ASSIGNEE_INVALID`) thay vì tạo bước mà không ai xử lý được.
+- **Mật khẩu mặc định ẩn:** `verify_user_password` từng chấp nhận `Admin@123456` cho tài khoản seed/`!UNUSABLE_DEMO_` khi `EAS_ENV=development`, trái với [README SQL](./database/EAS_Supabase_SQL/README_VI.md) ("không có mật khẩu mặc định"). Đã bỏ; xóa `fix_seed_passwords_local.py` (ghi hash mật khẩu công khai vào mọi tài khoản placeholder). Khôi phục mật khẩu dùng `recover_admin_password_interactive.py` hoặc lệnh `account_reset`. Không script khởi động nào ghi mật khẩu.
+- **Kết nối Supabase:** mặc định `EAS_DB_CONN_MAX_AGE` trong code là `0` (mâu thuẫn chú thích "60"), khiến mỗi request mở kết nối TLS mới (~2,3 giây đo từ máy dev). Nay mặc định 60 giây, giữ `CONN_HEALTH_CHECKS`.
+- **Dữ liệu giả trên trang quản trị:** bỏ số cứng 42 tài khoản / 8 phòng ban / "ISO 27001" / "2.0 LTS"; dùng `GET /api/v1/admin/overview` thật. Endpoint `/api/v1/meta/org-chart` (trước đây 404) đã có.
+- **AI không trung thực khi dự phòng:** bộ phân loại trả độ tin cậy cố định 0,75 khi dùng quy tắc từ khóa; nay trả `method="keyword_heuristic"`, `fallback_used=true`, độ tin cậy 0. Lỗi `SyncAIServiceClient._run` gọi lại coroutine đã dùng cũng được sửa.
+- Vite không còn proxy thẳng `/ai` tới dịch vụ AI nội bộ; test cấu hình production không còn phụ thuộc `.env` của máy dev (`EAS_DISABLE_DOTENV=true`).
+
+**API mới (chỉ đọc, trừ đánh giá AI)**
+
+| Endpoint | Mục đích | Phạm vi |
+|---|---|---|
+| `GET /api/v1/requests/{id}` → `request.progress` | Giai đoạn, người đang xử lý + vai trò, bước kế tiếp, hạn và thời gian còn lại, mọi quyết định kèm lý do | Như chi tiết hồ sơ |
+| `GET /api/v1/requests` | Thêm `current_assignee_name`, `due_at`, `overdue`, `requester_name`, lọc `requester_id` | Như danh sách |
+| `POST /api/v1/requests/route-preview` | Xem trước người duyệt/thực hiện/nghiệm thu bằng đúng bộ định tuyến khi gửi; không ghi dữ liệu | REQUESTER |
+| `GET /api/v1/reports/requests` | Thêm `avg_completion_hours`, `avg_approval_hours` (tính từ lần gửi đầu) | Như cũ |
+| `GET /api/v1/reports/team` | Phòng ban → nhân viên: tổng, chờ duyệt, đang làm, quá hạn, hoàn thành, thời gian TB | APPROVER/AUDITOR; chỉ hồ sơ người dùng tham gia hoặc thuộc phạm vi AUDITOR, không gồm hồ sơ của chính họ |
+| `GET /api/v1/meta/org-chart` | Phòng ban + quan hệ `manager_id` | Toàn tổ chức cho OPS_ADMIN/AUDITOR GLOBAL; người khác: phòng mình + chuỗi quản lý |
+| `GET/POST /api/v1/requests/{id}/ai-assessments` | Chạy và xem lịch sử đánh giá AI theo hồ sơ (kiểm tra dữ liệu thiếu, phân loại, rủi ro, tuyến duyệt, khuyến nghị) | Đọc: người xem được hồ sơ; chạy: vai trò nghiệp vụ |
+
+Đánh giá AI được ghi vào chuỗi `audit_event` (hành động `AI_ASSESSMENT_RECORDED`) — **không cần migration**. Mỗi bước ghi rõ `DONE / FALLBACK / NOT_APPLICABLE`; khuyến nghị duyệt là quy tắc nghiệp vụ (`method="rule_based"`), chỉ mang tính tham khảo, người có thẩm quyền vẫn quyết định. OCR được ghi "chưa chạy" khi có tệp vì luồng này chưa gửi tệp tới OCR. Nếu cả phân loại và rủi ro đều dự phòng, hệ thống không gọi thêm bước khuyến nghị để không vượt timeout 30 giây của gunicorn.
+
+**Giao diện**
+
+- Chi tiết hồ sơ: khối tình trạng (giai đoạn, người đang xử lý, bước kế tiếp, hạn/quá hạn, lý do từ chối/bổ sung) và bảng "Đánh giá AI" có lịch sử.
+- Tạo yêu cầu: "Tuyến xử lý dự kiến" trước khi gửi; cảnh báo nếu tuyến có người chưa đủ quyền. Gửi yêu cầu dùng một idempotency key cho mỗi phiên bản nháp; nếu hết thời gian chờ, client đọc lại trạng thái thật trước khi báo lỗi.
+- Mới: **Bảng điều khiển phòng ban** (Tổ chức → Phòng ban → Nhân viên → Hồ sơ); **Sơ đồ tổ chức** dạng cây có tìm kiếm, lọc phòng ban, mở/thu gọn. Auditor xem báo cáo phòng ban trong cổng quản trị.
+- "Yêu cầu của tôi": thẻ/bảng hiển thị người đang xử lý và hạn; phân trang 5/20/50. Tổng quan cá nhân hiển thị thời gian hoàn thành/phê duyệt trung bình thật.
+
+**Việc cần quản trị/DBA xử lý (không tự sửa dữ liệu)**
+
+1. Slot `DIRECTOR` đang gán cho tài khoản có AUDITOR, và một số người duyệt (ví dụ `tuan.pham`, có OPS_ADMIN) đang giữ bước ACTIVE. Theo quy tắc "quản trị chỉ dùng cho hệ thống", các yêu cầu có bước DIRECTOR sẽ bị từ chối khi gửi cho đến khi cấu hình `actor_bindings` trỏ tới người duyệt không có vai trò quản trị, hoặc tách vai trò quản trị sang tài khoản riêng. Các bước đang treo cần OPS điều phối lại sang người duyệt hợp lệ.
+2. Ba hồ sơ `PENDING_APPROVAL` không có bước ACTIVE (REQ-2026-0002, -0009, -0026; dữ liệu seed). Kiểm tra chỉ đọc:
+   `SELECT r.code FROM eas.request r WHERE r.status='PENDING_APPROVAL' AND NOT EXISTS (SELECT 1 FROM eas.approval_step s JOIN eas.workflow_instance w ON w.id=s.instance_id WHERE s.request_id=r.id AND s.state='ACTIVE' AND w.revision_id=r.current_revision_id);`
+
+**Kết quả kiểm tra (02/11/2026, máy dev Windows)**
+
+- `manage.py test`: 279 bài đạt (5 bỏ qua); `tests/run_tests.py`: 98 đạt; `web_client` `npm test`: 44 đạt; `npm run lint` sạch; build `web_client`/`web_admin` thành công; ruff, secret gate, env/docs gate đạt.
+- Truy vấn mới chạy thử trên Supabase DATN trong phiên `READ ONLY` qua toàn bộ stack Django (không ghi dữ liệu, không đăng nhập bằng mật khẩu). Độ trễ đo từ máy dev (RTT tới pooler ~390 ms/lượt): danh sách p50 0,76 s / p95 1,6 s; chi tiết p50 0,99 s / p95 1,6 s; sơ đồ tổ chức ~0,37 s; báo cáo ~0,45 s. Số liệu bị chi phối bởi khoảng cách mạng; **chưa đo tải trên hạ tầng triển khai cùng vùng**, nên chưa khẳng định đạt mục tiêu p95.
+- Chưa chạy: E2E ghi dữ liệu (gửi/duyệt/từ chối/nghiệm thu) trên Supabase, worker trên DB dùng chung, AI service thật, Playwright và kiểm thử tải. `npm audit` còn 7 cảnh báo mức moderate trong công cụ ESLint (dev).
 
 ## 01/11/2026 — Bố trí lại không gian làm việc và giám sát vận hành
 

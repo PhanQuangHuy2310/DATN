@@ -16,10 +16,8 @@ export default defineConfig({
         target: "http://127.0.0.1:8000",
         changeOrigin: false,
       },
-      "/ai": {
-        target: "http://127.0.0.1:8001",
-        changeOrigin: false,
-      },
+      // The AI service is internal-only (X-Internal-Secret); browsers reach AI
+      // features through Django at /api/v1/ai/* and /api/v1/requests/*/ai-assessments.
     },
   },
 });

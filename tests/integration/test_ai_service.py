@@ -335,6 +335,28 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
 class TestAIServiceClientFallback(unittest.TestCase):
     """Kiểm tra khả năng chịu lỗi (fault-tolerance) của ai_client."""
 
+    def setUp(self):
+        # Simulate an unreachable AI service deterministically: the result must
+        # not depend on whether a local AI process happens to be running, and
+        # Windows connect-refused retries must not slow the suite down.
+        from unittest.mock import patch
+
+        import httpx
+
+        class _Unreachable:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                raise httpx.ConnectError("AI service unreachable (simulated)")
+
+            async def __aexit__(self, *_):
+                return False
+
+        patcher = patch("httpx.AsyncClient", _Unreachable)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     @staticmethod
     def _get_client():
         try:

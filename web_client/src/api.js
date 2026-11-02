@@ -25,8 +25,18 @@ function cookie(name) {
 
 function mutationMessage(path) {
   if (path.includes("/auth/login")) return "Đăng nhập thành công";
-  if (path.includes("/auth/logout")) return "Đã đăng xuất an toàn";
   if (path.includes("/attachments")) return "Tài liệu đã được cập nhật";
+  if (path.includes("/reassign")) return "Đã điều chuyển người xử lý";
+  if (path.includes("/replay")) return "Đã đưa thông báo vào hàng gửi lại";
+  if (path.includes("/maintenance/start")) return "Đã bật chế độ bảo trì";
+  if (path.includes("/maintenance/complete")) return "Đã kết thúc bảo trì";
+  if (path.includes("/cancel")) return "Đã hủy yêu cầu";
+  if (path.includes("requests/submit") || /requests\/[^/]+\/submit$/.test(path)) return "Đã gửi yêu cầu phê duyệt";
+  if (path.includes("/request-drafts")) return "Đã lưu bản nháp";
+  if (path.includes("/issues")) return "Đã ghi nhận vướng mắc";
+  if (path.includes("/config-releases")) return "Đã lưu cấu hình quy trình";
+  if (path.includes("/admin/")) return "Đã lưu thay đổi quản trị";
+  if (path.includes("/auth/logout")) return "Đã đăng xuất an toàn";
   if (path.includes("/approval")) return "Đã ghi nhận quyết định phê duyệt";
   if (path.includes("/acceptance")) return "Đã ghi nhận kết quả nghiệm thu";
   if (path.includes("/execution")) return "Đã cập nhật công việc";
@@ -35,7 +45,10 @@ function mutationMessage(path) {
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function api(path, options = {}) {
+/** `silent`: a read-only POST (preview) or a call whose caller refreshes its own
+ * view; skip the generic toast and global cache invalidation.
+ * `timeoutMs`: override the default wait for long server-side work. */
+export async function api(path, { silent = false, timeoutMs, ...options } = {}) {
   const method = (options.method || "GET").toUpperCase();
   const isRead = method === "GET" || method === "HEAD";
   const headers = new Headers(options.headers || {});
@@ -49,7 +62,7 @@ export async function api(path, options = {}) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const controller = new AbortController();
     // Writes may still be committing to Supabase: wait longer and never retry them.
-    const timeout = setTimeout(() => controller.abort(), isRead ? 15000 : 30000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs || (isRead ? 15000 : 30000));
     const onAbort = () => controller.abort();
     options.signal?.addEventListener("abort", onAbort, { once: true });
     if (options.signal?.aborted) controller.abort();
@@ -76,9 +89,9 @@ export async function api(path, options = {}) {
         error.status = response.status;
         throw error;
       }
-      if (!isRead && method !== "OPTIONS") {
-        if (!path.includes("/ai/")) notify(mutationMessage(path));
-        if (!path.includes("/ai/")) invalidateResources();
+      if (!isRead && method !== "OPTIONS" && !silent && !path.includes("/ai/")) {
+        notify(mutationMessage(path));
+        invalidateResources();
       }
       return body;
     } catch (error) {
@@ -87,7 +100,7 @@ export async function api(path, options = {}) {
         await pause(300 * (2 ** attempt));
         continue;
       }
-      if (!isRead) notify(error.name === "AbortError" ? "Yêu cầu quá thời gian phản hồi. Kiểm tra trạng thái trước khi thử lại." : "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại.", "error");
+      if (!isRead && !silent) notify(error.name === "AbortError" ? "Yêu cầu quá thời gian phản hồi. Kiểm tra trạng thái trước khi thử lại." : "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại.", "error");
       if (!isRead && error.name === "AbortError") {
         // The server may have committed despite a client timeout. Do not retry.
         throw new Error("REQUEST_TIMEOUT_UNKNOWN");

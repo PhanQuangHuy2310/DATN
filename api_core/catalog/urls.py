@@ -1,5 +1,7 @@
 from django.urls import path
 
+from api_core.workflow.views import org_chart_view
+
 from .views import (
     colleague_choices,
     plan_request_type_blueprints,
@@ -11,5 +13,6 @@ urlpatterns = [
     path("request-types", request_types, name="request-types"),
     path("request-type-forms", request_type_forms, name="request-type-forms"),
     path("colleagues", colleague_choices, name="colleagues"),
+    path("org-chart", org_chart_view, name="org-chart"),
     path("plan-request-types", plan_request_type_blueprints, name="plan-request-types"),
 ]

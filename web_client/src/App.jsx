@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
@@ -14,10 +14,6 @@ import {
 } from "./components/ui.jsx";
 import RequestEditor from "./components/RequestEditor.jsx";
 import RequestDetail from "./components/RequestDetail.jsx";
-import IdentityAdmin from "./components/IdentityAdmin.jsx";
-import OrgChart from "./components/OrgChart.jsx";
-import ApiAdministration from "./components/ApiAdministration.jsx";
-import PlanCatalog from "./components/PlanCatalog.jsx";
 import WorkflowDiagrams from "./components/WorkflowDiagrams.jsx";
 import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
 import AiProcessGuide from "./components/AiProcessGuide.jsx";
@@ -25,6 +21,21 @@ import ClientDashboard from "./components/ClientDashboard.jsx";
 import ClientRequests from "./components/ClientRequests.jsx";
 import ClientOrgChart from "./components/ClientOrgChart.jsx";
 import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
+import TeamDashboard from "./components/TeamDashboard.jsx";
+// Administration screens are code-split: employees never download them.
+const adminPage = (name) => lazy(() => import("./components/AdminPages.jsx").then((m) => ({ default: m[name] })));
+const AdminDashboard = adminPage("AdminDashboard");
+const AuditLogPage = adminPage("AuditLogPage");
+const OperationsPage = adminPage("OperationsPage");
+const PolicyWorkspace = adminPage("PolicyWorkspace");
+const SlaNotificationsPage = adminPage("SlaNotificationsPage");
+const SystemConfigPage = adminPage("SystemConfigPage");
+const IdentityAdmin = lazy(() => import("./components/IdentityAdmin.jsx"));
+const OrgChart = lazy(() => import("./components/OrgChart.jsx"));
+const ApiAdministration = lazy(() => import("./components/ApiAdministration.jsx"));
+const PlanCatalog = lazy(() => import("./components/PlanCatalog.jsx"));
+import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
+import { PageHeader } from "./components/design.jsx";
 import {
   AdminEvents,
   Notifications,
@@ -307,28 +318,51 @@ function Login({ onLogin, portal = "client" }) {
 
 const menu = [
   ["home", "Tổng quan", "◫"],
-  ["mine", "Yêu cầu của tôi", "▤", "REQUESTER"],
-  ["approval", "Chờ tôi phê duyệt", "✓", "APPROVER"],
-  ["execution", "Công việc thực hiện", "▣", "EXECUTOR"],
-  ["acceptance", "Chờ nghiệm thu", "◇", "ACCEPTOR"],
-
-  ["flow-diagrams", "Sơ đồ luồng", "◇"],
+  ["mine", "Yêu cầu của tôi", "▤"],
+  ["approval", "Chờ phê duyệt", "✓"],
+  ["execution", "Công việc thực hiện", "▣"],
+  ["acceptance", "Chờ nghiệm thu", "◇"],
+  ["team", "Tổng quan phòng ban", "▥"],
+  ["team-employees", "Nhân viên phòng ban", "♙"],
+  ["org-client", "Sơ đồ tổ chức", "⌂"],
+  ["flow-diagrams", "Sơ đồ luồng", "⇢"],
   ["ai-process", "Quy trình AI", "✧"],
-  ["request-catalog", "Quản lý loại yêu cầu", "▦", "OPS_ADMIN"],
-  ["users", "Quản lý người dùng", "♙", "OPS_ADMIN"],
-  ["permissions", "Vai trò & phân quyền", "▦", "OPS_ADMIN"],
-  ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
-  ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
-  ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
-  ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
-  ["org-chart", "Sơ đồ tổ chức", "🏛", "OPS_ADMIN"],
-  ["org-client", "Sơ đồ tổ chức", "🏛"],
-  ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
-  ["audit", "Kiểm toán hồ sơ", "⌕", "AUDITOR"],
-  ["events", "Nhật ký quản trị", "≡", "AUDITOR"],
-  ["notifications", "Thông báo", "○"],
   ["profile", "Tài khoản cá nhân", "◎"],
+  ["notifications", "Thông báo", "○"],
+  ["ops", "Theo dõi vận hành", "⇄"],
+  ["users", "Quản lý người dùng", "♙"],
+  ["departments", "Phòng ban", "▦"],
+  ["permissions", "Ma trận phân quyền", "▩"],
+  ["org-chart", "Sơ đồ tổ chức", "⌂"],
+  ["request-catalog", "Danh mục yêu cầu", "▤"],
+  ["policy", "Quy chế & quy trình", "⚙"],
+  ["sla", "SLA & thông báo", "◷"],
+  ["audit", "Nhật ký kiểm toán", "⌕"],
+  ["system", "Cấu hình hệ thống", "⛭"],
+  // Legacy keys kept for the unified development portal and deep links.
+  ["identity", "Danh tính & phân quyền", "◎"],
+  ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
+  ["api-admin", "Quản lý API", "⌘"],
+  ["events", "Nhật ký quản trị", "≡"],
 ];
+const ADMIN_LABELS = { home: "Tổng quan hệ thống", team: "Báo cáo phòng ban" };
+const CLIENT_NAV = [
+  ["Không gian cá nhân", ["home", "mine"]],
+  ["Công việc được giao", ["approval", "execution", "acceptance"]],
+  ["Quản lý phòng ban", ["team", "team-employees"]],
+  ["Tổ chức & công cụ", ["org-client", "flow-diagrams", "ai-process"]],
+  ["Tài khoản", ["profile"]],
+];
+const ADMIN_NAV = [
+  ["Tổng quan", ["home", "ops"]],
+  ["Người dùng & tổ chức", ["users", "departments", "permissions", "org-chart"]],
+  ["Cấu hình nghiệp vụ", ["request-catalog", "policy", "sla"]],
+  ["Giám sát & kiểm toán", ["ai-process", "audit", "team"]],
+  ["Hệ thống", ["system"]],
+];
+function pageLabel(key, portal) {
+  return (portal === "admin" && ADMIN_LABELS[key]) || menu.find((m) => m[0] === key)?.[1] || "";
+}
 function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) {
   const [status, setStatus] = useState(""),
     [type, setType] = useState(""),
@@ -588,6 +622,7 @@ function renderWorkspaceContent({
   portal,
   searchText = "",
 }) {
+  const canOpenAsAdmin = user.roles.includes("AUDITOR");
   if (editor) {
     return (
       <RequestEditor
@@ -605,7 +640,7 @@ function renderWorkspaceContent({
   if (selected) {
     return (
       <RequestDetail
-        initialTab={page === "audit" ? "audit" : "info"}
+        initialTab={page === "audit" ? "activity" : "info"}
         key={selected}
         id={selected}
         user={user}
@@ -617,19 +652,28 @@ function renderWorkspaceContent({
   }
   switch (page) {
     case "home":
+      if (portal === "admin") return user.roles.includes("OPS_ADMIN") ? <AdminDashboard navigate={navigate} /> : <AdminOverview navigate={navigate} user={user} />;
       return portal === "client" ? (user.roles.includes("REQUESTER") ? <ClientDashboard navigate={navigate} onOpen={setSelected} user={user} /> : <AssignedWorkDashboard navigate={navigate} onOpen={setSelected} user={user}/>) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
     case "org-client":
       return <ClientOrgChart user={user} />;
+    case "team":
+      return <TeamDashboard onOpen={portal === "admin" && !canOpenAsAdmin ? undefined : setSelected} />;
+    case "team-employees":
+      return <TeamDashboard mode="employees" onOpen={setSelected} />;
     case "mine":
     case "approval":
     case "execution":
     case "acceptance":
       return portal === "client" ? <ClientRequests key={page} initialStage={page === "mine" ? "mine" : page} initialQuery={searchText} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} /> : <RequestList key={page} page={page} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} />;
     case "audit":
-      return <AuditorWorkspace onOpen={(id) => setSelected(id)} />;
+      return portal === "admin" ? <AuditLogPage onOpen={setSelected} /> : <AuditorWorkspace onOpen={(id) => setSelected(id)} />;
+    case "events":
+      return <AdminEvents />;
     case "identity":
     case "users":
       return <IdentityAdmin key="users" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "departments":
+      return <IdentityAdmin key="departments" initialKind="departments" onNavigateOrgChart={() => navigate("org-chart")} />;
     case "permissions":
       return <IdentityAdmin key="memberships" initialKind="memberships" onNavigateOrgChart={() => navigate("org-chart")} />;
     case "request-catalog":
@@ -640,23 +684,26 @@ function renderWorkspaceContent({
       return <ApiAdministration />;
     case "plan-catalog":
       return <PlanCatalog />;
+    case "ops":
+      return <OperationsPage key={searchText} initialQuery={searchText} onOpen={canOpenAsAdmin ? setSelected : undefined} />;
+    case "sla":
+      return <SlaNotificationsPage navigate={navigate} />;
+    case "system":
+      return <SystemConfigPage />;
     case "ai-process":
-      return <AiProcessGuide user={user} onOpen={setSelected} navigate={navigate} />;
+      return <AiProcessGuide user={user} portal={portal} onOpen={setSelected} navigate={navigate} />;
     case "flow-diagrams":
-      return <><div className="page-heading"><div><p className="eyebrow">EAS / QUY TRÌNH</p><h1>Sơ đồ luồng</h1><p className="muted">Tra cứu các sơ đồ xử lý và vòng đời yêu cầu.</p></div></div><WorkflowDiagrams /></>;
+      return <><PageHeader eyebrow="QUY TRÌNH" title="Sơ đồ luồng" description="Tra cứu các sơ đồ xử lý và vòng đời yêu cầu."/><WorkflowDiagrams /></>;
     case "policy":
-      return (
-        <Policy
-          canManageAccess={user.roles.includes("OPS_ADMIN")}
-          onManageAccess={() => navigate("identity")}
-        />
+      return portal === "admin" ? (
+        <PolicyWorkspace canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("permissions")} />
+      ) : (
+        <Policy canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />
       );
     case "notifications":
-      return <Notifications onOpen={setSelected} />;
+      return <Notifications onOpen={portal === "admin" && !canOpenAsAdmin ? undefined : setSelected} />;
     case "profile":
       return <Profile user={user} />;
-    case "events":
-      return <AdminEvents />;
     default:
       return (
         <RequestList
@@ -673,113 +720,43 @@ function renderWorkspaceContent({
 }
 
 const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
-const ADMIN_PAGES = new Set(["flow-diagrams", "ai-process", "home", "policy", "plan-catalog", "request-catalog", "ops", "identity", "users", "permissions", "org-chart", "api-admin", "audit", "events", "notifications"]);
-const CLIENT_PAGES = new Set(["flow-diagrams", "ai-process", "home", "mine", "approval", "execution", "acceptance", "org-client", "notifications", "profile"]);
+const navKeys = (groups) => groups.flatMap(([, keys]) => keys);
+const ADMIN_PAGES = new Set([...navKeys(ADMIN_NAV), "notifications"]);
+const CLIENT_PAGES = new Set([...navKeys(CLIENT_NAV), "notifications"]);
+const UNIFIED_NAV = [...CLIENT_NAV, ...ADMIN_NAV.map(([group, keys]) => [group, keys.filter((key) => !navKeys(CLIENT_NAV).includes(key))])];
 
+/** Overview for administrators without OPS scope (policy admins, auditors). */
 function AdminOverview({ navigate, user }) {
-  const usersMeta = useResource("/api/v1/meta/org-chart");
-  const readyMeta = useResource("/health/ready");
-  const totalStaff = usersMeta.data?.users?.length || 42;
-  const totalDepts = usersMeta.data?.departments?.length || 8;
-  const isHealthy = readyMeta.data?.status === "ready";
-
-  return (
-    <section className="admin-home">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">TRUNG TÂM ĐIỀU HÀNH & QUẢN TRỊ EAS</p>
-          <h1>Tổng quan hệ thống</h1>
-          <p className="muted">
-            Giám sát toàn diện nhân sự, cơ cấu phòng ban, quy trình phê duyệt và tuân thủ an toàn thông tin.
-          </p>
-        </div>
-        <div className="admin-overview-header-badge">
-          <span className="live-pulse" aria-hidden="true" />
-          <span>Hệ thống: {isHealthy ? "Sẵn sàng hoạt động" : "Đang kiểm tra"}</span>
-        </div>
-      </div>
-
-      <div className="admin-kpi-grid">
-        <article className="stat-card">
-          <div className="stat-card-icon stat-icon-blue">👥</div>
-          <div className="stat-card-info">
-            <span className="stat-card-label">Tổng tài khoản nhân sự</span>
-            <strong className="stat-card-value">{totalStaff}</strong>
-            <small className="stat-card-sub">Đồng bộ từ sơ đồ tổ chức</small>
-          </div>
-        </article>
-        <article className="stat-card">
-          <div className="stat-card-icon stat-icon-green">🏛</div>
-          <div className="stat-card-info">
-            <span className="stat-card-label">Đơn vị & Phòng ban</span>
-            <strong className="stat-card-value">{totalDepts}</strong>
-            <small className="stat-card-sub">Ban Giám Đốc và 7 phòng ban</small>
-          </div>
-        </article>
-        <article className="stat-card">
-          <div className="stat-card-icon stat-icon-purple">🛡</div>
-          <div className="stat-card-info">
-            <span className="stat-card-label">Tiêu chuẩn kiểm soát</span>
-            <strong className="stat-card-value">ISO/IEC 27001</strong>
-            <small className="stat-card-sub">Toàn vẹn SHA-256 chuỗi khối</small>
-          </div>
-        </article>
-        <article className="stat-card">
-          <div className="stat-card-icon stat-icon-amber">⚙</div>
-          <div className="stat-card-info">
-            <span className="stat-card-label">Nền tảng vận hành</span>
-            <strong className="stat-card-value">EAS Enterprise</strong>
-            <small className="stat-card-sub">Phiên bản 2.0 LTS</small>
-          </div>
-        </article>
-      </div>
-
-      <div className="admin-section-title">
-        <h2>Phân hệ quản trị nghiệp vụ</h2>
-        <p className="muted">Chọn khu vực chức năng để điều hành hoặc kiểm tra cấu hình.</p>
-      </div>
-
-      <div className="admin-tiles-grid">
-        {[
-          ["identity", "Danh tính & Phân quyền", "Quản lý 42 tài khoản, phân bổ role và phạm vi ủy quyền", "◎", "OPS_ADMIN"],
-          ["org-chart", "Sơ đồ tổ chức", "Trực quan hóa cây cơ cấu Ban Giám Đốc và 7 phòng ban thời gian thực", "🏛", null],
-          ["policy", "Cấu hình quy trình", "Soạn thảo biểu mẫu, thiết lập luồng duyệt và công bố quy chế", "⚙", "POLICY_ADMIN"],
-          ["ops", "Theo dõi vận hành", "Giám sát tiến độ xử lý hồ sơ, can thiệp điều phối và xử lý sự cố", "⇄", "OPS_ADMIN"],
-          ["api-admin", "Quản lý API & Tích hợp", "Danh mục endpoint nội bộ, ma trận phân quyền và kiểm tra readiness", "⌘", "OPS_ADMIN"],
-          ["audit", "Kiểm toán hồ sơ", "Đối soát hash SHA-256 và bằng chứng cryptographic từng quyết định", "⌕", "AUDITOR"],
-          ["events", "Nhật ký quản trị", "Tra cứu lịch sử kiểm toán, sự kiện bảo mật và thay đổi hệ thống", "≡", "AUDITOR"],
-          ["flow-diagrams", "Sơ đồ luồng nghiệp vụ", "Thư viện sơ đồ quy trình chuẩn các vòng đời A, B, C", "◇", null],
-        ]
-          .filter(([key, , , , reqRole]) => !reqRole || canNavigate(user.roles, key, user.capabilities))
-          .map(([key, label, detail, icon]) => (
-            <button
-              key={key}
-              type="button"
-              className="admin-feature-card"
-              onClick={() => navigate(key)}
-            >
-              <div className="admin-feature-icon">{icon}</div>
-              <div className="admin-feature-body">
-                <strong>{label}</strong>
-                <p>{detail}</p>
-              </div>
-              <span className="admin-feature-arrow" aria-hidden="true">→</span>
-            </button>
-          ))}
-      </div>
-    </section>
-  );
+  const tiles = [
+    ["policy", "Quy chế & quy trình", "Soạn thảo biểu mẫu, luồng duyệt, SLA và công bố quy chế", "⚙"],
+    ["audit", "Nhật ký kiểm toán", "Xác minh chuỗi nhật ký hồ sơ và tra cứu thay đổi quản trị", "⌕"],
+    ["team", "Báo cáo phòng ban", "Số liệu hồ sơ theo phòng ban trong phạm vi kiểm toán", "▥"],
+    ["ai-process", "Quy trình AI", "Lịch sử đánh giá AI của hồ sơ được phép xem", "✧"],
+  ].filter(([key]) => canNavigate(user.roles, key, user.capabilities));
+  return <section className="admin-home">
+    <PageHeader eyebrow="TRUNG TÂM QUẢN TRỊ" title="Tổng quan quản trị" description="Chọn khu vực chức năng theo vai trò quản trị được cấp." />
+    <div className="admin-tiles-grid">{tiles.map(([key, label, detail, icon]) => (
+      <button key={key} type="button" className="admin-feature-card" onClick={() => navigate(key)}>
+        <div className="admin-feature-icon" aria-hidden="true">{icon}</div>
+        <div className="admin-feature-body"><strong>{label}</strong><p>{detail}</p></div>
+        <span className="admin-feature-arrow" aria-hidden="true">→</span>
+      </button>))}
+    </div>
+  </section>;
 }
+
+function readFlag(key) { try { return window.localStorage.getItem(key) === "1"; } catch { return false; } }
+function writeFlag(key, value) { try { window.localStorage.setItem(key, value ? "1" : "0"); } catch { /* storage unavailable */ } }
+
 function Workspace({ user, onLogout, portal = "client" }) {
   const [page, setPage] = useState("home"),
     [selected, setSelected] = useState(null),
     [editor, setEditor] = useState(null),
     [revision, setRevision] = useState(0),
     [menuOpen, setMenuOpen] = useState(false),
-    [quickSearch, setQuickSearch] = useState(""),
     [searchText, setSearchText] = useState(""),
-    [notificationOpen, setNotificationOpen] = useState(false);
-  const unread = useResource("/api/v1/notifications?limit=1&offset=0");
+    [collapsed, setCollapsed] = useState(() => readFlag("eas.sidebarCollapsed")),
+    [closedGroups, setClosedGroups] = useState(() => new Set());
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const main = document.getElementById("main");
@@ -789,137 +766,125 @@ function Workspace({ user, onLogout, portal = "client" }) {
     });
     return () => cancelAnimationFrame(frame);
   }, [page, selected, editor]);
-  function navigate(next) {
+  const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
+  const groups = portal === "admin" ? ADMIN_NAV : portal === "client" ? CLIENT_NAV : UNIFIED_NAV;
+  function navigate(next, query = "") {
     if (!canNavigate(user.roles, next, user.capabilities)) return;
-    const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
     if (!allowedPages.has(next)) return;
     setPage(next);
     setSelected(null);
     setEditor(null);
     setMenuOpen(false);
-    setNotificationOpen(false);
-    if (next !== "mine") setSearchText("");
+    setSearchText(query);
   }
-  function searchAll(event) {
-    event.preventDefault();
-    if (!quickSearch.trim()) return;
-    const target = user.roles.includes("REQUESTER") ? "mine" : user.roles.includes("APPROVER") ? "approval" : user.roles.includes("EXECUTOR") ? "execution" : "acceptance";
-    if (portal !== "client" || !canNavigate(user.roles,target,user.capabilities)) return;
-    navigate(target);
-    setSearchText(quickSearch.trim());
+  function openRequest(id) {
+    setEditor(null);
+    setSelected(id);
+    setMenuOpen(false);
   }
-
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (event) => { if (event.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+  function toggleCollapsed() {
+    setCollapsed((value) => { writeFlag("eas.sidebarCollapsed", !value); return !value; });
+  }
+  function toggleGroup(name) {
+    setClosedGroups((prev) => { const next = new Set(prev); if (next.has(name)) next.delete(name); else next.add(name); return next; });
+  }
   const primaryRole = getPrimaryRoleBadge(user.roles);
+  const currentGroup = groups.find(([, keys]) => keys.includes(page))?.[0];
+  const crumbs = [portal === "admin" ? "Quản trị" : "Không gian làm việc", currentGroup, pageLabel(page, portal), editor ? (editor.id ? "Chỉnh sửa hồ sơ" : "Tạo yêu cầu") : selected ? "Chi tiết hồ sơ" : null].filter(Boolean);
+  // OPS admins only see request metadata (UC05), so admin search lands on the operations table.
+  const adminSearch = portal === "admin" && user.roles.includes("OPS_ADMIN");
+  const canSearch = portal !== "admin" || adminSearch;
 
   return (
-    <div className="app-shell">
+    <div className={"app-shell" + (collapsed ? " sidebar-collapsed" : "")}>
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
-      <aside className={"sidebar " + (menuOpen ? "open" : "")}>
+      <aside className={"sidebar " + (menuOpen ? "open" : "")} aria-label="Thanh điều hướng">
+        <button type="button" className="secondary ds-icon-button sidebar-close" aria-label="Đóng điều hướng" onClick={() => setMenuOpen(false)}>×</button>
         <a className="brand" href="#main" onClick={(event) => { event.preventDefault(); navigate("home"); }}>
           <img src="/logo.png" alt="EAS Logo" className="brand-logo-img" />
           <span>
-            {portal === "admin" ? "EAS Admin" : "EAS Portal"}<small>{portal === "admin" ? "SYSTEM CONTROL" : "ENTERPRISE APPROVAL"}</small>
+            {portal === "admin" ? "EAS Admin" : "EAS Portal"}<small>{portal === "admin" ? "QUẢN TRỊ HỆ THỐNG" : "PHÊ DUYỆT DOANH NGHIỆP"}</small>
           </span>
         </a>
         {portal !== "admin" && user.roles.includes("REQUESTER") && (
-          <button
-            className="create-button"
-            onClick={() => {
-              setSelected(null);
-              setEditor({});
-              setMenuOpen(false);
-            }}
-          >
-            + Tạo yêu cầu mới
+          <button className="create-button" title="Tạo yêu cầu mới" onClick={() => { setSelected(null); setEditor({}); setMenuOpen(false); }}>
+            <span aria-hidden="true">＋</span><span className="create-label"> Tạo yêu cầu mới</span>
           </button>
         )}
         <nav aria-label="Điều hướng chính">
-          {(portal === "admin" ? [
-            ["TỔNG QUAN & TỔ CHỨC", ["home", "org-chart", "flow-diagrams", "ai-process"]],
-            ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "plan-catalog", "request-catalog"]],
-            ["VẬN HÀNH & GIÁM SÁT", ["ops", "users", "permissions", "api-admin"]],
-            ["KIỂM TOÁN & NHẬT KÝ", ["audit", "events"]],
-            ["TÀI KHOẢN", ["notifications", "profile"]],
-          ] : [
-            ["KHÔNG GIAN CÁ NHÂN", ["home", "mine"]],
-            ["CÔNG VIỆC ĐƯỢC GIAO", ["approval", "execution", "acceptance"]],
-            ["TỔ CHỨC & HƯỚNG DẪN", ["org-client", "flow-diagrams", "ai-process"]],
-            ["TÀI KHOẢN", ["notifications", "profile"]],
-          ]).map(([group, keys]) => {
-            const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
-            const visible = menu.filter((m) => keys.includes(m[0]) && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
-            return visible.length ? (
-              <div key={group} className="nav-group">
-                <p className="nav-caption">{group}</p>
-                {visible.map(([key, title, icon]) => (
-                  <button
-                    key={key}
-                    className={page === key && !selected && !editor ? "nav-item active" : "nav-item"}
-                    aria-current={page === key && !selected && !editor ? "page" : undefined}
-                    onClick={() => navigate(key)}
-                  >
-                    <span aria-hidden="true">{icon}</span>
-                    <span className="nav-text">{title}</span>
-                  </button>
-                ))}
+          {groups.map(([group, keys]) => {
+            const visible = keys.map((key) => menu.find((m) => m[0] === key)).filter((m) => m && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
+            if (!visible.length) return null;
+            const isClosed = closedGroups.has(group);
+            return (
+              <div key={group} className={"nav-group" + (isClosed ? " is-collapsed" : "")}>
+                <button type="button" className="nav-caption" aria-expanded={!isClosed} onClick={() => toggleGroup(group)}>
+                  <span>{group}</span><span className="nav-caption-chevron" aria-hidden="true">▾</span>
+                </button>
+                {(!isClosed || collapsed) && visible.map(([key, , icon]) => {
+                  const active = page === key && !selected && !editor;
+                  const title = pageLabel(key, portal);
+                  return (
+                    <button key={key} type="button" title={collapsed ? title : undefined} className={active ? "nav-item active" : "nav-item"}
+                      aria-current={active ? "page" : undefined} onClick={() => navigate(key)}>
+                      <span aria-hidden="true">{icon}</span>
+                      <span className="nav-text">{title}</span>
+                    </button>
+                  );
+                })}
               </div>
-            ) : null;
+            );
           })}
         </nav>
-        <div className="sidebar-footer">
-          <strong>Quy trình có kiểm soát</strong>
-          <small>Phê duyệt · Thực hiện · Nghiệm thu</small>
-        </div>
+        <button type="button" className="secondary sidebar-collapse" onClick={toggleCollapsed} aria-pressed={collapsed}
+          aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}>{collapsed ? "»" : "« Thu gọn"}</button>
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <button
-            className="secondary menu-toggle"
-            aria-label="Mở điều hướng"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            ☰
-          </button>
-          <span className="muted">
-            {portal === "admin" ? "Trung tâm Quản trị" : "Không gian làm việc"} / {menu.find((m) => m[0] === page)?.[1]}
-          </span>
-          {portal === "client" && <form className="client-quick-search" role="search" onSubmit={searchAll}>
-            <label htmlFor="client-global-search" className="sr-only">Tìm mã yêu cầu</label>
-            <span aria-hidden="true">⌕</span><input id="client-global-search" type="search" value={quickSearch} onChange={e=>setQuickSearch(e.target.value)} placeholder="Tìm nhanh mã yêu cầu…" />
-            <button type="submit" className="secondary" aria-label="Tìm kiếm">Tìm</button>
-          </form>}
+          <button type="button" className="secondary menu-toggle" aria-label="Mở điều hướng" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
+          <nav className="ds-breadcrumb" aria-label="Vị trí hiện tại"><ol>
+            {crumbs.map((crumb, index) => <li key={crumb} aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb}</li>)}
+          </ol></nav>
+          {canSearch && <GlobalSearch portal={portal} onOpen={(id, item) => {
+            if (adminSearch) {
+              // Metadata-only scope: open the operations row instead of the restricted detail.
+              if (user.roles.includes("AUDITOR")) openRequest(id); else navigate("ops", item?.code || "");
+            } else openRequest(id);
+          }} />}
           <div className="topbar-right client-topbar-actions">
-            <div className="client-notifications-anchor">
-              <button type="button" className="secondary client-icon-button" onClick={() => setNotificationOpen(value=>!value)} aria-label={`Thông báo${unread.data?.unread_count ? `, ${unread.data.unread_count} chưa đọc` : ""}`} aria-expanded={notificationOpen} title="Thông báo">
-                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9"/><path d="M10 21h4"/></svg>
-                {Number(unread.data?.unread_count)>0&&<span className="client-notification-dot"/>}
-              </button>
-              {notificationOpen&&<div className="client-notification-popover" role="region" aria-label="Thông báo"><strong>Thông báo</strong><p className="muted">{Number(unread.data?.unread_count)||0} thông báo chưa đọc</p><button type="button" className="secondary" onClick={()=>navigate("notifications")}>Mở trung tâm thông báo →</button></div>}
-            </div>
-            <button type="button" className="client-account-link" onClick={()=>navigate("profile")} aria-label={`Tài khoản ${user.display_name||"người dùng"}`}>
-              <span className="client-avatar">{user.display_name?.slice(0,1)||"U"}</span>
+            <NotificationBell onOpen={portal === "admin" && !user.roles.includes("AUDITOR") ? () => navigate("notifications") : openRequest} onViewAll={() => navigate("notifications")} />
+            <button type="button" className="client-account-link" disabled={portal === "admin"} onClick={() => navigate("profile")} aria-label={`Tài khoản ${user.display_name || "người dùng"}`}>
+              <span className="client-avatar">{user.display_name?.slice(0, 1) || "U"}</span>
               <div className="topbar-user-pill">
-                <strong className="topbar-display-name">{user.display_name||"Người dùng"}</strong>
+                <strong className="topbar-display-name">{user.display_name || "Người dùng"}</strong>
                 <span className={`topbar-role-badge ${primaryRole.tone}`}>{primaryRole.name}</span>
               </div>
             </button>
-            <button type="button" className="secondary client-icon-button" aria-label="Đăng xuất" title="Đăng xuất" onClick={onLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
+            <button type="button" className="secondary ds-icon-button" aria-label="Đăng xuất" title="Đăng xuất" onClick={onLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
           </div>
         </header>
         <main id="main" className="content" tabIndex={-1}>
-          {portal === "admin" && page === "home" ? <AdminOverview navigate={navigate} user={user} /> : renderWorkspaceContent({
+          <Suspense fallback={<output className="ds-loading" aria-busy="true"><span className="sr-only">Đang tải trang…</span><span className="ds-skeleton" aria-hidden="true"><span className="ds-skeleton-line" style={{ width: "60%" }} /><span className="ds-skeleton-line" style={{ width: "90%" }} /></span></output>}>
+          {renderWorkspaceContent({
             editor,
             selected,
             page,
             user,
             revision,
             navigate,
-            setSelected,
+            setSelected: openRequest,
             setEditor,
             setRevision,
             portal,
             searchText,
           })}
+          </Suspense>
         </main>
         <footer className="page-footer">
           EAS · {portal === "admin" ? "Trung tâm quản trị hệ thống" : "Hệ thống phê duyệt yêu cầu doanh nghiệp"}
@@ -928,6 +893,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
     </div>
   );
 }
+
 let _bootstrapSessionPromise = null;
 
 function fetchInitialSession() {
@@ -1023,6 +989,7 @@ export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unif
   if (user && portal === "admin" && !user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
     return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
+  // Administrative identities are system-only (enforced again by the API).
   if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role))) {
     return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }

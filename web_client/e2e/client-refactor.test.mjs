@@ -37,14 +37,15 @@ test('new request supports flexible templates only when enabled by backend',()=>
  assert.match(selector,/Chưa có mẫu linh hoạt được công bố/);
 });
 
-test('AI process uses real request workflow and on-demand model calls, not a static image', () => {
+test('AI process uses real request workflow and persisted per-request assessments, not a static image', () => {
  const component=readFileSync(new URL('../src/components/AiProcessGuide.jsx',import.meta.url),'utf8');
  assert.match(component,/\/api\/v1\/requests\?tab=/);
  assert.match(component,/\/api\/v1\/requests\/\$\{currentId\}/);
- assert.match(component,/\/api\/v1\/ai\/classify/);
- assert.match(component,/\/api\/v1\/ai\/risk-score/);
+ // Per-request, persisted assessment (with fallback labelling) instead of session-only calls.
+ assert.match(component,/<AiAssessmentPanel/);
  assert.ok(!component.includes('ai-process-image'));
- assert.match(component,/fallback_used/);
+ const panel=readFileSync(new URL('../src/components/RequestProgress.jsx',import.meta.url),'utf8');
+ assert.match(panel,/fallback_used/);
 });
 test('organization exposes manager relationships in same department without changing form selector schema', () => {
  const backend=readFileSync(new URL('../../api_core/catalog/views.py',import.meta.url),'utf8');
@@ -61,4 +62,34 @@ test('period toolbar aligns labels and all actions in shared grid',()=>{
  assert.match(view,/overview-quick-group/);
  assert.match(view,/overview-apply-group/);
  assert.match(css,/\.overview-filter \{display:grid!important/);
+});
+test('each portal renders in its own mode, never the unrestricted "unified" fallback', () => {
+ const client=readFileSync(new URL('../src/main.jsx',import.meta.url),'utf8');
+ const admin=readFileSync(new URL('../../web_admin/src/main.jsx',import.meta.url),'utf8');
+ assert.match(client,/<App portal="client" \/>/);
+ assert.match(admin,/<App portal="admin" \/>/);
+});
+test('administrative accounts stay system-only on the client portal', () => {
+ const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
+ assert.match(app,/portal === "client" && user\.roles\?\.some\(\(role\) => ADMIN_ROLES\.includes\(role\)\)/);
+});
+test('admin overview shows API data, not hardcoded head counts', () => {
+ const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
+ assert.ok(!/\|\| 42|\|\| 8;|ISO\/IEC 27001|2\.0 LTS/.test(app));
+ assert.match(app,/<AdminDashboard navigate=\{navigate\} \/>/);
+ const pages=readFileSync(new URL('../src/components/AdminPages.jsx',import.meta.url),'utf8');
+ assert.match(pages,/\/api\/v1\/admin\/overview\?/);
+ assert.match(pages,/\/api\/v1\/admin\/diagnostics/);
+});
+test('request detail and editor surface real progress, route preview and persisted AI history', () => {
+ const detail=readFileSync(new URL('../src/components/RequestDetail.jsx',import.meta.url),'utf8');
+ const editor=readFileSync(new URL('../src/components/RequestEditor.jsx',import.meta.url),'utf8');
+ const preview=readFileSync(new URL('../src/components/RoutePreview.jsx',import.meta.url),'utf8');
+ const ai=readFileSync(new URL('../src/components/RequestProgress.jsx',import.meta.url),'utf8');
+ assert.match(detail,/<ProgressSummary progress=\{r\.progress\} \/>/);
+ assert.match(editor,/<RoutePreview/);
+ assert.match(editor,/REQUEST_TIMEOUT_UNKNOWN/);
+ assert.match(preview,/\/api\/v1\/requests\/route-preview/);
+ assert.match(preview,/silent: true/);
+ assert.match(ai,/\/ai-assessments/);
 });

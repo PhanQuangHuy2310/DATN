@@ -1,5 +1,3 @@
-import hmac
-import os
 from collections.abc import Callable
 from datetime import datetime, timezone
 from functools import wraps
@@ -19,26 +17,14 @@ from api_core.http import api_error, correlation_id
 
 from .models import Actor, AuthUser
 
-SEED_PLACEHOLDER_HASHES = frozenset(
-    {
-        "pbkdf2_sha256$600000$seed$TempHashForDevOnly00000000000000000000000000000=",
-        "pbkdf2_sha256$600000$admin_salt$dummy_hash_for_bootstrap_change_on_first_login",
-    }
-)
-
 
 def verify_user_password(password: str, password_hash: str) -> bool:
+    # No default/fallback password in any environment: seed and demo accounts
+    # are deliberately non-loginable until an operator sets a real password
+    # (account_reset / recover_admin_password_interactive.py).
     if not isinstance(password, str) or not isinstance(password_hash, str):
         return False
-    if check_password(password, password_hash):
-        return True
-    if getattr(settings, "ENVIRONMENT", "") == "development" and (
-        password_hash in SEED_PLACEHOLDER_HASHES
-        or password_hash.startswith("!UNUSABLE_DEMO_")
-    ):
-        fallback_pwd = os.getenv("EAS_DEV_DEFAULT_PASSWORD", "Admin@123456")
-        return hmac.compare_digest(password, fallback_pwd)
-    return False
+    return check_password(password, password_hash)
 
 
 class PasswordChangeError(ValueError):

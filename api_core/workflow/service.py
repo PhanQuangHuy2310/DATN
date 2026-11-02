@@ -40,6 +40,18 @@ SQL_INSERT_OUTBOX_EVENT = """
             VALUES (%s,%s,%s,%s)
             """
 HTML_TAG = re.compile(r"<[^>]+>")
+# Administrative identities are system-only (see require_actor): they can never
+# be routed or reassigned business work, or that work could not be decided.
+SQL_NOT_ADMINISTRATIVE = """
+          AND NOT EXISTS (
+            SELECT 1 FROM eas.role_membership adm
+            WHERE adm.user_id = u.id
+              AND adm.role IN ('OPS_ADMIN', 'POLICY_ADMIN', 'AUDITOR')
+              AND adm.revoked_at IS NULL
+              AND adm.valid_from <= statement_timestamp()
+              AND (adm.valid_to IS NULL OR adm.valid_to > statement_timestamp())
+          )
+"""
 
 
 class CommandError(ValueError):
@@ -111,8 +123,9 @@ def _is_actor_valid_for_role(
     department_id: str,
     type_id: str,
 ) -> bool:
+    # NOSONAR python:S2077 - SQL_NOT_ADMINISTRATIVE is a constant fragment
     cursor.execute(
-        """
+        f"""
         SELECT EXISTS (
           SELECT 1 FROM eas.app_user u
           JOIN eas.role_membership rm ON rm.user_id = u.id
@@ -122,6 +135,7 @@ def _is_actor_valid_for_role(
             AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
             AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = %s)
             AND (rm.type_scope = 'ALL' OR rm.type_id = %s)
+            {SQL_NOT_ADMINISTRATIVE}
         )
         """,
         [actor_id, role, department_id, type_id],
@@ -1034,8 +1048,13 @@ def _resolve_and_verify_route_actors(
         routed_actors.add(decision.executor_id)
     if decision.acceptor_id:
         routed_actors.add(decision.acceptor_id)
+    # NOSONAR python:S2077 - SQL_NOT_ADMINISTRATIVE is a constant fragment
     cursor.execute(
-        "SELECT count(*) FROM eas.app_user WHERE is_active AND id=ANY(%s::uuid[])",
+        f"""
+        SELECT count(*) FROM eas.app_user u
+        WHERE u.is_active AND u.id = ANY(%s::uuid[])
+        {SQL_NOT_ADMINISTRATIVE}
+        """,
         [list(routed_actors)],
     )
     if cursor.fetchone()[0] != len(routed_actors):

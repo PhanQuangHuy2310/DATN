@@ -72,11 +72,12 @@ else:
     except DatabaseUrlError as exc:
         raise RuntimeError(str(exc)) from None
 
-    # Optional: set to 0 when diagnosing stale long-lived Supabase/PgBouncer
-    # connections in local development. Default remains 60 to avoid changing
-    # the production connection policy unexpectedly.
+    # Reuse connections for 60s by default: opening a TLS session through the
+    # Supabase pooler costs seconds, so per-request connects dominate latency.
+    # CONN_HEALTH_CHECKS discards a stale reused connection before first use.
+    # Set 0 only when diagnosing stale pooler connections locally.
     try:
-        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "0"))
+        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "60"))
         if not 0 <= _db_max_age <= 3600:
             raise ValueError
     except ValueError:

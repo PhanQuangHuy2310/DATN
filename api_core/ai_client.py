@@ -269,6 +269,7 @@ class AIServiceClient:
                 ],
                 "auto_approve_note": None,
                 "evaluated_at": "",
+                "fallback_used": True,
             }
 
         payload = {
@@ -303,6 +304,7 @@ class AIServiceClient:
                 ],
                 "auto_approve_note": None,
                 "evaluated_at": "",
+                "fallback_used": True,
             }
 
     async def summarize_request(
@@ -476,23 +478,21 @@ class SyncAIServiceClient:
         self._async_client = AIServiceClient()
 
     def _run(self, coro):
+        # A coroutine can be awaited only once, so never "retry" it here; the
+        # async methods already convert transport failures into fallbacks.
         try:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
 
-            if loop is not None and loop.is_running():
-                # Trong context async (Celery, ASGI) — dùng ThreadPoolExecutor
-                import concurrent.futures
+        if loop is not None and loop.is_running():
+            # Trong context async (Celery, ASGI) — dùng ThreadPoolExecutor
+            import concurrent.futures
 
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, coro)
-                    return future.result(timeout=35)
-            else:
-                return asyncio.run(coro)
-        except Exception:  # noqa: BLE001
-            return asyncio.run(coro)
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result(timeout=TIMEOUT + 5)
+        return asyncio.run(coro)
 
     def classify_request(
         self,

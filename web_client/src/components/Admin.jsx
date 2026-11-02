@@ -457,7 +457,7 @@ export function Notifications({ onOpen }) {
               </p>
             </div>
             <div className="actions">
-              {n.request_id && (
+              {n.request_id && onOpen && (
                 <button
                   className="secondary"
                   onClick={() => onOpen(n.request_id)}

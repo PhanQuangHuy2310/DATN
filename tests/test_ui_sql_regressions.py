@@ -110,9 +110,12 @@ class EASRegressionTests(unittest.TestCase):
         self.assertIn("X-Auth-Optional", app_jsx)
         self.assertIn("_bootstrapSessionPromise", app_jsx)
 
+        # The AI service is internal (X-Internal-Secret); the browser-facing dev
+        # server must reach it only through Django, never by a direct proxy.
         vite_cfg = (ROOT / "web_client/vite.config.js").read_text(encoding="utf-8")
-        self.assertIn('"/ai"', vite_cfg)
-        self.assertIn("127.0.0.1:8001", vite_cfg)
+        self.assertIn('"/api"', vite_cfg)
+        self.assertNotIn('"/ai"', vite_cfg)
+        self.assertNotIn("127.0.0.1:8001", vite_cfg)
 
     def test_sql_queries_do_not_reference_nonexistent_columns(self):
         config_src = (ROOT / "api_core/workflow/config_service.py").read_text(
