@@ -25,6 +25,9 @@ const WorkflowDiagrams = lazy(() => import("./components/WorkflowDiagrams.jsx"))
 const AiProcessGuide = lazy(() => import("./components/AiProcessGuide.jsx"));
 const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
 const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
+import TeamDashboard from "./components/TeamDashboard.jsx";
+import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
+import { PageHeader } from "./components/design.jsx";
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
@@ -309,20 +312,6 @@ const menu = [
   ["org-client", "Sơ đồ tổ chức", "⌂"],
   ["flow-diagrams", "Sơ đồ luồng", "⇢"],
   ["ai-process", "Quy trình AI", "✧"],
-  ["request-catalog", "Quản lý loại yêu cầu", "▦", "OPS_ADMIN"],
-  ["users", "Quản lý người dùng", "♙", "OPS_ADMIN"],
-  ["permissions", "Vai trò & phân quyền", "▦", "OPS_ADMIN"],
-  ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
-  ["ai-policy", "Bộ luật quy định AI", "✧", "POLICY_ADMIN"],
-  ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
-  ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
-  ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
-  ["org-chart", "Sơ đồ tổ chức", "🏛", "OPS_ADMIN"],
-  ["org-client", "Sơ đồ tổ chức", "🏛"],
-  ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
-  ["audit", "Kiểm toán hồ sơ", "⌕", "AUDITOR"],
-  ["events", "Nhật ký quản trị", "≡", "AUDITOR"],
-  ["notifications", "Thông báo", "○"],
   ["profile", "Tài khoản cá nhân", "◎"],
   ["notifications", "Thông báo", "○"],
   ["ops", "Theo dõi vận hành", "⇄"],
@@ -332,6 +321,7 @@ const menu = [
   ["org-chart", "Sơ đồ tổ chức", "⌂"],
   ["request-catalog", "Danh mục yêu cầu", "▤"],
   ["policy", "Quy chế & quy trình", "⚙"],
+  ["ai-policy", "Bộ luật quy định AI", "✧"],
   ["sla", "SLA & thông báo", "◷"],
   ["audit", "Nhật ký kiểm toán", "⌕"],
   ["system", "Cấu hình hệ thống", "⛭"],
@@ -662,10 +652,14 @@ function renderWorkspaceContent({
     case "acceptance":
       return portal === "client" ? <ClientRequests key={page} initialStage={page === "mine" ? "mine" : page} initialQuery={searchText} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} /> : <RequestList key={page} page={page} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} />;
     case "audit":
-      return <AdminScreen name="AuditorWorkspace" onOpen={(id) => setSelected(id)} />;
+      return portal === "admin" ? <AdminScreen name="AuditLogPage" onOpen={setSelected} /> : <AdminScreen name="AuditorWorkspace" onOpen={(id) => setSelected(id)} />;
+    case "events":
+      return <AdminScreen name="AdminEvents" />;
     case "identity":
     case "users":
       return <AdminScreen name="IdentityAdmin" key="users" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "departments":
+      return <AdminScreen name="IdentityAdmin" key="departments" initialKind="departments" onNavigateOrgChart={() => navigate("org-chart")} />;
     case "permissions":
       return <AdminScreen name="IdentityAdmin" key="memberships" initialKind="memberships" onNavigateOrgChart={() => navigate("org-chart")} />;
     case "request-catalog":
@@ -676,17 +670,21 @@ function renderWorkspaceContent({
       return <AdminScreen name="ApiAdministration" />;
     case "plan-catalog":
       return <AdminScreen name="PlanCatalog" />;
+    case "ops":
+      return <AdminScreen name="OperationsPage" key={searchText} initialQuery={searchText} onOpen={canOpenAsAdmin ? setSelected : undefined} />;
+    case "sla":
+      return <AdminScreen name="SlaNotificationsPage" navigate={navigate} />;
+    case "system":
+      return <AdminScreen name="SystemConfigPage" />;
     case "ai-process":
       return <AiProcessGuide user={user} portal={portal} onOpen={setSelected} navigate={navigate} />;
     case "flow-diagrams":
       return <><PageHeader eyebrow="QUY TRÌNH" title="Sơ đồ luồng" description="Tra cứu các sơ đồ xử lý và vòng đời yêu cầu."/><WorkflowDiagrams /></>;
     case "policy":
-      return (
-        <AdminScreen
-          name="Policy"
-          canManageAccess={user.roles.includes("OPS_ADMIN")}
-          onManageAccess={() => navigate("identity")}
-        />
+      return portal === "admin" ? (
+        <AdminScreen name="PolicyWorkspace" canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("permissions")} />
+      ) : (
+        <AdminScreen name="Policy" canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />
       );
     case "ai-policy":
       return <AdminScreen name="AiPolicyAdmin" />;
@@ -699,8 +697,6 @@ function renderWorkspaceContent({
           {user.roles.includes("APPROVER") && <DelegationSettings />}
         </>
       );
-    case "events":
-      return <AdminScreen name="AdminEvents" />;
     default:
       return (
         <RequestList
@@ -716,8 +712,11 @@ function renderWorkspaceContent({
   }
 }
 
-const ADMIN_PAGES = new Set(["flow-diagrams", "ai-process", "home", "policy", "ai-policy", "plan-catalog", "request-catalog", "ops", "identity", "users", "permissions", "org-chart", "api-admin", "audit", "events", "notifications"]);
-const CLIENT_PAGES = new Set(["flow-diagrams", "ai-process", "home", "mine", "approval", "execution", "acceptance", "org-client", "notifications", "profile"]);
+const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
+const navKeys = (groups) => groups.flatMap(([, keys]) => keys);
+const ADMIN_PAGES = new Set([...navKeys(ADMIN_NAV), "notifications"]);
+const CLIENT_PAGES = new Set([...navKeys(CLIENT_NAV), "notifications"]);
+const UNIFIED_NAV = [...CLIENT_NAV, ...ADMIN_NAV.map(([group, keys]) => [group, keys.filter((key) => !navKeys(CLIENT_NAV).includes(key))])];
 
 /** Overview for administrators without OPS scope (policy admins, auditors). */
 function AdminOverview({ navigate, user }) {
@@ -812,34 +811,26 @@ function Workspace({ user, onLogout, portal = "client" }) {
           </button>
         )}
         <nav aria-label="Điều hướng chính">
-          {(portal === "admin" ? [
-            ["TỔNG QUAN & TỔ CHỨC", ["home", "org-chart", "flow-diagrams", "ai-process"]],
-            ["CẤU HÌNH & CHÍNH SÁCH", ["policy", "ai-policy", "plan-catalog", "request-catalog"]],
-            ["VẬN HÀNH & GIÁM SÁT", ["ops", "users", "permissions", "api-admin"]],
-            ["KIỂM TOÁN & NHẬT KÝ", ["audit", "events"]],
-            ["TÀI KHOẢN", ["notifications", "profile"]],
-          ] : [
-            ["KHÔNG GIAN CÁ NHÂN", ["home", "mine"]],
-            ["CÔNG VIỆC ĐƯỢC GIAO", ["approval", "execution", "acceptance"]],
-            ["TỔ CHỨC & HƯỚNG DẪN", ["org-client", "flow-diagrams", "ai-process"]],
-            ["TÀI KHOẢN", ["notifications", "profile"]],
-          ]).map(([group, keys]) => {
-            const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
-            const visible = menu.filter((m) => keys.includes(m[0]) && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
-            return visible.length ? (
-              <div key={group} className="nav-group">
-                <p className="nav-caption">{group}</p>
-                {visible.map(([key, title, icon]) => (
-                  <button
-                    key={key}
-                    className={page === key && !selected && !editor ? "nav-item active" : "nav-item"}
-                    aria-current={page === key && !selected && !editor ? "page" : undefined}
-                    onClick={() => navigate(key)}
-                  >
-                    <span aria-hidden="true">{icon}</span>
-                    <span className="nav-text">{title}</span>
-                  </button>
-                ))}
+          {groups.map(([group, keys]) => {
+            const visible = keys.map((key) => menu.find((m) => m[0] === key)).filter((m) => m && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
+            if (!visible.length) return null;
+            const isClosed = closedGroups.has(group);
+            return (
+              <div key={group} className={"nav-group" + (isClosed ? " is-collapsed" : "")}>
+                <button type="button" className="nav-caption" aria-expanded={!isClosed} onClick={() => toggleGroup(group)}>
+                  <span>{group}</span><span className="nav-caption-chevron" aria-hidden="true">▾</span>
+                </button>
+                {(!isClosed || collapsed) && visible.map(([key, , icon]) => {
+                  const active = page === key && !selected && !editor;
+                  const title = pageLabel(key, portal);
+                  return (
+                    <button key={key} type="button" title={collapsed ? title : undefined} className={active ? "nav-item active" : "nav-item"}
+                      aria-current={active ? "page" : undefined} onClick={() => navigate(key)}>
+                      <span aria-hidden="true">{icon}</span>
+                      <span className="nav-text">{title}</span>
+                    </button>
+                  );
+                })}
               </div>
             );
           })}
@@ -872,8 +863,8 @@ function Workspace({ user, onLogout, portal = "client" }) {
           </div>
         </header>
         <main id="main" className="content" tabIndex={-1}>
-          <Suspense fallback={<p className="muted" role="status">Đang tải…</p>}>
-          {portal === "admin" && page === "home" ? <AdminOverview navigate={navigate} user={user} /> : renderWorkspaceContent({
+          <Suspense fallback={<output className="ds-loading" aria-busy="true"><span className="sr-only">Đang tải trang…</span><span className="ds-skeleton" aria-hidden="true"><span className="ds-skeleton-line" style={{ width: "60%" }} /><span className="ds-skeleton-line" style={{ width: "90%" }} /></span></output>}>
+          {renderWorkspaceContent({
             editor,
             selected,
             page,
@@ -1020,7 +1011,9 @@ function PortalApp({ portal }) {
   if (user && portal === "admin" && !canUsePortal(user.roles, "admin")) {
     return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
-  if (user && portal === "client" && !canUsePortal(user.roles, "client")) {
+  // Administrative identities are system-only (enforced again by the API);
+  // an admin who also approves or executes keeps the employee portal.
+  if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role)) && !canUsePortal(user.roles, "client")) {
     return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
   }
   return user ? (

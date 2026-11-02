@@ -251,95 +251,23 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                 <p className="eyebrow">XỬ LÝ HỒ SƠ</p>
                 <h2>Thao tác của bạn</h2>
                 <div className="stack">
-                  {p.edit && (
-                    <button type="button" onClick={() => onEdit(r)}>
-                      Chỉnh sửa / bổ sung
-                    </button>
-                  )}
-                  {p.approve && (
-                    <>
-                      <button type="button" onClick={() => setAction("approve")}>
-                        Phê duyệt
-                      </button>
-                      <button
-                        className="secondary"
-                        onClick={() => setAction("info")}
-                      >
-                        Yêu cầu bổ sung
-                      </button>
-                      <button
-                        className="danger"
-                        onClick={() => setAction("reject")}
-                      >
-                        Từ chối
-                      </button>
-                    </>
-                  )}
-                  {p.claim && (
-                    <button type="button" onClick={() => setAction("claim")}>
-                      Nhận công việc
-                    </button>
-                  )}
-                  {p.execute && (
-                    <button type="button" onClick={() => setAction("execution")}>
-                      Nộp kết quả thực hiện
-                    </button>
-                  )}
-                  {(p.claim || p.execute) && (
-                    <button
-                      className="secondary"
-                      onClick={() => setAction("issue")}
-                    >
-                      Báo vướng mắc
-                    </button>
-                  )}
-                  {p.accept && (
-                    <>
-                      <button type="button" onClick={() => setAction("accept")}>
-                        Chấp nhận nghiệm thu
-                      </button>
-                      <button
-                        className="danger"
-                        onClick={() => setAction("rework")}
-                      >
-                        Yêu cầu làm lại
-                      </button>
-                    </>
-                  )}
-                  {p.cancel && (
-                    <button
-                      className="danger"
-                      onClick={() => setAction("cancel")}
-                    >
-                      Hủy yêu cầu
-                    </button>
-                  )}
-                  {p.revokeAi && (
-                    <button
-                      type="button"
-                      className="danger"
-                      onClick={() => setAction("revokeAi")}
-                    >
-                      Thu hồi duyệt tự động của AI
-                    </button>
-                  )}
-                  {!Object.values(p).some(Boolean) && (
-                    <p className="muted">
-                      Hồ sơ ở chế độ xem theo quyền và trạng thái hiện tại.
-                    </p>
-                  )}
-                  {user.roles.includes("AUDITOR") && (
-                    <ActionForm
-                      onSubmit={async () =>
-                        setVerify(
-                          await api(`/api/v1/requests/${id}/audit/verify`),
-                        )
-                      }
-                      submitLabel="Xác minh nhật ký"
-                    />
-                  )}
-                  {verify && <Data value={verify} />}
-                  <AiSummary request={r} />
+                  {p.edit && <button type="button" onClick={() => onEdit(r)}>Chỉnh sửa / bổ sung</button>}
+                  {p.approve && <>
+                    <button type="button" onClick={() => setAction("approve")}>Phê duyệt</button>
+                    <button type="button" className="secondary" onClick={() => setAction("info")}>Yêu cầu bổ sung</button>
+                    <button type="button" className="danger" onClick={() => setAction("reject")}>Từ chối</button>
+                  </>}
+                  {p.claim && <button type="button" onClick={() => setAction("claim")}>Nhận công việc</button>}
+                  {p.execute && <button type="button" onClick={() => setAction("execution")}>Nộp kết quả thực hiện</button>}
+                  {(p.claim || p.execute) && <button type="button" className="secondary" onClick={() => setAction("issue")}>Báo vướng mắc</button>}
+                  {p.accept && <>
+                    <button type="button" onClick={() => setAction("accept")}>Chấp nhận nghiệm thu</button>
+                    <button type="button" className="danger" onClick={() => setAction("rework")}>Yêu cầu làm lại</button>
+                  </>}
+                  {p.cancel && <button type="button" className="danger" onClick={() => setAction("cancel")}>Hủy yêu cầu</button>}
+                  {p.revokeAi && <button type="button" className="danger" onClick={() => setAction("revokeAi")}>Thu hồi duyệt tự động của AI</button>}
+                  {!Object.values(p).some(Boolean) && <p className="muted">Không có thao tác nào dành cho bạn ở trạng thái hiện tại.</p>}
+                  {r.status !== "DRAFT" && <button type="button" className="secondary" onClick={() => setTab("ai")}>Xem đánh giá AI</button>}
                 </div>
                 <hr />
                 <small className="muted">Mọi quyết định được lưu trong lịch sử hoạt động của hồ sơ.</small>

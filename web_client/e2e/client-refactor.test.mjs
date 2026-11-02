@@ -67,7 +67,7 @@ test('each portal renders in its own mode, never the unrestricted "unified" fall
  const client=readFileSync(new URL('../src/main.jsx',import.meta.url),'utf8');
  const admin=readFileSync(new URL('../../web_admin/src/main.jsx',import.meta.url),'utf8');
  assert.match(client,/<App portal="client" \/>/);
- assert.match(admin,/<App portal="admin" \/>/);
+ assert.match(admin,/<App portal="admin"(\s+adminScreens=\{adminScreens\})?\s*\/>/);
 });
 test('administrative accounts stay system-only on the client portal', () => {
  const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');

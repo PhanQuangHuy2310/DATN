@@ -103,4 +103,3 @@ test("department dashboard is limited to approvers and auditors", () => {
   assert.ok(canNavigate(["AUDITOR"], "team"));
   for (const role of ["REQUESTER", "EXECUTOR", "ACCEPTOR", "POLICY_ADMIN", "OPS_ADMIN"]) assert.equal(canNavigate([role], "team"), false, role);
 });
-

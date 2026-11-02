@@ -504,4 +504,3 @@ class NoDefaultPasswordTests(SimpleTestCase):
         hashed = make_password("Correct-horse-battery-9")
         self.assertTrue(verify_user_password("Correct-horse-battery-9", hashed))
         self.assertFalse(verify_user_password("wrong", hashed))
-

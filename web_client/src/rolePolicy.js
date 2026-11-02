@@ -7,11 +7,11 @@ export const ROLE_NAVIGATION = Object.freeze({
   EXECUTOR: ["home", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
   ACCEPTOR: ["home", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
   POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "ai-policy", "plan-catalog", "notifications", "profile"],
-  OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "identity", "users", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
-  AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "notifications", "profile"],
+  OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
+  AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "team", "team-employees", "notifications", "profile"],
 });
 
-const NAV_ORDER = ["home", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "history", "policy", "ai-policy", "plan-catalog", "ops", "identity", "users", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
+const NAV_ORDER = ["home", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "team", "team-employees", "history", "policy", "ai-policy", "plan-catalog", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
 
 export const ADMIN_ROLES = Object.freeze(["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"]);
 const WORKFLOW_DUTY_ROLES = ["APPROVER", "EXECUTOR"];
