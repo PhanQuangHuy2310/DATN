@@ -9,7 +9,7 @@ COPY web_admin/src ./web_admin/src
 COPY web_admin/index.html web_admin/vite.config.js ./web_admin/
 WORKDIR /app/web_admin
 RUN npm run build
-FROM nginx:alpine
+FROM nginx:1.31.6-alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
 COPY web_admin/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/web_admin/dist /usr/share/nginx/html
 USER nginx

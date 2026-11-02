@@ -109,11 +109,12 @@
 1. ~~#2 migration 004~~ DONE: `migrations/004_mock_rls.sql` + khối RLS trong `00_mock_enterprise_schemas.sql`. Chưa áp dụng lên DB thật. Readiness vẫn chỉ đòi 001–003 (`health/views.py:84`) — nâng lên 004 sau khi áp dụng.
 2. ~~#18~~ DONE: `reproduce.mjs` dùng id `...0000000000ff` và khoảng thời gian cố định 10–12/10/2026 (test cũ phụ thuộc `now()`), thêm kiểm tra RLS mọi bảng mock → PASS.
 3. ~~ai_service~~ DONE: `ocr.py` dùng `not ip.is_global`, lỗi OCR chung chung (502/400) + log; `main.py` `IS_PRODUCTION` tắt docs/redoc/openapi, public path production chỉ `/health`, `/`; CORS `allow_credentials=False`, header tường minh. Test: `tests/test_ai_service_exposure.py` (mới), thêm 4 URL SSRF vào `tests/integration/test_ai_service.py`.
-4. Django: cache `/health/ready` 10s; JSON handler404/500 (tuỳ chọn).
-5. #17: nâng 3 gói ai_service ở `requirements.txt` + `requirements-local.txt`, kiểm chứng bằng venv tạm + `python tests/run_tests.py` + `pip-audit`; pin devDeps web_client theo lock; pin `nginx:1.31.6-alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2` cho web_client/web_admin Dockerfile.
-6. Thêm `AGENTS.md` (vibe-check) + `CLAUDE.md` (`@AGENTS.md`).
-7. Full gate: Django test, `tests/run_tests.py`, logger, ruff check/format, web_client test/lint/build, build web_admin, 2 bộ SQL validation.
-8. Rebuild `web_client/dist`, restart `eas-vibe-nginx`, chạy lại `check.py`, ghi before/after.
+4. ~~Django~~ DONE (commit `e39598f`): `/health/ready` cache 5s (chỉ cache khi ready, tắt khi `test`), `handler404/handler500` JSON trong `config/urls.py`; test `JsonErrorHandlerTests` (test_health.py).
+   - Các mục 6.2 + TODO 1–3 đã được commit trong `e39598f`, `24c4d07` (02/11/2026).
+5. ~~#17~~ DONE: ai_service (cả 2 file requirements) `fastapi 0.162.0`, `starlette 1.10.0` (pin mới), `prometheus-fastapi-instrumentator 8.1.0`, `python-multipart 0.0.33`, `Pillow 13.0.0`, `python-dotenv 1.2.4` (audit đầy đủ dạng JSON phát hiện thêm 3 gói này — lần audit đầu bị cắt bởi `tail`). Kiểm chứng: venv tạm `%TEMP%/claude/eas-ai-venv`, 16 test AI pass, 0 skip; multipart upload parse OK. Còn lại (chấp nhận rủi ro, cần paddle 3.x đổi API): `paddlepaddle 2.6.2`, `protobuf 3.20.2`, `imgaug 0.4.0` — chỉ trong image OCR (`requirements.txt`), không có trong `requirements-local.txt`. web_client devDeps pin `4.13.0`/`1.64.0` + lockfile đồng bộ. Image nginx web_client/web_admin pin digest giống gateway.
+6. ~~AGENTS.md~~ DONE: `AGENTS.md` (nguyên văn vibe-check + mục "Project notes (EAS)" ghi 3 ngoại lệ có lý do), `CLAUDE.md` = `@AGENTS.md`; `build: { sourcemap: false }` tường minh ở 2 vite config.
+7. ~~Full gate~~ DONE (02/11/2026): Django 267 OK, `tests/` 100 OK, logger OK, ruff check + format (phạm vi CI) OK, compileall OK, web_client 39 pass / lint / build (0 `.map`), web_admin build, SQL 86 PASS, mock SQL PASS, `SECRET_GATE=PASS`, `npm audit --omit=dev` 0.
+8. ~~Rescan~~ DONE: nginx (image đã pin) trước 1 FAIL / 1 WARN / 22 PASS → sau 0 FAIL / 0 WARN / 23 PASS. Django API trực tiếp: 0 FAIL, 1 WARN (`Server: WSGIServer` chỉ có ở dev `runserver`). Bằng chứng lưu tại `security/evidence/scan_*.json`.
 9. Tài liệu: `security/reports/*_REPORT.md` (17), `security/plans/*_PLAN.md` (17), `security/AUDIT_SUMMARY.md`, `plans/reports/2026-11-01_vibe_check_security_audit_report.md`, `changelogs/2026-11-01_vibe_check_security_hardening.md` + `changelogs/README.md`, README cho `plans/active|completed|reports`; chuyển kế hoạch sang `plans/completed/`.
 
 ### 6.4 Môi trường cục bộ
