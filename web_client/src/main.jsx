@@ -5,11 +5,12 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import "./styles.css";
 import "./eas-enhancements.css";
 import "./client-refactor.css";
+import "./design-system.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <App portal="client" />
     </ErrorBoundary>
   </StrictMode>,
 );

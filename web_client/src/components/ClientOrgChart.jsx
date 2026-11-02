@@ -2,57 +2,103 @@ import { useMemo, useState } from "react";
 import { useResource, ResourceState } from "./ui.jsx";
 import { ClientPageHeader } from "./clientDesign.jsx";
 
-function Person({ person, isSelf, isManager = false }) {
-  return <div className={`client-org-person ${isSelf ? "client-org-self" : ""}`}>
-    <span className="client-avatar" aria-hidden="true">{(person.display_name || "?").trim().slice(0,1).toLocaleUpperCase("vi-VN")}</span>
-    <div><strong>{person.display_name || "Chưa có tên"}{isSelf && <span className="client-org-you"> (Bạn)</span>}</strong>
-      <small>{isManager ? "Quản lý trực tiếp" : person.manager_name ? `Quản lý: ${person.manager_name}` : "Chưa cập nhật quản lý trực tiếp"}</small></div>
-  </div>;
+const fold = (value) => String(value || "").toLocaleLowerCase("vi-VN");
+
+function PersonNode({ person, childrenOf, selfId, needle, depth = 0 }) {
+  const reports = childrenOf.get(person.id) || [];
+  const [open, setOpen] = useState(depth < 1);
+  const matches = !needle || fold(person.display_name).includes(needle);
+  return <li className="client-org-node">
+    <div className={`client-org-person ${person.id === selfId ? "client-org-self" : ""} ${needle && matches ? "client-org-match" : ""}`}>
+      <span className="client-avatar" aria-hidden="true">{(person.display_name || "?").trim().slice(0, 1).toLocaleUpperCase("vi-VN")}</span>
+      <div><strong>{person.display_name}{person.id === selfId && <span className="client-org-you"> (Bạn)</span>}</strong>
+        <small>{reports.length ? `Quản lý ${reports.length} người` : "Nhân viên"}</small></div>
+      {reports.length > 0 && <button type="button" className="link client-org-toggle" aria-expanded={open || Boolean(needle)} onClick={() => setOpen((v) => !v)}>{open || needle ? "Thu gọn" : "Mở rộng"}</button>}
+    </div>
+    {reports.length > 0 && (open || needle) && <ul className="client-org-children">
+      {reports.map((child) => <PersonNode key={child.id} person={child} childrenOf={childrenOf} selfId={selfId} needle={needle} depth={depth + 1} />)}
+    </ul>}
+  </li>;
 }
 
-/** Read-only, department-scoped organization structure. All relationships are read from API. */
+/** Organization → Department → Manager → Employees, built only from /api/v1/meta/org-chart.
+ * The API decides which people are visible; this view never infers hierarchy. */
 export default function ClientOrgChart({ user }) {
-  const colleagues = useResource("/api/v1/meta/colleagues");
+  const chart = useResource("/api/v1/meta/org-chart");
   const [search, setSearch] = useState("");
-  const people = useMemo(() => colleagues.data?.organization || [], [colleagues.data]);
-  const groups = useMemo(() => {
-    const byId = new Map(people.map(p => [p.id, p]));
-    const buckets = new Map();
-    people.forEach(person => {
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const needle = fold(search.trim());
+  const departments = useMemo(() => chart.data?.departments || [], [chart.data]);
+  const people = useMemo(() => chart.data?.users || [], [chart.data]);
+
+  const tree = useMemo(() => {
+    const byId = new Map(people.map((p) => [p.id, p]));
+    const childrenOf = new Map();
+    const rootsByDept = new Map();
+    for (const person of people) {
       const manager = person.manager_id && byId.get(person.manager_id);
-      const key = manager ? manager.id : "unassigned";
-      if (!buckets.has(key)) buckets.set(key, { manager: manager || null, members: [] });
-      if (manager?.id !== person.id) buckets.get(key).members.push(person);
-    });
-    // Root managers are already displayed as group leaders, not unassigned employees.
-    const knownLeaders = new Set([...buckets.values()].filter(b => b.manager).map(b => b.manager.id));
-    const unassigned = buckets.get("unassigned");
-    if (unassigned) unassigned.members = unassigned.members.filter(p => !knownLeaders.has(p.id));
-    return [...buckets.values()].filter(b => b.manager || b.members.length).sort((a,b) => (a.manager?.display_name || "~~~").localeCompare(b.manager?.display_name || "~~~", "vi"));
+      // A manager in another department leads their own unit; show the person as a root here.
+      if (manager && manager.department_id === person.department_id) {
+        if (!childrenOf.has(manager.id)) childrenOf.set(manager.id, []);
+        childrenOf.get(manager.id).push(person);
+      } else {
+        if (!rootsByDept.has(person.department_id)) rootsByDept.set(person.department_id, []);
+        rootsByDept.get(person.department_id).push(person);
+      }
+    }
+    const sortByName = (a, b) => a.display_name.localeCompare(b.display_name, "vi");
+    childrenOf.forEach((list) => list.sort(sortByName));
+    rootsByDept.forEach((list) => list.sort((a, b) => (childrenOf.get(b.id)?.length || 0) - (childrenOf.get(a.id)?.length || 0) || sortByName(a, b)));
+    return { childrenOf, rootsByDept };
   }, [people]);
-  const needle = search.trim().toLocaleLowerCase("vi-VN");
-  const visible = groups.filter(g => !needle || [g.manager?.display_name, ...g.members.map(m=>m.display_name)].some(t => String(t||"").toLocaleLowerCase("vi-VN").includes(needle)));
-  const department = people[0]?.department_name || "Phòng ban của bạn";
+
+  const visibleDepartments = departments.filter((d) => {
+    if (departmentFilter && d.id !== departmentFilter) return false;
+    if (!needle) return true;
+    return fold(d.name).includes(needle) || people.some((p) => p.department_id === d.id && fold(p.display_name).includes(needle));
+  });
+  const scopeLabel = chart.data?.scope === "organization" ? "Toàn tổ chức" : "Phòng ban của bạn và cấp quản lý trực tiếp";
+  function toggle(id) { setCollapsed((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); }
+
   return <section className="client-section">
-    <ClientPageHeader eyebrow="TỔ CHỨC" title="Sơ đồ phòng ban" description="Trưởng nhóm và thành viên được sắp xếp theo quan hệ quản lý đã khai báo trong hệ thống."/>
-    {!user.roles?.some(role => ["REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR"].includes(role)) ? <section className="panel empty"><h2>Không có quyền tra cứu</h2><p>Thông tin nhân sự chỉ hiển thị trong phạm vi được phân quyền.</p></section> :
-      <ResourceState resource={colleagues}>
-        <section className="panel client-org-workspace">
-          <div className="section-head"><div><p className="eyebrow">PHÒNG BAN</p><h2>{department}</h2><p className="muted">{people.length} thành viên đang hoạt động · Phân cấp theo quản lý trực tiếp.</p></div>
-            <button type="button" className="secondary" onClick={colleagues.reload}>Cập nhật</button></div>
-          <label className="client-org-search">Tìm thành viên
-            <input value={search} onChange={e=>setSearch(e.target.value)} type="search" placeholder="Nhập tên đồng nghiệp hoặc trưởng nhóm…"/>
-          </label>
-          {people.length === 0 ? <p className="muted">Chưa có dữ liệu nhân sự trong phòng ban được phép xem.</p> :
-            <div className="client-org-tree" aria-label="Cây tổ chức theo quản lý trực tiếp">
-              {visible.map((group,i) => <section key={group.manager?.id || `unassigned-${i}`} className="client-org-group">
-                <div className="client-org-leader">{group.manager ? <Person person={group.manager} isManager isSelf={group.manager.id === user.id}/> : <div className="client-org-unassigned"><strong>Chưa được gán quản lý trong phòng ban</strong><small>Kiểm tra quan hệ quản lý với bộ phận nhân sự.</small></div>}</div>
-                {group.members.length > 0 && <div className="client-org-members">{group.members.filter(p=>!needle||[p.display_name,group.manager?.display_name].some(s=>String(s||"").toLocaleLowerCase("vi-VN").includes(needle))).map(p => <Person key={p.id} person={p} isSelf={p.id === user.id}/>)}</div>}
-              </section>)}
-              {visible.length===0 && <p className="muted">Không tìm thấy thành viên phù hợp.</p>}
-            </div>}
-          <p className="muted client-org-footnote">Sơ đồ chỉ sử dụng tên và quan hệ quản lý trong phòng ban được phép xem; không công bố tài khoản đăng nhập hay thông tin cá nhân khác. Người được gán là quản lý trực tiếp không đồng nghĩa tự động có quyền phê duyệt mọi hồ sơ.</p>
-        </section>
-      </ResourceState>}
+    <ClientPageHeader eyebrow="TỔ CHỨC" title="Sơ đồ tổ chức" description="Cơ cấu phòng ban và quan hệ quản lý trực tiếp theo dữ liệu nhân sự của hệ thống." />
+    <ResourceState resource={chart}>
+      <section className="panel client-org-workspace">
+        <div className="section-head"><div><p className="eyebrow">{scopeLabel}</p><h2>{departments.length} phòng ban · {people.length} nhân sự hiển thị</h2></div>
+          <div className="actions">
+            <button type="button" className="secondary" onClick={() => setCollapsed(new Set())}>Mở tất cả</button>
+            <button type="button" className="secondary" onClick={() => setCollapsed(new Set(departments.map((d) => d.id)))}>Thu gọn tất cả</button>
+            <button type="button" className="secondary" onClick={chart.reload}>Cập nhật</button>
+          </div></div>
+        <div className="client-org-filters">
+          <label className="client-org-search">Tìm nhân sự hoặc phòng ban
+            <input value={search} onChange={(e) => setSearch(e.target.value)} type="search" placeholder="Nhập tên…" /></label>
+          <label>Phòng ban
+            <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)}>
+              <option value="">Tất cả phòng ban</option>
+              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select></label>
+        </div>
+        <div className="client-org-tree" aria-label="Cây tổ chức">
+          {visibleDepartments.map((dept) => {
+            const roots = tree.rootsByDept.get(dept.id) || [];
+            const isOpen = !collapsed.has(dept.id) || Boolean(needle);
+            return <section key={dept.id} className="client-org-group">
+              <button type="button" className="client-org-dept-head" aria-expanded={isOpen} onClick={() => toggle(dept.id)}>
+                <span aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
+                <strong>{dept.name}</strong>
+                <small>{dept.member_count} thành viên{dept.id === user.department_id ? " · Phòng của bạn" : ""}</small>
+              </button>
+              {isOpen && (roots.length
+                ? <ul className="client-org-children client-org-roots">{roots.map((p) => <PersonNode key={p.id} person={p} childrenOf={tree.childrenOf} selfId={user.id} needle={needle} />)}</ul>
+                : <p className="muted client-org-hidden">Danh sách nhân sự phòng này nằm ngoài phạm vi bạn được xem.</p>)}
+            </section>;
+          })}
+          {!visibleDepartments.length && <p className="muted">Không tìm thấy phòng ban hoặc nhân sự phù hợp.</p>}
+        </div>
+        <p className="muted client-org-footnote">Sơ đồ chỉ dùng họ tên, phòng ban và quan hệ quản lý trực tiếp; không công bố email hay quyền hệ thống. Là quản lý trực tiếp không đồng nghĩa có quyền phê duyệt mọi loại yêu cầu.</p>
+      </section>
+    </ResourceState>
   </section>;
 }

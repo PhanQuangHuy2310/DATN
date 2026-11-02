@@ -134,3 +134,51 @@
 @media(max-width:400px){.ai-workflow-progress{grid-template-columns:1fr;}}
 
 .ai-workflow-progress>.is-skipped{opacity:.7;background:#f4f6f9;color:#536681;}
+
+/* Request progress summary (current handler, next step, deadline, decisions) */
+.progress-summary {margin:0 0 16px;padding:18px!important;}
+.progress-summary-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;}
+.progress-summary-grid > div {display:flex;flex-direction:column;gap:5px;min-width:0;padding:12px;border:1px solid var(--client-border);border-radius:10px;background:#f8faff;}
+.progress-summary-grid strong {overflow-wrap:anywhere;color:var(--client-ink);}
+.progress-label {font-size:.75rem;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--client-muted);}
+.progress-overdue,.overdue {color:#b42318;font-weight:650;}
+.progress-meta {margin:12px 0 0;}
+.progress-decisions h3 {margin:16px 0 8px;font-size:.95rem;}
+.progress-reason {margin:6px 0 0;padding:8px 12px;border-left:3px solid #f0b4a8;background:#fff6f4;border-radius:0 8px 8px 0;white-space:pre-wrap;overflow-wrap:anywhere;}
+
+/* Route preview before submission */
+.route-preview {margin:16px 0;padding:16px;border:1px solid var(--client-border);border-radius:12px;background:#fbfcff;}
+.route-preview h3 {margin:0 0 4px;font-size:1rem;}
+.route-preview-steps {list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:10px;}
+.route-preview-steps li {display:flex;flex-direction:column;gap:3px;min-width:170px;flex:1 1 170px;padding:10px 12px;border:1px solid var(--client-border);border-radius:10px;background:#fff;}
+.route-preview-steps li.route-step-invalid {border-color:#f0b4a8;background:#fff6f4;}
+.route-step-tag {align-self:flex-start;font-size:.72rem;font-weight:700;color:var(--client-accent);background:var(--client-accent-soft);padding:2px 8px;border-radius:999px;}
+
+/* AI assessment */
+.ai-stage-list {list-style:none;margin:10px 0;padding:0;display:grid;gap:6px;}
+.ai-stage-list .ai-progress-step {display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:8px;}
+.ai-stage-detail {grid-column:2 / -1;margin:0;font-size:.8rem;overflow-wrap:anywhere;}
+.ai-progress-step.skipped {opacity:.7;}
+.ai-reasons {margin:8px 0;padding-left:18px;font-size:.85rem;}
+
+/* Request cards */
+.client-request-assignee,.client-request-due {margin:4px 0 0;font-size:.8rem;color:var(--client-muted);}
+.client-request-due.overdue {color:#b42318;}
+
+/* Team dashboard breadcrumb */
+.team-breadcrumb {display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:.9rem;}
+.team-breadcrumb [aria-current="page"] {font-weight:700;color:var(--client-ink);}
+
+/* Organization chart tree */
+.client-org-filters {display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:12px;margin:12px 0;}
+.client-org-dept-head {display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#f4f7fd;border:1px solid var(--client-border);border-radius:10px;padding:10px 14px;color:var(--client-ink);}
+.client-org-dept-head small {margin-left:auto;color:var(--client-muted);font-weight:500;}
+.client-org-children {list-style:none;margin:8px 0 0;padding-left:22px;border-left:2px solid var(--client-border);display:grid;gap:8px;}
+.client-org-roots {border-left:none;padding-left:8px;}
+.client-org-node > .client-org-person {display:flex;align-items:center;gap:10px;}
+.client-org-toggle {margin-left:auto;}
+.client-org-match {outline:2px solid var(--client-accent);outline-offset:2px;border-radius:10px;}
+.client-org-hidden {margin:8px 0 0 8px;}
+
+@media (max-width:1100px){.progress-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:620px){.progress-summary-grid,.client-org-filters{grid-template-columns:1fr;}.route-preview-steps li{min-width:0;}.client-org-children{padding-left:12px;}}

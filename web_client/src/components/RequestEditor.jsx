@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { api, idempotencyKey } from "../api.js";
+import { api, idempotencyKey, notify } from "../api.js";
 import { fields, fieldLabels, types, errorText, riskLevels, approvalLevels, typeLevels } from "../domain.js";
 import { Badge, command } from "./ui.jsx";
 import { AiRequestAssist } from "./AiAssist.jsx";
 import RequestTypeMenu from "./RequestTypeMenu.jsx";
+import RoutePreview from "./RoutePreview.jsx";
+import { ConfirmDialog } from "./design.jsx";
 
 // String properties representing evidence are stored as sanitized filenames in
 // the published schema, while the actual file bytes go through Attachment API.
@@ -102,6 +104,10 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
   const createKey = useRef(idempotencyKey());
+  // One key per draft version: retrying the same submission replays the stored
+  // result instead of issuing a second command.
+  const submitKeys = useRef(new Map());
+  const [confirmSend, setConfirmSend] = useState(false);
   useEffect(() => {
     let active = true;
     api("/api/v1/meta/request-type-forms")
@@ -184,10 +190,14 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       setBusy(false);
     }
   }
-  async function save(e) {
+  function save(e) {
     e.preventDefault();
-    const form = e.currentTarget;
     const send = e.nativeEvent.submitter?.value === "send";
+    // Submission starts the approval workflow; confirm first. Field values stay in the form.
+    if (send) { setConfirmSend(true); return; }
+    void persist(e.currentTarget, false);
+  }
+  async function persist(form, send) {
     const payload = Object.fromEntries(new FormData(form));
     delete payload.file;
     for (const [name, , kind] of formFields) if (kind === "evidence") {
@@ -279,13 +289,23 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       r = { ...r, lock_version: saved.request?.lock_version ?? saved.lock_version ?? r.lock_version };
       setRecord(r);
       if (send) {
-        await command("requests/submit", {
-          request_id: r.id,
-          expected_version: r.lock_version,
-          type_code: type,
-          viewed_release_id: current?.release_id,
-          payload,
-        });
+        const versionKey = `${r.id}:${r.lock_version}`;
+        if (!submitKeys.current.has(versionKey)) submitKeys.current.set(versionKey, idempotencyKey());
+        try {
+          await command("requests/submit", {
+            request_id: r.id,
+            expected_version: r.lock_version,
+            type_code: type,
+            viewed_release_id: current?.release_id,
+            payload,
+          }, "POST", submitKeys.current.get(versionKey));
+        } catch (submitError) {
+          // A timed-out write may still have committed: check the real status first.
+          if (submitError?.message !== "REQUEST_TIMEOUT_UNKNOWN" && !(submitError instanceof TypeError)) throw submitError;
+          const latest = await api(`/api/v1/requests/${r.id}`).catch(() => null);
+          if (!latest?.request || ["DRAFT", "NEEDS_INFO"].includes(latest.request.status)) throw submitError;
+          notify("Yêu cầu đã được gửi thành công (đã xác nhận lại với máy chủ)");
+        }
         onDone(r.id);
       } else
         setNotice(
@@ -413,6 +433,14 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
             }
             onSuggestType={record ? undefined : setType}
           />
+          <RoutePreview
+            type={type}
+            getValues={() =>
+              formElementRef.current
+                ? Object.fromEntries(new FormData(formElementRef.current))
+                : {}
+            }
+          />
           {error && (
             <p className="error" role="alert">
               {error}
@@ -437,6 +465,10 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           </div>
         </fieldset>
       </form>}
+      {confirmSend && <ConfirmDialog title={initial?.status === "NEEDS_INFO" ? "Gửi lại phê duyệt?" : "Gửi yêu cầu phê duyệt?"}
+        message="Sau khi gửi, yêu cầu được chuyển tới người phê duyệt theo tuyến dự kiến và không thể chỉnh sửa trừ khi được yêu cầu bổ sung."
+        confirmLabel="Gửi phê duyệt" onClose={() => setConfirmSend(false)}
+        onConfirm={async () => { setConfirmSend(false); await persist(formElementRef.current, true); }} />}
     </section>
   );
 }

@@ -34,7 +34,7 @@ export function PageControls({ offset, limit = 20, nextOffset, onPage, onLimit, 
     <nav className="pagination pagination-extended" aria-label={`Phân trang ${title}`} ref={pageRef}>
       <div className="pagination-context"><strong>Trang {page}</strong><span>Hiển thị {count} {title}{count ? ` · Từ ${offset + 1} đến ${offset + count}` : ""}</span></div>
       {onLimit && <label className="page-size">Số dòng / trang <select value={limit} onChange={(e) => { onLimit(Number(e.target.value)); change(0); }}>
-        {[10, 20, 50].map((v) => <option key={v} value={v}>{v}</option>)}
+        {[5, 20, 50].map((v) => <option key={v} value={v}>{v}</option>)}
       </select></label>}
       <div className="page-buttons">
         <button type="button" className="secondary" disabled={offset === 0} onClick={() => change(0)} aria-label="Trang đầu">«</button>

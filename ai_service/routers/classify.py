@@ -112,6 +112,10 @@ class ClassifyRequestResult(BaseModel):
         ..., description="Độ tin cậy dự đoán template (0-1)"
     )
     workflow_suggestion: str = Field(..., description="Gợi ý quy trình xử lý")
+    method: str = Field("nlp_model", description="nlp_model | keyword_heuristic")
+    fallback_used: bool = Field(
+        False, description="True khi model chưa sẵn sàng và dùng quy tắc từ khóa"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -213,8 +217,11 @@ async def classify_request(body: ClassifyRequestInput):
         predicted_request_type=fallback_res["type"],
         predicted_department=fallback_res["dept"],
         predicted_template=fallback_res["template"],
-        confidence_request_type=0.75,
-        confidence_department=0.70,
-        confidence_template=0.70,
+        # Keyword rules have no statistical confidence; never report a model-like score.
+        confidence_request_type=0.0,
+        confidence_department=0.0,
+        confidence_template=0.0,
         workflow_suggestion="Quy trình gợi ý dựa trên từ khóa (Fallback)",
+        method="keyword_heuristic",
+        fallback_used=True,
     )

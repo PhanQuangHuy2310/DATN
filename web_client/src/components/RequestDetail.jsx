@@ -1,6 +1,8 @@
 import FullHistory from "./FullHistory.jsx";
 import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { AiSummary } from "./AiAssist.jsx";
+import { AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
+import { EmptyState, PageTabs, WorkflowTimeline } from "./design.jsx";
 import { requestActionPayload } from "../actionPayload.js";
 import { useState } from "react";
 import { api, API_BASE } from "../api.js";
@@ -8,49 +10,112 @@ import { date, fields, fieldLabels, permissions, types, riskLevels, approvalLeve
 import {
   ActionForm,
   Badge,
-  Data,
   Modal,
   Reason,
   ResourceState,
   command,
   useResource,
 } from "./ui.jsx";
-function History({ id }) {
-  const r = useResource(`/api/v1/requests/${id}/revisions`);
-  return (
-    <ResourceState resource={r}>
-      {r.data?.revisions?.map((v) => (
-        <details key={v.id} className="record">
-          <summary>
-            Phiên bản {v.revision_no} · {date(v.submitted_at)}
-          </summary>
-          <Data value={v.payload} />
-          {v.attachments?.map((a) => (
-            <p key={a.id}>
-              {a.original_name} <Badge value={a.scan_state} />{" "}
-              {a.scan_state === "CLEAN" && (
-                <a
-                  href={`${API_BASE}/api/v1/attachments/${a.id}/download`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Tải xuống
-                </a>
-              )}
-            </p>
-          ))}
-        </details>
-      ))}
-    </ResourceState>
-  );
+const ACTION_LABELS = {
+  DRAFT_CREATED: "Tạo bản nháp", DRAFT_UPDATED: "Cập nhật bản nháp", REQUEST_SUBMITTED: "Gửi yêu cầu",
+  ATTACHMENT_ADDED: "Thêm tệp đính kèm", DRAFT_ATTACHMENT_REMOVED: "Gỡ tệp khỏi bản nháp", ATTACHMENT_DOWNLOADED: "Tải tệp đính kèm",
+  APPROVAL_APPROVE: "Phê duyệt", APPROVAL_REJECT: "Từ chối", APPROVAL_NEEDS_INFO: "Yêu cầu bổ sung",
+  EXECUTION_STARTED: "Nhận công việc thực hiện", EXECUTION_EVIDENCE_ADDED: "Thêm minh chứng thực hiện", EXECUTION_RESULT_SUBMITTED: "Nộp kết quả thực hiện",
+  EXECUTION_ISSUE_BLOCKED: "Báo vướng mắc", EXECUTION_ISSUE_UNABLE_TO_CLAIM: "Báo không thể nhận việc",
+  ACCEPTANCE_ACCEPT: "Nghiệm thu đạt", ACCEPTANCE_REWORK: "Yêu cầu làm lại",
+  REQUEST_CANCELLED: "Hủy yêu cầu", ACTOR_REASSIGNED: "Điều chuyển người xử lý",
+  SLA_REMINDER: "Nhắc hạn xử lý", SLA_BREACH: "Quá hạn xử lý", AI_ASSESSMENT_RECORDED: "Đánh giá AI",
+  NOTIFICATION_SKIPPED_INACTIVE_OR_REVOKED: "Bỏ qua thông báo cho tài khoản ngừng hoạt động",
+};
+const STEP_STATES = { WAITING: "Chờ đến lượt", ACTIVE: "Đang xử lý", APPROVED: "Đã phê duyệt", REJECTED: "Đã từ chối", NEEDS_INFO: "Yêu cầu bổ sung", SKIPPED: "Bỏ qua" };
+
+function fieldLabel(typeCode, name) {
+  return fields[typeCode]?.find(([field]) => field === name)?.[1] || fieldLabels[name] || name.replaceAll("_", " ");
 }
-function Audit({ id }) {
+function PayloadList({ typeCode, payload }) {
+  const entries = Object.entries(payload || {});
+  if (!entries.length) return <p className="muted">Chưa có nội dung.</p>;
+  return <dl className="data-list">{entries.map(([name, value]) => <div key={name}>
+    <dt>{fieldLabel(typeCode, name)}</dt>
+    <dd>{typeof value === "object" && value !== null ? JSON.stringify(value) : String(value ?? "—")}</dd>
+  </div>)}</dl>;
+}
+function Attachments({ id, typeCode }) {
+  const r = useResource(`/api/v1/requests/${id}/revisions`);
+  const revisions = r.data?.revisions || [];
+  return <ResourceState resource={r}>
+    {revisions.length ? revisions.map((v, index) => <details key={v.id} className="record" open={index === revisions.length - 1}>
+      <summary>Lần gửi {v.revision_no} · {date(v.submitted_at)} · {v.attachments?.length || 0} tệp</summary>
+      {v.attachments?.length ? <ul className="ds-health-list">{v.attachments.map((a) => <li key={a.id}>
+        <span>{a.original_name}</span>
+        <span><Badge value={a.scan_state} /> {a.scan_state === "CLEAN" && <a href={`${API_BASE}/api/v1/attachments/${a.id}/download`} target="_blank" rel="noreferrer">Tải xuống</a>}</span>
+      </li>)}</ul> : <p className="muted">Không có tệp đính kèm.</p>}
+      <details><summary>Nội dung đã gửi</summary><PayloadList typeCode={typeCode} payload={v.payload} /></details>
+    </details>) : <EmptyState title="Chưa có tệp đính kèm" description="Tệp được lưu theo từng lần gửi yêu cầu." />}
+  </ResourceState>;
+}
+/** Human-readable activity log built from the request audit chain (no hashes or identifiers). */
+function ActivityLog({ id, userId }) {
   const r = useResource(`/api/v1/requests/${id}/audit`);
-  return (
-    <ResourceState resource={r}>
-      <Data value={r.data?.items || r.data} technical />
-    </ResourceState>
-  );
+  const items = [...(r.data?.items || [])].reverse();
+  return <ResourceState resource={r}>
+    {items.length ? <ol className="ds-timeline">{items.map((event) => <li key={event.id} className="ds-timeline-item is-done">
+      <span className="ds-timeline-dot" aria-hidden="true" />
+      <div className="ds-timeline-body">
+        <strong>{ACTION_LABELS[event.action] || "Cập nhật hồ sơ"}</strong>
+        <small className="muted">{date(event.occurred_at)} · {event.actor_kind === "SYSTEM" ? "Hệ thống" : event.actor_id === userId ? "Bạn" : "Người dùng"}</small>
+        {event.details?.reason && <blockquote>{event.details.reason}</blockquote>}
+      </div>
+    </li>)}</ol> : <EmptyState title="Chưa có hoạt động" />}
+  </ResourceState>;
+}
+function ApproversTable({ request }) {
+  const steps = request.approval_steps || [];
+  const decisions = request.progress?.decisions || [];
+  if (!steps.length) return <EmptyState title="Chưa có tuyến phê duyệt" description="Tuyến duyệt được xác định khi yêu cầu được gửi." />;
+  return <div className="table-wrap"><table><thead><tr><th>Cấp</th><th>Vai trò</th><th>Người phê duyệt</th><th>Trạng thái</th><th>Thời điểm</th><th>Nhận xét</th></tr></thead>
+    <tbody>{steps.map((s) => {
+      const decision = decisions.filter((d) => d.kind === "APPROVAL" && d.step_no === s.step_no && d.revision_no === request.revision_no).pop();
+      return <tr key={s.step_no} className={s.state === "ACTIVE" && request.progress?.deadline?.overdue ? "is-overdue" : ""}>
+        <td>{s.tier_level || s.step_no}</td>
+        <td>{resolverLabels[s.resolver_code] || "Người phê duyệt"}</td>
+        <td><strong>{s.assignee_name || "Đang phân công"}</strong></td>
+        <td><Badge value={s.state} /> <span className="sr-only">{STEP_STATES[s.state]}</span></td>
+        <td>{date(s.closed_at || s.activated_at) || "—"}</td>
+        <td>{decision?.reason || <span className="muted">—</span>}</td>
+      </tr>;
+    })}</tbody></table></div>;
+}
+function timelineItems(request) {
+  const status = request.status;
+  const lifecycle = request.workflow?.lifecycle;
+  const steps = request.approval_steps || [];
+  const closedBad = status === "REJECTED" || status === "CANCELLED";
+  const submitted = status !== "DRAFT";
+  const approved = ["READY_FOR_EXECUTION", "IN_PROGRESS", "WAITING_FOR_ACCEPTANCE", "COMPLETED"].includes(status);
+  const items = [{ key: "submit", title: "Gửi yêu cầu", state: submitted ? "done" : "current", meta: submitted ? `Lần gửi ${request.revision_no || 1}` : "Đang là bản nháp" }];
+  steps.forEach((s) => items.push({
+    key: `step-${s.step_no}`,
+    title: `Phê duyệt cấp ${s.tier_level || s.step_no} · ${resolverLabels[s.resolver_code] || "Người phê duyệt"}`,
+    meta: `${s.assignee_name || "Đang phân công"} · ${STEP_STATES[s.state] || ""}${s.closed_at ? ` · ${date(s.closed_at)}` : ""}`,
+    state: s.state === "APPROVED" ? "done" : s.state === "ACTIVE" ? "current" : ["REJECTED", "NEEDS_INFO"].includes(s.state) ? "failed" : s.state === "SKIPPED" ? "skipped" : "upcoming",
+  }));
+  if (lifecycle === "B" || lifecycle === "C") items.push({
+    key: "execution", title: "Thực hiện",
+    meta: request.progress?.executor?.name || undefined,
+    state: ["WAITING_FOR_ACCEPTANCE", "COMPLETED"].includes(status) || (lifecycle === "B" && status === "COMPLETED") ? "done" : ["READY_FOR_EXECUTION", "IN_PROGRESS"].includes(status) ? "current" : closedBad ? "skipped" : "upcoming",
+  });
+  if (lifecycle === "C") items.push({
+    key: "acceptance", title: "Nghiệm thu", meta: request.progress?.acceptor?.name || undefined,
+    state: status === "COMPLETED" ? "done" : status === "WAITING_FOR_ACCEPTANCE" ? "current" : closedBad ? "skipped" : "upcoming",
+  });
+  items.push({
+    key: "end",
+    title: status === "REJECTED" ? "Bị từ chối" : status === "CANCELLED" ? "Đã hủy" : "Hoàn thành",
+    state: status === "COMPLETED" ? "done" : closedBad ? "failed" : "upcoming",
+    meta: !approved && !closedBad && status !== "COMPLETED" ? "Chưa kết thúc" : undefined,
+  });
+  return items;
 }
 function AssignDownSelect({ requestId }) {
   const resource = useResource(`/api/v1/requests/${requestId}/assignable-executors`);
@@ -131,7 +196,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
             <div className="page-heading">
               <div>
                 <p className="eyebrow">
-                  {r.code} / {types[r.type_code]}
+                  {r.code} / {r.progress?.type_name || types[r.type_code] || "Yêu cầu"}
                 </p>
                 <h1>{r.payload?.title || r.code}</h1>
                 <p className="muted">
@@ -140,80 +205,47 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
               </div>
               <Badge value={r.status} />
             </div>
-            <div className="tabs" aria-label="Nội dung hồ sơ">
-              {[
-                ["info", "Thông tin yêu cầu"],
-                ["progress", "Tiến trình"],
-                ["diagrams", "Sơ đồ luồng"],
-                ["history", "Phiên bản & tài liệu"],
-                ["audit", "Nhật ký"],
-              ].map(([key, title]) => (
-                <button
-                  key={key}
-                  className={tab === key ? "active" : "secondary"}
-                  onClick={() => {
-                    setTab(key);
-                    window.requestAnimationFrame(() => document.getElementById("request-detail-content")?.scrollIntoView({ behavior: "smooth", block: "start" }));
-                  }}
-                >
-                  {title}
-                </button>
-              ))}
-            </div>
+            <ProgressSummary progress={r.progress} />
+            <PageTabs label="Nội dung hồ sơ" value={tab} onChange={(key) => {
+              setTab(key);
+              window.requestAnimationFrame(() => document.getElementById("request-detail-content")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+            }} tabs={[
+              ["info", "Thông tin"],
+              ["progress", "Tiến trình xử lý"],
+              ["approvers", "Người phê duyệt", r.approval_steps?.length || null],
+              ["files", "Tệp đính kèm"],
+              ...(r.status !== "DRAFT" ? [["ai", "Đánh giá AI"]] : []),
+              ["activity", "Lịch sử hoạt động"],
+              ["diagrams", "Sơ đồ luồng"],
+            ]} />
             <div className={tab === "diagrams" ? "detail-grid flow-detail-grid" : "detail-grid"} id="request-detail-content">
               <div className="panel">
-                {tab === "info" && (
-                  <>
-                    <h2>Nội dung đề nghị</h2>
-                    <dl className="data-list">
-                      {Object.entries(r.payload || {}).map(([name, value]) => (
-                        <div key={name}>
-                          <dt>{fields[r.type_code]?.find(([field]) => field === name)?.[1] || fieldLabels[name] || name.replaceAll("_", " ")}</dt>
-                          <dd>{typeof value === "object" ? JSON.stringify(value) : String(value ?? "—")}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </>
-                )}
-                {tab === "progress" && (
-                  <>
-                    <h2>Tiến trình phê duyệt</h2>
-                    <ol className="timeline">
-                      {r.approval_steps?.map((s, i) => (
-                        <li key={i}>
-                          <strong>Cấp {s.tier_level || s.step_no} / {r.approval_steps?.length || r.approval_level || 1}{s.resolver_code ? ` · ${resolverLabels[s.resolver_code] || "Người phê duyệt"}` : ""}</strong>{" "}
-                          <Badge value={s.state} />
-                          <p className="muted">Người xử lý: {s.assignee_name || "Đang phân công"}</p>
-                          <small>{date(s.closed_at || s.activated_at)}</small>
-                        </li>
-                      ))}
-                    </ol>
-                    <h2>Thực hiện & nghiệm thu</h2>
-                    {r.workflow?.attempt ? (
-                      <>
-                        <Badge value={r.workflow.attempt.state} />
-                        <p>Lần thực hiện {r.workflow.attempt.attempt_no}</p>
-                        <p>
-                          {r.workflow.attempt.result_note ||
-                            "Chưa nộp kết quả."}
-                        </p>
-                        <p>
-                          Mã tham chiếu:{" "}
-                          {r.workflow.attempt.external_reference || "—"}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="muted">
-                        Không có lần thực hiện đang hoạt động. Xem nhật ký để
-                        tra cứu các lần đã kết thúc.
-                      </p>
-                    )}
-                  </>
-                )}
+                {tab === "info" && <><h2>Nội dung đề nghị</h2><PayloadList typeCode={r.type_code} payload={r.payload} /></>}
+                {tab === "progress" && <>
+                  <h2>Tiến trình xử lý</h2>
+                  <WorkflowTimeline items={timelineItems(r)} />
+                  {r.workflow?.attempt && <div className="record">
+                    <strong>Lần thực hiện {r.workflow.attempt.attempt_no}</strong> <Badge value={r.workflow.attempt.state} />
+                    <p>{r.workflow.attempt.result_note || "Chưa nộp kết quả."}</p>
+                    {r.workflow.attempt.external_reference && <p className="muted">Mã tham chiếu: {r.workflow.attempt.external_reference}</p>}
+                  </div>}
+                  <FullHistory id={id} />
+                </>}
+                {tab === "approvers" && <><h2>Người phê duyệt</h2><ApproversTable request={r} /></>}
+                {tab === "files" && <><h2>Tệp đính kèm</h2><Attachments id={id} typeCode={r.type_code} /></>}
+                {tab === "ai" && r.status !== "DRAFT" && <>
+                  <AiAssessmentPanel requestId={id} canRun={r.progress?.stage !== "CLOSED" && !user.roles.some((role) => ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"].includes(role))} />
+                  <AiSummary request={r} />
+                </>}
+                {tab === "activity" && <>
+                  <h2>Lịch sử hoạt động</h2>
+                  {user.roles.includes("AUDITOR") && <div className="record">
+                    <ActionForm onSubmit={async () => setVerify(await api(`/api/v1/requests/${id}/audit/verify`))} submitLabel="Xác minh tính toàn vẹn nhật ký" />
+                    {verify && <p role="status"><Badge value={verify.status === "PASS" ? "COMPLETED" : "REJECTED"} /> {verify.status === "PASS" ? "Chuỗi nhật ký toàn vẹn." : verify.status === "FAIL" ? "Phát hiện sai lệch trong chuỗi nhật ký." : "Chưa đủ dữ liệu để kết luận."}</p>}
+                  </div>}
+                  <ActivityLog id={id} userId={user.id} />
+                </>}
                 {tab === "diagrams" && <WorkflowDiagrams request={r} embedded />}
-                {tab === "history" && <History id={id} />}
-                {tab === "progress" && <FullHistory id={id} />}
-                {tab === "audit" && <Audit id={id} />}
               </div>
               <aside className="panel">
                 <p className="eyebrow">XỬ LÝ HỒ SƠ</p>
@@ -310,9 +342,7 @@ export default function RequestDetail({ id, user, onBack, onEdit, onChanged, ini
                   <AiSummary request={r} />
                 </div>
                 <hr />
-                <small className="muted">
-                  Quyết định và thay đổi được lưu trong lịch sử hồ sơ.
-                </small>
+                <small className="muted">Mọi quyết định được lưu trong lịch sử hoạt động của hồ sơ.</small>
               </aside>
             </div>
             {action && (

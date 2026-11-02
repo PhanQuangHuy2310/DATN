@@ -17,7 +17,9 @@ test("each of the seven SRS roles has the correct main worklist", () => {
 
 test("auditors cannot see mutation workspaces", () => {
   const pages = visiblePages(["AUDITOR"]);
-  assert.deepEqual(pages, ["home", "flow-diagrams", "ai-process", "audit", "events", "notifications", "profile"]);
+  // "team" is a read-only scoped report (UC15: auditor is the primary report actor).
+  assert.deepEqual(pages, ["home", "flow-diagrams", "ai-process", "team", "team-employees", "audit", "events", "notifications", "profile"]);
+  for (const mutation of ["approval", "execution", "acceptance"]) assert.ok(!pages.includes(mutation));
   assert.ok(!pages.includes("mine"));
   assert.ok(!pages.includes("ops"));
   assert.ok(!pages.includes("policy"));
@@ -95,3 +97,10 @@ test("only POLICY_ADMIN reaches the AI policy page", () => {
     assert.equal(canNavigate([role], "ai-policy"), false);
   }
 });
+
+test("department dashboard is limited to approvers and auditors", () => {
+  assert.ok(canNavigate(["APPROVER"], "team"));
+  assert.ok(canNavigate(["AUDITOR"], "team"));
+  for (const role of ["REQUESTER", "EXECUTOR", "ACCEPTOR", "POLICY_ADMIN", "OPS_ADMIN"]) assert.equal(canNavigate([role], "team"), false, role);
+});
+

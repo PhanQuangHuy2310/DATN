@@ -13,6 +13,14 @@ urlpatterns = [
     path("requests", views.request_list_or_create, name="request-list"),
     path("requests/submit", views.submit, name="request-submit"),
     path(
+        "requests/route-preview", views.route_preview_view, name="request-route-preview"
+    ),
+    path(
+        "requests/<uuid:request_id>/ai-assessments",
+        views.ai_assessment_view,
+        name="request-ai-assessments",
+    ),
+    path(
         "requests/<uuid:request_id>/submit", views.submit, name="request-submit-with-id"
     ),
     path(
@@ -215,6 +223,7 @@ urlpatterns = [
         name="notification-mark-read-alias",
     ),
     path("reports/requests", views.reports_requests_view, name="reports-requests"),
+    path("reports/team", views.team_report_view, name="reports-team"),
     path(
         "requests/<uuid:request_id>/audit",
         views.request_audit_view,

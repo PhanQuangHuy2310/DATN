@@ -150,11 +150,21 @@ def get_request_metrics_report(
         SELECT rt.code, rt.name, r.status,
                COUNT(*)::integer AS total,
                COUNT(*) FILTER (WHERE r.current_revision_id IS NOT NULL)::integer AS submitted,
-               COUNT(*) FILTER (WHERE r.approved_at IS NOT NULL)::integer AS approved
+               COUNT(*) FILTER (WHERE r.approved_at IS NOT NULL)::integer AS approved,
+               SUM(EXTRACT(EPOCH FROM (r.completed_at - fs.first_submitted)))
+                 FILTER (WHERE r.status = 'COMPLETED' AND fs.first_submitted IS NOT NULL),
+               COUNT(*) FILTER (WHERE r.status = 'COMPLETED' AND fs.first_submitted IS NOT NULL)::integer,
+               SUM(EXTRACT(EPOCH FROM (r.approved_at - fs.first_submitted)))
+                 FILTER (WHERE r.approved_at IS NOT NULL AND fs.first_submitted IS NOT NULL),
+               COUNT(*) FILTER (WHERE r.approved_at IS NOT NULL AND fs.first_submitted IS NOT NULL)::integer
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         JOIN eas.app_user u ON u.id = r.requester_id
         LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
+        LEFT JOIN LATERAL (
+          SELECT min(fr.submitted_at) AS first_submitted
+          FROM eas.request_revision fr WHERE fr.request_id = r.id
+        ) fs ON true
         WHERE r.status != 'DRAFT'
           AND r.created_at >= %s
           AND r.created_at <= %s
@@ -209,9 +219,19 @@ def get_request_metrics_report(
     approved = sum(row[5] for row in rows)
     completed = sum(row[3] for row in rows if row[2] == "COMPLETED")
 
+    # Durations are measured from the first submission (not draft creation)
+    # to final completion / final approval, summed in SQL per group.
+    durations = [0.0, 0, 0.0, 0]
+    for row in rows:
+        for index, value in enumerate(row[6:10]):
+            durations[index] += float(value or 0)
+
+    def average_hours(total_seconds: float, count: float) -> float | None:
+        return round(total_seconds / count / 3600, 1) if count else None
+
     by_status: dict[str, int] = {}
     by_type: dict[str, dict[str, object]] = {}
-    for code, name, status, count, _sub, _app in rows:
+    for code, name, status, count, _sub, _app, *_durations in rows:
         by_status[status] = by_status.get(status, 0) + count
         item = by_type.setdefault(code, {"code": code, "name": name, "count": 0})
         item["count"] += count
@@ -227,6 +247,8 @@ def get_request_metrics_report(
             "completed": completed,
             "approved_rate": approved_rate,
             "completed_rate": completed_rate,
+            "avg_completion_hours": average_hours(durations[0], durations[1]),
+            "avg_approval_hours": average_hours(durations[2], durations[3]),
             "by_status": by_status,
             "top_types": sorted(
                 by_type.values(), key=lambda item: (-item["count"], item["name"])

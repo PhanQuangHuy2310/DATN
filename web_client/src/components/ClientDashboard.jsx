@@ -3,6 +3,7 @@ import { date, types } from "../domain.js";
 import { Badge, ResourceState, useResource } from "./ui.jsx";
 import { PeriodChooser } from "./DashboardOverview.jsx";
 import { ClientPageHeader, ClientStatCard } from "./clientDesign.jsx";
+import { formatHours } from "./TeamDashboard.jsx";
 
 function localDay(value) { return new Date(value).toLocaleDateString("en-CA",{timeZone:"Asia/Ho_Chi_Minh"}); }
 function initialFrom(){return localDay(Date.now()-29*86400000);}
@@ -27,20 +28,22 @@ export default function ClientDashboard({ user, onOpen, navigate }) {
  const cards=[
   ["Yêu cầu đã gửi",total,"Trong khoảng thời gian"],
   ["Tần suất yêu cầu",`${(total/days*30).toLocaleString("vi-VN",{maximumFractionDigits:1})}/30 ngày`,"Ước tính theo khoảng đã chọn"],
-  ["Đang xử lý",inProgress,"Bao gồm các bước chưa hoàn tất"],
-  ["Chưa hoàn thành",inProgress,"Chưa kết thúc xử lý"],
+  ["Đang xử lý",inProgress,"Chưa kết thúc xử lý"],
+  ["Chờ phê duyệt",(by.PENDING_APPROVAL||0)+(by.NEEDS_INFO||0),"Gồm hồ sơ cần bổ sung"],
   ["Bị từ chối",rejected,"Yêu cầu bị từ chối"],
   ["Hoàn thành",by.COMPLETED||0,"Yêu cầu đã kết thúc"],
   ["Tỉ lệ hoàn thành",formatPercent(data?.completed_rate),"Số hoàn thành / đã gửi"],
+  ["Thời gian hoàn thành TB",formatHours(data?.avg_completion_hours),"Từ lúc gửi đến khi hoàn tất"],
+  ["Thời gian phê duyệt TB",formatHours(data?.avg_approval_hours),"Từ lúc gửi đến khi duyệt xong"],
  ];
  return <div className="client-dashboard"><ClientPageHeader eyebrow="TỔNG QUAN CÁ NHÂN" title={`Xin chào, ${user.display_name||"bạn"}`} description="Thống kê yêu cầu bạn đã tạo; không tính bản nháp." action={<button type="button" onClick={()=>navigate("mine")}>Xem yêu cầu của tôi →</button>}/>
   <PeriodChooser start={from} end={to} setStart={setFrom} setEnd={setTo} reload={report.reload}/>
   {!valid?<p role="alert" className="error">Khoảng thời gian không hợp lệ hoặc dài hơn 12 tháng.</p>:<ResourceState resource={report}>
-   {data&&<><div className="client-metric-grid">{cards.map(([title,value,detail])=><ClientStatCard key={title} title={title} value={value} detail={detail}/>)}<ClientStatCard title="Thời gian hoàn thành TB" value="—" detail="Backend chưa cung cấp thời gian trung bình"/></div>
+   {data&&<><div className="client-metric-grid">{cards.map(([title,value,detail])=><ClientStatCard key={title} title={title} value={value} detail={detail}/>)}</div>
    <div className="client-dashboard-charts"><section className="panel"><h2>Phân bố trạng thái</h2><div className="client-chart-list">{Object.entries(by).map(([status,count])=><div key={status} className="client-chart-row"><Badge value={status}/><div className="client-chart-track"><span style={{width:`${100*count/Math.max(1,total)}%`}}/></div><strong>{count}</strong></div>)}{!Object.keys(by).length&&<p className="muted">Chưa có hồ sơ được gửi trong kỳ.</p>}</div></section>
    <section className="panel"><h2>Loại yêu cầu thường gặp</h2><div className="client-chart-list">{top.map(item=><div className="client-chart-row" key={item.code}><span>{item.name||types[item.code]||"Loại yêu cầu"}</span><div className="client-chart-track"><span style={{width:`${100*item.count/maxTop}%`}}/></div><strong>{item.count}</strong></div>)}{!top.length&&<p className="muted">Không có dữ liệu cho kỳ này.</p>}</div></section></div></>}
   </ResourceState>}
   <section className="panel"><div className="section-head"><h2>Hồ sơ gần đây</h2><button type="button" className="secondary" onClick={()=>navigate("mine")}>Xem tất cả</button></div><ResourceState resource={recent}><div className="client-recent-list">{mine.map(item=><button key={item.id} type="button" className="client-recent-row" onClick={()=>onOpen(item.id)}><span><strong>{types[item.type_code]||"Yêu cầu"}</strong><small>{item.code} · {date(item.updated_at)}</small></span><Badge value={item.status}/><span aria-hidden="true">→</span></button>)}{!mine.length&&<p className="muted">Chưa có hồ sơ gần đây.</p>}</div></ResourceState></section>
-  <section className="panel client-scope-note"><h2>Tổng quan theo phòng ban và tổ chức</h2><p>Hệ thống hiện chưa có API báo cáo tổng hợp được phân quyền theo Trưởng phòng / Giám đốc. Khi Backend cung cấp quyền xem dữ liệu ở từng cấp, trang tổng quan có thể mở rộng theo tuyến Tổ chức → Phòng ban → Nhân viên, không tiết lộ hồ sơ riêng tư.</p></section>
+  {(user.roles.includes("APPROVER")||user.roles.includes("AUDITOR"))&&<section className="panel client-scope-note"><h2>Theo dõi phòng ban</h2><p>Xem hồ sơ của nhân viên mà bạn tham gia phê duyệt: số đang chờ, quá hạn và hiệu suất theo từng người.</p><button type="button" className="secondary" onClick={()=>navigate("team")}>Mở bảng điều khiển phòng ban →</button></section>}
  </div>;
 }

@@ -111,7 +111,9 @@ def list_ops_metadata(
                executor.display_name AS executor_name,
                acceptor.display_name AS acceptor_name,
                planned.display_name AS planned_executor_name,
-               rt.name AS type_name
+               rt.name AS type_name,
+               u.display_name AS requester_name,
+               dept.name AS department_name
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         JOIN eas.app_user u ON u.id = r.requester_id
@@ -124,8 +126,11 @@ def list_ops_metadata(
         LEFT JOIN eas.app_user executor ON executor.id = a.executor_id
         LEFT JOIN eas.app_user acceptor ON acceptor.id = i.acceptor_id
         LEFT JOIN eas.app_user planned ON planned.id = i.planned_executor_id
+        LEFT JOIN eas.department dept ON dept.id = COALESCE(v.department_id, u.department_id)
         WHERE (%s::text IS NULL OR r.status = %s)
-          AND (%s::text IS NULL OR STRPOS(LOWER(r.code), LOWER(%s::text)) > 0)
+          AND (%s::text IS NULL OR (STRPOS(LOWER(r.code), LOWER(%s::text)) > 0
+               OR STRPOS(LOWER(COALESCE(v.payload->>'title', r.draft_payload->>'title', '')),
+                         LOWER(%s::text)) > 0))
           AND (%s::text IS NULL OR rt.code = %s)
           AND (%s::timestamptz IS NULL OR r.created_at >= %s)
           AND (%s::timestamptz IS NULL OR r.created_at <= %s)
@@ -147,6 +152,7 @@ def list_ops_metadata(
     params = [
         status_filter,
         status_filter,
+        search_filter,
         search_filter,
         search_filter,
         type_code_filter,
@@ -214,6 +220,8 @@ def list_ops_metadata(
                 else None
             ),
             "overdue": bool(row[18] and row[18] < timezone.now()),
+            "requester_name": row[26] if len(row) > 26 else None,
+            "department_name": row[27] if len(row) > 27 else None,
         }
         for row in rows[:limit]
     ]

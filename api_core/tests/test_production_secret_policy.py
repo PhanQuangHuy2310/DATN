@@ -44,6 +44,8 @@ class ProductionSecretPolicyTests(unittest.TestCase):
         "DATABASE_URL": "postgresql://u:p@db.example.invalid:5432/postgres?sslmode=require",
         "DJANGO_SECRET_KEY": "x" * 64,
         "REDIS_URL": "redis://redis:6379/0",
+        # Keep the developer's repository .env out of the probe process.
+        "EAS_DISABLE_DOTENV": "true",
     }
 
     def test_rejects_publicly_known_dev_secret(self):

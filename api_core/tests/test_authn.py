@@ -483,3 +483,25 @@ class SeedPasswordScriptTests(SimpleTestCase):
         self.assertNotIn("pbkdf2_sha256$600000$eas_seed_2026", script)
         self.assertIn("must_change_password = TRUE", script)
         self.assertIn('os.getenv("EAS_SEED_PASSWORD"', script)
+
+
+class NoDefaultPasswordTests(SimpleTestCase):
+    """Demo/seed accounts must never accept a built-in password (README_VI.md)."""
+
+    @override_settings(ENVIRONMENT="development")
+    def test_disabled_and_placeholder_hashes_reject_former_default(self):
+        from api_core.authn.service import verify_user_password
+
+        for disabled in (
+            "!UNUSABLE_DEMO_REQUESTER",
+            "pbkdf2_sha256$600000$seed$TempHashForDevOnly00000000000000000000000000000=",
+        ):
+            self.assertFalse(verify_user_password("Admin@123456", disabled), disabled)
+
+    def test_real_hash_still_verifies(self):
+        from api_core.authn.service import verify_user_password
+
+        hashed = make_password("Correct-horse-battery-9")
+        self.assertTrue(verify_user_password("Correct-horse-battery-9", hashed))
+        self.assertFalse(verify_user_password("wrong", hashed))
+

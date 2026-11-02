@@ -91,7 +91,10 @@ export function useResource(url) {
   };
 }
 export function ResourceState({ resource, children }) {
-  if (resource.loading && !resource.data) return <output className="empty" aria-live="polite"><span className="loading-spinner" /> Đang tải dữ liệu…</output>;
+  if (resource.loading && !resource.data) return <output className="ds-loading" aria-live="polite" aria-busy="true">
+    <span className="sr-only">Đang tải dữ liệu…</span>
+    <span className="ds-skeleton" aria-hidden="true">{[92, 78, 64].map((w) => <span key={w} className="ds-skeleton-line" style={{ width: `${w}%` }} />)}</span>
+  </output>;
   if (resource.error && !resource.data) return <div role="alert" className="error">
     {resource.error} <button type="button" className="secondary" onClick={resource.reload}>Thử lại</button>
   </div>;
