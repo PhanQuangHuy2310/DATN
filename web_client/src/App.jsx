@@ -353,6 +353,171 @@ const ADMIN_NAV = [
 function pageLabel(key, portal) {
   return (portal === "admin" && ADMIN_LABELS[key]) || menu.find((m) => m[0] === key)?.[1] || "";
 }
+
+function renderNavIcon(key, fallback) {
+  const p = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
+  switch (key) {
+    case "home":
+      return (
+        <svg {...p}>
+          <rect x="3" y="3" width="7" height="7" rx="2" />
+          <rect x="14" y="3" width="7" height="7" rx="2" />
+          <rect x="14" y="14" width="7" height="7" rx="2" />
+          <rect x="3" y="14" width="7" height="7" rx="2" />
+        </svg>
+      );
+    case "mine":
+      return (
+        <svg {...p}>
+          <rect x="2" y="7" width="20" height="14" rx="2" />
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+        </svg>
+      );
+    case "approval":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    case "execution":
+      return (
+        <svg {...p}>
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" />
+          <line x1="3" y1="12" x2="3.01" y2="12" />
+          <line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+      );
+    case "acceptance":
+      return (
+        <svg {...p}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    case "team":
+    case "team-employees":
+      return (
+        <svg {...p}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    case "org-client":
+    case "org-chart":
+      return (
+        <svg {...p}>
+          <rect x="9" y="3" width="6" height="4" rx="1" />
+          <rect x="2" y="17" width="6" height="4" rx="1" />
+          <rect x="16" y="17" width="6" height="4" rx="1" />
+          <path d="M12 7v5m0 0H5v5m7-5h7v5" />
+        </svg>
+      );
+    case "flow-diagrams":
+      return (
+        <svg {...p}>
+          <circle cx="18" cy="6" r="3" />
+          <circle cx="6" cy="18" r="3" />
+          <path d="M6 15V9a4 4 0 0 1 4-4h5" />
+        </svg>
+      );
+    case "ai-process":
+    case "ai-policy":
+      return (
+        <svg {...p}>
+          <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+        </svg>
+      );
+    case "profile":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="10" r="3" />
+          <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
+        </svg>
+      );
+    case "notifications":
+      return (
+        <svg {...p}>
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      );
+    case "ops":
+      return (
+        <svg {...p}>
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+      );
+    case "users":
+      return (
+        <svg {...p}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      );
+    case "departments":
+      return (
+        <svg {...p}>
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />
+        </svg>
+      );
+    case "permissions":
+      return (
+        <svg {...p}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      );
+    case "request-catalog":
+    case "plan-catalog":
+      return (
+        <svg {...p}>
+          <path d="m12 3-9 4.5 9 4.5 9-4.5-9-4.5Z" />
+          <path d="m3 12 9 4.5 9-4.5" />
+          <path d="m3 16.5 9 4.5 9-4.5" />
+        </svg>
+      );
+    case "policy":
+      return (
+        <svg {...p}>
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+      );
+    case "sla":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      );
+    case "audit":
+    case "events":
+      return (
+        <svg {...p}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <circle cx="11.5" cy="14.5" r="2.5" />
+          <path d="m16 18-2-2" />
+        </svg>
+      );
+    case "system":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      );
+    default:
+      return fallback;
+  }
+}
 function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) {
   const [status, setStatus] = useState(""),
     [type, setType] = useState(""),
@@ -803,6 +968,18 @@ function Workspace({ user, onLogout, portal = "client" }) {
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")} aria-label="Thanh điều hướng">
         <button type="button" className="secondary ds-icon-button sidebar-close" aria-label="Đóng điều hướng" onClick={() => setMenuOpen(false)}>×</button>
+        <button
+          type="button"
+          className="sidebar-edge-toggle"
+          onClick={toggleCollapsed}
+          aria-pressed={collapsed}
+          aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+          title={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {collapsed ? <path d="m9 18 6-6-6-6" /> : <path d="m15 18-6-6 6-6" />}
+          </svg>
+        </button>
         <a className="brand" href="#main" onClick={(event) => { event.preventDefault(); navigate("home"); }}>
           <img src="/logo.png" alt="EAS Logo" className="brand-logo-img" />
           <span>
@@ -810,11 +987,23 @@ function Workspace({ user, onLogout, portal = "client" }) {
           </span>
         </a>
         {portal !== "admin" && user.roles.includes("REQUESTER") && (
-          <button className="create-button" title="Tạo yêu cầu mới" onClick={() => { setSelected(null); setEditor({}); setMenuOpen(false); }}>
-            <span aria-hidden="true">＋</span><span className="create-label"> Tạo yêu cầu mới</span>
-          </button>
+          <div className="sidebar-create-wrap">
+            <button
+              type="button"
+              className="create-button"
+              title="Tạo yêu cầu mới"
+              onClick={() => { setSelected(null); setEditor({}); setMenuOpen(false); }}
+            >
+              <span className="create-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </span>
+              <span className="create-label">Tạo yêu cầu mới</span>
+            </button>
+          </div>
         )}
-        <nav aria-label="Điều hướng chính">
+        <nav aria-label="Điều hướng chính" className="sidebar-nav">
           {groups.map(([group, keys]) => {
             const visible = keys.map((key) => menu.find((m) => m[0] === key)).filter((m) => m && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
             if (!visible.length) return null;
@@ -830,7 +1019,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
                   return (
                     <button key={key} type="button" title={collapsed ? title : undefined} className={active ? "nav-item active" : "nav-item"}
                       aria-current={active ? "page" : undefined} onClick={() => navigate(key)}>
-                      <span aria-hidden="true">{icon}</span>
+                      <span className="nav-icon" aria-hidden="true">{renderNavIcon(key, icon)}</span>
                       <span className="nav-text">{title}</span>
                     </button>
                   );

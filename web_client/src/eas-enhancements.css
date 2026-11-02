@@ -6,9 +6,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .page-heading { padding-top: 5px; }
 .page-heading h1 { color:#091f7c; font-size:clamp(24px,2.5vw,34px); font-weight:750; }
 .page-heading .muted { max-width:720px; }
-.sidebar { border-right:1px solid var(--eas-line); box-shadow: 2px 0 14px #15377a05; }
-.nav-item.active { background:#10379e; color:#fff; border-radius:8px; }
-.sidebar .brand small { color:#62718a; }
+.sidebar { background: #071f84; background: linear-gradient(145deg, #071f84 0%, #173bb0 55%, #102a69 100%); border-right: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 2px 0 16px rgba(7, 31, 132, 0.28); }
+.nav-item.active { background: #ffffff !important; color: #ea580c !important; }
+.sidebar .brand small { color: rgba(255, 255, 255, 0.75); }
 .stat { min-height:150px; box-shadow:0 2px 5px #101e4905; }
 .stat strong { font-size:clamp(24px,3vw,34px); color:#091c51; }
 .stat small { font-size:12px; }
