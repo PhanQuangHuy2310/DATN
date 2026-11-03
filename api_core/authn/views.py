@@ -5,7 +5,7 @@ import logging
 import secrets
 import smtplib
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.core.cache import cache
@@ -567,6 +567,232 @@ def logout(request: HttpRequest) -> JsonResponse:
     )
 
 
+def _is_valid_uuid(val: Any) -> bool:
+    if not val:
+        return False
+    try:
+        UUID(str(val))
+        return True
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
+def _get_actor_permissions(actor: Any) -> dict[str, Any]:
+    modules_list = []
+    by_module: dict[str, dict[str, bool]] = {}
+
+    # Module permissions are keyed by eas.app_user (migration 2026-11-03_01:
+    # role_module_permission + user_permissions). The legacy eas.users table
+    # was quarantined, so the actor id is passed directly.
+    user_uuid = actor.id if _is_valid_uuid(getattr(actor, "id", None)) else None
+    try:
+        with connection.cursor() as cursor:
+            if user_uuid:
+                cursor.execute(
+                    """SELECT module_code, module_name, group_name, route_path, icon_name,
+                              target_app, can_view, can_create, can_update, can_delete,
+                              show_on_sidebar, permission_source
+                       FROM eas.get_effective_user_permissions(%s::uuid)""",
+                    [user_uuid],
+                )
+                for r in cursor.fetchall():
+                    mod_data = {
+                        "module_code": r[0],
+                        "module_name": r[1],
+                        "group_name": r[2],
+                        "route_path": r[3],
+                        "icon_name": r[4],
+                        "target_app": r[5],
+                        "can_view": bool(r[6]),
+                        "can_create": bool(r[7]),
+                        "can_update": bool(r[8]),
+                        "can_delete": bool(r[9]),
+                        "show_on_sidebar": bool(r[10]),
+                        "permission_source": r[11],
+                    }
+                    modules_list.append(mod_data)
+                    by_module[r[0]] = {
+                        "can_view": mod_data["can_view"],
+                        "can_create": mod_data["can_create"],
+                        "can_update": mod_data["can_update"],
+                        "can_delete": mod_data["can_delete"],
+                    }
+    except DatabaseError as exc:
+        logger.warning(
+            "Error fetching effective permissions for actor %s: %s",
+            getattr(actor, "email", ""),
+            exc,
+        )
+
+    # A database without role defaults (e.g. before the migration ran) yields
+    # rows that grant nothing; fall back to the role-derived matrix below.
+    if any(m["can_view"] for m in modules_list):
+        return {"modules": modules_list, "by_module": by_module}
+    modules_list, by_module = [], {}
+
+    actor_roles = getattr(actor, "roles", frozenset())
+    is_admin = bool({"OPS_ADMIN", "POLICY_ADMIN", "ADMIN"}.intersection(actor_roles))
+    is_auditor = "AUDITOR" in actor_roles
+    is_manager = bool({"APPROVER", "MANAGER"}.intersection(actor_roles))
+
+    STANDARD_MODULES = [
+        (
+            "dashboard",
+            "Tổng quan",
+            "Giám sát",
+            "/dashboard",
+            "LayoutDashboard",
+            "BOTH",
+            True,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "requests_workflows",
+            "Yêu cầu & Quy trình",
+            "Luồng công việc",
+            "/requests-workflows",
+            "GitPullRequest",
+            "BOTH",
+            True,
+            True,
+            is_admin or is_manager,
+            is_admin,
+        ),
+        (
+            "org_chart",
+            "Sơ đồ công ty",
+            "Tổ chức & Nhân sự",
+            "/org-chart",
+            "Network",
+            "BOTH",
+            True,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "users",
+            "Người dùng",
+            "Tổ chức & Nhân sự",
+            "/users",
+            "Users",
+            "ADMIN",
+            is_admin,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "permissions",
+            "Phân quyền",
+            "Tổ chức & Nhân sự",
+            "/permissions",
+            "ShieldCheck",
+            "ADMIN",
+            is_admin,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "regulations",
+            "Quy định",
+            "Tri thức & AI",
+            "/regulations",
+            "BookOpenCheck",
+            "BOTH",
+            True,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin,
+        ),
+        (
+            "ai_engine",
+            "Quản trị AI",
+            "Tri thức & AI",
+            "/ai-engine",
+            "BrainCircuit",
+            "ADMIN",
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin,
+        ),
+        (
+            "api_management",
+            "Quản lý API",
+            "Hệ thống & Tích hợp",
+            "/api-management",
+            "Webhook",
+            "ADMIN",
+            is_admin,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "system_versions",
+            "Phiên bản hệ thống",
+            "Hệ thống & Tích hợp",
+            "/system-versions",
+            "History",
+            "ADMIN",
+            is_admin or is_auditor,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+    ]
+
+    for (
+        code,
+        name,
+        grp,
+        route,
+        icon,
+        target,
+        can_v,
+        can_c,
+        can_u,
+        can_d,
+    ) in STANDARD_MODULES:
+        show_sb = can_v or can_c or can_u or can_d
+        m_item = {
+            "module_code": code,
+            "module_name": name,
+            "group_name": grp,
+            "route_path": route,
+            "icon_name": icon,
+            "target_app": target,
+            "can_view": can_v,
+            "can_create": can_c,
+            "can_update": can_u,
+            "can_delete": can_d,
+            "show_on_sidebar": show_sb,
+            "permission_source": "ROLE_FALLBACK",
+        }
+        modules_list.append(m_item)
+        by_module[code] = {
+            "can_view": can_v,
+            "can_create": can_c,
+            "can_update": can_u,
+            "can_delete": can_d,
+        }
+
+    return {"modules": modules_list, "by_module": by_module}
+
+
+@require_GET
+@require_actor()
+def permissions_me(request: HttpRequest) -> JsonResponse:
+    perms = _get_actor_permissions(request.actor)
+    return JsonResponse(
+        {"permissions": perms, "correlation_id": correlation_id(request)}
+    )
+
+
 @require_GET
 @require_actor()
 def me(request: HttpRequest) -> JsonResponse:
@@ -612,6 +838,7 @@ def me(request: HttpRequest) -> JsonResponse:
             "roles": sorted(actor.roles),
             "capabilities": {"identity_manage": can_manage_identity},
             "must_change_password": actor.must_change_password,
+            "permissions": _get_actor_permissions(actor),
         },
         "correlation_id": correlation_id(request),
     }

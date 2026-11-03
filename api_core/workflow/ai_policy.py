@@ -112,7 +112,23 @@ def list_versions(*, limit: int = 50) -> dict[str, Any]:
 
 
 def active_document() -> dict[str, Any] | None:
+    """Policy the AI must run: the last applied learning result (regulation
+    rules + manual rules, migration 12), else the active manual version."""
     with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT to_regclass('eas.ai_learning_job') IS NOT NULL, "
+            "to_regclass('eas.ai_policy_version') IS NOT NULL"
+        )
+        learning_ready, manual_ready = cursor.fetchone()
+        if learning_ready is True:
+            cursor.execute(
+                "SELECT applied_policy FROM eas.ai_system_state WHERE id = 1"
+            )
+            row = cursor.fetchone()
+            if row and row[0] and row[0].get("version"):
+                return {"version": row[0]["version"], "rules": row[0].get("rules", [])}
+        if manual_ready is not True:
+            return None
         cursor.execute(
             "SELECT version, document FROM eas.ai_policy_version WHERE state = 'ACTIVE'"
         )
@@ -197,8 +213,23 @@ def activate_version(
 
 
 def push_to_ai(document: dict[str, Any], correlation_id: str) -> dict[str, Any] | None:
-    """Refresh the AI cache; on failure the AI pulls from the API later."""
+    """Apply a manual rule change to the AI.
+
+    With migration 12 this queues an AI learning job: the AI merges the manual
+    rules with the regulation rules, verifies them, notifies users and only
+    then unlocks. Older databases fall back to refreshing the AI cache.
+    """
     from api_core.integrations.ai_service import ai_client_sync
+    from api_core.workflow import ai_learning
+
+    if ai_learning.jobs_table_ready():
+        with transaction.atomic(), connection.cursor() as cursor:
+            job_id = ai_learning.enqueue_learning(
+                cursor,
+                reason=f"Kích hoạt bộ luật AI {document['version']}",
+                requested_by=None,
+            )
+        return {"queued_job": job_id} if job_id else None
 
     try:
         return ai_client_sync.publish_policy_rules(

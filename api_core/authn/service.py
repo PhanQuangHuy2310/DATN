@@ -185,6 +185,9 @@ def find_user(email: str) -> AuthUser | None:
                    password_hash, auth_version, is_active, must_change_password
             FROM eas.app_user
             WHERE email = %s
+              -- System accounts (ai.system@eas.com, migration 08) never sign in,
+              -- whatever their password hash holds.
+              AND NOT COALESCE((to_jsonb(app_user) ->> 'is_system_account')::boolean, false)
             """,
             [email],
         )

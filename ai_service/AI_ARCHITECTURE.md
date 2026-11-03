@@ -130,9 +130,14 @@ Input request
 
 **Routing rules (trong `routers/risk.py`):**
 ```python
-FINANCE_TYPES = {"advance_payment", "expense_reimbursement", "budget_approval", "contract_payment"}
-HR_TYPES      = {"leave_annual", "leave_unpaid", "overtime", "remote_work", "travel", ...}
-IT_TYPES      = {"equipment_new", "equipment_repair", "access_permission", "vpn_access"}
+FINANCE_TYPES = {
+    "advance_payment",
+    "expense_reimbursement",
+    "budget_approval",
+    "contract_payment",
+}
+HR_TYPES = {"leave_annual", "leave_unpaid", "overtime", "remote_work", "travel", ...}
+IT_TYPES = {"equipment_new", "equipment_repair", "access_permission", "vpn_access"}
 ```
 
 ### 3. Auto-Approve (`/ai/auto-approve/evaluate`)

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import history_views, policy_views, views
+from . import announcement_views, history_views, policy_views, views
 
 urlpatterns = [
     path("requests/<uuid:request_id>/history", history_views.history),
@@ -178,6 +178,12 @@ urlpatterns = [
         "policies/ai-rules/<uuid:version_id>/activate",
         policy_views.activate_ai_policy_version,
         name="policy-ai-rules-activate",
+    ),
+    path("announcements", announcement_views.announcements_view, name="announcements"),
+    path(
+        "announcements/<uuid:announcement_id>/read",
+        announcement_views.announcement_read_view,
+        name="announcement-read",
     ),
     path(
         "internal/ai-policy/active",

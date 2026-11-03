@@ -525,7 +525,8 @@ class AbsentAssigneeTests(SimpleTestCase):
 class PolicyPublicationLatencyTests(SimpleTestCase):
     """Scenario 6: time from loading a new policy to it being applied."""
 
-    def test_published_workflow_release_applies_to_next_submission(self):
+    @patch("api_core.workflow.service.unavailable_notice", return_value=None)
+    def test_published_workflow_release_applies_to_next_submission(self, _notice):
         from time import perf_counter
 
         from api_core.workflow.service import _fetch_submit_config
@@ -534,7 +535,7 @@ class PolicyPublicationLatencyTests(SimpleTestCase):
         releases = iter(["release-v1", "release-v2"])
 
         def fetch():
-            return ("type", "A", next(releases), {}, {}, {}, {})
+            return ("type", "A", next(releases), {}, {}, {}, {}, "IT")
 
         cursor.fetchone.side_effect = fetch
         self.assertEqual(
@@ -567,6 +568,7 @@ class PolicyPublicationLatencyTests(SimpleTestCase):
         }
         with (
             patch("api_core.authn.service.load_actor_from_session", return_value=actor),
+            patch("api_core.maintenance.is_maintenance_active", return_value=False),
             patch(
                 "api_core.workflow.ai_policy.publish_version", return_value=stored
             ) as store,

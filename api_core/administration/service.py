@@ -295,30 +295,16 @@ def list_records(actor, kind, query):
     }
 
 
+# Built from TABLES so the column order always matches serialize(columns, row).
 SELECT_BY_ID_SQL = {
-    "users": (
-        "SELECT id,email,display_name,department_id,manager_id,is_active,"
-        "auth_version,must_change_password FROM eas.app_user WHERE id=%s"
-    ),
-    "departments": (
-        "SELECT id,code,name,parent_id,is_active,created_at,updated_at "
-        "FROM eas.department WHERE id=%s"
-    ),
-    "request-types": (
-        "SELECT id,code,name,category,lifecycle,description,risk_weight,"
-        "approval_level,is_active,created_at,updated_at FROM eas.request_type WHERE id=%s"
-    ),
-    "memberships": (
-        "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,"
-        "valid_from,valid_to,revoked_at,created_at,updated_at FROM eas.role_membership WHERE id=%s"
-    ),
+    kind: f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s"
+    for kind, (table, columns) in TABLES.items()
 }
 
 SELECT_FOR_UPDATE_SQL = {k: v + " FOR UPDATE" for k, v in SELECT_BY_ID_SQL.items()}
 
 USER_MEMBERSHIPS_SQL = (
-    "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,"
-    "valid_from,valid_to,revoked_at,created_at,updated_at FROM eas.role_membership "
+    f"SELECT {','.join(TABLES['memberships'][1])} FROM eas.role_membership "
     "WHERE user_id=%s ORDER BY role,id"
 )
 
