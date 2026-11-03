@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import hmac
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from django.conf import settings
 from django.db import connection
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone as django_timezone
+from django.utils.http import content_disposition_header
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.authn.service import require_actor
@@ -56,6 +60,7 @@ from api_core.workflow.service import (
     create_draft,
     decide_acceptance,
     decide_approval,
+    list_assignable_executors,
     report_execution_issue,
     start_execution,
     submit_execution,
@@ -337,8 +342,9 @@ def request_list(request: HttpRequest) -> JsonResponse:
     ]
 
     with connection.cursor() as cursor:
-        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
-        cursor.execute(sql, params)
+        cursor.execute(  # NOSONAR python:S2077 - query parameterized with psycopg placeholders
+            sql, params
+        )
         rows = cursor.fetchall()
 
     items = []
@@ -386,6 +392,37 @@ def request_list_or_create(request: HttpRequest) -> JsonResponse:
     elif request.method == "GET":
         return request_list(request)
     return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+
+
+@csrf_exempt  # NOSONAR python:S4502 - machine-to-machine call with HMAC token
+@require_POST
+def internal_auto_approve_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    from api_core.workflow.auto_approval import try_auto_approve
+
+    supplied = request.headers.get("X-Internal-Secret") or ""
+    expected = settings.EAS_WORKER_INTERNAL_SECRET
+    if not expected or not hmac.compare_digest(supplied, expected):
+        return api_error(request, "UNAUTHORIZED", status=401)
+    result = try_auto_approve(str(request_id), correlation_id(request))
+    return JsonResponse(
+        {
+            "approved": result is not None,
+            "result": result,
+            "correlation_id": correlation_id(request),
+        }
+    )
+
+
+@require_actor("APPROVER")
+def assignable_executors_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    try:
+        result = list_assignable_executors(
+            actor=request.actor, request_id=str(request_id)
+        )
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    result["correlation_id"] = correlation_id(request)
+    return JsonResponse(result)
 
 
 @require_actor()
@@ -504,9 +541,16 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
     else:
         raw_app_level = None
     risk_w, app_lvl = resolve_five_level_metadata(row[2], raw_risk, raw_app_level)
+    ai_approval = None
+    if row[3] == "COMPLETED":
+        from api_core.workflow.auto_approval import ai_approval_info
+
+        with connection.cursor() as cursor:
+            ai_approval = ai_approval_info(cursor, row[0], row[3])
     return JsonResponse(
         {
             "request": {
+                "ai_auto_approval": ai_approval,
                 "id": row[0],
                 "code": row[1],
                 "type_code": row[2],
@@ -591,6 +635,72 @@ def submit(request: HttpRequest, request_id: str | None = None) -> JsonResponse:
     response["X-Idempotent-Replay"] = "true" if result.replayed else "false"
     response["X-Correlation-ID"] = correlation_id(request)
     return response
+
+
+@require_actor("APPROVER")
+def delegations_view(request: HttpRequest) -> JsonResponse:
+    from api_core.http import JsonBodyError as _BodyError
+    from api_core.workflow import delegation
+
+    try:
+        if request.method == "GET":
+            result = delegation.list_delegations(actor=request.actor)
+            status = 200
+        elif request.method == "POST":
+            result = delegation.create_delegation(
+                actor=request.actor,
+                body=parse_json_object(request),
+                correlation_id=correlation_id(request),
+            )
+            status = 201
+        else:
+            return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    except _BodyError as exc:
+        return api_error(request, str(exc), status=400)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse(
+        {**result, "correlation_id": correlation_id(request)}, status=status
+    )
+
+
+@require_GET
+@require_actor("APPROVER")
+def delegation_candidates_view(request: HttpRequest) -> JsonResponse:
+    from api_core.workflow import delegation
+
+    return JsonResponse(
+        {
+            **delegation.delegate_candidates(actor=request.actor),
+            "correlation_id": correlation_id(request),
+        }
+    )
+
+
+@require_POST
+@require_actor("APPROVER")
+def delegation_revoke_view(request: HttpRequest, delegation_id) -> JsonResponse:
+    from api_core.workflow import delegation
+
+    try:
+        result = delegation.revoke_delegation(
+            actor=request.actor,
+            delegation_id=str(delegation_id),
+            correlation_id=correlation_id(request),
+        )
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse({**result, "correlation_id": correlation_id(request)})
+
+
+@require_POST
+@require_actor("APPROVER")
+def revoke_ai_approval_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    from api_core.workflow.auto_approval import revoke_ai_auto_approval
+
+    return _command_response(
+        request, revoke_ai_auto_approval, request_id=str(request_id)
+    )
 
 
 @require_POST
@@ -912,13 +1022,15 @@ def attachment_download(request: HttpRequest, attachment_id: str) -> HttpRespons
 
     safe_mime = (
         "application/octet-stream"
-        if mime in ("text/html", "application/xhtml+xml", "text/xml")
+        if mime in ("text/html", "application/xhtml+xml", "text/xml", "image/svg+xml")
         else mime
     )
     response = HttpResponse(
         data, content_type=safe_mime
     )  # NOSONAR pythonsecurity:S5131
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    # RFC 6266 quoting/encoding: Vietnamese names survive and a stored name
+    # cannot inject extra header parameters.
+    response["Content-Disposition"] = content_disposition_header(True, filename)
     response["Content-Security-Policy"] = "default-src 'none'"
     response["Cache-Control"] = "no-store"
     response["X-Content-Type-Options"] = "nosniff"
@@ -1103,7 +1215,7 @@ def request_audit_verify_view(request: HttpRequest, request_id: str) -> JsonResp
 
 
 @require_GET
-@require_actor()
+@require_actor("AUDITOR", "POLICY_ADMIN", "OPS_ADMIN")
 def admin_events_view(request: HttpRequest) -> JsonResponse:
     try:
         res = list_admin_events(actor=request.actor, query_params=request.GET.dict())

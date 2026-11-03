@@ -1,6 +1,10 @@
 from django.urls import path
 
+<<<<<<< HEAD
 from . import delegation_views, history_views, views
+=======
+from . import history_views, policy_views, views
+>>>>>>> 86172e9d9f550e4183a6abfffd2cfe3d13177dd5
 
 urlpatterns = [
     path("requests/<uuid:request_id>/history", history_views.history),
@@ -61,6 +65,16 @@ urlpatterns = [
         name="execution-attachment-upload",
     ),
     path(
+        "internal/requests/<uuid:request_id>/auto-approve",
+        views.internal_auto_approve_view,
+        name="internal-auto-approve",
+    ),
+    path(
+        "requests/<uuid:request_id>/assignable-executors",
+        views.assignable_executors_view,
+        name="request-assignable-executors",
+    ),
+    path(
         "attachments/<uuid:attachment_id>",
         views.attachment_metadata,
         name="attachment-metadata",
@@ -71,6 +85,22 @@ urlpatterns = [
         name="attachment-download",
     ),
     # Decisions & Cancellation
+    path("delegations", views.delegations_view, name="delegations"),
+    path(
+        "delegations/candidates",
+        views.delegation_candidates_view,
+        name="delegation-candidates",
+    ),
+    path(
+        "delegations/<uuid:delegation_id>/revoke",
+        views.delegation_revoke_view,
+        name="delegation-revoke",
+    ),
+    path(
+        "requests/<uuid:request_id>/ai-approval/revoke",
+        views.revoke_ai_approval_view,
+        name="request-ai-approval-revoke",
+    ),
     path(
         "requests/<uuid:request_id>/approval-decisions",
         views.approval_decision,
@@ -168,6 +198,21 @@ urlpatterns = [
         name="ops-delegation-revoke",
     ),
     # Policy & Config Release
+    path(
+        "policies/ai-rules",
+        policy_views.publish_ai_policy_rules,
+        name="policy-ai-rules",
+    ),
+    path(
+        "policies/ai-rules/<uuid:version_id>/activate",
+        policy_views.activate_ai_policy_version,
+        name="policy-ai-rules-activate",
+    ),
+    path(
+        "internal/ai-policy/active",
+        policy_views.internal_active_ai_policy,
+        name="internal-ai-policy-active",
+    ),
     path("config-releases", views.config_releases_view, name="config-releases"),
     path(
         "config-releases/status",

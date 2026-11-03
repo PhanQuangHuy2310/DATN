@@ -249,7 +249,7 @@ def system_diagnostics(request):
 
     try:
         ai_ok = asyncio.run(asyncio.wait_for(ai_client.health_check(), timeout=3))
-    except (TimeoutError, RuntimeError, OSError):
+    except (RuntimeError, OSError):
         ai_ok = False
     lag = None if oldest_pending_seconds is None else int(oldest_pending_seconds)
     return JsonResponse(

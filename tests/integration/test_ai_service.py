@@ -212,6 +212,10 @@ class TestMockDataSnapshots(unittest.TestCase):
             "file:///etc/passwd",
             "ftp://fileserver/invoice.png",
             "http://metadata.google.internal/computeMetadata/v1/",
+            "http://100.64.0.1/carrier-grade-nat",
+            "http://0.0.0.0:8001/health",
+            "http://[::ffff:127.0.0.1]/mapped-loopback",
+            "http://[::1]/ipv6-loopback",
         ]
         for url in blocked_urls:
             with self.subTest(url=url), self.assertRaises(HTTPException):
@@ -336,24 +340,19 @@ class TestAIServiceClientFallback(unittest.TestCase):
     """Kiểm tra khả năng chịu lỗi (fault-tolerance) của ai_client."""
 
     def setUp(self):
-        # Simulate an unreachable AI service deterministically: the result must
-        # not depend on whether a local AI process happens to be running, and
-        # Windows connect-refused retries must not slow the suite down.
+        # Simulate an unreachable AI service at the HTTP layer: instant and
+        # deterministic, whether or not an AI service is running locally
+        # (a refused localhost connection takes ~3 s on Windows).
+        try:
+            import httpx
+        except ImportError:
+            return
         from unittest.mock import patch
 
-        import httpx
+        def refuse(*_args, **_kwargs):
+            raise httpx.ConnectError("AI service offline (simulated)")
 
-        class _Unreachable:
-            def __init__(self, *args, **kwargs):
-                pass
-
-            async def __aenter__(self):
-                raise httpx.ConnectError("AI service unreachable (simulated)")
-
-            async def __aexit__(self, *_):
-                return False
-
-        patcher = patch("httpx.AsyncClient", _Unreachable)
+        patcher = patch.object(httpx.AsyncClient, "send", side_effect=refuse)
         patcher.start()
         self.addCleanup(patcher.stop)
 

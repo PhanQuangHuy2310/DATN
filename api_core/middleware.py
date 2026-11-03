@@ -36,14 +36,11 @@ class ApiSecurityHeadersMiddleware:
         response["Cross-Origin-Opener-Policy"] = "same-origin"
 
         if not response.has_header("Content-Security-Policy"):
+            # Django serves JSON only (the SPA is served by nginx/Vite), so no
+            # response from this process ever needs to load or run anything.
             response["Content-Security-Policy"] = (
-                "default-src 'self'; "
-                "script-src 'self'; "
-                "style-src 'self' 'unsafe-inline'; "
-                "img-src 'self' data: blob:; "
-                "connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; "
-                "frame-ancestors 'none'; "
-                "form-action 'self';"
+                "default-src 'none'; object-src 'none'; base-uri 'none'; "
+                "frame-ancestors 'none'; form-action 'none'"
             )
         return response
 

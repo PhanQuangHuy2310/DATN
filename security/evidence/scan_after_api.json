@@ -1,0 +1,204 @@
+{
+  "target": "http://127.0.0.1:8000",
+  "final_url": "http://127.0.0.1:8000",
+  "local": true,
+  "requests": 60,
+  "summary": {
+    "fail": 0,
+    "warn": 1,
+    "pass": 15,
+    "info": 3
+  },
+  "findings": [
+    {
+      "category": "secrets",
+      "status": "PASS",
+      "title": "No sensitive files served on http://127.0.0.1:8000",
+      "detail": "Checked 20 paths (.env*, .git, dumps, keys, logs).",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "1. SECRETS_EXPOSURE"
+    },
+    {
+      "category": "secrets",
+      "status": "PASS",
+      "title": "No directory listing on http://127.0.0.1:8000",
+      "detail": "Checked 12 common folders.",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "1. SECRETS_EXPOSURE"
+    },
+    {
+      "category": "frontend",
+      "status": "INFO",
+      "title": "No same-origin scripts found in the HTML",
+      "detail": "Source maps weren't checked. If the page loads its JS from another host or builds it at runtime, check the Network tab manually.",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "5. FRONTEND_SECRETS"
+    },
+    {
+      "category": "csrf",
+      "status": "INFO",
+      "title": "No cookies set on the landing page",
+      "detail": "Session cookies are usually set after login. Check them in DevTools \u2192 Application \u2192 Cookies (manual check #7).",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "7. CSRF (cookie flags)"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "CSP default-src is restrictive",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "CSP script-src blocks inline and third-party scripts",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "CSP object-src is 'none'",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "CSP base-uri is set",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "CSP form-action is set",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "CSP frame-ancestors is set",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "CSP fetch directives are restricted",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "X-Frame-Options: DENY",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "X-Content-Type-Options: nosniff",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "PASS",
+      "title": "Referrer-Policy: strict-origin-when-cross-origin",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "headers",
+      "status": "INFO",
+      "title": "HSTS skipped (local target)",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "8. SECURITY_HEADERS"
+    },
+    {
+      "category": "cors",
+      "status": "PASS",
+      "title": "page: foreign origins are not allowed",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "http://127.0.0.1:8000",
+      "category_label": "9. CORS"
+    },
+    {
+      "category": "errors",
+      "status": "PASS",
+      "title": "Error pages don't leak internals on http://127.0.0.1:8000",
+      "detail": "",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "15. ERROR_HANDLING"
+    },
+    {
+      "category": "errors",
+      "status": "PASS",
+      "title": "No debug or API-docs endpoints on http://127.0.0.1:8000",
+      "detail": "Checked 21 paths.",
+      "fix": "",
+      "evidence": "",
+      "url": "",
+      "category_label": "15. ERROR_HANDLING"
+    },
+    {
+      "category": "errors",
+      "status": "WARN",
+      "title": "Response headers disclose software versions",
+      "detail": "",
+      "fix": "Remove X-Powered-By (Express: `app.disable('x-powered-by')`) and version numbers from Server.",
+      "evidence": "Server: WSGIServer/0.2 CPython/3.12.9",
+      "url": "",
+      "category_label": "15. ERROR_HANDLING"
+    }
+  ]
+}

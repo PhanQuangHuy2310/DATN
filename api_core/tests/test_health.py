@@ -126,3 +126,14 @@ class OptionalCatalogReadinessTests(SimpleTestCase):
         rows = [("LEAVE", "A", True), ("ACCESS", "B", False), ("EQUIPMENT", "C", True)]
         result = assess_request_types(rows, require_active_releases=True)
         self.assertFalse(result["p0_active_types_configured"])
+
+
+class JsonErrorHandlerTests(SimpleTestCase):
+    """vibe-check #15: unknown routes answer with a generic JSON error, never
+    the framework HTML page."""
+
+    def test_unknown_route_returns_generic_json_404(self):
+        response = self.client.get("/definitely-not-a-route")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"]["code"], "RESOURCE_NOT_FOUND")
+        self.assertNotIn(b"<html", response.content.lower())

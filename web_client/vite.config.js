@@ -5,6 +5,8 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  // Never publish source maps (vibe-check FRONTEND_SECRETS).
+  build: { sourcemap: false },
   envDir: resolve(fileURLToPath(new URL(".", import.meta.url)), ".."),
   server: {
     proxy: {

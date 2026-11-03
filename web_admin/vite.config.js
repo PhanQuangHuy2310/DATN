@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   plugins: [react()],
+  // Never publish source maps (vibe-check FRONTEND_SECRETS).
+  build: { sourcemap: false },
   envDir: resolve(root, ".."),
   publicDir: resolve(root, "../web_client/public"),
   resolve: {

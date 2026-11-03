@@ -74,6 +74,30 @@ test("AI process guide is available to every recognized role", () => {
   for (const role of ROLES) assert.equal(canNavigate([role],"ai-process"),true);
 });
 
+test("portal access: pure admins stay in the admin portal, admins with duties use both", async () => {
+  const { canUsePortal } = await import("../src/rolePolicy.js");
+  const pureAdmin = ["OPS_ADMIN", "POLICY_ADMIN", "REQUESTER", "ACCEPTOR"];
+  const auditorApprover = ["AUDITOR", "APPROVER", "REQUESTER", "ACCEPTOR"];
+  const opsExecutor = ["OPS_ADMIN", "EXECUTOR", "REQUESTER"];
+  const employee = ["REQUESTER", "APPROVER", "ACCEPTOR"];
+  assert.equal(canUsePortal(pureAdmin, "admin"), true);
+  assert.equal(canUsePortal(pureAdmin, "client"), false);
+  for (const roles of [auditorApprover, opsExecutor]) {
+    assert.equal(canUsePortal(roles, "admin"), true);
+    assert.equal(canUsePortal(roles, "client"), true);
+  }
+  assert.equal(canUsePortal(employee, "client"), true);
+  assert.equal(canUsePortal(employee, "admin"), false);
+  assert.equal(canUsePortal(undefined, "client"), true);
+});
+
+test("only POLICY_ADMIN reaches the AI policy page", () => {
+  assert.equal(canNavigate(["POLICY_ADMIN"], "ai-policy"), true);
+  for (const role of ["OPS_ADMIN", "AUDITOR", "APPROVER", "REQUESTER"]) {
+    assert.equal(canNavigate([role], "ai-policy"), false);
+  }
+});
+
 test("department dashboard is limited to approvers and auditors", () => {
   assert.ok(canNavigate(["APPROVER"], "team"));
   assert.ok(canNavigate(["AUDITOR"], "team"));

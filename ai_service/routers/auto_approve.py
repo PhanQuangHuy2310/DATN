@@ -22,6 +22,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from .mock_context import lookup_facility_available, lookup_leave_balance
+from .policy import apply_policy
 
 settings = get_settings()
 router = APIRouter()
@@ -55,6 +56,7 @@ class AutoApproveDecision(BaseModel):
         None, description="Ghi chú hiển thị với badge 🤖"
     )
     evaluated_at: str
+    policy_version: str | None = Field(None, description="Bộ luật quy định đã áp dụng")
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +199,21 @@ async def evaluate_auto_approve(body: AutoApproveInput):
     detail_reasons = []
     can_auto_approve = True
 
+    # --- Gate 0: Quy định đã nạp (đọc lại theo mtime, hiệu lực ngay) ---
+    risk_score, forced_manual, matched_rules, policy_version = apply_policy(
+        request_type=body.request_type,
+        amount=body.amount,
+        days=body.days_requested,
+        risk=body.risk_score,
+    )
+    if matched_rules:
+        detail_reasons.append(
+            f"ℹ️ Quy định {policy_version} áp dụng luật: {', '.join(matched_rules)}"
+        )
+    if forced_manual:
+        detail_reasons.append("❌ Quy định yêu cầu duyệt thủ công cho trường hợp này")
+        can_auto_approve = False
+
     # --- Gate 1: Template A chỉ ---
     if body.lifecycle_template != "A":
         detail_reasons.append(
@@ -207,14 +224,14 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         detail_reasons.append("✅ Template A (Approve-Only) — phù hợp auto-approve")
 
     # --- Gate 2: Risk score ---
-    if body.risk_score > settings.auto_approve_max_risk:
+    if risk_score > settings.auto_approve_max_risk:
         detail_reasons.append(
-            f"❌ Risk score {body.risk_score}/5 > ngưỡng {settings.auto_approve_max_risk} — cần người duyệt"
+            f"❌ Risk score {risk_score}/5 > ngưỡng {settings.auto_approve_max_risk} — cần người duyệt"
         )
         can_auto_approve = False
     else:
         detail_reasons.append(
-            f"✅ Risk score {body.risk_score}/5 ≤ {settings.auto_approve_max_risk}"
+            f"✅ Risk score {risk_score}/5 ≤ {settings.auto_approve_max_risk}"
         )
 
     # --- Gate 3: Business rules theo loại ---
@@ -249,4 +266,5 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         detail_reasons=detail_reasons,
         auto_approve_note=note,
         evaluated_at=datetime.now(timezone.utc).isoformat(),
+        policy_version=policy_version,
     )

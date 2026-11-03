@@ -1,3 +1,4 @@
+import { catalogTypeLevels, catalogTypeNames } from "./catalogV2.js";
 export const statuses = {
   DRAFT: "Bản nháp",
   PENDING_APPROVAL: "Chờ phê duyệt",
@@ -154,6 +155,9 @@ export const typeLevels = {
   BUDGET_REALLOCATION: { risk_weight: 5, approval_level: 5 },
   SECURITY_INCIDENT_HOTFIX: { risk_weight: 5, approval_level: 5 },
 };
+// The approved 10-group catalogue overrides older names and levels.
+Object.assign(types, catalogTypeNames);
+Object.assign(typeLevels, catalogTypeLevels);
 export const roles = {
   REQUESTER: "Người gửi yêu cầu",
   APPROVER: "Người phê duyệt",
@@ -372,6 +376,11 @@ export function permissions(user, r) {
     accept: granted.has("ACCEPTOR") && r.status === "WAITING_FOR_ACCEPTANCE" &&
       r.workflow?.lifecycle === "C" && r.workflow?.acceptor_id === user.id &&
       attempt?.state === "SUBMITTED" && !isExecutor,
+    // Within 24h of an AI auto-approval any approver (not the requester) may
+    // send the request back to manual review; the server re-checks scope.
+    revokeAi: granted.has("APPROVER") && !own && r.status === "COMPLETED" &&
+      Boolean(r.ai_auto_approval?.revocable) &&
+      Date.now() < Date.parse(r.ai_auto_approval?.revocable_until || 0),
   };
 }
 export const date = (v) => (v ? new Date(v).toLocaleString("vi-VN") : "—");
@@ -381,6 +390,12 @@ export function errorText(e) {
       "Dữ liệu đã thay đổi. Hãy tải lại hồ sơ trước khi tiếp tục.",
     REQUEST_STATE_CONFLICT: "Trạng thái đã thay đổi. Hãy tải lại hồ sơ.",
     FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
+    DELEGATION_OVERLAP: "Đã có ủy quyền khác trùng khoảng thời gian này.",
+    DELEGATE_NOT_APPROVER: "Người nhận phải là người duyệt đang hoạt động.",
+    INVALID_DELEGATION_WINDOW: "Khoảng thời gian ủy quyền không hợp lệ (tối đa 90 ngày).",
+    DELEGATION_NOT_INSTALLED: "Tính năng ủy quyền chưa được cài trên cơ sở dữ liệu.",
+    SYSTEM_ACCOUNT_LOCKED: "Tài khoản hệ thống không thể sửa, vô hiệu hóa hay đổi quyền.",
+    AI_APPROVAL_NOT_REVOCABLE: "Đã quá 24 giờ hoặc hồ sơ không còn do AI duyệt; không thể thu hồi.",
     INVALID_CREDENTIALS: "Tên đăng nhập hoặc mật khẩu không đúng.",
     DATABASE_QUERY_FAILED: "Máy chủ gặp lỗi truy vấn dữ liệu. Vui lòng báo quản trị viên kèm mã lỗi để kiểm tra Backend.",
     DATABASE_TEMPORARILY_UNAVAILABLE: "Kết nối cơ sở dữ liệu đang gián đoạn hoặc quá thời gian chờ. Vui lòng thử lại sau vài giây; nếu còn lỗi hãy gửi mã lỗi cho quản trị viên.",
@@ -413,6 +428,7 @@ export function errorText(e) {
     PASSWORD_REUSE_NOT_ALLOWED: "Mật khẩu mới phải khác mật khẩu cũ.",
     PASSWORD_POLICY_VIOLATION: "Mật khẩu mới phải có 15–128 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt và không chứa tên đăng nhập.",
     LOGIN_RATE_LIMITED: "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.",
+    PASSWORD_CHANGE_RATE_LIMITED: "Bạn đã nhập sai mật khẩu hiện tại quá nhiều lần. Vui lòng thử lại sau.",
     VALIDATION_FAILED: "Dữ liệu chưa hợp lệ.",
     VALIDATION_STALE:
       "Cấu hình đã thay đổi. Hãy kiểm tra lại trước khi công bố.",

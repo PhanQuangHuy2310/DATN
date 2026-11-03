@@ -22,6 +22,8 @@ def _boot(extra_env: dict[str, str]) -> subprocess.CompletedProcess:
         for key, value in os.environ.items()
         if not key.startswith(("EAS_", "DJANGO_", "INTERNAL_API"))
     }
+    # Never read the developer's .env: the probe must see only these variables.
+    env["EAS_SKIP_DOTENV"] = "1"
     env.update(extra_env)
     return subprocess.run(
         [sys.executable, "-c", _PROBE],
@@ -68,3 +70,28 @@ class ProductionSecretPolicyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DotenvIsolationTests(unittest.TestCase):
+    def test_probe_ignores_local_dotenv(self):
+        import tempfile
+
+        from project_env import load_project_env
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env_file = Path(tmp) / ".env"
+            env_file.write_text(
+                "EAS_ISOLATION_PROBE=from-file" + chr(10), encoding="utf-8"
+            )
+            saved = dict(os.environ)
+            try:
+                os.environ.pop("EAS_ISOLATION_PROBE", None)
+                os.environ["EAS_SKIP_DOTENV"] = "1"
+                load_project_env(env_file)
+                self.assertNotIn("EAS_ISOLATION_PROBE", os.environ)
+                os.environ.pop("EAS_SKIP_DOTENV")
+                load_project_env(env_file)
+                self.assertEqual(os.environ["EAS_ISOLATION_PROBE"], "from-file")
+            finally:
+                os.environ.clear()
+                os.environ.update(saved)

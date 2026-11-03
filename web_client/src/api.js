@@ -34,8 +34,6 @@ function mutationMessage(path) {
   if (path.includes("requests/submit") || /requests\/[^/]+\/submit$/.test(path)) return "Đã gửi yêu cầu phê duyệt";
   if (path.includes("/request-drafts")) return "Đã lưu bản nháp";
   if (path.includes("/issues")) return "Đã ghi nhận vướng mắc";
-  if (path.includes("/config-releases")) return "Đã lưu cấu hình quy trình";
-  if (path.includes("/admin/")) return "Đã lưu thay đổi quản trị";
   if (path.includes("/auth/logout")) return "Đã đăng xuất an toàn";
   if (path.includes("/approval")) return "Đã ghi nhận quyết định phê duyệt";
   if (path.includes("/acceptance")) return "Đã ghi nhận kết quả nghiệm thu";

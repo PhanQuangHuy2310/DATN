@@ -6,12 +6,32 @@ export const ROLE_NAVIGATION = Object.freeze({
   APPROVER: ["home", "flow-diagrams", "ai-process", "org-client", "approval", "delegations", "team", "team-employees", "notifications", "profile"],
   EXECUTOR: ["home", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
   ACCEPTOR: ["home", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
+<<<<<<< HEAD
   POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "plan-catalog", "notifications", "profile"],
   OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "delegations", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
   AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "team", "team-employees", "notifications", "profile"],
 });
 
 const NAV_ORDER = ["home", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "delegations", "team", "team-employees", "history", "policy", "plan-catalog", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
+=======
+  POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "ai-policy", "plan-catalog", "notifications", "profile"],
+  OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
+  AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "team", "team-employees", "notifications", "profile"],
+});
+
+const NAV_ORDER = ["home", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "team", "team-employees", "history", "policy", "ai-policy", "plan-catalog", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
+
+export const ADMIN_ROLES = Object.freeze(["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"]);
+const WORKFLOW_DUTY_ROLES = ["APPROVER", "EXECUTOR"];
+
+/** Admin portal: any admin role. Employee portal: everyone except pure admins;
+ * an admin who also approves or executes keeps access to process requests. */
+export function canUsePortal(roles = [], portal = "client") {
+  const isAdmin = roles.some((role) => ADMIN_ROLES.includes(role));
+  if (portal === "admin") return isAdmin;
+  return !isAdmin || roles.some((role) => WORKFLOW_DUTY_ROLES.includes(role));
+}
+>>>>>>> 86172e9d9f550e4183a6abfffd2cfe3d13177dd5
 
 export function visiblePages(roles = [], capabilities = {}) {
   const enabled = new Set(["home", "notifications", "profile"]);

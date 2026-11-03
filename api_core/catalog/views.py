@@ -15,9 +15,12 @@ from django.views.decorators.http import require_GET
 from api_core.authn.service import require_actor
 from api_core.catalog.availability import request_option_blocker
 from api_core.catalog.plan_catalog import (
+    catalog_v2,
+    catalog_v2_active,
+    catalog_v2_item,
+    category_label,
     enterprise_item,
     enterprise_items,
-    enterprise_options,
     five_level_framework,
     plan_item,
     plan_items,
@@ -96,7 +99,8 @@ CORE_FIELD_LABELS = {
 
 def resolve_field_labels(code: str) -> dict[str, str]:
     specific = (
-        plan_item(code)
+        catalog_v2_item(code)
+        or plan_item(code)
         or enterprise_item(code)
         or next(
             (x for x in approval_menu_blueprint()["types"] if x["code"] == code), {}
@@ -110,9 +114,13 @@ def approval_type_name(code):
         (item for item in approval_menu_blueprint()["types"] if item["code"] == code),
         None,
     )
-    return (matched or plan_item(code) or enterprise_item(code) or {}).get(
-        "name", CORE_TYPE_NAMES.get(code, code)
-    )
+    return (
+        catalog_v2_item(code)
+        or matched
+        or plan_item(code)
+        or enterprise_item(code)
+        or {}
+    ).get("name", CORE_TYPE_NAMES.get(code, code))
 
 
 @require_GET
@@ -228,10 +236,27 @@ def _fetch_requester_type_states(cursor, actor):
     }
 
 
+def catalog_v2_menu_rows():
+    """Requester menu rows: the approved 10-group catalogue, active types only."""
+    return [
+        {
+            "group": category_label(item["category"]),
+            "category": item["category"],
+            "label": item["name"],
+            "code": item["code"],
+            "risk_weight": item["risk_weight"],
+            "approval_level": item["approval_level"],
+            "lifecycle": item["lifecycle"],
+            "description": item["approval_route"],
+        }
+        for item in catalog_v2_active()
+    ]
+
+
 def _build_requester_menu(items, states):
     available = {item["code"]: item for item in items}
     menu = []
-    for row in approval_menu_blueprint()["options"] + enterprise_options():
+    for row in catalog_v2_menu_rows():
         code = row["code"]
         state = states.get(code)
         match = available.get(code)
@@ -310,6 +335,7 @@ def plan_request_type_blueprints(request):
             "enterprise_items": enterprise_items(),
             "five_level_framework": five_level_framework(),
             "approval_menu": approval_menu_blueprint(),
+            "catalog_v2": catalog_v2(),
         }
     )
 

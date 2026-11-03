@@ -1,4 +1,5 @@
 import json
+import os
 from typing import ClassVar
 from unittest.mock import patch
 from uuid import uuid4
@@ -147,6 +148,8 @@ class AuthenticationEndpointTests(SimpleTestCase):
     @override_settings(
         EMAIL_HOST="smtp.test",
         DEFAULT_FROM_EMAIL="EAS Support <mailer@eas.com>",
+        # A developer .env may redirect mail to one inbox; assert real recipients.
+        EAS_EMAIL_TEST_RECIPIENT="",
     )
     @patch("api_core.authn.views.send_mail")
     @patch("api_core.authn.views.connection")
@@ -179,6 +182,8 @@ class AuthenticationEndpointTests(SimpleTestCase):
     @override_settings(
         EMAIL_HOST="smtp.test",
         DEFAULT_FROM_EMAIL="EAS Support <mailer@eas.com>",
+        # A developer .env may redirect mail to one inbox; assert real recipients.
+        EAS_EMAIL_TEST_RECIPIENT="",
     )
     @patch("api_core.authn.views.send_mail")
     @patch("api_core.authn.views.connection")
@@ -358,6 +363,126 @@ class AuthenticationEndpointTests(SimpleTestCase):
             validate_new_password("Different-Strong-123!", "employee@eas.com"),
             "Different-Strong-123!",
         )
+
+
+@override_settings(
+    EAS_LOGIN_MAX_ATTEMPTS=2, EAS_LOGIN_MAX_IP_ATTEMPTS=30, EAS_LOGIN_WINDOW_SECONDS=60
+)
+class CredentialHardeningTests(SimpleTestCase):
+    """vibe-check #1/#10/#16: no source-code default password, constant-work
+    login checks and a throttled current-password oracle."""
+
+    databases: ClassVar[set[str]] = {"default"}
+
+    def setUp(self):
+        cache.clear()
+        self.actor = Actor(
+            id=str(uuid4()),
+            email="employee@eas.com",
+            display_name="Employee",
+            department_id=str(uuid4()),
+            auth_version=1,
+            roles=frozenset({"REQUESTER"}),
+            must_change_password=False,
+        )
+
+    @override_settings(ENVIRONMENT="development")
+    def test_seed_fallback_requires_explicit_dev_password(self):
+        from api_core.authn.service import SEED_PLACEHOLDER_HASHES, verify_user_password
+
+        seed_hash = next(iter(SEED_PLACEHOLDER_HASHES))
+        with patch.dict("os.environ", {}, clear=False) as env:
+            env.pop("EAS_DEV_DEFAULT_PASSWORD", None)
+            self.assertFalse(verify_user_password("Admin@123456", seed_hash))
+        with patch.dict(
+            "os.environ", {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pw-2026!"}
+        ):
+            self.assertTrue(verify_user_password("Local-Only-Pw-2026!", seed_hash))
+            self.assertFalse(verify_user_password("Admin@123456", seed_hash))
+
+    @override_settings(ENVIRONMENT="production")
+    def test_seed_fallback_never_applies_outside_development(self):
+        from api_core.authn.service import SEED_PLACEHOLDER_HASHES, verify_user_password
+
+        seed_hash = next(iter(SEED_PLACEHOLDER_HASHES))
+        with patch.dict(
+            "os.environ", {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pw-2026!"}
+        ):
+            self.assertFalse(verify_user_password("Local-Only-Pw-2026!", seed_hash))
+
+    def test_unknown_account_still_pays_one_password_hash(self):
+        from api_core.authn import service
+
+        with patch.object(service, "check_password", return_value=False) as check:
+            self.assertFalse(service.verify_login_password(None, "whatever"))
+        check.assert_called_once()
+
+    @patch("api_core.authn.views.change_password")
+    @patch("api_core.authn.views.load_actor_from_session")
+    def test_wrong_current_password_is_rate_limited(self, load_actor, change):
+        load_actor.return_value = self.actor
+        change.side_effect = PasswordChangeError("INVALID_CURRENT_PASSWORD")
+        body = json.dumps(
+            {"current_password": "guess", "new_password": "New-Strong-Pass-2026!"}
+        )
+        statuses = [
+            self.client.post(
+                "/api/v1/auth/password", data=body, content_type="application/json"
+            ).status_code
+            for _ in range(3)
+        ]
+        self.assertEqual(statuses, [401, 401, 429])
+        self.assertEqual(change.call_count, 2)
+
+
+class SeedPlaceholderPasswordTests(SimpleTestCase):
+    """Seed placeholder hashes never accept a built-in default password."""
+
+    placeholder = "!UNUSABLE_DEMO_REQUESTER"
+
+    @override_settings(ENVIRONMENT="development")
+    def test_no_default_password_without_env(self):
+        from api_core.authn.service import verify_user_password
+
+        with patch.dict(os.environ, {"EAS_DEV_DEFAULT_PASSWORD": ""}):
+            self.assertFalse(verify_user_password("Admin@123456", self.placeholder))
+            self.assertFalse(verify_user_password("", self.placeholder))
+
+    @override_settings(ENVIRONMENT="development")
+    def test_placeholder_opens_only_with_local_env_password(self):
+        from api_core.authn.service import verify_user_password
+
+        with patch.dict(
+            os.environ, {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pass-2026"}
+        ):
+            self.assertTrue(
+                verify_user_password("Local-Only-Pass-2026", self.placeholder)
+            )
+            self.assertFalse(verify_user_password("Admin@123456", self.placeholder))
+
+    @override_settings(ENVIRONMENT="production")
+    def test_placeholder_never_opens_outside_development(self):
+        from api_core.authn.service import verify_user_password
+
+        with patch.dict(
+            os.environ, {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pass-2026"}
+        ):
+            self.assertFalse(
+                verify_user_password("Local-Only-Pass-2026", self.placeholder)
+            )
+
+
+class SeedPasswordScriptTests(SimpleTestCase):
+    def test_script_has_no_password_and_forces_change(self):
+        from pathlib import Path
+
+        script = (
+            Path(__file__).resolve().parents[2] / "fix_seed_passwords_local.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("Admin@123456", script)
+        self.assertNotIn("pbkdf2_sha256$600000$eas_seed_2026", script)
+        self.assertIn("must_change_password = TRUE", script)
+        self.assertIn('os.getenv("EAS_SEED_PASSWORD"', script)
 
 
 class NoDefaultPasswordTests(SimpleTestCase):

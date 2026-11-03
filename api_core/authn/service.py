@@ -1,6 +1,8 @@
+import hmac
+import os
 from collections.abc import Callable
 from datetime import datetime, timezone
-from functools import wraps
+from functools import lru_cache, wraps
 from uuid import UUID, uuid4
 
 from django.conf import settings
@@ -17,14 +19,45 @@ from api_core.http import api_error, correlation_id
 
 from .models import Actor, AuthUser
 
+SEED_PLACEHOLDER_HASHES = frozenset(
+    {
+        "pbkdf2_sha256$600000$seed$TempHashForDevOnly00000000000000000000000000000=",
+        "pbkdf2_sha256$600000$admin_salt$dummy_hash_for_bootstrap_change_on_first_login",
+    }
+)
+
 
 def verify_user_password(password: str, password_hash: str) -> bool:
-    # No default/fallback password in any environment: seed and demo accounts
-    # are deliberately non-loginable until an operator sets a real password
-    # (account_reset / recover_admin_password_interactive.py).
     if not isinstance(password, str) or not isinstance(password_hash, str):
         return False
-    return check_password(password, password_hash)
+    if check_password(password, password_hash):
+        return True
+    if getattr(settings, "ENVIRONMENT", "") == "development" and (
+        password_hash in SEED_PLACEHOLDER_HASHES
+        or password_hash.startswith("!UNUSABLE_DEMO_")
+    ):
+        # Seed accounts only, development only: seed placeholders only open
+        # when EAS_DEV_DEFAULT_PASSWORD is set locally (never committed).
+        fallback_pwd = os.getenv("EAS_DEV_DEFAULT_PASSWORD", "")
+        return bool(fallback_pwd) and hmac.compare_digest(password, fallback_pwd)
+    return False
+
+
+@lru_cache(maxsize=1)
+def _timing_equalizer_hash() -> str:
+    return make_password(uuid4().hex, hasher="argon2")
+
+
+def verify_login_password(user: AuthUser | None, password: str) -> bool:
+    """Check a login attempt in constant work whether or not the account exists.
+
+    Unknown or inactive accounts still pay one Argon2 verification, so response
+    time does not reveal which employee emails are registered.
+    """
+    if user is None or not user.is_active:
+        check_password(password, _timing_equalizer_hash())
+        return False
+    return verify_user_password(password, user.password_hash)
 
 
 class PasswordChangeError(ValueError):
@@ -186,40 +219,35 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
     idle_key = f"eas:idle:{session_id}"
     if cache.get(idle_key) != active_session:
         return None
+    # One round trip: each query to the Supabase pooler costs ~300ms.
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id::text, email, display_name, department_id::text,
-                   auth_version, must_change_password
-            FROM eas.app_user
-            WHERE id = %s AND is_active AND auth_version = %s
+            SELECT u.id::text, u.email, u.display_name, u.department_id::text,
+                   u.auth_version, u.must_change_password,
+                   ARRAY(
+                     SELECT DISTINCT rm.role::text
+                     FROM eas.role_membership rm
+                     WHERE rm.user_id = u.id
+                       AND rm.revoked_at IS NULL
+                       AND rm.valid_from <= statement_timestamp()
+                       AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                   )
+            FROM eas.app_user u
+            WHERE u.id = %s AND u.is_active AND u.auth_version = %s
             """,
             [user_id, auth_version],
         )
         user = cursor.fetchone()
-        if not user:
-            return None
-        if (
-            active_session is None
-            and getattr(settings, "ENVIRONMENT", "") == "development"
-        ):
-            cache.set(
-                f"eas:session:{session_id}",
-                expected_marker,
-                timeout=getattr(settings, "SESSION_COOKIE_AGE", 28800),
-            )
-        cursor.execute(
-            """
-            SELECT DISTINCT role
-            FROM eas.role_membership
-            WHERE user_id = %s
-              AND revoked_at IS NULL
-              AND valid_from <= statement_timestamp()
-              AND (valid_to IS NULL OR valid_to > statement_timestamp())
-            """,
-            [user_id],
+    if not user:
+        return None
+    if active_session is None and getattr(settings, "ENVIRONMENT", "") == "development":
+        cache.set(
+            f"eas:session:{session_id}",
+            expected_marker,
+            timeout=getattr(settings, "SESSION_COOKIE_AGE", 28800),
         )
-        roles = frozenset(row[0] for row in cursor.fetchall())
+    roles = frozenset(user[6] or ())
     # Sliding 30-minute inactivity window, but the original 8-hour absolute
     # session key is NEVER refreshed here. Logout/password reset still revoke.
     cache.set(idle_key, active_session, timeout=settings.EAS_SESSION_IDLE_SECONDS)
@@ -238,7 +266,10 @@ def require_actor(*required_roles: str) -> Callable:
     def decorator(view: Callable) -> Callable:
         @wraps(view)
         def wrapped(request: HttpRequest, *args, **kwargs) -> HttpResponse:
-            actor = load_actor_from_session(request)
+            # Nested decorated views (e.g. request_list_or_create -> request_list)
+            # reuse the actor loaded by the outer decorator in this request
+            # instead of paying another DB round trip; role checks still run.
+            actor = getattr(request, "actor", None) or load_actor_from_session(request)
             if actor is None:
                 request.session.flush()
                 if request.headers.get("X-Auth-Optional") == "1" and request.path in {

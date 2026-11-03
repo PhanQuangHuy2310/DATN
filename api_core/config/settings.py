@@ -8,7 +8,7 @@ from django.core.validators import validate_email
 
 from project_env import load_project_env
 
-from .database import DatabaseUrlError, parse_database_url
+from .database import DatabaseUrlError, parse_database_url, resolve_redis_url
 
 load_project_env()
 
@@ -83,6 +83,28 @@ else:
     except ValueError:
         raise RuntimeError("EAS_DB_CONN_MAX_AGE must be 0..3600") from None
     DATABASES["default"]["CONN_MAX_AGE"] = _db_max_age
+    # A new TLS connection to the Supabase pooler costs ~2s from Vietnam; a
+    # process-wide pool reuses connections across requests and runserver
+    # threads. Django forbids pooling together with CONN_MAX_AGE > 0.
+    if _db_max_age == 0:
+        # With a pool, CONN_HEALTH_CHECKS pings the DB on every checkout (one
+        # extra ~300ms round trip). TCP keepalives + max_idle retire dead
+        # connections instead; psycopg_pool discards broken ones on return.
+        # ponytail: a connection killed server-side can fail one request (503
+        # + Retry-After); re-enable checks if the pooler drops idle clients.
+        DATABASES["default"]["CONN_HEALTH_CHECKS"] = False
+        DATABASES["default"]["OPTIONS"].update(
+            pool={
+                "min_size": int(os.getenv("EAS_DB_POOL_MIN_SIZE", "2")),
+                "max_size": int(os.getenv("EAS_DB_POOL_MAX_SIZE", "10")),
+                "max_idle": 240,
+                "timeout": 15,
+            },
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=3,
+        )
 
 LANGUAGE_CODE = "vi"
 TIME_ZONE = "Asia/Ho_Chi_Minh"
@@ -108,7 +130,7 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.Argon2PasswordHasher",
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
 ]
-REDIS_URL = os.getenv("REDIS_URL", "").strip()
+REDIS_URL = resolve_redis_url(os.environ)
 if ENVIRONMENT == "production" and not REDIS_URL:
     raise RuntimeError("REDIS_URL is required in production for shared security state")
 if REDIS_URL and ENVIRONMENT != "test":
@@ -250,6 +272,30 @@ if ENVIRONMENT == "production" and (
         "EAS_AI_INTERNAL_SECRET must be a random secret of at least 32 characters in production"
     )
 EAS_AI_TIMEOUT_SECONDS = float(os.getenv("EAS_AI_TIMEOUT_SECONDS", "5.0"))
+# Non-login account that records AI auto-approval decisions (migration 08).
+EAS_AI_SYSTEM_USER_ID = os.getenv(
+    "EAS_AI_SYSTEM_USER_ID", "00000002-0000-4000-8000-0000000000a1"
+)
+EAS_AI_AUTO_APPROVE_ENABLED = (
+    os.getenv("EAS_AI_AUTO_APPROVE_ENABLED", "true").lower() == "true"
+)
+EAS_AI_AUTO_APPROVE_MAX_WEIGHT = int(os.getenv("EAS_AI_AUTO_APPROVE_MAX_WEIGHT", "2"))
+# The least-privilege worker cannot write approvals; it asks the API to run
+# AI auto-approval through this internal, secret-protected endpoint.
+EAS_API_INTERNAL_URL = os.getenv(
+    "EAS_API_INTERNAL_URL",
+    "http://127.0.0.1:8000" if ENVIRONMENT == "development" else "http://api:8000",
+).rstrip("/")
+EAS_WORKER_INTERNAL_SECRET = os.getenv("EAS_WORKER_INTERNAL_SECRET", "")
+if not EAS_WORKER_INTERNAL_SECRET and ENVIRONMENT in {"development", "test"}:
+    EAS_WORKER_INTERNAL_SECRET = "eas-local-dev-worker-internal-secret-2026"
+if ENVIRONMENT == "production" and (
+    len(EAS_WORKER_INTERNAL_SECRET) < 32
+    or EAS_WORKER_INTERNAL_SECRET == "eas-local-dev-worker-internal-secret-2026"
+):
+    raise RuntimeError(
+        "EAS_WORKER_INTERNAL_SECRET must be a random secret of at least 32 characters in production"
+    )
 
 LOGGING = {
     "version": 1,

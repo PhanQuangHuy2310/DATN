@@ -1,18 +1,25 @@
 from __future__ import annotations
 
+<<<<<<< HEAD
 import math
 import os
+=======
+import logging
+>>>>>>> 86172e9d9f550e4183a6abfffd2cfe3d13177dd5
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import NamedTuple
 from uuid import uuid4
 
+from django.conf import settings
 from django.db import connection, transaction
 from django.utils import timezone
 from psycopg.types.json import Jsonb
 
 from api_core.workflow.service import _append_admin_audit, _append_request_audit
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -319,7 +326,13 @@ def acknowledge_outbox(item: OutboxItem) -> None:
         lease = cursor.fetchone()
         if lease != ("PROCESSING", item.lease_token, True):
             raise RuntimeError("OUTBOX_LEASE_LOST")
+<<<<<<< HEAD
         for recipient_id, label, metadata_only in _recipients(cursor, item):
+=======
+        for recipient_id, label in _recipients(cursor, item):
+            if recipient_id == settings.EAS_AI_SYSTEM_USER_ID:
+                continue  # the AI account already decided; nobody reads its inbox
+>>>>>>> 86172e9d9f550e4183a6abfffd2cfe3d13177dd5
             cursor.execute(
                 """
                 SELECT u.is_active,
@@ -399,9 +412,29 @@ def fail_outbox(item: OutboxItem, error: object) -> None:
             raise RuntimeError("OUTBOX_LEASE_LOST")
 
 
+def request_ai_auto_approval(request_id: str) -> bool:
+    """Ask the API (which owns approval writes) to let the AI decide the step."""
+    import httpx
+
+    try:
+        response = httpx.post(
+            f"{settings.EAS_API_INTERNAL_URL}/api/v1/internal/requests/{request_id}/auto-approve",
+            headers={"X-Internal-Secret": settings.EAS_WORKER_INTERNAL_SECRET},
+            timeout=settings.EAS_AI_TIMEOUT_SECONDS + 5,
+        )
+        response.raise_for_status()
+        return bool(response.json().get("approved"))
+    except (httpx.HTTPError, ValueError):
+        # Auto-approval is optional: the human approver is still notified.
+        logger.warning("AI auto-approve unavailable for %s", request_id)
+        return False
+
+
 def run_outbox_batch(*, batch_size: int = 20) -> int:
     items = claim_outbox(batch_size=batch_size)
     for item in items:
+        if item.event_type == "APPROVAL_REQUESTED" and item.request_id:
+            request_ai_auto_approval(item.request_id)
         try:
             acknowledge_outbox(item)
         except Exception as exc:  # noqa: BLE001 - every delivery failure must release the lease

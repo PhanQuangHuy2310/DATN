@@ -19,3 +19,19 @@ urlpatterns = [
     path("api/v1/meta/", include("api_core.catalog.urls")),
     path("api/v1/mock/", include("api_core.mock_sources.urls")),
 ]
+
+
+def custom_404(request, exception=None):
+    from api_core.http import api_error
+
+    return api_error(request, "RESOURCE_NOT_FOUND", status=404)
+
+
+def custom_500(request):
+    from api_core.http import api_error
+
+    return api_error(request, "INTERNAL_SERVER_ERROR", status=500)
+
+
+handler404 = "api_core.config.urls.custom_404"
+handler500 = "api_core.config.urls.custom_500"
