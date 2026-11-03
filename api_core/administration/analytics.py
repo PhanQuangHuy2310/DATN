@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from django.db import connection
 from django.http import JsonResponse
 
+from api_core.authn.module_access import ADMIN_ROLES
 from api_core.authn.service import require_actor
 from api_core.http import api_error
 
@@ -40,6 +41,46 @@ REQUESTS_SQL = """
     LEFT JOIN eas.config_release cr ON cr.id = rt.active_release_id
     WHERE r.status <> 'DRAFT' AND r.created_at >= %s AND r.created_at <= %s
 """
+
+
+SCOPE_COMPANY = {"kind": "COMPANY", "label": "Toàn công ty"}
+
+
+def _scope(request) -> tuple[str, list, dict]:
+    """Which requests the viewer may aggregate.
+
+    Admin and company-wide approvers: everything; department approvers: their
+    departments; everyone else: only their own requests.
+    """
+    actor = request.actor
+    if actor.roles & ADMIN_ROLES:
+        return "", [], SCOPE_COMPANY
+    with connection.cursor() as cur:
+        cur.execute(
+            """SELECT m.scope_kind, m.type_scope, m.department_id::text
+               FROM eas.role_membership m
+               WHERE m.user_id = %s AND m.role = 'APPROVER' AND m.revoked_at IS NULL
+                 AND m.valid_from <= statement_timestamp()
+                 AND (m.valid_to IS NULL OR m.valid_to > statement_timestamp())""",
+            [actor.id],
+        )
+        rows = cur.fetchall()
+    if any(kind == "GLOBAL" and types == "ALL" for kind, types, _ in rows):
+        return "", [], SCOPE_COMPANY
+    departments = sorted(
+        {dept for kind, _, dept in rows if kind == "DEPARTMENT" and dept}
+    )
+    if departments:
+        return (
+            " AND COALESCE(rv.department_id, u.department_id)::text = ANY(%s)",
+            [departments],
+            {"kind": "DEPARTMENT", "label": "Phòng ban bạn phụ trách"},
+        )
+    return (
+        " AND r.requester_id = %s",
+        [actor.id],
+        {"kind": "OWN", "label": "Yêu cầu của bạn"},
+    )
 
 
 def _format_duration(minutes):
@@ -111,21 +152,41 @@ def _top(counter: dict, limit: int | None = None) -> list[tuple]:
     return rows[:limit] if limit else rows
 
 
-@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
+@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR", "ADMIN")
 def admin_analytics_view(request):
     if request.method != "GET":
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
 
     now = datetime.now(VN_TZ)
-    period, start = _period_range(
-        request.GET.get("period", "month").lower().strip(), now
-    )
+    requested_period = request.GET.get("period", "month").lower().strip()
+    period, start = _period_range(requested_period, now)
     start = _parse_dt(request.GET.get("created_from"), start)
     end = _parse_dt(request.GET.get("created_to"), now)
 
+    scope_sql, scope_params, scope = _scope(request)
     with connection.cursor() as cur:
-        cur.execute(REQUESTS_SQL, [start, end])
+        cur.execute(
+            REQUESTS_SQL + scope_sql, [start, end, *scope_params]
+        )  # NOSONAR python:S2077 - constant fragments
         rows = cur.fetchall()
+        if not rows and not request.GET.get("created_from"):
+            cur.execute(  # NOSONAR python:S2077 - constant fragments
+                """SELECT MAX(r.created_at) FROM eas.request r
+                   LEFT JOIN eas.request_revision rv ON rv.id = r.current_revision_id
+                   LEFT JOIN eas.app_user u ON u.id = r.requester_id
+                   WHERE r.status <> 'DRAFT'"""
+                + scope_sql,
+                scope_params,
+            )
+            max_row = cur.fetchone()
+            if max_row and max_row[0]:
+                anchor = max_row[0].astimezone(VN_TZ)
+                period, start = _period_range(requested_period, anchor)
+                end = anchor.replace(hour=23, minute=59, second=59)
+                cur.execute(
+                    REQUESTS_SQL + scope_sql, [start, end, *scope_params]
+                )  # NOSONAR python:S2077
+                rows = cur.fetchall()
 
     # ponytail: aggregated in Python; move to SQL GROUP BY if a period exceeds ~100k requests.
     kpi = {"success": 0, "rejected": 0, "processing": 0}
@@ -157,7 +218,19 @@ def admin_analytics_view(request):
     ) in rows:
         outcome = _outcome(status)
         kpi[outcome] += 1
-        bucket = trends[_bucket(period, created)]
+        b_key = _bucket(period, created)
+        bucket = trends.get(b_key)
+        if not bucket:
+            bucket = trends.setdefault(
+                b_key,
+                {
+                    "label": b_key,
+                    "total": 0,
+                    "success": 0,
+                    "rejected": 0,
+                    "processing": 0,
+                },
+            )
         bucket["total"] += 1
         bucket[outcome] += 1
         lc = lifecycles.setdefault(
@@ -184,14 +257,16 @@ def admin_analytics_view(request):
 
     total = len(rows)
     category_performance = []
+    default_slas = {"A": 2, "B": 24, "C": 72}
     for code, lc in lifecycles.items():
         avg = sum(lc["durations"]) / len(lc["durations"]) if lc["durations"] else 0.0
         sla = sorted(lc["sla"])
+        sla_val = int(sla[len(sla) // 2]) if sla else default_slas.get(code, 24)
         category_performance.append(
             {
                 "category_code": code,
                 "name": LIFECYCLES.get(code, (code,))[0],
-                "sla_hours": int(sla[len(sla) // 2]) if sla else None,
+                "sla_hours": sla_val,
                 "total_requests": lc["total"],
                 "avg_duration_minutes": round(avg, 1),
                 "avg_duration_text": _format_duration(avg),
@@ -206,6 +281,7 @@ def admin_analytics_view(request):
     return JsonResponse(
         {
             "period": period,
+            "scope": scope,
             "date_range": {"from": start.isoformat(), "to": end.isoformat()},
             "kpis": {
                 "total_requests": total,

@@ -3,7 +3,7 @@ import { PermissionProvider } from "./hooks/usePermission.jsx";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
-import { canNavigate, canUsePortal } from "./rolePolicy.js";
+import { ADMIN_ROLES, canNavigate, canUsePortal } from "./rolePolicy.js";
 import { PERMISSIONS_CHANGED, createRefresher } from "./sessionRefresh.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
@@ -86,21 +86,39 @@ function Login({ onLogin, portal = "client", aiStatus }) {
   async function submit(e) {
     e.preventDefault();
     const values = Object.fromEntries(new FormData(e.currentTarget));
-    if (portal === "client" && aiStatus?.client_maintenance_lock) {
-      setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật hoàn tất.`);
-      return;
+    const email = String(values.email || "").trim().toLowerCase();
+
+    // Strict portal separation check
+    if (portal === "admin") {
+      if (email !== "admin@eas.com") {
+        setError("Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).");
+        return;
+      }
+    } else if (portal === "client") {
+      if (email === "admin@eas.com") {
+        setError("Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).");
+        return;
+      }
+      if (aiStatus?.client_maintenance_lock) {
+        setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật hoàn tất.`);
+        return;
+      }
     }
+
     setBusy(true);
     setError("");
     try {
       await initializeCsrf();
       const result = await api("/api/v1/auth/login", {
         method: "POST",
-        body: JSON.stringify(values),
+        headers: { "X-EAS-Portal": portal },
+        body: JSON.stringify({ ...values, email, portal }),
       });
       await onLogin(result.user);
     } catch (err) {
-      if (err?.code === "INVALID_CREDENTIALS" || err?.message?.includes("INVALID_CREDENTIALS") || String(err?.code).includes("CREDENTIALS") || err?.status === 401) {
+      if (err?.serverMessage) {
+        setError(err.serverMessage);
+      } else if (err?.code === "INVALID_CREDENTIALS" || err?.message?.includes("INVALID_CREDENTIALS") || String(err?.code).includes("CREDENTIALS") || err?.status === 401) {
         setError("Thông tin đăng nhập không hợp lệ.");
       } else {
         setError(errorText(err));
@@ -344,7 +362,10 @@ const menu = [
   ["api-admin", "Quản lý API", "⌘"],
   ["events", "Nhật ký quản trị", "≡"],
 ];
-export function pageToModuleCode(key) {
+export function pageToModuleCode(key, portal = "admin") {
+  // Employee-portal pages that share a key with an admin module (AI guide,
+  // department roster) are governed by workflow roles, not admin modules.
+  if (portal !== "admin" && (key === "ai-process" || key === "team-employees")) return null;
   switch (key) {
     case "home":
     case "dashboard":
@@ -426,11 +447,11 @@ const CLIENT_NAV = [
   ["Tài khoản", ["profile"]],
 ];
 const ADMIN_NAV = [
-  ["GIÁM SÁT", ["home", "ops", "team"]],
-  ["LUỒNG CÔNG VIỆC", ["request-catalog", "release-workspace", "sla"]],
-  ["TỔ CHỨC & NHÂN SỰ", ["org-chart", "users", "identity", "permissions"]],
-  ["TRI THỨC & AI", ["policy", "ai-process", "ai-rules"]],
-  ["HỆ THỐNG", ["api-admin", "system", "audit"]],
+  ["GIÁM SÁT", ["home"]],
+  ["LUỒNG CÔNG VIỆC", ["request-catalog"]],
+  ["TỔ CHỨC & NHÂN SỰ", ["org-chart", "users", "permissions"]],
+  ["TRI THỨC & AI", ["policy", "ai-policy"]],
+  ["HỆ THỐNG", ["api-admin", "system"]],
 ];
 function pageLabel(key, portal) {
   return (portal === "admin" && ADMIN_LABELS[key]) || menu.find((m) => m[0] === key)?.[1] || "";
@@ -587,6 +608,15 @@ function renderNavIcon(key, fallback) {
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <circle cx="11.5" cy="14.5" r="2.5" />
           <path d="m16 18-2-2" />
+        </svg>
+      );
+    case "api-admin":
+      return (
+        <svg {...p}>
+          <rect x="2" y="2" width="20" height="8" rx="2" />
+          <rect x="2" y="14" width="20" height="8" rx="2" />
+          <line x1="6" y1="6" x2="6.01" y2="6" />
+          <line x1="6" y1="18" x2="6.01" y2="18" />
         </svg>
       );
     case "system":
@@ -860,7 +890,7 @@ function renderWorkspaceContent({
   searchText = "",
 }) {
   const canOpenAsAdmin = user.roles.includes("AUDITOR");
-  const mod = pageToModuleCode(page);
+  const mod = pageToModuleCode(page, portal);
   if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
     if (!user.permissions.by_module[mod].can_view) {
       return (
@@ -906,7 +936,7 @@ function renderWorkspaceContent({
   }
   switch (page) {
     case "home":
-      if (portal === "admin") return user.roles.includes("OPS_ADMIN") ? <AdminDashboard navigate={navigate} /> : <AdminOverview navigate={navigate} user={user} />;
+      if (portal === "admin") return <AdminDashboard navigate={navigate} />;
       return portal === "client" ? (user.roles.includes("REQUESTER") ? <ClientDashboard navigate={navigate} onOpen={setSelected} user={user} /> : <AssignedWorkDashboard navigate={navigate} onOpen={setSelected} user={user}/>) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
     case "org-client":
       return <ClientOrgChart user={user} />;
@@ -1005,14 +1035,13 @@ function renderWorkspaceContent({
   }
 }
 
-const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
 const navKeys = (groups) => groups.flatMap(([, keys]) => keys);
 const ADMIN_PAGES = new Set([...navKeys(ADMIN_NAV), "ops", "sla", "audit", "identity", "departments", "notifications"]);
 const CLIENT_PAGES = new Set([...navKeys(CLIENT_NAV), "notifications"]);
 const UNIFIED_NAV = [...CLIENT_NAV, ...ADMIN_NAV.map(([group, keys]) => [group, keys.filter((key) => !navKeys(CLIENT_NAV).includes(key))])];
 
 /** Overview for administrators without OPS scope (policy admins, auditors). */
-function AdminOverview({ navigate, user }) {
+export function AdminOverview({ navigate, user }) {
   const tiles = [
     ["policy", "Quy chế & quy trình", "Soạn thảo biểu mẫu, luồng duyệt, SLA và công bố quy chế", "⚙"],
     ["audit", "Nhật ký kiểm toán", "Xác minh chuỗi nhật ký hồ sơ và tra cứu thay đổi quản trị", "⌕"],
@@ -1057,7 +1086,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
   function navigate(next, query = "") {
     if (!canNavigate(user.roles, next, user.capabilities)) return;
     if (!allowedPages.has(next)) return;
-    const mod = pageToModuleCode(next);
+    const mod = pageToModuleCode(next, portal);
     if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
       if (!user.permissions.by_module[mod].can_view) return;
     }
@@ -1116,7 +1145,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
             {portal === "admin" ? "EAS Admin" : "EAS Portal"}<small>{portal === "admin" ? "QUẢN TRỊ HỆ THỐNG" : "PHÊ DUYỆT DOANH NGHIỆP"}</small>
           </span>
         </a>
-        {portal !== "admin" && user.roles.includes("REQUESTER") && (
+        {portal !== "admin" && (user?.permissions?.by_module?.requests_workflows ? Boolean(user.permissions.by_module.requests_workflows.can_create) : user.roles.includes("REQUESTER")) && (
           <div className="sidebar-create-wrap">
             <button
               type="button"
@@ -1139,7 +1168,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
               if (!m) return false;
               if (!allowedPages.has(m[0])) return false;
               if (!canNavigate(user.roles, m[0], user.capabilities)) return false;
-              const mod = pageToModuleCode(m[0]);
+              const mod = pageToModuleCode(m[0], portal);
               if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
                 return Boolean(user.permissions.by_module[mod].can_view);
               }
@@ -1503,13 +1532,47 @@ function PortalApp({ portal, theme, toggleTheme }) {
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );
-  if (user && portal === "admin" && !canUsePortal(user.roles, "admin")) {
-    return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
+  if (user && portal === "admin" && (user.email !== "admin@eas.com" || !canUsePortal(user.roles, "admin"))) {
+    return (
+      <main className="auth-shell">
+        <section className="panel">
+          <h1>Không có quyền quản trị</h1>
+          <p>Tài khoản nhân viên không được phép sử dụng Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).</p>
+          <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+            <a
+              href={import.meta.env.VITE_CLIENT_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:8080`}
+              className="btn-primary"
+              style={{ display: "inline-flex", alignItems: "center", textDecoration: "none", padding: "8px 16px", borderRadius: "6px" }}
+            >
+              Mở Cổng Nhân viên
+            </a>
+            <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
+          </div>
+        </section>
+      </main>
+    );
   }
   // Administrative identities are system-only (enforced again by the API);
   // an admin who also approves or executes keeps the employee portal.
-  if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role)) && !canUsePortal(user.roles, "client")) {
-    return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
+  if (user && ((portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role)) && !canUsePortal(user.roles, "client")) || (portal === "client" && user.email === "admin@eas.com"))) {
+    return (
+      <main className="auth-shell">
+        <section className="panel">
+          <h1>Tài khoản quản trị</h1>
+          <p>Tài khoản Quản trị viên (admin@eas.com) không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).</p>
+          <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+            <a
+              href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:8081`}
+              className="btn-primary"
+              style={{ display: "inline-flex", alignItems: "center", textDecoration: "none", padding: "8px 16px", borderRadius: "6px" }}
+            >
+              Mở Cổng Quản trị
+            </a>
+            <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
+          </div>
+        </section>
+      </main>
+    );
   }
   return user ? (
     <>

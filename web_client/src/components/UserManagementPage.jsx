@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
+import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
 import { useResource, ResourceState } from "./ui.jsx";
 import { usePermission } from "../hooks/usePermission.jsx";
 
 export default function UserManagementPage({ onNavigateOrgChart }) {
+  const apiBase = useApiBase();
   const userPerms = usePermission("users");
   const canCreate = userPerms.canCreate;
   const canUpdate = userPerms.canUpdate;
@@ -17,10 +19,10 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
 
   // Data fetching
   const usersRes = useResource(
-    `/api/v1/admin/users-management?limit=200&t=${refreshKey}`
+    `${apiBase}/users-management?limit=200&t=${refreshKey}`
   );
-  const rolesRes = useResource("/api/v1/admin/rbac/roles");
-  const deptsRes = useResource("/api/v1/admin/departments?limit=100");
+  const rolesRes = useResource(`${apiBase}/rbac/roles`);
+  const deptsRes = useResource(`${apiBase}/departments?limit=100`);
 
   // Modals state
   const [selectedUserForDetail, setSelectedUserForDetail] = useState(null);
@@ -55,7 +57,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
     setSelectedUserForDetail(user);
     setLoadingDetail(true);
     try {
-      const res = await api(`/api/v1/admin/users-management/${user.id}/requests-detail`);
+      const res = await api(`${apiBase}/users-management/${user.id}/requests-detail`);
       setDetailData(res);
     } catch (err) {
       showToast("Không thể tải chi tiết hồ sơ: " + (err.message || err), "error");
@@ -75,7 +77,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
         reason: leaveReason,
       };
       const res = await api(
-        `/api/v1/admin/users-management/${leaveModalUser.id}/leave-trip`,
+        `${apiBase}/users-management/${leaveModalUser.id}/leave-trip`,
         {
           method: "POST",
           body: JSON.stringify(payload),
@@ -102,7 +104,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       return;
     }
     try {
-      await api(`/api/v1/admin/users-management/${user.id}`, {
+      await api(`${apiBase}/users-management/${user.id}`, {
         method: "PATCH",
         body: JSON.stringify({ is_active: !user.is_active }),
       });
@@ -119,13 +121,13 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
     setUserSubmitting(true);
     try {
       if (isNewUser) {
-        await api("/api/v1/admin/users-management", {
+        await api(`${apiBase}/users-management`, {
           method: "POST",
           body: JSON.stringify(userFormData),
         });
         showToast("Tạo người dùng mới thành công!", "success");
       } else {
-        await api(`/api/v1/admin/users-management/${editUserModal.id}`, {
+        await api(`${apiBase}/users-management/${editUserModal.id}`, {
           method: "PATCH",
           body: JSON.stringify(userFormData),
         });
@@ -591,9 +593,9 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                           </tr>
                         ) : (
                           detailData.items.map((r) => (
-                            <tr key={r.id}>
+                            <tr key={r.request_id || r.id}>
                               <td>
-                                <strong>{r.code}</strong>
+                                <strong>{r.request_code || r.code}</strong>
                               </td>
                               <td>
                                 <div style={{ fontWeight: 500 }}>{r.title}</div>

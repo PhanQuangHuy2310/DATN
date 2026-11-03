@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import { date, statuses, types } from "../domain.js";
 import { ActionForm, Badge, Modal, Reason, ResourceState, command, useResource } from "./ui.jsx";
 import { PageControls } from "./ux.jsx";
+import { useApiBase } from "../apiBase.js";
 import { PeriodChooser } from "./DashboardOverview.jsx";
 import { EmptyState, PageHeader, PageTabs, StatCard, useDebounced } from "./design.jsx";
 import { Policy, AdminEvents } from "./Admin.jsx";
@@ -52,7 +53,10 @@ function HealthList({ diagnostics, ready }) {
 }
 
 /** System-wide dashboard; every figure comes from /api/v1/admin/overview and diagnostics. */
-export function AdminDashboard({ navigate }) {
+/** `workspace`: employee-portal mode — figures scoped by the API (own requests,
+ * departments led, or company), no system health or operations shortcut. */
+export function AdminDashboard({ navigate, workspace = false }) {
+  const apiBase = useApiBase();
   const [period, setPeriod] = useState("month");
   const [start, setStart] = useState(() => localDay(Date.now() - 29 * 86400000));
   const [end, setEnd] = useState(() => localDay(Date.now()));
@@ -65,10 +69,10 @@ export function AdminDashboard({ navigate }) {
   if (status) params.set("status", status);
 
   // Resources (preserving overview & diagnostics for regression tests and system state)
-  const overview = useResource(valid ? `/api/v1/admin/overview?${params}` : "");
-  const diagnostics = useResource("/api/v1/admin/diagnostics");
-  const ready = useResource("/health/ready");
-  const analytics = useResource(`/api/v1/admin/analytics?period=${period}`);
+  const overview = useResource(valid && !workspace ? `/api/v1/admin/overview?${params}` : "");
+  const diagnostics = useResource(workspace ? "" : "/api/v1/admin/diagnostics");
+  const ready = useResource(workspace ? "" : "/health/ready");
+  const analytics = useResource(`${apiBase}/analytics?period=${period}`);
 
   const aData = analytics.data;
   const oData = overview.data;
@@ -95,13 +99,19 @@ export function AdminDashboard({ navigate }) {
   return (
     <div className="admin-dashboard-container">
       <PageHeader
-        eyebrow="GIÁM SÁT HỆ THỐNG"
-        title="Tổng quan vận hành"
-        description="Khối lượng yêu cầu, hiệu suất SLA theo phân loại A/B/C và các chỉ số toàn diện của doanh nghiệp."
+        eyebrow={workspace ? "TỔNG QUAN" : "GIÁM SÁT HỆ THỐNG"}
+        title={workspace ? "Tổng quan" : "Tổng quan vận hành"}
+        description={
+          workspace
+            ? `Khối lượng yêu cầu, tỉ lệ thành công và tốc độ xử lý theo phân loại A/B/C — phạm vi: ${aData?.scope?.label || "đang tải…"}.`
+            : "Khối lượng yêu cầu, hiệu suất SLA theo phân loại A/B/C và các chỉ số toàn diện của doanh nghiệp."
+        }
         action={
-          <button type="button" className="primary" onClick={() => navigate("ops")}>
-            Theo dõi chi tiết vận hành →
-          </button>
+          workspace ? null : (
+            <button type="button" className="primary" onClick={() => navigate("ops")}>
+              Theo dõi chi tiết vận hành →
+            </button>
+          )
         }
       />
 
@@ -136,13 +146,15 @@ export function AdminDashboard({ navigate }) {
               {period === "year" && "Năm 2026 (Từ đầu năm)"}
             </strong>
           </span>
-          <button
-            type="button"
-            className="secondary admin-btn-filter-toggle"
-            onClick={() => setShowCustomDate(!showCustomDate)}
-          >
-            {showCustomDate ? "Ẩn tùy chỉnh ngày ▲" : "Tùy chỉnh ngày nâng cao ▼"}
-          </button>
+          {!workspace && (
+            <button
+              type="button"
+              className="secondary admin-btn-filter-toggle"
+              onClick={() => setShowCustomDate(!showCustomDate)}
+            >
+              {showCustomDate ? "Ẩn tùy chỉnh ngày ▲" : "Tùy chỉnh ngày nâng cao ▼"}
+            </button>
+          )}
           <button
             type="button"
             className="secondary"
@@ -247,9 +259,9 @@ export function AdminDashboard({ navigate }) {
             type="button"
             className="link"
             style={{ fontWeight: 600 }}
-            onClick={() => navigate("request-catalog")}
+            onClick={() => navigate(workspace ? "requests" : "request-catalog")}
           >
-            Quản lý quy trình A, B, C →
+            {workspace ? "Xem quy trình A, B, C →" : "Quản lý quy trình A, B, C →"}
           </button>
         </div>
 
@@ -495,7 +507,7 @@ export function AdminDashboard({ navigate }) {
       </div>
 
       {/* 5. TÌNH TRẠNG DỊCH VỤ HỆ THỐNG */}
-      <section className="panel" style={{ marginTop: 16 }}>
+      {!workspace && <section className="panel" style={{ marginTop: 16 }}>
         <div className="section-head">
           <div>
             <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Tình trạng dịch vụ hệ thống</h2>
@@ -513,7 +525,7 @@ export function AdminDashboard({ navigate }) {
           </button>
         </div>
         <HealthList diagnostics={diagnostics} ready={ready} />
-      </section>
+      </section>}
     </div>
   );
 }

@@ -309,12 +309,12 @@ USER_MEMBERSHIPS_SQL = (
 )
 
 
-def read_record(actor, kind, record_id):
+def read_record(actor, kind, record_id, authorizer=None):
     _, columns = TABLES[kind]
     record_id = uid(record_id, "id")
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
-        authorize(c, actor)
+        (authorizer or authorize)(c, actor)
         c.execute(SELECT_BY_ID_SQL[kind], [record_id])
         row = c.fetchone()
         if not row:
@@ -514,7 +514,9 @@ def _assert_not_system_account(c, user_id):
         raise CommandError("SYSTEM_ACCOUNT_LOCKED", status=403)
 
 
-def mutate(actor, kind, record_id, body, method, key, correlation_id):
+def mutate(actor, kind, record_id, body, method, key, correlation_id, authorizer=None):
+    """authorizer(cursor, actor) raises CommandError; default: global OPS_ADMIN."""
+    authorizer = authorizer or authorize
     table, columns = TABLES[kind]
     if (
         method == "POST"
@@ -677,7 +679,7 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
     # Acquire exclusive lock BEFORE the shared-lock idempotency helper to avoid lock upgrade races.
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(true)")
-        authorize(c, actor)
+        authorizer(c, actor)
         return _execute_idempotent(
             actor_id=actor.id,
             scope=f"admin:{kind}:{method}:{record_id or 'new'}",

@@ -1,8 +1,17 @@
 import { useState } from "react";
+import { useApiBase } from "../apiBase.js";
 import { useResource, ResourceState } from "./ui.jsx";
 
 const DEPT_COLORS = {
   BOD: { bg: "#eff6ff", border: "#3b82f6", text: "#1e40af", badge: "#2563eb", icon: "🏛️" },
+  TECH: { bg: "#f0fdf4", border: "#22c55e", text: "#166534", badge: "#16a34a", icon: "💻" },
+  HR: { bg: "#fdf4ff", border: "#d946ef", text: "#86198f", badge: "#c026d3", icon: "👥" },
+  FIN: { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#d97706", icon: "💰" },
+  BIZ: { bg: "#fef2f2", border: "#ef4444", text: "#991b1b", badge: "#dc2626", icon: "💼" },
+  MKT: { bg: "#fff1f2", border: "#f43f5e", text: "#be123c", badge: "#e11d48", icon: "📢" },
+  OPS: { bg: "#ecfeff", border: "#06b6d4", text: "#155e75", badge: "#0891b2", icon: "⚙️" },
+  LEGAL: { bg: "#f5f3ff", border: "#8b5cf6", text: "#5b21b6", badge: "#7c3aed", icon: "⚖️" },
+  // Compatibility fallbacks
   DEPT_IT: { bg: "#f0fdf4", border: "#22c55e", text: "#166534", badge: "#16a34a", icon: "💻" },
   DEPT_HR: { bg: "#fdf4ff", border: "#d946ef", text: "#86198f", badge: "#c026d3", icon: "👥" },
   DEPT_FIN: { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#d97706", icon: "💰" },
@@ -11,17 +20,18 @@ const DEPT_COLORS = {
 };
 
 export default function OrgChart({ navigate, portal = "client" }) {
-  const treeRes = useResource("/api/v1/admin/org-chart-tree");
+  const apiBase = useApiBase();
+  const treeRes = useResource(`${apiBase}/org-chart-tree`);
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [zoom, setZoom] = useState(1);
 
   const summary = treeRes.data?.summary || {
-    total_departments: 6,
-    total_employees: 50,
-    working_count: 47,
-    leave_count: 1,
-    trip_count: 2,
+    total_departments: 8,
+    total_employees: 136,
+    working_count: 135,
+    leave_count: 0,
+    trip_count: 1,
   };
 
   const departments = treeRes.data?.departments || [];

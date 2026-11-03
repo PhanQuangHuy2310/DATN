@@ -29,6 +29,7 @@ from api_core.workflow.constants import (
     ERR_STATE_CONFLICT,
     ERR_VERSION_CONFLICT,
 )
+from api_core.workflow.leave_sync import record_approved_leave
 
 SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
 SQL_COMPLETE_WORKFLOW = (
@@ -2168,6 +2169,9 @@ def decide_approval(
             """,
             [next_status, now, approved_at, completed_at, request_id],
         )
+        if approved_at is not None:
+            # Fully approved leave/trip: show it in the employee's working status.
+            record_approved_leave(cursor, request_id, actor.display_name)
         _append_request_audit(
             cursor,
             request_id=request_id,

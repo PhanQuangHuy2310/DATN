@@ -3,6 +3,14 @@ import { api } from "../api.js";
 import { useResource } from "./ui.jsx";
 import { notifyPermissionsChanged } from "../sessionRefresh.js";
 
+const EMPLOYEE_ROLES = new Set(["REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR"]);
+const SYSTEM_LOCKED_MODULES = new Set([
+  "permissions",
+  "ai_engine",
+  "api_management",
+  "system_versions",
+]);
+
 export default function RolePermissionMatrixPage() {
   const [activeTab, setActiveTab] = useState("role"); // "role" | "user"
   const [selectedRoleId, setSelectedRoleId] = useState("");
@@ -51,6 +59,10 @@ export default function RolePermissionMatrixPage() {
 
   // Toggle permission for a role
   const handleToggleRolePermission = async (moduleCode, action, currentValue) => {
+    if (SYSTEM_LOCKED_MODULES.has(moduleCode)) {
+      showToast("Chức năng hệ thống/cấu hình này bị khóa cứng, không thể phân quyền!", "error");
+      return;
+    }
     const newValue = !currentValue;
     const saveKey = `${moduleCode}_${action}`;
     setSavingKey(saveKey);
@@ -103,6 +115,10 @@ export default function RolePermissionMatrixPage() {
 
   // Toggle user override permission
   const handleToggleUserPermission = async (moduleCode, action, currentValue) => {
+    if (SYSTEM_LOCKED_MODULES.has(moduleCode)) {
+      showToast("Chức năng hệ thống/cấu hình này bị khóa cứng, không thể phân quyền!", "error");
+      return;
+    }
     const newValue = !currentValue;
     const saveKey = `user_${moduleCode}_${action}`;
     setSavingKey(saveKey);
@@ -299,18 +315,27 @@ export default function RolePermissionMatrixPage() {
                     </tr>
                   ) : (
                     matrixData.modules.map((m, idx) => {
+                      // Admin-only modules can never be granted to employee roles (server enforces it too).
+                      const isLocked = SYSTEM_LOCKED_MODULES.has(m.code) || (m.target_app === "ADMIN" && EMPLOYEE_ROLES.has(roleId));
                       const isSavingView = savingKey === `${m.code}_can_view`;
                       const isSavingCreate = savingKey === `${m.code}_can_create`;
                       const isSavingUpdate = savingKey === `${m.code}_can_update`;
                       const isSavingDelete = savingKey === `${m.code}_can_delete`;
 
                       return (
-                        <tr key={m.code} className={!m.can_view ? "row-view-disabled" : ""}>
+                        <tr key={m.code} className={isLocked ? "row-locked-module" : !m.can_view ? "row-view-disabled" : ""}>
                           <td>
                             <div className="module-title-cell">
                               <span className="module-order-num">{idx + 1}</span>
                               <div>
-                                <strong className="module-display-name">{m.name}</strong>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                  <strong className="module-display-name">{m.name}</strong>
+                                  {isLocked && (
+                                    <span className="badge badge-locked" style={{ backgroundColor: "#fee2e2", color: "#991b1b", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "4px" }} title="4 chức năng hệ thống bị khóa cứng, chỉ Super Admin mới có quyền truy cập">
+                                      🔒 Khóa cứng hệ thống
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="module-code-hint">
                                   <code>{m.code}</code> • {m.description || "Chức năng hệ thống"}
                                 </div>
@@ -320,11 +345,11 @@ export default function RolePermissionMatrixPage() {
 
                           {/* Toggle: can_view */}
                           <td style={{ textAlign: "center" }}>
-                            <label className="switch-toggle" title="Bật/Tắt quyền Xem module này" aria-label="Bật/Tắt quyền Xem module này">
+                            <label className={`switch-toggle ${isLocked ? "switch-disabled" : ""}`} title={isLocked ? "Khóa cứng hệ thống (không thể chỉnh sửa)" : "Bật/Tắt quyền Xem module này"} aria-label="Bật/Tắt quyền Xem module này">
                               <input
                                 type="checkbox"
-                                checked={Boolean(m.can_view)}
-                                disabled={isSavingView}
+                                checked={isLocked ? false : Boolean(m.can_view)}
+                                disabled={isLocked || isSavingView}
                                 onChange={() => handleToggleRolePermission(m.code, "can_view", m.can_view)}
                               />
                               <span className="slider round"></span>
@@ -333,11 +358,11 @@ export default function RolePermissionMatrixPage() {
 
                           {/* Toggle: can_create */}
                           <td style={{ textAlign: "center" }}>
-                            <label className="switch-toggle" title="Bật/Tắt quyền Thêm mới trong module này" aria-label="Bật/Tắt quyền Thêm mới trong module này">
+                            <label className={`switch-toggle ${isLocked ? "switch-disabled" : ""}`} title={isLocked ? "Khóa cứng hệ thống (không thể chỉnh sửa)" : "Bật/Tắt quyền Thêm mới trong module này"} aria-label="Bật/Tắt quyền Thêm mới trong module này">
                               <input
                                 type="checkbox"
-                                checked={Boolean(m.can_create)}
-                                disabled={!m.can_view || isSavingCreate}
+                                checked={isLocked ? false : Boolean(m.can_create)}
+                                disabled={isLocked || !m.can_view || isSavingCreate}
                                 onChange={() => handleToggleRolePermission(m.code, "can_create", m.can_create)}
                               />
                               <span className="slider round"></span>
@@ -346,11 +371,11 @@ export default function RolePermissionMatrixPage() {
 
                           {/* Toggle: can_update */}
                           <td style={{ textAlign: "center" }}>
-                            <label className="switch-toggle" title="Bật/Tắt quyền Sửa trong module này" aria-label="Bật/Tắt quyền Sửa trong module này">
+                            <label className={`switch-toggle ${isLocked ? "switch-disabled" : ""}`} title={isLocked ? "Khóa cứng hệ thống (không thể chỉnh sửa)" : "Bật/Tắt quyền Sửa trong module này"} aria-label="Bật/Tắt quyền Sửa trong module này">
                               <input
                                 type="checkbox"
-                                checked={Boolean(m.can_update)}
-                                disabled={!m.can_view || isSavingUpdate}
+                                checked={isLocked ? false : Boolean(m.can_update)}
+                                disabled={isLocked || !m.can_view || isSavingUpdate}
                                 onChange={() => handleToggleRolePermission(m.code, "can_update", m.can_update)}
                               />
                               <span className="slider round"></span>
@@ -359,11 +384,11 @@ export default function RolePermissionMatrixPage() {
 
                           {/* Toggle: can_delete */}
                           <td style={{ textAlign: "center" }}>
-                            <label className="switch-toggle" title="Bật/Tắt quyền Xóa / Khóa trong module này" aria-label="Bật/Tắt quyền Xóa / Khóa trong module này">
+                            <label className={`switch-toggle ${isLocked ? "switch-disabled" : ""}`} title={isLocked ? "Khóa cứng hệ thống (không thể chỉnh sửa)" : "Bật/Tắt quyền Xóa / Khóa trong module này"} aria-label="Bật/Tắt quyền Xóa / Khóa trong module này">
                               <input
                                 type="checkbox"
-                                checked={Boolean(m.can_delete)}
-                                disabled={!m.can_view || isSavingDelete}
+                                checked={isLocked ? false : Boolean(m.can_delete)}
+                                disabled={isLocked || !m.can_view || isSavingDelete}
                                 onChange={() => handleToggleRolePermission(m.code, "can_delete", m.can_delete)}
                               />
                               <span className="slider round"></span>
@@ -479,6 +504,7 @@ export default function RolePermissionMatrixPage() {
                 </thead>
                 <tbody>
                   {(userMatrixData?.modules || []).map((m, idx) => {
+                    const isLocked = SYSTEM_LOCKED_MODULES.has(m.code) || m.target_app === "ADMIN";
                     const isOverride = m.is_user_override;
                     const isSavingView = savingKey === `user_${m.code}_can_view`;
                     const isSavingCreate = savingKey === `user_${m.code}_can_create`;
@@ -486,18 +512,22 @@ export default function RolePermissionMatrixPage() {
                     const isSavingDelete = savingKey === `user_${m.code}_can_delete`;
 
                     return (
-                      <tr key={m.code} className={!m.can_view ? "row-view-disabled" : ""}>
+                      <tr key={m.code} className={isLocked ? "row-locked-module" : !m.can_view ? "row-view-disabled" : ""}>
                         <td>
                           <div className="module-title-cell">
                             <span className="module-order-num">{idx + 1}</span>
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <strong className="module-display-name">{m.name}</strong>
-                                {isOverride && (
+                                {isLocked ? (
+                                  <span className="badge badge-locked" style={{ backgroundColor: "#fee2e2", color: "#991b1b", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "4px" }} title="4 chức năng hệ thống bị khóa cứng, chỉ Super Admin mới có quyền truy cập">
+                                    🔒 Khóa cứng hệ thống
+                                  </span>
+                                ) : isOverride ? (
                                   <span className="badge badge-override" title="Quyền này được ghi đè riêng cho nhân viên">
                                     Quyền riêng
                                   </span>
-                                )}
+                                ) : null}
                               </div>
                               <div className="module-code-hint">
                                 <code>{m.code}</code> • {m.description || "Chức năng"}
@@ -508,11 +538,11 @@ export default function RolePermissionMatrixPage() {
 
                         {/* Toggle: can_view */}
                         <td style={{ textAlign: "center" }}>
-                          <label className="switch-toggle" title="Bật/Tắt quyền Xem riêng" aria-label="Bật/Tắt quyền Xem riêng">
+                          <label className={`switch-toggle ${isLocked ? "switch-disabled" : ""}`} title={isLocked ? "Khóa cứng hệ thống (không thể chỉnh sửa)" : "Bật/Tắt quyền Xem riêng"} aria-label="Bật/Tắt quyền Xem riêng">
                             <input
                               type="checkbox"
-                              checked={Boolean(m.can_view)}
-                              disabled={isSavingView}
+                              checked={isLocked ? false : Boolean(m.can_view)}
+                              disabled={isLocked || isSavingView}
                               onChange={() => handleToggleUserPermission(m.code, "can_view", m.can_view)}
                             />
                             <span className="slider round"></span>
@@ -521,11 +551,11 @@ export default function RolePermissionMatrixPage() {
 
                         {/* Toggle: can_create */}
                         <td style={{ textAlign: "center" }}>
-                          <label className="switch-toggle" title="Bật/Tắt quyền Thêm riêng" aria-label="Bật/Tắt quyền Thêm riêng">
+                          <label className={`switch-toggle ${isLocked ? "switch-disabled" : ""}`} title={isLocked ? "Khóa cứng hệ thống (không thể chỉnh sửa)" : "Bật/Tắt quyền Thêm riêng"} aria-label="Bật/Tắt quyền Thêm riêng">
                             <input
                               type="checkbox"
-                              checked={Boolean(m.can_create)}
-                              disabled={!m.can_view || isSavingCreate}
+                              checked={isLocked ? false : Boolean(m.can_create)}
+                              disabled={isLocked || !m.can_view || isSavingCreate}
                               onChange={() => handleToggleUserPermission(m.code, "can_create", m.can_create)}
                             />
                             <span className="slider round"></span>
@@ -534,11 +564,11 @@ export default function RolePermissionMatrixPage() {
 
                         {/* Toggle: can_update */}
                         <td style={{ textAlign: "center" }}>
-                          <label className="switch-toggle" title="Bật/Tắt quyền Sửa riêng" aria-label="Bật/Tắt quyền Sửa riêng">
+                          <label className={`switch-toggle ${isLocked ? "switch-disabled" : ""}`} title={isLocked ? "Khóa cứng hệ thống (không thể chỉnh sửa)" : "Bật/Tắt quyền Sửa riêng"} aria-label="Bật/Tắt quyền Sửa riêng">
                             <input
                               type="checkbox"
-                              checked={Boolean(m.can_update)}
-                              disabled={!m.can_view || isSavingUpdate}
+                              checked={isLocked ? false : Boolean(m.can_update)}
+                              disabled={isLocked || !m.can_view || isSavingUpdate}
                               onChange={() => handleToggleUserPermission(m.code, "can_update", m.can_update)}
                             />
                             <span className="slider round"></span>
@@ -547,11 +577,11 @@ export default function RolePermissionMatrixPage() {
 
                         {/* Toggle: can_delete */}
                         <td style={{ textAlign: "center" }}>
-                          <label className="switch-toggle" title="Bật/Tắt quyền Xóa riêng" aria-label="Bật/Tắt quyền Xóa riêng">
+                          <label className={`switch-toggle ${isLocked ? "switch-disabled" : ""}`} title={isLocked ? "Khóa cứng hệ thống (không thể chỉnh sửa)" : "Bật/Tắt quyền Xóa riêng"} aria-label="Bật/Tắt quyền Xóa riêng">
                             <input
                               type="checkbox"
-                              checked={Boolean(m.can_delete)}
-                              disabled={!m.can_view || isSavingDelete}
+                              checked={isLocked ? false : Boolean(m.can_delete)}
+                              disabled={isLocked || !m.can_view || isSavingDelete}
                               onChange={() => handleToggleUserPermission(m.code, "can_delete", m.can_delete)}
                             />
                             <span className="slider round"></span>

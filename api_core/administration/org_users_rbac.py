@@ -17,6 +17,7 @@ from django.conf import settings
 from django.db import IntegrityError, connection, transaction
 from django.http import JsonResponse
 
+from api_core.authn.module_access import ADMIN_ROLES, NEVER_FOR_EMPLOYEES, can
 from api_core.authn.service import require_actor
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
 from api_core.workflow.service import CommandError, _append_admin_audit
@@ -147,6 +148,22 @@ def _fetch_users(cur, where: str = "", params: list | None = None) -> list[dict]
         [settings.EAS_AI_SYSTEM_USER_ID, *(params or [])],
     )
     return [_serialize_user(r, names) for r in cur.fetchall()]
+
+
+def _users_authorizer(request, action: str):
+    """Identity writes: admin, or an employee the admin granted `users` rights."""
+
+    def check(_cursor, _actor) -> None:
+        if not can(request, "users", action):
+            raise CommandError("MODULE_FORBIDDEN", status=403)
+
+    return check
+
+
+def _forbidden_unless_users(request, action: str):
+    if not can(request, "users", action):
+        return api_error(request, "MODULE_FORBIDDEN", status=403)
+    return None
 
 
 def _forbidden_unless_writer(request):
@@ -303,7 +320,13 @@ def _role_grants(user_id: str, department_id: str, role: str) -> list[dict]:
 
 
 def _grant_role(
-    request, user_id: str, department_id: str, role: str, key: str, reason: str
+    request,
+    user_id: str,
+    department_id: str,
+    role: str,
+    key: str,
+    reason: str,
+    action: str = "update",
 ) -> None:
     """Grant role unless the user already holds it (as any active membership)."""
     with connection.cursor() as cur:
@@ -322,14 +345,22 @@ def _grant_role(
             "POST",
             str(uuid5(UUID(key), f"role:{role}:{i}")),
             correlation_id(request),
+            authorizer=_users_authorizer(request, action),
         )
 
 
-def _validated_role(value) -> str | None:
+def _validated_role(value, request=None) -> str | None:
     if value in (None, ""):
         return None
     if value not in EMPLOYEE_ROLES:
         raise CommandError("INVALID_ROLE", status=422)
+    # Approval authority is granted by the administrator only.
+    if (
+        value == "APPROVER"
+        and request is not None
+        and not request.actor.roles & ADMIN_ROLES
+    ):
+        raise CommandError("APPROVER_ROLE_ADMIN_ONLY", status=403)
     return value
 
 
@@ -371,11 +402,11 @@ def users_management_list(request):
 
     if request.method != "POST":
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
-    if denied := _forbidden_unless_writer(request):
+    if denied := _forbidden_unless_users(request, "create"):
         return denied
 
     payload = parse_json_object(request)
-    role = _validated_role(payload.get("role_id"))
+    role = _validated_role(payload.get("role_id"), request)
     department_id = payload.get("department_id")
     key = _idempotency_key(request)
     reason = _reason(payload, "Tạo tài khoản nhân viên từ trang Quản lý người dùng")
@@ -402,12 +433,15 @@ def users_management_list(request):
             "POST",
             key,
             correlation_id(request),
+            authorizer=_users_authorizer(request, "create"),
         )
         user_id = created.body["item"]["id"]
         # Every employee can create and accept their own requests.
         for granted in dict.fromkeys(("REQUESTER", "ACCEPTOR", role)):
             if granted:
-                _grant_role(request, user_id, department_id, granted, key, reason)
+                _grant_role(
+                    request, user_id, department_id, granted, key, reason, "create"
+                )
 
     return JsonResponse(
         {
@@ -433,14 +467,21 @@ def user_management_detail(request, user_id):
 
     if request.method not in ("PATCH", "PUT", "DELETE"):
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
-    if denied := _forbidden_unless_writer(request):
+    payload = parse_json_object(request) if request.method != "DELETE" else {}
+    # Locking/unlocking an account is a delete-level right.
+    action = (
+        "delete" if request.method == "DELETE" or "is_active" in payload else "update"
+    )
+    if denied := _forbidden_unless_users(request, action):
         return denied
+    if request.actor.id == u_str:
+        return api_error(request, "SELF_ADMIN_CHANGE_FORBIDDEN", status=403)
 
     with connection.cursor() as cur:
         _assert_employee(cur, u_str)
-    payload = parse_json_object(request) if request.method != "DELETE" else {}
     key = _idempotency_key(request)
-    current = read_record(request.actor, "users", u_str)["item"]
+    authorizer = _users_authorizer(request, action)
+    current = read_record(request.actor, "users", u_str, authorizer)["item"]
 
     if request.method == "DELETE":
         result = mutate(
@@ -456,13 +497,14 @@ def user_management_detail(request, user_id):
             "DELETE",
             key,
             correlation_id(request),
+            authorizer=authorizer,
         )
         item = result.body["item"]
         return JsonResponse(
             {"success": True, "message": f"Đã khóa tài khoản {item['display_name']}"}
         )
 
-    role = _validated_role(payload.get("role_id"))
+    role = _validated_role(payload.get("role_id"), request)
     reason = _reason(payload, "Cập nhật tài khoản từ trang Quản lý người dùng")
     changes = {}
     if payload.get("full_name"):
@@ -485,9 +527,12 @@ def user_management_detail(request, user_id):
                 "PATCH",
                 key,
                 correlation_id(request),
+                authorizer=authorizer,
             ).body["item"]
         if role:
-            _grant_role(request, u_str, item["department_id"], role, key, reason)
+            _grant_role(
+                request, u_str, item["department_id"], role, key, reason, action
+            )
 
     if not changes and not role:
         return JsonResponse({"success": True, "message": "Không có thay đổi"})
@@ -534,6 +579,8 @@ def user_requests_detail_view(request, user_id):
         stage_counts[stage] += 1
         items.append(
             {
+                "id": rid,
+                "code": code,
                 "request_id": rid,
                 "request_code": code,
                 "title": title,
@@ -575,7 +622,7 @@ def user_leave_trip_manage(request, user_id):
     """Record an approved leave/business trip, or cancel today's, to set working status."""
     if request.method != "POST":
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
-    if denied := _forbidden_unless_writer(request):
+    if denied := _forbidden_unless_users(request, "update"):
         return denied
 
     u_str = str(user_id)
@@ -737,11 +784,16 @@ def rbac_matrix_view(request):
     )
 
 
+SYSTEM_LOCKED_MODULES = frozenset(
+    {"permissions", "ai_engine", "api_management", "system_versions"}
+)
+
+
 def _permission_payload(payload: dict, id_field: str) -> tuple[str, str, str, bool]:
     target, module, field = (
         payload.get(id_field),
         payload.get("module_code"),
-        payload.get("permission_type"),
+        payload.get("permission_type") or payload.get("field"),
     )
     if (
         not target
@@ -750,7 +802,22 @@ def _permission_payload(payload: dict, id_field: str) -> tuple[str, str, str, bo
         or not isinstance(payload.get("value"), bool)
     ):
         raise CommandError("INVALID_RBAC_PAYLOAD", status=400)
+    if module in SYSTEM_LOCKED_MODULES:
+        raise CommandError(
+            "SYSTEM_MODULE_LOCKED",
+            "4 chức năng hệ thống (Phân quyền, Quản trị AI, Quản lý API, Phiên bản hệ thống) được khóa cứng bảo mật; không thể cấp quyền cho vai trò hoặc nhân viên.",
+            status=400,
+        )
     return str(target), str(module), field, payload["value"]
+
+
+def _assert_grantable(cur, module: str, value: bool, *, employee: bool) -> None:
+    """System modules can never be granted to employees (roles or overrides)."""
+    cur.execute("SELECT 1 FROM eas.modules WHERE code = %s", [module])
+    if not cur.fetchone():
+        raise CommandError("MODULE_NOT_FOUND", status=404)
+    if employee and value and module in NEVER_FOR_EMPLOYEES:
+        raise CommandError("ADMIN_MODULE_NOT_GRANTABLE", status=422)
 
 
 def _bump_epoch(cur) -> None:
@@ -775,9 +842,7 @@ def rbac_role_permission_update(request):
         cur.execute("SELECT 1 FROM eas.role WHERE code = %s", [role])
         if not cur.fetchone():
             raise CommandError("ROLE_NOT_FOUND", status=404)
-        cur.execute("SELECT 1 FROM eas.modules WHERE code = %s", [module])
-        if not cur.fetchone():
-            raise CommandError("MODULE_NOT_FOUND", status=404)
+        _assert_grantable(cur, module, value, employee=role in EMPLOYEE_ROLES)
         # field is one of PERMISSION_FIELDS (validated above).
         cur.execute(  # NOSONAR python:S2077
             f"""
@@ -880,6 +945,7 @@ def rbac_user_permission_update(request):
     with transaction.atomic(), connection.cursor() as cur:
         cur.execute("SELECT eas.lock_security(true)")
         _assert_employee(cur, user_id)
+        _assert_grantable(cur, module, value, employee=True)
         # Start the override from the current effective permissions.
         cur.execute(
             "SELECT can_view, can_create, can_update, can_delete FROM eas.get_effective_user_permissions(%s::uuid) WHERE module_code = %s",

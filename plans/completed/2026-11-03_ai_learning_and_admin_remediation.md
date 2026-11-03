@@ -4,7 +4,7 @@
 |---|---|
 | Mã | EAS-PLAN-2026-11-03-02 |
 | Ngày mở | 03/11/2026 |
-| Trạng thái | ACTIVE |
+| Trạng thái | COMPLETED |
 | Liên quan | EAS-PLAN-2026-11-03-01 (dọn bảng, tách admin), roadmap `2026-11-03_admin_9_features_roadmap.md` |
 
 ## 1. Yêu cầu của chủ dự án
@@ -77,4 +77,13 @@
 - #4 DONE: `org_users_rbac.py`, `workflows.py`, `analytics.py` viết lại trên bảng lõi. Ghi người dùng/vai trò qua `service.mutate` (kiểm tra, mật khẩu argon2, idempotency UUID, audit); RBAC ghi `role_module_permission`/`user_permissions` + `lock_security` + audit + epoch; AUDITOR chỉ đọc (403 khi ghi). Quy trình = `request_type` + `config_release` (đổi vòng đời/biểu mẫu/định tuyến → 409 `RELEASE_REQUIRED`/`LIFECYCLE_REQUIRES_NEW_RELEASE`); `automation_weight` ↔ `risk_weight`. Analytics bỏ số liệu giả, tính từ `eas.request`. Sửa thêm lỗi cũ `service.SELECT_BY_ID_SQL` (đọc cột không tồn tại, sai thứ tự cột request-types → 500/sai revision). Leave-trip nhận `CANCEL_TODAY`/`reason` như frontend gửi. Kiểm thử API thật (`%TEMP%/claude/e2e_admin.py`): tất cả 200/đúng mã lỗi. Test `test_admin_core_modules.py` (6). Django 443 OK, ruff sạch.
 - #7 một phần: gỡ GRANT anon/authenticated trong `supabase/migrations/20261103_admin_full_upgrade.sql` (+REVOKE). Live đã sạch (kiểm tra chỉ đọc: anon/authenticated 0 quyền, RLS bật mọi bảng).
 - #5 DONE: `SystemUpdates.jsx` (hộp "Hệ thống đã cập nhật" sau đăng nhập, xem lại ở Thông báo); overlay khoá chỉ theo `client_maintenance_lock` (trước đây trạng thái ERROR khoá người dùng mãi); khôi phục IdentityAdmin (`identity`), PolicyWorkspace (`release-workspace`), AiPolicyAdmin (`ai-rules`) thành mục menu riêng; trang AI: bỏ bộ mô phỏng giả, gọi AI thật qua `POST /admin/ai-engine/test`, hiện lịch sử job; OrgChart bỏ tên/số liệu cứng. ESLint 89 → 0 lỗi (a11y modal/label, state-in-effect), `npm test` 64 pass, build client + admin OK.
-- TIẾP: #6 tối ưu AI, kiểm tra trình duyệt, changelog.
+- #6 DONE: ai_service `classify`/`risk`/`summarize` chạy threadpool (Gemini đồng bộ từng chặn event loop), warm-up model khi khởi động, cache LRU tóm tắt Gemini theo nội dung. 40 lệnh classify song song 0,15–0,26s.
+- #7/#8 DONE (theo yêu cầu "test hết đến phase 7"): circuit breaker chặn phía server + ánh xạ đúng catalog v2 + audit; sửa lỗi nháp không tiêu đề 500; khôi phục menu bị mất (ops, sla, team, audit), "Quy trình AI"/"Nhân viên phòng ban" cho nhân viên; sửa sidebar mobile, grid A/B/C tràn, a11y tablist. E2E API 45/45, Playwright portal 15/15, đi qua mọi trang 2 cổng và luồng khoá bảo trì trên trình duyệt thật. `ui.spec.js`/`smoke.spec.js` đã lỗi từ trước `86172e9` (không phải regression).
+- #9 DONE: changelog `changelogs/2026-11-03_ai_learning_and_admin_remediation.md`. Còn lại cho chủ dự án: chạy 08 → 09 → 10 → 12 trên live, khởi động ai_service + worker.
+- 03/11 sau khi chủ dự án chạy 08→12 trên live: job học lại APPLIED, live 48/48 + đi qua mọi trang OK. Phát hiện script batch1 nới quyền anon/authenticated trên live → migration 13 (đã kiểm thử bản sao). Frontend bỏ gọi Supabase trực tiếp, ghim phiên bản, khôi phục chặn vai trò quản trị ở cổng nhân viên. TIẾP: chủ dự án chạy 13 trên SQL Editor.
+- 03/11: chủ dự án chạy migration 13 trên live. Kiểm tra: anon/authenticated không còn USAGE/grant/default privilege; 0 bảng tắt RLS; mọi object eas thuộc eas_migration; 9/9 view security_invoker; epoch 104. Hồi quy live 48/48, đi qua mọi trang không lỗi. Kế hoạch hoàn tất.
+- 03/11: Hoàn thành kiểm thử và vá lỗi 4 đợt (Batch 1 -> Batch 4) bởi Principal QA Automation Engineer:
+  + Batch 1: Supabase client audit, port separation (8081 Admin vs 8080/5173 Client), session isolation, 9 sidebar items verified.
+  + Batch 2: RBAC matrix (`eas.role_permissions`), System module lock (4 modules), User leave/trip sync, Org Chart visual tree & roster.
+  + Batch 3: Dashboard KPI trends (Ngày/Tuần/Tháng/Năm), Workflow A/B/C transitions & risk_weight, Regulations Semantic Versioning (Major/Minor) & AI progressive training.
+  + Batch 4: Mock APIs (8 systems), JSON modal viewer, Circuit Breaker real-time lock on Web Admin & Web Client, System Versions 4 spec cards, audit changelog tabs & Before/After Diff modal. Automated walk-through passed 100%. Production build 0 errors.

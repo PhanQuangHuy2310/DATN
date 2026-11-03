@@ -11,6 +11,7 @@ urlpatterns = [
     path("", health_views.live, name="root-live"),
     path("favicon.ico", lambda _: HttpResponse(status=204), name="favicon"),
     path("api/v1/admin/", include("api_core.administration.urls")),
+    path("api/v1/workspace/", include("api_core.administration.workspace")),
     path("health/", include("api_core.health.urls")),
     path("api/v1/system/ai-status", public_ai_status_view, name="public-ai-status"),
     path(

@@ -364,9 +364,12 @@ export function permissions(user, r) {
   const attempt = r.workflow?.attempt;
   const isExecutor = attempt?.executor_id === user.id;
   const hasApprovedStep = r.approval_steps?.some((s) => s.assignee_id === user.id);
+  const modPerms = user?.permissions?.by_module?.requests_workflows;
+  const canUpdate = modPerms ? Boolean(modPerms.can_update) : true;
+  const canDelete = modPerms ? Boolean(modPerms.can_delete) : true;
   return {
-    edit: owner && ["DRAFT", "NEEDS_INFO"].includes(r.status),
-    cancel: owner && ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(r.status),
+    edit: owner && canUpdate && ["DRAFT", "NEEDS_INFO"].includes(r.status),
+    cancel: owner && canDelete && ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(r.status),
     approve: granted.has("APPROVER") && r.status === "PENDING_APPROVAL" &&
       !own && activeStep?.assignee_id === user.id,
     claim: granted.has("EXECUTOR") && r.status === "READY_FOR_EXECUTION" &&
@@ -385,7 +388,11 @@ export function permissions(user, r) {
 }
 export const date = (v) => (v ? new Date(v).toLocaleString("vi-VN") : "—");
 export function errorText(e) {
+  if (e?.serverMessage) {
+    return e.serverMessage + (e.correlationId ? ` (Mã lỗi: ${e.correlationId})` : "");
+  }
   const messages = {
+    ACCESS_DENIED: "Bạn không có quyền truy cập vào cổng này.",
     VERSION_CONFLICT:
       "Dữ liệu đã thay đổi. Hãy tải lại hồ sơ trước khi tiếp tục.",
     REQUEST_STATE_CONFLICT: "Trạng thái đã thay đổi. Hãy tải lại hồ sơ.",

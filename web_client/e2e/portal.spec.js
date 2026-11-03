@@ -11,7 +11,8 @@ const OTHER = "44444444-4444-4444-8444-444444444444";
 const USERS = {
   requester: { roles: ["REQUESTER", "ACCEPTOR"], capabilities: {} },
   approver: { roles: ["APPROVER", "REQUESTER", "ACCEPTOR"], capabilities: {} },
-  ops: { roles: ["OPS_ADMIN"], capabilities: { identity_manage: true } },
+  // The admin portal accepts only the single system administrator account.
+  ops: { email: "admin@eas.com", roles: ["OPS_ADMIN", "POLICY_ADMIN"], capabilities: { identity_manage: true } },
 };
 
 function listItem(overrides = {}) {
@@ -175,7 +176,8 @@ test("request detail shows progress, all tabs and requires a reason to reject", 
 test("admin operations reassigns through a people picker with the step and version", async ({ page }) => {
   const calls = await mock(page, "ops");
   await page.goto(ADMIN);
-  await page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("button", { name: "Theo dõi vận hành" }).click();
+  // Operations is opened from the dashboard (the sidebar keeps the 9 admin modules).
+  await page.getByRole("button", { name: /Theo dõi chi tiết vận hành/ }).click();
   for (const header of ["Người tạo", "Người đang xử lý", "Phòng ban", "Giai đoạn", "Hạn xử lý", "Quá hạn"]) {
     await expect(page.getByRole("columnheader", { name: header })).toBeVisible();
   }
@@ -194,12 +196,12 @@ test("admin navigation exposes system modules and no request creation", async ({
   await mock(page, "ops");
   await page.goto(ADMIN);
   const nav = page.getByRole("navigation", { name: "Điều hướng chính" });
-  for (const label of ["Tổng quan", "Theo dõi vận hành", "Người dùng", "Sơ đồ công ty", "Yêu cầu & Quy trình", "Phân quyền", "Thông báo SLA", "Quản trị AI", "Phiên bản hệ thống"]) {
-    await expect(nav.getByRole("button", { name: label, exact: true })).toBeVisible();
+  const modules = ["Tổng quan", "Yêu cầu & Quy trình", "Sơ đồ công ty", "Người dùng", "Phân quyền", "Quy định", "Quản trị AI", "Quản lý API", "Phiên bản hệ thống"];
+  for (const label of modules) {
+    await expect(nav.locator(".nav-text", { hasText: new RegExp(`^${label}$`) })).toBeVisible();
   }
+  await expect(nav.locator(".nav-item")).toHaveCount(modules.length);
   await expect(page.getByRole("button", { name: /Tạo yêu cầu mới/ })).toHaveCount(0);
-  await nav.getByRole("button", { name: "Thông báo SLA" }).click();
-  await expect(page.getByRole("cell", { name: "Quá hạn xử lý" })).toBeVisible();
   await page.getByRole("button", { name: "Thu gọn thanh điều hướng" }).click();
   await expect(page.locator(".app-shell.sidebar-collapsed")).toBeVisible();
 });

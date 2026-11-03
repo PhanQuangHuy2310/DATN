@@ -15,13 +15,13 @@ from uuid import uuid4
 from django.db import connection, transaction
 from django.http import HttpRequest, JsonResponse
 
+from api_core.authn.module_access import ACTION_BY_METHOD, can
 from api_core.authn.service import require_actor
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
 from api_core.maintenance import get_ai_maintenance_state
 from api_core.workflow.ai_learning import _ai_http, enqueue_learning, steps_detail
 from api_core.workflow.service import _append_admin_audit
 
-WRITE_ROLES = frozenset({"OPS_ADMIN", "POLICY_ADMIN"})
 MAX_TITLE = 300
 MAX_CATEGORY = 120
 MAX_CONTENT = 20000
@@ -142,7 +142,9 @@ def _audit(cur, request, *, action: str, regulation: dict, reason: str) -> None:
 
 
 def _forbidden_unless_writer(request: HttpRequest):
-    if not request.actor.roles & WRITE_ROLES:
+    """Admin, or an employee granted the matching right on module `regulations`."""
+    action = ACTION_BY_METHOD.get(request.method, "update")
+    if not can(request, "regulations", action):
         return api_error(request, "FORBIDDEN", status=403)
     return None
 

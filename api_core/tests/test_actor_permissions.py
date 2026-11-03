@@ -64,13 +64,15 @@ class ActorPermissionTests(SimpleTestCase):
         )
         self.assertFalse(result["by_module"]["users"]["can_view"])
 
-    def test_matrix_granting_nothing_falls_back_to_roles(self):
+    def test_database_matrix_is_authoritative_even_when_it_grants_nothing(self):
+        # The DB matrix is the only source of module rights once it returns rows;
+        # roles never widen what the matrix denies.
         cursor = self._cursor([_row("dashboard", False), _row("users", False)])
         with patch("api_core.authn.views.connection") as conn:
             conn.cursor.return_value = cursor
             result = _get_actor_permissions(_actor("OPS_ADMIN"))
-        self.assertTrue(result["by_module"]["users"]["can_view"])
-        self.assertTrue(result["by_module"]["dashboard"]["can_view"])
+        self.assertFalse(result["by_module"]["users"]["can_view"])
+        self.assertFalse(result["by_module"]["dashboard"]["can_view"])
 
     def test_database_error_falls_back_to_roles(self):
         cursor = self._cursor(error=DatabaseError("function does not exist"))

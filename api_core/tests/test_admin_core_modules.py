@@ -67,3 +67,24 @@ class IntegrationMappingTests(SimpleTestCase):
         self.assertTrue(integrations.blocks("crm", "SPECIAL_DISCOUNT", "SALES"))
         self.assertFalse(integrations.blocks("it", "LEAVE", "TIME"))
         self.assertFalse(integrations.blocks("travel", "IT_SUPPORT", "IT"))
+
+
+class AdminModuleGrantTests(SimpleTestCase):
+    def test_system_modules_never_granted_to_employees(self):
+        from unittest.mock import MagicMock
+
+        from api_core.administration.org_users_rbac import _assert_grantable
+
+        cur = MagicMock()
+        cur.fetchone.return_value = (1,)
+        for module in ("permissions", "ai_engine", "api_management", "system_versions"):
+            with self.assertRaises(CommandError):
+                _assert_grantable(cur, module, True, employee=True)
+            _assert_grantable(cur, module, False, employee=True)  # revoking is fine
+            _assert_grantable(cur, module, True, employee=False)  # admin roles
+        # Business modules the admin may delegate (spec: users, regulations...).
+        for module in ("users", "regulations", "org_chart", "dashboard"):
+            _assert_grantable(cur, module, True, employee=True)
+        cur.fetchone.return_value = None
+        with self.assertRaises(CommandError):
+            _assert_grantable(cur, "nope", True, employee=True)

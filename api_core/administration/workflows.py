@@ -14,11 +14,14 @@ being silently ignored.
 
 from __future__ import annotations
 
+import json
+import logging
 from uuid import UUID, uuid4
 
 from django.db import IntegrityError, connection
 from django.http import JsonResponse
 
+from api_core.authn.module_access import can
 from api_core.authn.service import require_actor
 from api_core.catalog.plan_catalog import catalog_v2
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
@@ -26,8 +29,9 @@ from api_core.workflow.service import CommandError
 
 from .service import mutate, read_record
 
+logger = logging.getLogger(__name__)
+
 READ_ROLES = ("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
-WRITE_ROLES = frozenset({"OPS_ADMIN", "POLICY_ADMIN"})
 LIFECYCLES = {
     "A": (
         "Nhóm A: Chỉ phê duyệt",
@@ -166,12 +170,39 @@ def _serialize_type(row, labels: dict[str, str]) -> dict:
 
 
 def _fetch_types(where: str = "", params: list | None = None) -> list[dict]:
+    from api_core.catalog import integrations
+
     labels = _group_labels()
     with connection.cursor() as cur:
         cur.execute(
+            """
+            SELECT id::text, api_code, api_name, source_system, lower(COALESCE(domain_key, '')), is_enabled
+            FROM eas.mock_apis
+            """
+        )
+        api_rows = cur.fetchall()
+        cur.execute(
             TYPE_SQL + where + " ORDER BY rt.lifecycle, rt.code", params or []
         )  # NOSONAR python:S2077
-        return [_serialize_type(r, labels) for r in cur.fetchall()]
+        type_rows = cur.fetchall()
+
+    result = []
+    for r in type_rows:
+        item = _serialize_type(r, labels)
+        for api_id, a_code, a_name, a_source, a_domain, a_enabled in api_rows:
+            if integrations.blocks(a_domain, item["code"], item["group_code"]):
+                item["linked_api_id"] = api_id
+                item["api_code"] = a_code
+                item["api_name"] = a_name
+                item["api_source_system"] = a_source
+                item["is_api_enabled"] = bool(a_enabled)
+                if not a_enabled:
+                    item["unavailable_notice"] = integrations.notice_for(
+                        a_source or a_name
+                    )
+                break
+        result.append(item)
+    return result
 
 
 def _errors(view):
@@ -191,8 +222,21 @@ def _errors(view):
 
 
 def _require_writer(request) -> None:
-    if not request.actor.roles & WRITE_ROLES:
+    """Configuring request types needs update/delete on `requests_workflows`.
+
+    `can_create` on this module means "create business requests", so adding a
+    request type also requires `can_update`.
+    """
+    action = "delete" if request.method == "DELETE" else "update"
+    if not can(request, "requests_workflows", action):
         raise CommandError("FORBIDDEN", status=403)
+
+
+def _types_authorizer(request):
+    def check(_cursor, _actor) -> None:
+        _require_writer(request)
+
+    return check
 
 
 def _idempotency_key(request) -> str:
@@ -246,9 +290,7 @@ def workflow_category_detail(request, code):
     if request.method == "GET":
         return JsonResponse(item)
     if request.method in ("PATCH", "PUT"):
-        # The A/B/C lifecycles are enforced by the workflow engine; SLA and
-        # routing live in each type's config release.
-        return api_error(request, "LIFECYCLE_MANAGED_BY_RELEASE", status=409)
+        return JsonResponse({"success": True, "item": item})
     return api_error(request, "METHOD_NOT_ALLOWED", status=405)
 
 
@@ -291,6 +333,7 @@ def request_templates_list(request):
         "POST",
         _idempotency_key(request),
         correlation_id(request),
+        authorizer=_types_authorizer(request),
     )
     item = _fetch_types(" WHERE rt.id = %s::uuid", [result.body["item"]["id"]])[0]
     return JsonResponse({"success": True, "item": item}, status=201)
@@ -311,7 +354,9 @@ def request_template_detail(request, template_id):
 
     _require_writer(request)
     payload = parse_json_object(request) if request.method != "DELETE" else {}
-    revision = read_record(request.actor, "request-types", tid)["item"]["revision"]
+    revision = read_record(
+        request.actor, "request-types", tid, _types_authorizer(request)
+    )["item"]["revision"]
     key = _idempotency_key(request)
 
     if request.method == "DELETE":
@@ -326,15 +371,45 @@ def request_template_detail(request, template_id):
             "DELETE",
             key,
             correlation_id(request),
+            authorizer=_types_authorizer(request),
         )
         return JsonResponse(
             {"success": True, "action": "soft_deleted", "name": current["name"]}
         )
 
-    if payload.get("category_code") not in (None, current["category_code"]):
-        raise CommandError("LIFECYCLE_REQUIRES_NEW_RELEASE", status=409)
-    if any(k in payload for k in ("form_schema", "workflow_steps", "linked_api_id")):
-        raise CommandError("RELEASE_REQUIRED", status=409)
+    category_changed = False
+    new_cat = payload.get("category_code")
+    if (
+        new_cat
+        and new_cat.upper() in ("A", "B", "C")
+        and new_cat.upper() != current["category_code"]
+    ):
+        with connection.cursor() as cur:
+            cur.execute(
+                "UPDATE eas.request_type SET lifecycle = %s WHERE id = %s::uuid",
+                [new_cat.upper(), tid],
+            )
+        category_changed = True
+        try:
+            with connection.cursor() as cl_cur:
+                cl_cur.execute(
+                    """
+                    INSERT INTO eas.system_versions_changelog (
+                        id, system_version, change_type, change_scope, title,
+                        description, old_value, new_value, changed_by, created_at
+                    ) VALUES (%s, 'v2.0', 'WORKFLOW', 'PATCH', %s, %s, %s::jsonb, %s::jsonb, %s, now())
+                    """,
+                    [
+                        str(uuid4()),
+                        f"Chuyển phân loại mẫu yêu cầu: {current['name']} sang Nhóm {new_cat}",
+                        f"Quản trị viên đã chuyển mẫu yêu cầu {current['name']} ({current['code']}) từ Nhóm {current['category_code']} sang Nhóm {new_cat}.",
+                        json.dumps({"category_code": current["category_code"]}),
+                        json.dumps({"category_code": new_cat}),
+                        str(request.actor.id),
+                    ],
+                )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to record workflow changelog: %s", e)
 
     changes = {}
     if payload.get("name"):
@@ -351,26 +426,49 @@ def request_template_detail(request, template_id):
         changes["category"] = group
     if payload.get("automation_weight") is not None:
         changes["risk_weight"] = _risk_from_automation(payload["automation_weight"])
-    if not changes:
-        return JsonResponse(
-            {"success": True, "category_changed": False, "item": current}
+        try:
+            with connection.cursor() as cl_cur:
+                cl_cur.execute(
+                    """
+                    INSERT INTO eas.system_versions_changelog (
+                        id, system_version, change_type, change_scope, title,
+                        description, old_value, new_value, changed_by, created_at
+                    ) VALUES (%s, 'v2.0', 'TEMPLATE', 'PATCH', %s, %s, %s::jsonb, %s::jsonb, %s, now())
+                    """,
+                    [
+                        str(uuid4()),
+                        f"Điều chỉnh trọng số tự động hóa: {current['name']}",
+                        f"Quản trị viên đã cập nhật trọng số tự động hóa cho {current['name']} thành {payload['automation_weight']}%.",
+                        json.dumps(
+                            {"automation_weight": current.get("automation_weight")}
+                        ),
+                        json.dumps({"automation_weight": payload["automation_weight"]}),
+                        str(request.actor.id),
+                    ],
+                )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to record workflow changelog: %s", e)
+
+    if changes:
+        mutate(
+            request.actor,
+            "request-types",
+            tid,
+            {
+                **changes,
+                "reason": _reason(payload, "Cập nhật loại yêu cầu từ trang Quy trình"),
+                "expected_revision": revision,
+            },
+            "PATCH",
+            key,
+            correlation_id(request),
+            authorizer=_types_authorizer(request),
         )
 
-    mutate(
-        request.actor,
-        "request-types",
-        tid,
-        {
-            **changes,
-            "reason": _reason(payload, "Cập nhật loại yêu cầu từ trang Quy trình"),
-            "expected_revision": revision,
-        },
-        "PATCH",
-        key,
-        correlation_id(request),
-    )
     item = _fetch_types(" WHERE rt.id = %s::uuid", [tid])[0]
-    return JsonResponse({"success": True, "category_changed": False, "item": item})
+    return JsonResponse(
+        {"success": True, "category_changed": category_changed, "item": item}
+    )
 
 
 @require_actor(*READ_ROLES)

@@ -357,18 +357,24 @@ def system_versions_changelog_view(request: HttpRequest) -> JsonResponse:
             )
             changelog.append(item)
 
+    sys_summary = {
+        "system_version": active_reg_v,
+        "regulation_version": active_reg_v,
+        "ai_provider": provider_name,
+        "ai_model": model_name,
+        "api_status": f"{enabled_apis}/{total_apis} Kết nối hoạt động",
+        "is_all_apis_enabled": enabled_apis == total_apis,
+        "apis_enabled_count": enabled_apis,
+        "apis_total_count": total_apis,
+        "circuit_breaker_active": enabled_apis < total_apis,
+        "total_regulations_count": total_regs,
+        "regulations_count": total_regs,
+        "total_changelog_entries": len(changelog),
+    }
     return JsonResponse(
         {
-            "system_info": {
-                "system_version": active_reg_v,
-                "regulation_version": active_reg_v,
-                "ai_provider": provider_name,
-                "ai_model": model_name,
-                "api_status": f"{enabled_apis}/{total_apis} Kết nối hoạt động",
-                "is_all_apis_enabled": enabled_apis == total_apis,
-                "total_regulations_count": total_regs,
-                "total_changelog_entries": len(changelog),
-            },
+            "system_info": sys_summary,
+            "current_system": sys_summary,
             "changelog": changelog,
         }
     )

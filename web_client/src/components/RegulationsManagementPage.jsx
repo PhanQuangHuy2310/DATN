@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -12,6 +13,7 @@ const CATEGORIES = [
 ];
 
 export function RegulationsManagementPage() {
+  const apiBase = useApiBase();
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
@@ -39,7 +41,7 @@ export function RegulationsManagementPage() {
 
   const loadData = async (silent = false) => {
     try {
-      const res = await api("/api/v1/admin/regulations");
+      const res = await api(`${apiBase}/regulations`);
       setRegulations(res.regulations || []);
       setAiState(res.ai_state || null);
     } catch (err) {
@@ -87,7 +89,7 @@ export function RegulationsManagementPage() {
     }
     setSubmitting(true);
     try {
-      const res = await api("/api/v1/admin/regulations", {
+      const res = await api(`${apiBase}/regulations`, {
         method: "POST",
         body: JSON.stringify({
           code: formCode.trim(),
@@ -114,7 +116,7 @@ export function RegulationsManagementPage() {
     }
     setSubmitting(true);
     try {
-      const res = await api(`/api/v1/admin/regulations/${editingRegulation.id}`, {
+      const res = await api(`${apiBase}/regulations/${editingRegulation.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           title: formTitle.trim(),
@@ -137,7 +139,7 @@ export function RegulationsManagementPage() {
     if (!deletingRegulation) return;
     setSubmitting(true);
     try {
-      const res = await api(`/api/v1/admin/regulations/${deletingRegulation.id}`, {
+      const res = await api(`${apiBase}/regulations/${deletingRegulation.id}`, {
         method: "DELETE",
       });
       showToast(res.message || "Đã gỡ bỏ quy định và nâng phiên bản lớn!", "success");
@@ -153,7 +155,7 @@ export function RegulationsManagementPage() {
   const openViewModal = async (reg) => {
     setViewingRegulation(reg);
     try {
-      const res = await api(`/api/v1/admin/regulations/${reg.id}`);
+      const res = await api(`${apiBase}/regulations/${reg.id}`);
       if (res.regulation) {
         setViewingRegulation(res.regulation);
       }

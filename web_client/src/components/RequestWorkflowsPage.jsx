@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
 import { PermissionGuard } from "./PermissionGuard.jsx";
 import { Modal } from "./ui.jsx";
@@ -36,6 +37,7 @@ const CATEGORY_META = {
 };
 
 export default function RequestWorkflowsPage() {
+  const apiBase = useApiBase();
   const [categories, setCategories] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [mockApis, setMockApis] = useState([]);
@@ -59,9 +61,9 @@ export default function RequestWorkflowsPage() {
   const loadData = async () => {
     try {
       const [catRes, tplRes, apiRes] = await Promise.all([
-        api("/api/v1/admin/workflow-categories"),
-        api("/api/v1/admin/request-templates"),
-        api("/api/v1/admin/mock-apis"),
+        api(`${apiBase}/workflow-categories`),
+        api(`${apiBase}/request-templates`),
+        api(`${apiBase}/mock-apis`),
       ]);
       setCategories(catRes.items || []);
       setTemplates(tplRes.items || []);
@@ -82,7 +84,7 @@ export default function RequestWorkflowsPage() {
   const handleCategoryChange = async (template, newCategory) => {
     if (template.category_code === newCategory) return;
     try {
-      const res = await api(`/api/v1/admin/request-templates/${template.id}`, {
+      const res = await api(`${apiBase}/request-templates/${template.id}`, {
         method: "PATCH",
         body: JSON.stringify({ category_code: newCategory }),
       });
@@ -104,7 +106,7 @@ export default function RequestWorkflowsPage() {
   const handleWeightChange = async (template, newWeight) => {
     const val = Math.max(0, Math.min(100, parseInt(newWeight, 10) || 0));
     try {
-      const res = await api(`/api/v1/admin/request-templates/${template.id}`, {
+      const res = await api(`${apiBase}/request-templates/${template.id}`, {
         method: "PATCH",
         body: JSON.stringify({ automation_weight: val }),
       });
@@ -122,7 +124,7 @@ export default function RequestWorkflowsPage() {
   // Save standard category workflow steps
   const handleSaveCategory = async (catData) => {
     try {
-      const res = await api(`/api/v1/admin/workflow-categories/${catData.category_code}`, {
+      const res = await api(`${apiBase}/workflow-categories/${catData.category_code}`, {
         method: "PATCH",
         body: JSON.stringify(catData),
       });
@@ -144,8 +146,8 @@ export default function RequestWorkflowsPage() {
     try {
       const isNew = !tplData.id;
       const url = isNew
-        ? "/api/v1/admin/request-templates"
-        : `/api/v1/admin/request-templates/${tplData.id}`;
+        ? `${apiBase}/request-templates`
+        : `${apiBase}/request-templates/${tplData.id}`;
       const method = isNew ? "POST" : "PATCH";
 
       const res = await api(url, {
@@ -172,7 +174,7 @@ export default function RequestWorkflowsPage() {
   // Delete template
   const handleDeleteTemplate = async (template) => {
     try {
-      const res = await api(`/api/v1/admin/request-templates/${template.id}`, {
+      const res = await api(`${apiBase}/request-templates/${template.id}`, {
         method: "DELETE",
       });
       if (res.success) {
@@ -462,9 +464,20 @@ export default function RequestWorkflowsPage() {
                         {/* Linked API */}
                         <td>
                           {tpl.api_name ? (
-                            <div className="rw-api-badge" title={`Hệ thống nguồn: ${tpl.api_source_system || "Mock"}`}>
-                              <span className="rw-api-dot" />
-                              <span className="rw-api-text">{tpl.api_name}</span>
+                            <div>
+                              <div
+                                className={`rw-api-badge ${tpl.is_api_enabled === false ? "rw-api-badge-disabled" : ""}`}
+                                style={tpl.is_api_enabled === false ? { background: "#FEF2F2", color: "#DC2626", borderColor: "#FECACA" } : {}}
+                                title={tpl.unavailable_notice || `Hệ thống nguồn: ${tpl.api_source_system || "Mock"}`}
+                              >
+                                <span className={`rw-api-dot ${tpl.is_api_enabled === false ? "dot-disabled" : ""}`} style={tpl.is_api_enabled === false ? { background: "#DC2626" } : {}} />
+                                <span className="rw-api-text">{tpl.api_name} {tpl.is_api_enabled === false ? "(Đã ngắt kết nối)" : ""}</span>
+                              </div>
+                              {tpl.is_api_enabled === false && (
+                                <div className="rw-api-disabled-warning" style={{ fontSize: 11, color: "#DC2626", marginTop: 4, fontWeight: 600 }}>
+                                  ⚠️ Yêu cầu này hiện không thể sử dụng do kết nối API [{tpl.api_source_system || tpl.api_name}] đang bị tắt
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <span className="muted" style={{ fontSize: 12 }}>Chưa liên kết</span>
