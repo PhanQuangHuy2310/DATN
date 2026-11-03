@@ -462,7 +462,7 @@ def create_draft(
                 actor.id,
                 type_id,
                 release_id,
-                Jsonb(draft_payload) if draft_payload else None,
+                Jsonb(draft_payload or {}),
                 origin_request_id,
                 risk_w,
                 app_lvl,
