@@ -519,6 +519,9 @@ dialog::backdrop { background: rgba(15, 23, 42, .45); }
 }
 @media (max-width: 800px) {
   .app-shell .sidebar, .app-shell.sidebar-collapsed .sidebar { width: var(--ds-sidebar-w); }
+  /* Off-canvas on small screens: hidden until the menu button opens it. */
+  .app-shell .sidebar { display: none; }
+  .app-shell .sidebar.open { display: flex; }
   .app-shell .workspace, .app-shell.sidebar-collapsed .workspace { margin-left: 0; }
   .app-shell.sidebar-collapsed .nav-text, .app-shell.sidebar-collapsed .nav-caption, .app-shell.sidebar-collapsed .brand span { display: initial; }
   .sidebar-collapse { display: none; }

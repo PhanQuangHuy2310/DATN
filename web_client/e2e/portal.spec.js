@@ -109,7 +109,7 @@ for (const width of [1440, 1024, 768, 375]) {
       await page.keyboard.press("Escape");
       await expect(page.locator(".sidebar.open")).toHaveCount(0);
     }
-    const search = page.getByRole("combobox", { name: /Tìm hồ sơ/ });
+    const search = page.getByRole("combobox", { name: /Tìm nhanh/ });
     await search.fill("REQ");
     await page.locator("#ds-global-search-results").getByRole("button", { name: /REQ-2026-0012/ }).click();
     await expect(search).toHaveValue("");
@@ -121,8 +121,8 @@ for (const width of [1440, 1024, 768, 375]) {
     await page.setViewportSize({ width, height: 900 });
     await mock(page, "ops");
     await page.goto(ADMIN);
-    await expect(page.getByRole("heading", { name: "Tổng quan hệ thống" })).toBeVisible();
-    await expect(page.getByText("Người dùng hoạt động")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tổng quan vận hành" })).toBeVisible();
+    await expect(page.getByText("Tổng yêu cầu phát sinh")).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await expectHeaderClearsHeading(page);
   });
@@ -194,11 +194,11 @@ test("admin navigation exposes system modules and no request creation", async ({
   await mock(page, "ops");
   await page.goto(ADMIN);
   const nav = page.getByRole("navigation", { name: "Điều hướng chính" });
-  for (const label of ["Tổng quan hệ thống", "Theo dõi vận hành", "Quản lý người dùng", "Phòng ban", "Danh mục yêu cầu", "Ma trận phân quyền", "SLA & thông báo", "Quy trình AI", "Cấu hình hệ thống"]) {
+  for (const label of ["Tổng quan", "Theo dõi vận hành", "Người dùng", "Sơ đồ công ty", "Yêu cầu & Quy trình", "Phân quyền", "Thông báo SLA", "Quản trị AI", "Phiên bản hệ thống"]) {
     await expect(nav.getByRole("button", { name: label, exact: true })).toBeVisible();
   }
   await expect(page.getByRole("button", { name: /Tạo yêu cầu mới/ })).toHaveCount(0);
-  await nav.getByRole("button", { name: "SLA & thông báo" }).click();
+  await nav.getByRole("button", { name: "Thông báo SLA" }).click();
   await expect(page.getByRole("cell", { name: "Quá hạn xử lý" })).toBeVisible();
   await page.getByRole("button", { name: "Thu gọn thanh điều hướng" }).click();
   await expect(page.locator(".app-shell.sidebar-collapsed")).toBeVisible();

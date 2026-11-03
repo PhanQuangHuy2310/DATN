@@ -107,7 +107,7 @@ export function AdminDashboard({ navigate }) {
 
       {/* Bộ lọc thời gian chuẩn: Theo Ngày | Theo Tuần | Theo Tháng | Theo Năm */}
       <div className="admin-period-bar">
-        <div className="admin-period-btn-group" role="tablist" aria-label="Bộ lọc thời gian">
+        <div className="admin-period-btn-group" role="group" aria-label="Bộ lọc thời gian">
           {[
             { key: "day", label: "Theo Ngày" },
             { key: "week", label: "Theo Tuần" },
@@ -118,6 +118,7 @@ export function AdminDashboard({ navigate }) {
               key={tab.key}
               type="button"
               className={`admin-period-btn ${period === tab.key ? "active" : ""}`}
+              aria-pressed={period === tab.key}
               onClick={() => setPeriod(tab.key)}
             >
               {tab.label}

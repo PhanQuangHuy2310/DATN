@@ -2084,7 +2084,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 }
 .admin-cat-perf-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 16px;
   margin-top: 14px;
 }
