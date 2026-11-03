@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import math
+import os
 import re
 import unicodedata
 from datetime import date, datetime
@@ -394,6 +395,14 @@ def _validate_route_rules_config(
         errs.append("route_rules:lifecycle C requires valid executor and acceptor")
 
 
+def allowed_reminder_fractions() -> tuple[float, ...]:
+    """0.8 (thesis Table 2.9) only once migration 07 lets guard_release accept
+    it, signalled by EAS_SLA_ESCALATION_LEVELS=1; 0.5 stays valid for history."""
+    if os.environ.get("EAS_SLA_ESCALATION_LEVELS", "").strip() == "1":
+        return (0.8, 0.5)
+    return (0.5,)
+
+
 def _validate_sla_profile_config(
     sla_profile: dict[str, Any], lifecycle: str, errs: list[str]
 ) -> None:
@@ -401,10 +410,19 @@ def _validate_sla_profile_config(
     reminder_fraction = sla_profile.get("reminder_fraction")
     if clock != "CALENDAR_UTC":
         errs.append("sla_profile:clock must be CALENDAR_UTC")
-    if not isinstance(reminder_fraction, (int, float)) or not math.isclose(
-        float(reminder_fraction), 0.5, rel_tol=1e-9
+    allowed = allowed_reminder_fractions()
+    if (
+        isinstance(reminder_fraction, bool)
+        or not isinstance(reminder_fraction, (int, float))
+        or not any(
+            math.isclose(float(reminder_fraction), value, rel_tol=1e-9)
+            for value in allowed
+        )
     ):
-        errs.append("sla_profile:reminder_fraction must be 0.5")
+        errs.append(
+            "sla_profile:reminder_fraction must be "
+            + " or ".join(str(v) for v in allowed)
+        )
 
     app_h = sla_profile.get("approval_hours")
     exec_h = sla_profile.get("execution_hours")

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import AttachmentOcr, { AMOUNT_FIELDS } from "./AttachmentOcr.jsx";
 import { api, idempotencyKey, notify } from "../api.js";
 import { fields, fieldLabels, types, errorText, riskLevels, approvalLevels, typeLevels } from "../domain.js";
 import { Badge, command } from "./ui.jsx";
@@ -173,6 +174,14 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       active = false;
     };
   }, [initial?.id]);
+  function applyOcrAmount(amount) {
+    const form = formElementRef.current;
+    const input = AMOUNT_FIELDS.map((name) => form?.elements.namedItem(name)).find(Boolean);
+    if (!input) { setError("Biểu mẫu này không có trường số tiền để điền."); return; }
+    input.value = String(amount);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  }
   async function removeFile(id) {
     setBusy(true);
     setError("");
@@ -407,16 +416,19 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
               trong lịch sử phiên bản.
             </p>
             {files.map((f) => (
-              <p key={f.id}>
-                {f.original_name || f.id} <Badge value={f.scan_state} />{" "}
-                <button
-                  type="button"
-                  className="link"
-                  onClick={() => removeFile(f.id)}
-                >
-                  Bỏ khỏi bản nháp
-                </button>
-              </p>
+              <div key={f.id}>
+                <p>
+                  {f.original_name || f.id} <Badge value={f.scan_state} />{" "}
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => removeFile(f.id)}
+                  >
+                    Bỏ khỏi bản nháp
+                  </button>
+                </p>
+                <AttachmentOcr attachment={f} onApplyAmount={applyOcrAmount} />
+              </div>
             ))}
             {files.length > 0 && (
               <button type="button" className="secondary" onClick={checkFiles}>

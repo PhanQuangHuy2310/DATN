@@ -10,6 +10,7 @@ from copy import deepcopy
 from uuid import UUID
 
 from api_core.domain.routing import ACCEPTOR_SLOTS, APPROVER_SLOTS, EXECUTOR_SLOTS
+from api_core.domain.validation import allowed_reminder_fractions
 
 # Readable mapping from the plan's approval-route descriptions to existing
 # single-executor engine slots. These are only suggested DRAFT routes.
@@ -501,7 +502,7 @@ def initial_policy_draft(type_code: str, lifecycle: str) -> dict:
     sla = {
         "schema_version": 1,
         "clock": "CALENDAR_UTC",
-        "reminder_fraction": 0.5,
+        "reminder_fraction": allowed_reminder_fractions()[0],
         "approval_hours": 24,
         "execution_hours": 48 if lifecycle != "A" else None,
         "acceptance_hours": 24 if lifecycle == "C" else None,

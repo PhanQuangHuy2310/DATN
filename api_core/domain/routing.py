@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -7,6 +8,15 @@ from uuid import UUID
 
 class RoutingError(ValueError):
     pass
+
+
+class SodEscalationError(RoutingError):
+    """R07 found no eligible higher-level manager; never assign an arbitrary one."""
+
+
+# Thesis Table 2.6, rule R07: when the requester would approve their own
+# request, the step escalates to the requester's next eligible superior.
+SOD_ESCALATION_RULE = "R07"
 
 
 APPROVER_SLOTS = {
@@ -94,15 +104,34 @@ class RouteDecision:
     approver_ids: tuple[str, ...]
     executor_id: str | None
     acceptor_id: str | None
+    escalations: tuple[dict[str, object], ...] = ()
+    delegations: tuple[dict[str, object], ...] = ()
 
     @property
     def resolved_route(self) -> list[dict[str, object]]:
-        return [
-            {"step_no": index, "assignee_id": actor_id, "resolver": slot}
-            for index, (slot, actor_id) in enumerate(
-                zip(self.approver_slots, self.approver_ids), start=1
-            )
-        ]
+        escalated = {e["step_no"]: e for e in self.escalations}
+        delegated = {d["step_no"]: d for d in self.delegations}
+        route: list[dict[str, object]] = []
+        for index, (slot, actor_id) in enumerate(
+            zip(self.approver_slots, self.approver_ids), start=1
+        ):
+            step: dict[str, object] = {
+                "step_no": index,
+                "assignee_id": actor_id,
+                "resolver": slot,
+            }
+            if index in escalated:
+                step["escalation"] = {
+                    "rule": SOD_ESCALATION_RULE,
+                    "chain_depth": escalated[index]["chain_depth"],
+                }
+            if index in delegated:
+                step["delegation"] = {
+                    "delegation_id": delegated[index]["delegation_id"],
+                    "delegator_id": delegated[index]["delegator_id"],
+                }
+            route.append(step)
+        return route
 
 
 def _uuid(value: object, label: str) -> str:
@@ -259,6 +288,58 @@ def _validate_resolved_actors(
         raise RoutingError("Acceptor cannot be the executor")
 
 
+def _escalate_self_approval(
+    *,
+    requester: str,
+    slots: Sequence[str],
+    approvers: list[str],
+    executor: str | None,
+    manager_chain: Sequence[str],
+    is_eligible: Callable[[str], bool] | None,
+) -> tuple[dict[str, object], ...]:
+    """Replace each step the requester would approve with their next eligible
+    superior (R07). Candidates come only from the requester's own manager
+    chain, nearest first; a candidate already on the route, the executor, or
+    one failing ``is_eligible`` (permission/SoD check) is skipped."""
+    escalations: list[dict[str, object]] = []
+    chain = [_uuid(m, "MANAGER_CHAIN") for m in manager_chain]
+    for index, actor_id in enumerate(approvers):
+        if actor_id != requester:
+            continue
+        skipped: list[dict[str, str]] = []
+        chosen: tuple[int, str] | None = None
+        for depth, candidate in enumerate(chain, start=1):
+            if candidate == requester:
+                reason = "REQUESTER"
+            elif candidate in approvers:
+                reason = "ALREADY_ON_ROUTE"
+            elif candidate == executor:
+                reason = "IS_EXECUTOR"
+            elif is_eligible is not None and not is_eligible(candidate):
+                reason = "NOT_ELIGIBLE"
+            else:
+                chosen = (depth, candidate)
+                break
+            skipped.append({"user_id": candidate, "reason": reason})
+        if chosen is None:
+            raise SodEscalationError(
+                f"No eligible superior for self-approval at step {index + 1}"
+            )
+        approvers[index] = chosen[1]
+        escalations.append(
+            {
+                "rule": SOD_ESCALATION_RULE,
+                "step_no": index + 1,
+                "slot": slots[index],
+                "original_assignee_id": requester,
+                "escalated_to": chosen[1],
+                "chain_depth": chosen[0],
+                "skipped": skipped,
+            }
+        )
+    return tuple(escalations)
+
+
 def resolve_route(
     *,
     route_rules: dict[str, Any],
@@ -268,7 +349,12 @@ def resolve_route(
     manager_id: str | None,
     amount_vnd: int | None = None,
     payload: dict[str, Any] | None = None,
+    manager_chain: Sequence[str] | None = None,
+    is_eligible: Callable[[str], bool] | None = None,
 ) -> RouteDecision:
+    """Resolve the approval route. ``manager_chain`` (requester's superiors,
+    nearest first) enables R07 escalation; without it a self-approval route
+    is rejected as before."""
     if (
         route_rules.get("schema_version") != 1
         or actor_bindings.get("schema_version") != 1
@@ -320,11 +406,22 @@ def resolve_route(
             return _uuid(manager_id, slot)
         return _uuid(department_bindings.get(slot), slot)
 
-    approvers = tuple(actor_for(slot) for slot in slots)
+    resolved = [actor_for(slot) for slot in slots]
     requester = _uuid(requester_id, "REQUESTER")
     executor = actor_for(executor_slot)
     acceptor = actor_for(acceptor_slot)
 
+    escalations: tuple[dict[str, object], ...] = ()
+    if manager_chain is not None and requester in resolved:
+        escalations = _escalate_self_approval(
+            requester=requester,
+            slots=slots,
+            approvers=resolved,
+            executor=executor,
+            manager_chain=manager_chain,
+            is_eligible=is_eligible,
+        )
+    approvers = tuple(resolved)
     _validate_resolved_actors(requester, approvers, executor, acceptor)
 
     return RouteDecision(
@@ -333,4 +430,5 @@ def resolve_route(
         approver_ids=approvers,
         executor_id=executor,
         acceptor_id=acceptor,
+        escalations=escalations,
     )

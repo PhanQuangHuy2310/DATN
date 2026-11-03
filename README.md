@@ -75,6 +75,35 @@ Giữ hướng dẫn chi tiết cạnh các phân hệ phức tạp:
 - Tệp ảnh được tối ưu tại `web_client/public/flow-diagrams/`. `web_admin/vite.config.js` dùng `web_client/public` làm nguồn public chung để hai app dùng một bộ ảnh. Mọi sơ đồ chỉ là **hình minh họa tổng quan**, không thay thế chính sách đã công bố hoặc trạng thái xử lý hiện thời từ Supabase.
 - Kiểm tra sau khi giải nén: `cd web_client && npm ci && npm run build && npm test`, sau đó `cd ..\web_admin && npm ci && npm run build`; mở một hồ sơ, chuyển sang **Sơ đồ luồng**, thử phóng to và tải ảnh.
 
+## 02/11/2026 — Đối chiếu yêu cầu với báo cáo đồ án (Report_DATN_CNTT_Nhom07_v1.0)
+
+Áp dụng quyết định của chủ dự án. Không thay đổi dữ liệu hay schema trên Supabase; mọi thay đổi chính sách mới đều **tắt mặc định** cho tới khi được duyệt.
+
+**Đã thực hiện**
+
+- **R07 – không tự duyệt (Bảng 2.6):** khi một cấp duyệt rơi vào chính người lập, hệ thống chuyển lên cấp trên gần nhất **đủ điều kiện** trong chuỗi quản lý của người lập (đang hoạt động, có quyền APPROVER đúng phòng/loại, không phải tài khoản quản trị, chưa có trong tuyến, không phải người thực hiện). Không tìm được → từ chối gửi với `ROUTE_SOD_ESCALATION_UNRESOLVED` (409), không bao giờ gán người tùy ý. Mỗi lần chuyển cấp ghi sự kiện kiểm toán `APPROVER_ESCALATED_SOD` (bước, slot, người được chọn, các ứng viên bị bỏ qua và lý do); `resolved_route` đánh dấu `escalation`. Xem trước tuyến duyệt dùng đúng cùng logic và hiển thị "chuyển lên cấp trên (R07)". Người lập không được tự thực hiện (executor) vẫn bị từ chối như cũ.
+- **A6 – cổng quản trị chỉ quản trị hệ thống:** đã được chặn tại API (`ADMIN_PORTAL_ONLY`), bổ sung kiểm thử hồi quy cho tạo nháp, gửi và xem trước tuyến với OPS_ADMIN/POLICY_ADMIN/AUDITOR có quyền REQUESTER cũ.
+- **B1/B2 – giữ mã trạng thái, ánh xạ sang thuật ngữ đồ án:** `api_core/domain/thesis_mapping.py`; kiểm thử đối chiếu đủ mọi giá trị CHECK trong schema.
+
+| Mã lưu trữ | Đồ án (ST-01 / Bảng 2.5) |
+|---|---|
+| DRAFT, NEEDS_INFO | DRAFT (NEEDS_INFO giữ mã riêng, sửa được như nháp) |
+| — (gửi nguyên tử, không lưu) | SUBMITTED |
+| PENDING_APPROVAL | IN_REVIEW |
+| READY_FOR_EXECUTION | READY |
+| IN_PROGRESS | IN_PROGRESS |
+| WAITING_FOR_ACCEPTANCE | SUBMITTED_ACCEPT |
+| COMPLETED / REJECTED / CANCELLED | như nhau |
+| Nghiệm thu ACCEPT / REWORK | PASS / FAIL |
+
+  Khác biệt hành vi đã ghi nhận: REWORK mở lượt thực hiện mới ở READY_FOR_EXECUTION (đồ án quay thẳng về IN_PROGRESS).
+- **B3 – SLA theo Bảng 2.9 (chuẩn bị, chưa bật):** worker đọc `reminder_fraction` từ phiên bản quy chế của hồ sơ (hiện tất cả là 0.5 nên hành vi không đổi). L1 (100%: thêm cấp trên trực tiếp của người xử lý) và L2 (>150%: Giám đốc theo binding + Ops Admin, loại cảnh báo `ESCALATE`, chống trùng theo stage) chỉ chạy khi `EAS_SLA_ESCALATION_LEVELS=1` **sau khi** áp dụng `database/report_migrations/07_sla_thesis_policy_DBA_REVIEW_ONLY.sql` (có bước sao lưu, kiểm tra lệch schema, rollback).
+- **C3 – ủy quyền phê duyệt có thời hạn (chuẩn bị, chưa bật):** `role_membership` không đủ vì không biết ủy quyền thay ai, ai tạo, ai thu hồi. Thêm migration bổ sung `08_approval_delegation_DBA_REVIEW_ONLY.sql` (bảng `approval_delegation`, bắt buộc `valid_to`, thu hồi có người thu hồi) và logic áp dụng khi gửi: người được ủy quyền phải qua cùng kiểm tra quyền/SoD, không bắc cầu; không hợp lệ thì giữ người duyệt gốc; ghi kiểm toán `APPROVER_DELEGATED`. Bật bằng `EAS_APPROVAL_DELEGATION=1` sau khi migration được duyệt. Chưa có màn hình tạo/thu hồi ủy quyền.
+
+**Đang chờ quyết định:** ngưỡng tiền theo từng loại (A3), chặn hay bổ sung cấp duyệt khi vượt ngân sách (C2), số lần thử outbox (B4), người nhận cảnh báo SLA có được quyền xem hồ sơ hay không, sửa dữ liệu live (Director gán cho AUDITOR, Ops Admin giữ bước duyệt, 3 hồ sơ mồ côi, REQ-2026-0011), phạm vi mobile/OCR/LLM (C4).
+
+**Kiểm tra:** `manage.py test` 309 bài đạt (5 bỏ qua; 25 bài mới trong `api_core/tests/test_requirements_alignment.py`); `tests/run_tests.py` 98 đạt; `web_client` lint, 51 bài test, build đạt; ruff đạt. Chưa chạy E2E ghi dữ liệu trên Supabase.
+
 ## 02/11/2026 — Hệ thống thiết kế thống nhất cho hai cổng web
 
 **Hệ thống thiết kế**

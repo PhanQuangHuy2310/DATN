@@ -34,6 +34,7 @@ const IdentityAdmin = lazy(() => import("./components/IdentityAdmin.jsx"));
 const OrgChart = lazy(() => import("./components/OrgChart.jsx"));
 const ApiAdministration = lazy(() => import("./components/ApiAdministration.jsx"));
 const PlanCatalog = lazy(() => import("./components/PlanCatalog.jsx"));
+const DelegationsPage = lazy(() => import("./components/DelegationsPage.jsx"));
 import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
 import { PageHeader } from "./components/design.jsx";
 import {
@@ -322,6 +323,7 @@ const menu = [
   ["approval", "Chờ phê duyệt", "✓"],
   ["execution", "Công việc thực hiện", "▣"],
   ["acceptance", "Chờ nghiệm thu", "◇"],
+  ["delegations", "Ủy quyền phê duyệt", "⇆"],
   ["team", "Tổng quan phòng ban", "▥"],
   ["team-employees", "Nhân viên phòng ban", "♙"],
   ["org-client", "Sơ đồ tổ chức", "⌂"],
@@ -348,14 +350,14 @@ const menu = [
 const ADMIN_LABELS = { home: "Tổng quan hệ thống", team: "Báo cáo phòng ban" };
 const CLIENT_NAV = [
   ["Không gian cá nhân", ["home", "mine"]],
-  ["Công việc được giao", ["approval", "execution", "acceptance"]],
+  ["Công việc được giao", ["approval", "execution", "acceptance", "delegations"]],
   ["Quản lý phòng ban", ["team", "team-employees"]],
   ["Tổ chức & công cụ", ["org-client", "flow-diagrams", "ai-process"]],
   ["Tài khoản", ["profile"]],
 ];
 const ADMIN_NAV = [
   ["Tổng quan", ["home", "ops"]],
-  ["Người dùng & tổ chức", ["users", "departments", "permissions", "org-chart"]],
+  ["Người dùng & tổ chức", ["users", "departments", "permissions", "delegations", "org-chart"]],
   ["Cấu hình nghiệp vụ", ["request-catalog", "policy", "sla"]],
   ["Giám sát & kiểm toán", ["ai-process", "audit", "team"]],
   ["Hệ thống", ["system"]],
@@ -688,6 +690,8 @@ function renderWorkspaceContent({
       return <OperationsPage key={searchText} initialQuery={searchText} onOpen={canOpenAsAdmin ? setSelected : undefined} />;
     case "sla":
       return <SlaNotificationsPage navigate={navigate} />;
+    case "delegations":
+      return <DelegationsPage ops={portal === "admin"} user={user} />;
     case "system":
       return <SystemConfigPage />;
     case "ai-process":

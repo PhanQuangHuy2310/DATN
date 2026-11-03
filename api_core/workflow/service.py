@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import os
 import re
 import unicodedata
 from collections.abc import Callable
@@ -21,7 +22,12 @@ from api_core.domain import (
     validate_draft_payload,
     validate_payload,
 )
-from api_core.domain.routing import RoutingError, extract_amount_vnd
+from api_core.domain.delegation import apply_delegations
+from api_core.domain.routing import (
+    RoutingError,
+    SodEscalationError,
+    extract_amount_vnd,
+)
 from api_core.workflow.constants import (
     ERR_REQUEST_NOT_FOUND,
     ERR_STATE_CONFLICT,
@@ -141,6 +147,70 @@ def _is_actor_valid_for_role(
         [actor_id, role, department_id, type_id],
     )
     return bool(cursor.fetchone()[0])
+
+
+# Requester's superiors, nearest first; cycle-safe and bounded (R07 escalation).
+SQL_MANAGER_CHAIN = """
+    WITH RECURSIVE chain(id, depth, path) AS (
+      SELECT u.manager_id, 1, ARRAY[u.id]
+      FROM eas.app_user u WHERE u.id = %s AND u.manager_id IS NOT NULL
+      UNION ALL
+      SELECT m.manager_id, c.depth + 1, c.path || c.id
+      FROM chain c JOIN eas.app_user m ON m.id = c.id
+      WHERE m.manager_id IS NOT NULL AND c.depth < 10
+        AND NOT m.manager_id = ANY(c.path || c.id)
+    )
+    SELECT id::text FROM chain ORDER BY depth
+"""
+
+
+def _manager_chain(cursor, requester_id: str) -> list[str]:
+    cursor.execute(SQL_MANAGER_CHAIN, [requester_id])
+    return [row[0] for row in cursor.fetchall()]
+
+
+def _approver_eligibility(cursor, *, department_id: str, type_id: str):
+    """Escalation candidates must pass the same grant/SoD checks as any approver."""
+
+    def is_eligible(user_id: str) -> bool:
+        return _is_actor_valid_for_role(
+            cursor,
+            actor_id=user_id,
+            role="APPROVER",
+            department_id=department_id,
+            type_id=type_id,
+        )
+
+    return is_eligible
+
+
+def approval_delegation_enabled() -> bool:
+    """C3 delegation. Off until report_migrations/08_approval_delegation_*.sql
+    is approved and applied (the table does not exist before that)."""
+    return os.environ.get("EAS_APPROVAL_DELEGATION", "").strip() == "1"
+
+
+SQL_ACTIVE_DELEGATIONS = """
+    SELECT d.delegator_id::text, d.id::text, d.delegate_id::text
+    FROM eas.approval_delegation d
+    WHERE d.delegator_id = ANY(%s::uuid[]) AND d.revoked_at IS NULL
+      AND d.valid_from <= statement_timestamp()
+      AND d.valid_to > statement_timestamp()
+      AND (d.department_id IS NULL OR d.department_id = %s)
+      AND (d.type_id IS NULL OR d.type_id = %s)
+    ORDER BY d.delegator_id, (d.type_id IS NULL), (d.department_id IS NULL),
+             d.valid_from DESC, d.id
+"""
+
+
+def _active_delegations(
+    cursor, approver_ids, *, department_id: str, type_id: str
+) -> dict[str, list[tuple[str, str]]]:
+    cursor.execute(SQL_ACTIVE_DELEGATIONS, [list(approver_ids), department_id, type_id])
+    found: dict[str, list[tuple[str, str]]] = {}
+    for delegator, delegation_id, delegate in cursor.fetchall():
+        found.setdefault(delegator, []).append((delegation_id, delegate))
+    return found
 
 
 def _append_request_audit(
@@ -1019,6 +1089,12 @@ def _fetch_submit_config(
     return type_id, lifecycle, release_id, form, rules, bindings, sla
 
 
+def check_resources(cursor, **kwargs):
+    from api_core.workflow.resource_guard import check_resources as run_checks
+
+    return run_checks(cursor, **kwargs)
+
+
 def _resolve_and_verify_route_actors(
     cursor,
     rules: dict[str, Any],
@@ -1038,11 +1114,32 @@ def _resolve_and_verify_route_actors(
             manager_id=manager_id,
             amount_vnd=amount,
             payload=normalized,
+            manager_chain=_manager_chain(cursor, actor.id),
+            is_eligible=_approver_eligibility(
+                cursor, department_id=actor.department_id, type_id=type_id
+            ),
         )
+    except SodEscalationError as exc:
+        # R07 found no eligible superior: refuse rather than pick anyone.
+        raise CommandError("ROUTE_SOD_ESCALATION_UNRESOLVED", status=409) from exc
     except RoutingError as exc:
         # Unresolved role bindings are a configuration conflict, not a 500.
         # No draft is submitted or workflow instance created.
         raise CommandError("ROUTE_CONFIGURATION_INVALID", status=409) from exc
+    if approval_delegation_enabled():
+        decision = apply_delegations(
+            decision,
+            requester_id=actor.id,
+            delegations=_active_delegations(
+                cursor,
+                decision.approver_ids,
+                department_id=actor.department_id,
+                type_id=type_id,
+            ),
+            is_eligible=_approver_eligibility(
+                cursor, department_id=actor.department_id, type_id=type_id
+            ),
+        )
     routed_actors = set(decision.approver_ids)
     if decision.executor_id:
         routed_actors.add(decision.executor_id)
@@ -1359,6 +1456,24 @@ def submit_request(
         ):
             raise CommandError("DEPARTMENT_SCOPE_VIOLATION", status=403)
         amount = extract_amount_vnd(normalized, allow_zero=False)
+        # C2: confirmed shortages block; unverified balances are only recorded.
+        resource_checks = check_resources(
+            cursor,
+            actor_id=actor.id,
+            department_id=actor.department_id,
+            type_code=type_code,
+            payload=normalized,
+            amount=amount,
+            request_id=existing_request_id,
+            lock=True,
+        )
+        blocking = [c for c in resource_checks if c.blocking]
+        if blocking:
+            raise CommandError(
+                "RESOURCE_INSUFFICIENT",
+                status=409,
+                fields={"resource": [c.message for c in blocking]},
+            )
         decision = _resolve_and_verify_route_actors(
             cursor=cursor,
             rules=rules,
@@ -1462,10 +1577,41 @@ def submit_request(
                 "revision_id": revision_id,
                 "release_id": release_id,
                 "matched_rule_id": decision.matched_rule_id,
+                "sod_escalations": len(decision.escalations),
+                "resource_checks": [
+                    {"kind": c.kind, "status": c.status, "reason": c.reason}
+                    for c in resource_checks
+                ],
             },
             correlation_id=correlation_id,
             occurred_at=now,
         )
+        for delegation in decision.delegations:
+            _append_request_audit(
+                cursor,
+                request_id=request_id,
+                actor_id=None,
+                actor_kind="SYSTEM",
+                action="APPROVER_DELEGATED",
+                target_type="request",
+                target_id=request_id,
+                details={"revision_id": revision_id, **delegation},
+                correlation_id=correlation_id,
+                occurred_at=now,
+            )
+        for escalation in decision.escalations:
+            _append_request_audit(
+                cursor,
+                request_id=request_id,
+                actor_id=None,
+                actor_kind="SYSTEM",
+                action="APPROVER_ESCALATED_SOD",
+                target_type="request",
+                target_id=request_id,
+                details={"revision_id": revision_id, **escalation},
+                correlation_id=correlation_id,
+                occurred_at=now,
+            )
         cursor.execute(
             """
             INSERT INTO eas.outbox_event(request_id,event_type,payload,dedupe_key)

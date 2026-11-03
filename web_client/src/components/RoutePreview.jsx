@@ -3,8 +3,11 @@ import { api } from "../api.js";
 import { errorText, resolverLabels } from "../domain.js";
 
 const ROLE_LABELS = { APPROVER: "Phê duyệt", EXECUTOR: "Thực hiện", ACCEPTOR: "Nghiệm thu" };
+const RESOURCE_TITLES = { LEAVE: "Số dư ngày phép", BUDGET: "Ngân sách phòng ban" };
+const RESOURCE_STATES = { OK: "Đủ", INSUFFICIENT: "Không đủ", UNVERIFIED: "Chưa xác nhận" };
 const PROBLEMS = {
   ROUTE_CONFIGURATION_INVALID: "Chưa xác định được người duyệt cho phòng ban của bạn (ví dụ chưa có quản lý trực tiếp). Hãy liên hệ quản trị trước khi gửi.",
+  ROUTE_SOD_ESCALATION_UNRESOLVED: "Bạn đang là người duyệt của chính yêu cầu này và không tìm được cấp trên đủ quyền để chuyển lên (quy tắc R07). Hãy liên hệ quản trị trước khi gửi.",
   ROUTE_ACTOR_INACTIVE: "Một người trong tuyến chưa được cấp quyền hoặc đã ngừng hoạt động; yêu cầu sẽ không gửi được cho đến khi quản trị cập nhật.",
 };
 
@@ -60,9 +63,15 @@ export default function RoutePreview({ type, getValues }) {
         {preview.steps.map((step, index) => <li key={`${step.role}-${index}`} className={step.authorized ? "" : "route-step-invalid"}>
           <span className="route-step-tag">{step.level ? `Cấp ${step.level}` : ROLE_LABELS[step.role]}</span>
           <strong>{step.assignee_name || "Chưa xác định"}</strong>
-          <small className="muted">{resolverLabels[step.resolver_code] || ROLE_LABELS[step.role]}{!step.authorized ? " · chưa đủ quyền" : ""}</small>
+          <small className="muted">{resolverLabels[step.resolver_code] || ROLE_LABELS[step.role]}{step.sod_escalated ? " · chuyển lên cấp trên (R07: không tự duyệt)" : ""}{step.delegated ? " · người được ủy quyền tạm thời" : ""}{!step.authorized ? " · chưa đủ quyền" : ""}</small>
         </li>)}
       </ol>}
+      {preview.resource_checks?.length > 0 && <ul className="resource-checks" aria-label="Kiểm tra số dư">
+        {preview.resource_checks.map((check) => <li key={check.kind} className={`resource-check is-${check.status.toLowerCase()}`}>
+          <strong>{RESOURCE_TITLES[check.kind] || check.kind}: {RESOURCE_STATES[check.status] || check.status}</strong>
+          <small className="muted">{check.message}{check.blocking ? " Yêu cầu sẽ bị chặn khi gửi." : ""}</small>
+        </li>)}
+      </ul>}
       {preview.sla_hours?.approval && <p className="muted">Thời hạn phê duyệt mỗi cấp: {preview.sla_hours.approval} giờ{preview.sla_hours.execution ? ` · thực hiện ${preview.sla_hours.execution} giờ` : ""}{preview.sla_hours.acceptance ? ` · nghiệm thu ${preview.sla_hours.acceptance} giờ` : ""}.</p>}
     </>}
   </section>;

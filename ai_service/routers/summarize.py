@@ -184,10 +184,9 @@ async def summarize_request(body: SummarizeRequest):
     - **sentiment**: mức độ (normal/urgent/high_risk)
     - **tokens_used**: số token Gemini đã dùng
     """
-    if not settings.gemini_api_key:
-        logger.info(
-            f"Gemini API key chưa cấu hình, dùng tóm tắt trích xuất cục bộ: {body.title}"
-        )
+    if not settings.external_ai_allowed():
+        # No external call without explicit authorization (privacy gate).
+        logger.info("External AI disabled; using local extractive summary")
         return _local_extractive_summarize(body)
 
     response = None
@@ -195,7 +194,7 @@ async def summarize_request(body: SummarizeRequest):
         import google.generativeai as genai
 
         genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel(settings.gemini_model)
         prompt = build_summarize_prompt(body)
 
         response = model.generate_content(

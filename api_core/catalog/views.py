@@ -23,6 +23,7 @@ from api_core.catalog.plan_catalog import (
     plan_items,
     resolve_five_level_metadata,
 )
+from api_core.catalog.thesis_core_types import THESIS_CORE_CODES
 
 
 @lru_cache(maxsize=1)
@@ -143,6 +144,7 @@ def request_types(request):
                     "configured": configured,
                     "risk_weight": risk_w,
                     "approval_level": app_lvl,
+                    "thesis_core": code in THESIS_CORE_CODES,
                 }
             )
     return JsonResponse(

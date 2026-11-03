@@ -38,7 +38,8 @@ router = APIRouter()
 class OCRResult(BaseModel):
     raw_text: str
     extracted_fields: dict
-    confidence: float
+    # None when the engine reports no confidence (never a made-up number).
+    confidence: float | None
     engine: str  # "paddleocr" hoặc "gemini-vision"
 
 
@@ -135,58 +136,78 @@ _ocr_engine = None
 
 
 def get_ocr_engine():
-    """Lazy Singleton Cache cho PaddleOCR chống rò rỉ bộ nhớ."""
+    """Lazy singleton PaddleOCR engine (3.x API, with a 2.x fallback)."""
     global _ocr_engine
     if _ocr_engine is None:
         from paddleocr import PaddleOCR
 
-        _ocr_engine = PaddleOCR(
-            use_angle_cls=True, lang=settings.ocr_lang, use_gpu=settings.ocr_use_gpu
-        )
+        try:  # PaddleOCR 3.x
+            _ocr_engine = PaddleOCR(
+                lang=settings.ocr_lang,
+                device="gpu" if settings.ocr_use_gpu else "cpu",
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=True,
+            )
+        except TypeError:  # PaddleOCR 2.x keyword names
+            _ocr_engine = PaddleOCR(
+                use_angle_cls=True, lang=settings.ocr_lang, use_gpu=settings.ocr_use_gpu
+            )
     return _ocr_engine
 
 
-def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float]:
-    """Chạy PaddleOCR và trả về (raw_text, confidence)."""
-    try:
-        import numpy as np
-        from PIL import Image
-
-        ocr_engine = get_ocr_engine()
-        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        img_array = np.array(img)
-
-        result = ocr_engine.ocr(img_array, cls=True)
-        if not result or not result[0]:
-            return "", 0.0
-
+def _paddle_lines(engine, img_array) -> list[tuple[str, float]]:
+    if hasattr(engine, "predict"):  # 3.x: one result per page
         lines = []
-        confidences = []
-        for line in result[0]:
-            text = line[1][0]
-            conf = line[1][1]
-            lines.append(text)
-            confidences.append(conf)
+        for page in engine.predict(img_array) or []:
+            lines += list(zip(page["rec_texts"], page["rec_scores"], strict=False))
+        return lines
+    result = engine.ocr(img_array, cls=True)  # 2.x
+    return [(line[1][0], line[1][1]) for line in (result[0] if result else None) or []]
 
-        raw_text = "\n".join(lines)
-        avg_conf = sum(confidences) / len(confidences) if confidences else 0.0
-        return raw_text, round(avg_conf, 4)
 
-    except ImportError:
-        logger.warning("PaddleOCR chưa cài. Dùng fallback Gemini Vision.")
-        raise
+def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float | None]:
+    """Run PaddleOCR; returns (raw_text, mean recognition score)."""
+    import numpy as np
+    from PIL import Image
+
+    engine = get_ocr_engine()
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    lines = _paddle_lines(engine, np.array(img))
+    if not lines:
+        return "", None
+    scores = [float(score) for _text, score in lines]
+    return "\n".join(text for text, _score in lines), round(
+        sum(scores) / len(scores), 4
+    )
+
+
+async def run_ocr(image_bytes: bytes, mime_type: str) -> tuple[str, float | None, str]:
+    """Local PaddleOCR first; Gemini Vision only if external AI is authorized.
+    Never returns a simulated result."""
+    try:
+        raw_text, confidence = ocr_with_paddle(image_bytes)
+        return raw_text, confidence, "paddleocr"
+    except Exception as exc:  # engine missing or failed
+        logger.warning(f"PaddleOCR unavailable: {type(exc).__name__}")
+        if not settings.external_ai_allowed():
+            raise HTTPException(
+                status_code=503, detail="OCR_ENGINE_UNAVAILABLE"
+            ) from exc
+    raw_text, confidence = await ocr_with_gemini_vision(image_bytes, mime_type)
+    return raw_text, confidence, "gemini-vision"
 
 
 async def ocr_with_gemini_vision(
     image_bytes: bytes, mime_type: str = MIME_JPEG
-) -> tuple[str, float]:
+) -> tuple[str, float | None]:
     """Dùng Gemini Vision làm fallback khi PaddleOCR chưa khả dụng."""
 
     def _call_gemini() -> tuple[str, float]:
         import google.generativeai as genai
 
         genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel(settings.gemini_vision_model)
 
         b64 = base64.b64encode(image_bytes).decode()
         prompt = (
@@ -200,7 +221,7 @@ async def ocr_with_gemini_vision(
                 prompt,
             ]
         )
-        return response.text, 0.75  # Gemini không trả confidence nên hardcode 0.75
+        return response.text, None  # Gemini does not report OCR confidence
 
     try:
         return await asyncio.to_thread(_call_gemini)
@@ -240,19 +261,11 @@ async def extract_from_upload(
     if len(image_bytes) > 10 * 1024 * 1024:  # 10MB limit
         raise HTTPException(status_code=413, detail="File quá lớn. Tối đa 10MB.")
 
-    # Thử PaddleOCR trước, fallback sang Gemini Vision
-    engine = "paddleocr"
-    try:
-        raw_text, confidence = ocr_with_paddle(image_bytes)
-    except Exception:  # noqa: BLE001
-        engine = "gemini-vision"
-        raw_text, confidence = await ocr_with_gemini_vision(
-            image_bytes, file.content_type
-        )
+    raw_text, confidence, engine = await run_ocr(image_bytes, file.content_type)
 
     extracted = parse_invoice_fields(raw_text)
     logger.info(
-        f"OCR [{engine}] → {len(raw_text)} chars, conf={confidence}, fields={list(extracted.keys())}"
+        f"OCR [{engine}] {len(raw_text)} chars, conf={confidence}, fields={list(extracted.keys())}"
     )
 
     return OCRResult(
@@ -330,12 +343,7 @@ async def extract_from_url(body: OCRUrlRequest):
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=f"Không tải được ảnh từ URL: {e}")
 
-    engine = "paddleocr"
-    try:
-        raw_text, confidence = ocr_with_paddle(image_bytes)
-    except Exception:  # noqa: BLE001
-        engine = "gemini-vision"
-        raw_text, confidence = await ocr_with_gemini_vision(image_bytes, content_type)
+    raw_text, confidence, engine = await run_ocr(image_bytes, content_type)
 
     extracted = parse_invoice_fields(raw_text)
     return OCRResult(

@@ -390,6 +390,22 @@ export function errorText(e) {
     REQUEST_TIMEOUT_UNKNOWN: "Kết nối quá thời gian xử lý. Kiểm tra trạng thái trước khi thực hiện lại để tránh trùng lặp.",
     CATALOG_EXPANSION_DISABLED: "Chức năng thêm loại yêu cầu chưa được DBA phê duyệt/mở khóa migration. Danh mục P0 vẫn hoạt động bình thường.",
     REQUEST_TYPE_NOT_CONFIGURED: "Loại yêu cầu này chưa có phiên bản quy chế đã công bố.",
+    OCR_UNAVAILABLE: "Chưa đọc được hóa đơn: công cụ OCR hoặc dịch vụ AI đang không khả dụng. Hãy nhập tay.",
+    OCR_UNSUPPORTED_TYPE: "OCR chỉ hỗ trợ ảnh JPEG/PNG.",
+    RESOURCE_INSUFFICIENT: "Không đủ số dư đã xác nhận để gửi yêu cầu.",
+    DELEGATION_NOT_ENABLED: "Chức năng ủy quyền phê duyệt chưa được bật (cần áp dụng migration 08 sau khi được phê duyệt).",
+    DELEGATION_SELF: "Không thể tự ủy quyền cho chính mình.",
+    DELEGATION_ADMIN_PARTY: "Quản trị viên không thể là một bên của ủy quyền phê duyệt.",
+    DELEGATION_START_IN_PAST: "Thời điểm bắt đầu không được ở quá khứ.",
+    DELEGATION_PERIOD_INVALID: "Thời điểm kết thúc phải sau thời điểm bắt đầu.",
+    DELEGATOR_NOT_APPROVER: "Người ủy quyền không có quyền phê duyệt trong phạm vi và thời gian đã chọn.",
+    DELEGATE_NOT_ELIGIBLE: "Người được ủy quyền phải đang hoạt động, không phải quản trị viên và có quyền phê duyệt trong phạm vi suốt thời gian ủy quyền.",
+    DELEGATION_OVERLAP: "Đã có ủy quyền khác cùng phạm vi trùng thời gian. Thu hồi ủy quyền cũ trước.",
+    DELEGATION_CHAIN_FORBIDDEN: "Không cho phép ủy quyền bắc cầu: một trong hai người đang tham gia ủy quyền khác trong cùng thời gian.",
+    DELEGATION_NOT_ACTIVE: "Ủy quyền đã hết hạn hoặc đã bị thu hồi.",
+    DELEGATION_NOT_FOUND: "Không tìm thấy ủy quyền.",
+    UNKNOWN_TYPE_CODE: "Loại yêu cầu không tồn tại.",
+    ROUTE_SOD_ESCALATION_UNRESOLVED: "Bạn sẽ là người duyệt yêu cầu của chính mình và không có cấp trên đủ quyền để chuyển lên (quy tắc R07). Liên hệ quản trị viên.",
     ROUTE_CONFIGURATION_INVALID: "Quy trình chưa gán đủ người duyệt/thực hiện/nghiệm thu hợp lệ. Liên hệ quản trị viên quy chế.",
     ATTACHMENT_REQUIRED: "Loại yêu cầu này bắt buộc đính kèm tài liệu hợp lệ trước khi gửi.",
     DEPARTMENT_SCOPE_VIOLATION: "Bạn không được chọn phòng ban khác với phòng ban của mình.",
@@ -406,7 +422,9 @@ export function errorText(e) {
     (messages[e.message] || (e.status === 401
       ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
       : e.message)) +
-    (e.fields ? " " + JSON.stringify(e.fields) : "") +
+    (Array.isArray(e.fields?.resource)
+      ? " " + e.fields.resource.join(" ")
+      : e.fields ? " " + JSON.stringify(e.fields) : "") +
     (e.correlationId ? ` (Mã lỗi: ${e.correlationId})` : "")
   );
 }
