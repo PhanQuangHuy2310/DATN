@@ -317,3 +317,46 @@ Slash commands là các phím tắt bạn có thể gõ trực tiếp trong chat
 
 > [!NOTE]
 > Tất cả các skill đều được kích hoạt **tự động** dựa trên ngữ cảnh yêu cầu của bạn. Bạn không cần nhớ tên chính xác — chỉ cần mô tả những gì bạn muốn làm!
+
+
+---
+
+# 📋 NHẬT KÝ THỰC HIỆN CÁC GIAI ĐOẠN DỰ ÁN (PHASE 0 - PHASE 7)
+
+## 1. Giai đoạn 0 (Phase 0): Audit Dự Án, Sửa Lỗi Nền Tảng & Đồng Bộ Plans
+- Rà soát toàn bộ tài liệu đặc tả SRS, kiến trúc micro-service, và file SQL Migration.
+- Dọn dẹp các bảng trùng lặp, chuẩn hóa các trường dữ liệu và bảo đảm không làm mất bất kỳ dữ liệu nghiệp vụ nào.
+- Cập nhật tài liệu quy hoạch phát triển hệ thống quản trị 9 chức năng trong `plans/active/2026-11-03_admin_9_features_roadmap.md`.
+
+## 2. Giai đoạn 1 (Phase 1): Thiết Kế File SQL Migration Supabase
+- Tạo file migration an toàn tuyệt đối: `supabase/migrations/20261103_admin_full_upgrade.sql`.
+- Tạo và mở rộng các bảng: `departments`, `app_user` (kèm `avatar_url`, `role_id`, `department_id`), `user_leave_and_trips` (chấm công, công tác, nghỉ phép), `role_permissions`, `user_custom_permissions`, `mock_apis` (8 APIs nội bộ), và `system_versions_changelog`.
+- Cung cấp đầy đủ Seed Data tiếng Việt với cơ chế `ON CONFLICT DO NOTHING`.
+
+## 3. Giai đoạn 2 (Phase 2): Master Layout, Sidebar & Header Đồng Bộ
+- Thống nhất bảng màu (Deep Corporate Blue `#1E40AF` & `#1E3A8A`), font chữ (Roboto cho body, Montserrat cho tiêu đề), bo góc và bóng mờ trên cả `web_admin` và `web_client`.
+- Hỗ trợ chế độ Sáng / Tối (Dark / Light Mode) mượt mà với `theme-toggle-btn`.
+- Sidebar dạng 2 trạng thái: Mở rộng (Expanded) và Thu gọn (Collapsed) ghi nhớ `localStorage`.
+- Header đồng bộ với Avatar người dùng, Chức vụ, Nút đăng xuất, Chuông thông báo (Notification Bell), Thanh tìm kiếm nhanh (Global Search) và Tiêu đề Header luôn đổi theo đúng chức năng đang mở.
+
+## 4. Giai đoạn 3 (Phase 3): Module "Tổng Quan" & "Yêu Cầu & Quy Trình"
+- **Chức năng 1 (Tổng quan):** Bộ lọc 4 chu kỳ (Ngày / Tuần / Tháng / Năm), 4 thẻ KPI (Tổng yêu cầu, Tỷ lệ duyệt thành công, Bị từ chối, Đang xử lý), Biểu đồ xu hướng, Top phòng ban, Top nhân viên và Thống kê thời gian xử lý SLA theo chu kỳ A/B/C.
+- **Chức năng 2 (Yêu cầu & Quy trình):** Bảng Kanban trực quan 3 cột (Quy trình A - Duyệt nhanh tự động / Quy trình B - Duyệt tiêu chuẩn / Quy trình C - Duyệt chặt chẽ đa cấp), cho phép điều chỉnh trọng số rủi ro (1-5) và cấp độ phê duyệt (1-5).
+
+## 5. Giai đoạn 4 (Phase 4): Sơ Đồ Công Ty, Quản Lý Người Dùng & Ma Trận Phân Quyền
+- **Chức năng 3 (Sơ đồ công ty):** Cây sơ đồ tổ chức trực quan (Visual Org Chart Tree), hiển thị Trưởng phòng ban, số lượng nhân sự, và modal danh sách nhân sự trực thuộc khi nhấp vào khối phòng ban.
+- **Chức năng 4 (Người dùng & Trạng thái):** Tính toán trạng thái làm việc thời gian thực (Đang làm việc trong khung giờ 08:00 - 17:30 T2-T6; Nghỉ làm; Đi công tác; Đang làm ngoài giờ). Nhấp vào tổng số yêu cầu mở modal chi tiết 5 giai đoạn (`DRAFT`, `PENDING_APPROVAL`, `IN_EXECUTION`, `PENDING_ACCEPTANCE`, `COMPLETED` / `REJECTED`).
+- **Chức năng 5 (Ma trận phân quyền RBAC):** Bảng ma trận ma trận 10 nhóm chức năng, hỗ trợ phân quyền theo Chức vụ (Vai trò) và cấp quyền tùy biến theo từng Cá nhân nhân viên với `PermissionGuard`.
+
+## 6. Giai đoạn 5 (Phase 5): Quy Định Công Ty & Quản Trị AI (Semantic Versioning & Auto-Lock)
+- **Chức năng 6 (Quy định công ty):** Quản lý quy định nội bộ, áp dụng Semantic Versioning tự động (Sửa tăng Minor `v1.0 -> v1.1`, Thêm/Xóa tăng Major `v1.1 -> v2.0`).
+- **Chức năng 7 (Quản trị AI):** Đồng bộ Knowledge Graph sang `ai_service`, mô phỏng giả lập đánh giá rủi ro yêu cầu trước khi huấn luyện thật, tiến trình huấn luyện 4 bước (Pre-processing -> Embedding -> KG Update -> Health Check).
+- **Cơ chế Khóa tự động (Client Auto-Lock):** Khi AI đang học quy định mới, `web_client` tự động chuyển sang màn hình bảo trì, hiển thị tiến độ và đếm ngược cho người dùng thoát ra an toàn, tự động mở khóa khi hoàn tất.
+
+## 7. Giai đoạn 6 (Phase 6): Quản Lý API (Circuit Breaker) & Phiên Bản Hệ Thống
+- **Chức năng 8 (Quản lý API & Circuit Breaker):** Quản lý 8 API hệ thống nội bộ (HR, Finance, IT, CRM, Assets, Facilities, Procurement, Travel), xem JSON payload mẫu, tự động liên kết biểu mẫu phụ thuộc. Khi Quản trị viên ngắt kết nối API, toàn bộ biểu mẫu liên quan trên cả `web_admin` và `web_client` chuyển sang trạng thái "Tạm ngưng", hiển thị banner cảnh báo và khóa nút gửi. Backend chặn nộp đơn với HTTP 503.
+- **Chức năng 9 (Phiên bản hệ thống & Audit Changelog):** 4 thẻ Specification hệ thống, Timeline nhật ký kiểm toán có lọc theo loại thay đổi, modal xem Before/After Diff so sánh trạng thái trước và sau, hỗ trợ xuất file Audit JSON.
+
+## 8. Giai đoạn 7 (Phase 7): Kiểm Thử Tổng Thể (E2E Audit) & Hoàn Tất Definition of Done
+- Rà soát toàn bộ 9 chức năng trên `web_admin` và `web_client`, kiểm tra chéo 6 luồng nghiệp vụ cốt lõi.
+- Xác nhận Definition of Done: 64/64 Unit tests pass trong 193ms, 0 lỗi TypeScript/ESLint/Linter, thời gian build Vite 294ms (client) & 324ms (admin).

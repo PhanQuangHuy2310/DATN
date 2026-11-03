@@ -22,7 +22,7 @@ test("client and admin keep separate navigation configurations", () => {
     assert.match(app.slice(app.indexOf("const ADMIN_NAV")), new RegExp(`"${key}"`), key);
   }
   // Business request creation never appears in the admin portal.
-  assert.match(app, /portal !== "admin" && user\.roles\.includes\("REQUESTER"\)/);
+  assert.match(app, /portal !== "admin" && \(user\?\.permissions\?\.by_module\?\.requests_workflows \? Boolean\(user\.permissions\.by_module\.requests_workflows\.can_create\) : user\.roles\.includes\("REQUESTER"\)\)/);
 });
 
 test("department pages and diagnostics are role and scope gated", () => {

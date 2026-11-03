@@ -5,7 +5,7 @@ import logging
 import secrets
 import smtplib
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.core.cache import cache
@@ -63,18 +63,24 @@ def csrf(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"status": "ok", "correlation_id": correlation_id(request)})
 
 
-def _parse_credentials(request: HttpRequest) -> tuple[str, str] | JsonResponse:
+def _parse_credentials(
+    request: HttpRequest,
+) -> tuple[str, str, str | None] | JsonResponse:
     try:
         body = parse_json_object(request, max_bytes=8 * 1024)
     except JsonBodyError as exc:
         return api_error(request, str(exc), status=400)
-    if set(body) != {"email", "password"}:
+    valid_keys = {"email", "password", "portal"}
+    if not (
+        {"email", "password"}.issubset(set(body)) and set(body).issubset(valid_keys)
+    ):
         return api_error(request, "INVALID_CREDENTIALS", status=401)
     email = _normalized_login_email(body.get("email"))
     password = body.get("password")
+    portal = body.get("portal") if isinstance(body.get("portal"), str) else None
     if email is None or not isinstance(password, str):
         return api_error(request, "INVALID_CREDENTIALS", status=401)
-    return email, password
+    return email, password, portal
 
 
 def _check_maintenance_login(
@@ -142,7 +148,30 @@ def login(request: HttpRequest) -> JsonResponse:
     parsed = _parse_credentials(request)
     if isinstance(parsed, JsonResponse):
         return parsed
-    email, password = parsed
+    email, password, portal_body = parsed
+    portal = request.headers.get("X-EAS-Portal") or portal_body
+    if portal == "admin" and email != "admin@eas.com":
+        return api_error(
+            request,
+            "ACCESS_DENIED",
+            status=403,
+            fields={
+                "portal": [
+                    "Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị (8081). Vui lòng đăng nhập tại Cổng Nhân viên (8080)."
+                ]
+            },
+        )
+    if portal == "client" and email == "admin@eas.com":
+        return api_error(
+            request,
+            "ACCESS_DENIED",
+            status=403,
+            fields={
+                "portal": [
+                    "Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081)."
+                ]
+            },
+        )
 
     keys = throttle_keys(email, client_ip(request))
     if is_throttled(
@@ -567,6 +596,247 @@ def logout(request: HttpRequest) -> JsonResponse:
     )
 
 
+def _is_valid_uuid(val: Any) -> bool:
+    if not val:
+        return False
+    try:
+        UUID(str(val))
+        return True
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
+JOB_TITLES = (
+    ("OPS_ADMIN", "Quản trị hệ thống"),
+    ("POLICY_ADMIN", "Quản trị chính sách"),
+    ("APPROVER", "Người phê duyệt"),
+    ("EXECUTOR", "Người thực hiện"),
+    ("ACCEPTOR", "Người nghiệm thu"),
+    ("REQUESTER", "Nhân viên"),
+)
+
+
+def _job_title(roles) -> str:
+    """Most senior role, shown as the job title in the header."""
+    return next((title for role, title in JOB_TITLES if role in roles), "Nhân viên")
+
+
+def _get_actor_permissions(actor: Any) -> dict[str, Any]:
+    modules_list = []
+    by_module: dict[str, dict[str, bool]] = {}
+
+    # Module permissions are keyed by eas.app_user (migration 2026-11-03_01:
+    # role_module_permission + user_permissions). The legacy eas.users table
+    # was quarantined, so the actor id is passed directly.
+    user_uuid = actor.id if _is_valid_uuid(getattr(actor, "id", None)) else None
+    try:
+        with connection.cursor() as cursor:
+            if user_uuid:
+                cursor.execute(
+                    """SELECT module_code, module_name, group_name, route_path, icon_name,
+                              target_app, can_view, can_create, can_update, can_delete,
+                              show_on_sidebar, permission_source
+                       FROM eas.get_effective_user_permissions(%s::uuid)""",
+                    [user_uuid],
+                )
+                for r in cursor.fetchall():
+                    mod_data = {
+                        "module_code": r[0],
+                        "module_name": r[1],
+                        "group_name": r[2],
+                        "route_path": r[3],
+                        "icon_name": r[4],
+                        "target_app": r[5],
+                        "can_view": bool(r[6]),
+                        "can_create": bool(r[7]),
+                        "can_update": bool(r[8]),
+                        "can_delete": bool(r[9]),
+                        "show_on_sidebar": bool(r[10]),
+                        "permission_source": r[11],
+                    }
+                    modules_list.append(mod_data)
+                    by_module[r[0]] = {
+                        "can_view": mod_data["can_view"],
+                        "can_create": mod_data["can_create"],
+                        "can_update": mod_data["can_update"],
+                        "can_delete": mod_data["can_delete"],
+                    }
+    except DatabaseError as exc:
+        logger.warning(
+            "Error fetching effective permissions for actor %s: %s",
+            getattr(actor, "email", ""),
+            exc,
+        )
+
+    # A database without role defaults (e.g. before the migration ran) yields
+    # rows that grant nothing; fall back to the role-derived matrix below.
+    if modules_list:
+        return {"modules": modules_list, "by_module": by_module}
+    modules_list, by_module = [], {}
+
+    actor_roles = getattr(actor, "roles", frozenset())
+    is_admin = bool({"OPS_ADMIN", "POLICY_ADMIN", "ADMIN"}.intersection(actor_roles))
+    is_auditor = "AUDITOR" in actor_roles
+    is_manager = bool({"APPROVER", "MANAGER"}.intersection(actor_roles))
+
+    STANDARD_MODULES = [
+        (
+            "dashboard",
+            "Tổng quan",
+            "Giám sát",
+            "/dashboard",
+            "LayoutDashboard",
+            "BOTH",
+            True,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "requests_workflows",
+            "Yêu cầu & Quy trình",
+            "Luồng công việc",
+            "/requests-workflows",
+            "GitPullRequest",
+            "BOTH",
+            True,
+            True,
+            is_admin or is_manager,
+            is_admin,
+        ),
+        (
+            "org_chart",
+            "Sơ đồ công ty",
+            "Tổ chức & Nhân sự",
+            "/org-chart",
+            "Network",
+            "BOTH",
+            True,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "users",
+            "Người dùng",
+            "Tổ chức & Nhân sự",
+            "/users",
+            "Users",
+            "ADMIN",
+            is_admin,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "permissions",
+            "Phân quyền",
+            "Tổ chức & Nhân sự",
+            "/permissions",
+            "ShieldCheck",
+            "ADMIN",
+            is_admin,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "regulations",
+            "Quy định",
+            "Tri thức & AI",
+            "/regulations",
+            "BookOpenCheck",
+            "BOTH",
+            True,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin,
+        ),
+        (
+            "ai_engine",
+            "Quản trị AI",
+            "Tri thức & AI",
+            "/ai-engine",
+            "BrainCircuit",
+            "ADMIN",
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin,
+        ),
+        (
+            "api_management",
+            "Quản lý API",
+            "Hệ thống & Tích hợp",
+            "/api-management",
+            "Webhook",
+            "ADMIN",
+            is_admin,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "system_versions",
+            "Phiên bản hệ thống",
+            "Hệ thống & Tích hợp",
+            "/system-versions",
+            "History",
+            "ADMIN",
+            is_admin or is_auditor,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+    ]
+
+    for (
+        code,
+        name,
+        grp,
+        route,
+        icon,
+        target,
+        can_v,
+        can_c,
+        can_u,
+        can_d,
+    ) in STANDARD_MODULES:
+        show_sb = can_v or can_c or can_u or can_d
+        m_item = {
+            "module_code": code,
+            "module_name": name,
+            "group_name": grp,
+            "route_path": route,
+            "icon_name": icon,
+            "target_app": target,
+            "can_view": can_v,
+            "can_create": can_c,
+            "can_update": can_u,
+            "can_delete": can_d,
+            "show_on_sidebar": show_sb,
+            "permission_source": "ROLE_FALLBACK",
+        }
+        modules_list.append(m_item)
+        by_module[code] = {
+            "can_view": can_v,
+            "can_create": can_c,
+            "can_update": can_u,
+            "can_delete": can_d,
+        }
+
+    return {"modules": modules_list, "by_module": by_module}
+
+
+@require_GET
+@require_actor()
+def permissions_me(request: HttpRequest) -> JsonResponse:
+    perms = _get_actor_permissions(request.actor)
+    return JsonResponse(
+        {"permissions": perms, "correlation_id": correlation_id(request)}
+    )
+
+
 @require_GET
 @require_actor()
 def me(request: HttpRequest) -> JsonResponse:
@@ -585,21 +855,39 @@ def me(request: HttpRequest) -> JsonResponse:
     # OPS_ADMIN membership is not enough. Backend administration APIs still
     # perform their own authorization checks on every operation.
     can_manage_identity = False
+    profile: dict[str, Any] = {}
     try:
         with connection.cursor() as cursor:
+            # One round trip: identity capability + profile shown in the header.
             cursor.execute(
                 """SELECT EXISTS (
                       SELECT 1 FROM eas.role_membership rm
-                      WHERE rm.user_id = %s AND rm.role = 'OPS_ADMIN'
+                      WHERE rm.user_id = u.id AND rm.role = 'OPS_ADMIN'
                         AND rm.revoked_at IS NULL
                         AND rm.valid_from <= statement_timestamp()
                         AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
                         AND rm.scope_kind = 'GLOBAL' AND rm.type_scope = 'ALL'
-                   )""",
+                   ), u.employee_code, d.code, d.name,
+                   ws.status_code, ws.status_label, ws.detail_reason
+                   FROM eas.app_user u
+                   LEFT JOIN eas.department d ON d.id = u.department_id
+                   LEFT JOIN LATERAL eas.get_user_working_status(u.id, now()) ws ON true
+                   WHERE u.id = %s""",
                 [actor.id],
             )
             row = cursor.fetchone()
             can_manage_identity = bool(row[0]) if row else False
+            if row and len(row) >= 7:
+                profile = {
+                    "employee_code": row[1],
+                    "department_code": row[2],
+                    "department_name": row[3],
+                    "working_status": {
+                        "code": row[4] or "DANG_LAM",
+                        "label": row[5] or "Đang làm",
+                        "detail": row[6] or "",
+                    },
+                }
     except (DatabaseError, AttributeError):
         can_manage_identity = False
 
@@ -610,8 +898,11 @@ def me(request: HttpRequest) -> JsonResponse:
             "display_name": actor.display_name,
             "department_id": actor.department_id,
             "roles": sorted(actor.roles),
+            "job_title": _job_title(actor.roles),
+            **profile,
             "capabilities": {"identity_manage": can_manage_identity},
             "must_change_password": actor.must_change_password,
+            "permissions": _get_actor_permissions(actor),
         },
         "correlation_id": correlation_id(request),
     }

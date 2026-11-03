@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import close_old_connections
 
 from api_core.worker import process_sla_batch, run_outbox_batch
+from api_core.workflow.ai_learning import run_pending as run_learning_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,8 @@ class Command(BaseCommand):
             try:
                 sla_events = process_sla_batch(batch_size=min(batch_size * 5, 500))
                 processed = run_outbox_batch(batch_size=batch_size)
+                # AI regulation learning jobs (leased: safe alongside API runners).
+                processed += run_learning_jobs()
             except Exception:
                 logger.exception("Error processing worker batch")
                 if options["once"]:

@@ -58,6 +58,7 @@ supabase/.temp/
 /ai_service/data/enterprise_synthetic_dataset*.csv
 
 # Non-software documentation, diagrams, reports & scratch scripts
+scratch/
 Thiết kế/
 SƠ ĐỒ/
 Sơ đồ bản mới nhất/

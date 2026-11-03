@@ -1,171 +1,412 @@
-import { useMemo, useState } from "react";
-import { PageControls } from "./ux.jsx";
-import { ResourceState, useResource } from "./ui.jsx";
-import { roles } from "../domain.js";
-import { buildAccessMatrix } from "../accessMatrix.js";
+import { useState, useEffect } from "react";
+import { api } from "../api.js";
+import { PageHeader } from "./design.jsx";
 
-const methodOrder = ["GET", "POST", "PATCH", "DELETE"];
+export function ApiAdministration() {
+  const [apis, setApis] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [toast, setToast] = useState(null);
 
-function Method({ name }) {
-  return <span className={`api-method api-${name.toLowerCase()}`}>{name}</span>;
-}
+  // Payload modal state
+  const [viewingPayload, setViewingPayload] = useState(null);
 
-function Info({ name, value }) {
-  return <article className="api-overview-stat"><span>{name}</span><strong>{value}</strong></article>;
-}
+  // Circuit breaker confirmation modal
+  const [confirmToggleApi, setConfirmToggleApi] = useState(null);
+  const [toggling, setToggling] = useState(false);
 
-function Matrix({ data, endpoints = [], catalogLoading = false, catalogError = "" }) {
-  const [focusRole, setFocusRole] = useState("");
-  const [focusDomain, setFocusDomain] = useState("");
-  const [selection, setSelection] = useState(null);
-  const matrix = useMemo(() => buildAccessMatrix(data?.items || [], endpoints), [data, endpoints]);
-  const columns = focusDomain ? matrix.domains.filter((name) => name === focusDomain) : matrix.domains;
-  const rows = focusRole ? matrix.rows.filter((item) => item.role === focusRole) : matrix.rows;
-  const selectedRole = (data?.items || []).find((item) => item.role === (selection?.role || focusRole)) || (data?.items || [])[0];
-  const selectedCell = selection && matrix.rows.find((row) => row.role === selection.role)?.cells.find((cell) => cell.domain === selection.domain);
-  return <section className="access-matrix-layout" aria-label="Biểu đồ ma trận phân quyền">
-    <div className="access-matrix-heading">
-      <div><p className="eyebrow">BẢN ĐỒ PHÂN QUYỀN</p><h2>Vai trò × nhóm nghiệp vụ</h2>
-        <p className="muted">Mỗi ô thể hiện số endpoint có khai báo vai trò trực tiếp trong danh mục API. Chọn một ô để xem chi tiết.</p></div>
-      <div className="access-matrix-legend" aria-label="Chú giải biểu đồ">
-        <span><i className="access-key access-none"/>Chưa khai báo</span><span><i className="access-key access-read"/>Chỉ đọc</span>
-        <span><i className="access-key access-write"/>Thao tác</span><span><i className="access-key access-both"/>Cả hai</span>
-      </div>
-    </div>
-    <div className="access-matrix-filters">
-      <label>Vai trò
-        <select value={focusRole} onChange={(e) => { setFocusRole(e.target.value); setSelection(null); }}><option value="">Cả 7 vai trò</option>
-          {(data?.items || []).map((item) => <option value={item.role} key={item.role}>{item.name}</option>)}
-        </select>
-      </label>
-      <label>Nhóm nghiệp vụ
-        <select value={focusDomain} onChange={(e) => {setFocusDomain(e.target.value);setSelection(null);}}><option value="">Tất cả nhóm</option>
-          {matrix.domains.map((domain) => <option key={domain} value={domain}>{domain}</option>)}
-        </select>
-      </label>
-      {(focusRole || focusDomain) && <button className="secondary" type="button" onClick={() => {setFocusRole("");setFocusDomain("");setSelection(null);}}>Đặt lại bộ lọc</button>}
-    </div>
-    {catalogLoading ? <output>Đang tải danh mục API để lập biểu đồ…</output> : catalogError ?
-      <p className="error" role="alert">Không tải được danh mục endpoint để lập biểu đồ: {catalogError}</p> : matrix.domains.length ? <>
-      <div className="access-matrix-scroll" aria-label="Bảng ma trận phân quyền, cuộn ngang để xem đủ cột">
-        <table className="access-matrix-heatmap" style={{minWidth: `${155 + columns.length * 116}px`}}>
-          <thead><tr><th scope="col">Vai trò</th>{columns.map((domain) => <th scope="col" key={domain}>{domain}</th>)}</tr></thead>
-          <tbody>{rows.map((row) => <tr key={row.role}>
-            <th scope="row"><strong>{row.name}</strong><small>{row.role}</small></th>
-            {row.cells.filter((cell) => columns.includes(cell.domain)).map((cell) =>
-              <td key={cell.domain}><button type="button" className={`access-matrix-cell access-${cell.kind} ${selection?.role === row.role && selection?.domain === cell.domain ? "is-focused" : ""}`}
-                aria-pressed={selection?.role === row.role && selection?.domain === cell.domain}
-                title={`${row.name} · ${cell.domain}: ${cell.reads} GET, ${cell.writes} thao tác`}
-                aria-label={`${row.name} / ${cell.domain}: ${cell.reads} endpoint đọc, ${cell.writes} endpoint thao tác`}
-                onClick={() => setSelection({role: row.role, domain: cell.domain})}>
-                <strong>{cell.count || "—"}</strong>{cell.count > 0 && <small>{cell.reads ? `${cell.reads} đọc` : ""}{cell.reads && cell.writes ? " · " : ""}{cell.writes ? `${cell.writes} ghi` : ""}</small>}
-              </button></td>)}
-          </tr>)}</tbody>
-        </table>
-      </div>
-      <p className="access-matrix-disclaimer">Chỉ phản ánh hợp đồng API; <strong>không phải quyền hiệu lực của từng tài khoản</strong>. Vai trò tổng quát như PARTICIPANT/AUTHENTICATED chưa được quy thành quyền trực tiếp. Ô trống không đồng nghĩa bị cấm tuyệt đối. Backend vẫn kiểm tra phiên, scope, actor, trạng thái và SoD.</p>
-    </> : <output>Chưa có endpoint gán trực tiếp cho các vai trò trong danh mục API.</output>}
-    {selectedCell && <div className="access-matrix-drilldown" role="region" aria-label="Chi tiết nhóm quyền đã chọn">
-      <div className="section-head"><div><p className="eyebrow">CHI TIẾT Ô MA TRẬN</p><h3>{roles[selectedCell.role] || selectedCell.role} · {selectedCell.domain}</h3><p className="muted">{selectedCell.reads} endpoint GET · {selectedCell.writes} endpoint thao tác</p></div>
-        <button className="secondary" type="button" onClick={() => setSelection(null)}>Đóng chi tiết</button></div>
-      {selectedCell.endpoints.length ? <div className="access-matrix-endpoints">{selectedCell.endpoints.map((endpoint) => <div className="access-matrix-endpoint" key={`${endpoint.method}:${endpoint.path}`}><Method name={endpoint.method}/><div><code>{endpoint.path}</code><span>{endpoint.purpose}</span><small>{endpoint.protection}</small></div></div>)}</div> : <p className="muted">Danh mục API chưa khai báo endpoint trực tiếp cho cặp vai trò và nhóm này.</p>}
-    </div>}
-    {selectedRole && <div className="access-matrix-role-detail"><div className="section-head"><h3>Quy tắc nghiệp vụ · {selectedRole.name}</h3><small>{selectedRole.uc}</small></div>
-      <dl><div><dt>Phạm vi xem</dt><dd>{selectedRole.read}</dd></div><div><dt>Thao tác nghiệp vụ</dt><dd>{selectedRole.write}</dd></div><div><dt>Giới hạn bắt buộc</dt><dd>{selectedRole.constraints}</dd></div></dl>
-    </div>}
-    <div className="access-matrix-scope"><strong>Phạm vi cấp quyền: </strong>{data.scope_model}. {data.note}</div>
-  </section>;
-}
+  const showToast = (msg, type = "info") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
-function getReadyStatusText(loading, status) {
-  if (loading) {
-    return "Đang kiểm tra";
-  }
-  return status === "ready" ? "READY" : "Chưa xác nhận";
-}
+  const loadApis = async (silent = false) => {
+    try {
+      const res = await api("/api/v1/admin/mock-apis");
+      setApis(res.apis || []);
+    } catch (err) {
+      if (!silent) showToast("Không thể tải danh sách API: " + (err.message || ""), "error");
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
 
-export default function ApiAdministration() {
-  const [tab, setTab] = useState("endpoints");
-  const [query, setQuery] = useState("");
-  const [domain, setDomain] = useState("");
-  const [method, setMethod] = useState("");
-  const [role, setRole] = useState("");
-  const [limit, setLimit] = useState(20);
-  const [offset, setOffset] = useState(0);
-  const catalog = useResource("/api/v1/admin/api-catalog");
-  const matrix = useResource("/api/v1/admin/access-matrix");
-  const ready = useResource("/health/ready");
-  const items = useMemo(() => catalog.data?.items || [], [catalog.data]);
-  const domains = useMemo(() => [...new Set(items.map((i) => i.domain))].sort((a, b) => String(a).localeCompare(String(b), "vi")), [items]);
-  const filtered = useMemo(() => items.filter((item) => {
-    const needle = query.trim().toLocaleLowerCase("vi");
-    return (!needle || [item.path, item.purpose, item.uc, item.protection].some((part) => part.toLocaleLowerCase("vi").includes(needle)))
-      && (!domain || item.domain === domain) && (!method || item.method === method)
-      && (!role || item.roles.includes(role));
-  }), [items, query, domain, method, role]);
-  const [prevFilterKey, setPrevFilterKey] = useState("");
-  const filterKey = `${query}|${domain}|${method}|${role}`;
-  if (filterKey !== prevFilterKey) {
-    setPrevFilterKey(filterKey);
-    setOffset(0);
-  }
-  const visible = filtered.slice(offset, offset + limit);
-  const total = filtered.length;
-  const verbs = methodOrder.map((name) => [name, items.filter((x) => x.method === name).length]);
-  return <>
-    <header className="page-heading api-title"><div><p className="eyebrow">QUẢN TRỊ HỆ THỐNG</p><h1>Quản lý API & ma trận quyền</h1>
-      <p className="muted">Danh mục dịch vụ, phân quyền truy cập và tình trạng hoạt động của hệ thống. Quyền thực tế luôn được bảo vệ tại Backend.</p></div>
-      <span className="api-readonly">CHỈ ĐỌC CẤU HÌNH API</span>
-    </header>
-    <section className="api-overview-grid" aria-label="Thông tin API">
-      <Info name="Endpoint có trong danh mục" value={items.length || "—"}/>
-      <Info name="Nhóm nghiệp vụ" value={domains.length || "—"}/>
-      <Info name="Vai trò hệ thống" value={matrix.data?.items?.length || 7}/>
-      <article className="api-overview-stat"><span>Backend readiness</span>
-        <strong className={ready.data?.status === "ready" ? "api-ok" : "api-alert"}>{getReadyStatusText(ready.loading, ready.data?.status)}</strong>
-        {ready.error && <small>{ready.error}</small>}
-      </article>
-    </section>
-    <div className="tabs" role="tablist" aria-label="Quản lý API">
-      <button type="button" role="tab" aria-selected={tab === "endpoints"} className={tab === "endpoints" ? "active" : "secondary"} onClick={() => setTab("endpoints")}>Danh mục API</button>
-      <button type="button" role="tab" aria-selected={tab === "matrix"} className={tab === "matrix" ? "active" : "secondary"} onClick={() => setTab("matrix")}>Ma trận phân quyền</button>
-      <button type="button" role="tab" aria-selected={tab === "health"} className={tab === "health" ? "active" : "secondary"} onClick={() => setTab("health")}>Giám sát API</button>
-    </div>
-    {tab === "endpoints" && <section className="panel" id="api-results">
-      <div className="section-head"><div><h2>Danh mục API đang quản lý</h2><p className="muted">{catalog.data?.contract ? `${catalog.data.contract} · ` : ""}Quản lý và giám sát danh mục API nội bộ.</p></div></div>
-      <ResourceState resource={catalog}>
-        <div className="api-filter-grid">
-          <label>Tìm dịch vụ API<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nhập đường dẫn hoặc chức năng" aria-label="Tìm kiếm endpoint" /></label>
-          <label>Nhóm nghiệp vụ<select value={domain} onChange={(e) => setDomain(e.target.value)}><option value="">Tất cả nhóm</option>{domains.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-          <label>Phương thức<select value={method} onChange={(e) => setMethod(e.target.value)}><option value="">Mọi phương thức</option>{verbs.map(([name, n]) => <option key={name} value={name}>{name} ({n})</option>)}</select></label>
-          <label>Vai trò<select value={role} onChange={(e) => setRole(e.target.value)}><option value="">Mọi vai trò</option>{matrix.data?.items?.map((item) => <option key={item.role} value={item.role}>{roles[item.role] || item.role}</option>)}</select></label>
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
+    loadApis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleToggleClick = (apiItem) => {
+    if (apiItem.is_enabled) {
+      // Confirming DISABLING an API (Circuit Breaker)
+      setConfirmToggleApi(apiItem);
+    } else {
+      // Re-enabling directly
+      executeToggle(apiItem);
+    }
+  };
+
+  const executeToggle = async (apiItem) => {
+    setToggling(true);
+    try {
+      const res = await api(`/api/v1/admin/mock-apis/${apiItem.id}/toggle`, {
+        method: "PATCH",
+      });
+      showToast(res.message || "Đã cập nhật trạng thái kết nối API!", "success");
+      setConfirmToggleApi(null);
+      loadApis(true);
+    } catch (err) {
+      showToast("Lỗi khi điều khiển Circuit Breaker: " + (err.message || ""), "error");
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  const filteredApis = apis.filter((a) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      a.api_name?.toLowerCase().includes(q) ||
+      a.api_code?.toLowerCase().includes(q) ||
+      a.source_system?.toLowerCase().includes(q) ||
+      a.endpoint_path?.toLowerCase().includes(q) ||
+      a.data_provided?.toLowerCase().includes(q)
+    );
+  });
+
+  const totalApis = apis.length;
+  const enabledCount = apis.filter((a) => a.is_enabled).length;
+  const disabledCount = totalApis - enabledCount;
+  const circuitBreakerActive = disabledCount > 0;
+
+  // Calculate total affected request types
+  const affectedRequestsCount = apis
+    .filter((a) => !a.is_enabled)
+    .reduce((acc, curr) => acc + (curr.linked_count || 0), 0);
+
+  return (
+    <div className="page-container api-admin-page">
+      <PageHeader
+        eyebrow="HỆ THỐNG"
+        title="Quản lý API & Circuit Breaker"
+        description="Giám sát 8 kết nối API nội bộ (HR, Finance, IT, CRM, Assets, Facilities, Procurement, Travel), xem cấu trúc dữ liệu JSON và điều khiển ngắt mạch kết nối (Circuit Breaker)."
+      />
+
+      {/* Top 3 Meta Cards */}
+      <div className="eas-meta-cards-row">
+        <div className="eas-meta-stat-card">
+          <div className="eas-meta-stat-header">
+            <span className="eas-meta-stat-label">Tổng số kết nối API</span>
+            <span className="eas-badge-neutral">{totalApis} Hệ thống</span>
+          </div>
+          <div className="eas-meta-stat-value">{totalApis} API</div>
+          <div className="eas-meta-stat-sub">Đồng bộ dữ liệu ngữ cảnh với AI Engine</div>
         </div>
-        <div className="api-result-summary"><strong>{total} endpoint</strong> phù hợp bộ lọc · Quyền truy cập được xác minh khi gửi yêu cầu tới máy chủ.</div>
-        <div className="table-wrap"><table className="responsive-records api-table"><thead><tr><th>Phương thức</th><th>API / Mục đích</th><th>Vai trò</th><th>Quy tắc bảo vệ</th></tr></thead><tbody>
-          {visible.map((item) => <tr key={`${item.method}-${item.path}`}>
-            <td data-label="Phương thức"><Method name={item.method}/></td>
-            <td data-label="Endpoint"><div className="api-endpoint"><code>{item.path}</code><strong>{item.purpose}</strong><small>{item.domain}</small></div></td>
-            <td data-label="Vai trò"><div className="api-role-list">{item.roles.map((r) => <span key={r} className="api-role-chip">{r}</span>)}</div></td>
-            <td data-label="Bảo vệ"><span className="muted">{item.protection}</span></td>
-          </tr>)}
-        </tbody></table></div>
-        {total === 0 && <p className="empty">Không tìm thấy API nào phù hợp với bộ lọc hiện tại.</p>}
-        <PageControls offset={offset} limit={limit} count={visible.length} nextOffset={offset + limit < total ? offset + limit : null} onPage={setOffset} onLimit={(v) => { setLimit(v); setOffset(0); }} title="API" targetId="api-results"/>
-      </ResourceState>
-    </section>}
-    {tab === "matrix" && <ResourceState resource={matrix}><Matrix data={matrix.data} endpoints={items} catalogLoading={catalog.loading} catalogError={catalog.error}/></ResourceState>}
-    {tab === "health" && <section className="panel api-health-panel"><div className="section-head"><div><h2>Kiểm tra trạng thái Backend</h2><p className="muted">Đọc trực tiếp /health/ready; mỗi dấu kiểm lấy từ Backend đang chạy, không sử dụng dữ liệu minh họa.</p></div><button className="secondary" type="button" onClick={ready.reload}>Kiểm tra lại</button></div>
-      <ResourceState resource={ready}>
-        <div className="api-health-summary"><span className={ready.data?.status === "ready" ? "api-health-light success" : "api-health-light"}/><strong>{ready.data?.status === "ready" ? "Dịch vụ sẵn sàng" : "Dịch vụ chưa sẵn sàng"}</strong></div>
-        <div className="api-check-grid">{Object.entries(ready.data?.checks || {}).map(([key, value]) => <div className="api-check" key={key}><span aria-hidden="true">{value ? "✓" : "!"}</span><code>{key}</code><strong>{value ? "PASS" : "FAIL"}</strong></div>)}</div>
-        {ready.data?.catalog && <output className="api-inline-note">
-          <strong>Danh mục yêu cầu:</strong> {ready.data.catalog.active_type_count} loại đang bật; <strong>{ready.data.catalog.unconfigured_active_type_count} loại thiếu quy chế PUBLISHED</strong>.
-          {ready.data.catalog.unconfigured_active_type_count > 0
-            ? " Các loại này sẽ chưa được phép tạo/gửi đơn cho đến khi Policy Admin công bố release hợp lệ; các loại đã cấu hình vẫn hoạt động."
-            : " Tất cả loại đang bật đều có release hợp lệ."}
-        </output>}
-      </ResourceState>
-    </section>}
-    <div className="api-inline-note" role="note"><strong>Chính sách an toàn:</strong> Danh mục API và ma trận phân quyền tuân thủ nguyên tắc đặc quyền tối thiểu (Least Privilege). Việc thay đổi quyền hạn được kiểm soát tập trung qua phân hệ Quản trị Danh tính.</div>
-  </>;
+
+        <div className={`eas-meta-stat-card ${circuitBreakerActive ? "warning-border" : "success-border"}`}>
+          <div className="eas-meta-stat-header">
+            <span className="eas-meta-stat-label">Trạng thái Circuit Breaker</span>
+            {circuitBreakerActive ? (
+              <span className="eas-badge-danger pulse">ĐÃ KÍCH HOẠT ({disabledCount} BỊ NGẮT)</span>
+            ) : (
+              <span className="eas-badge-success">TẤT CẢ KẾT NỐI HOẠT ĐỘNG (8/8)</span>
+            )}
+          </div>
+          <div className="eas-meta-stat-value">
+            {circuitBreakerActive ? `${enabledCount}/${totalApis} Bật` : "100% Online"}
+          </div>
+          <div className="eas-meta-stat-sub">
+            {circuitBreakerActive
+              ? `Có ${disabledCount} kết nối API bị tắt. Các yêu cầu liên quan bị tạm ngưng.`
+              : "Toàn bộ API thông suốt, dữ liệu biểu mẫu nạp bình thường."}
+          </div>
+        </div>
+
+        <div className={`eas-meta-stat-card ${affectedRequestsCount > 0 ? "warning-border" : ""}`}>
+          <div className="eas-meta-stat-header">
+            <span className="eas-meta-stat-label">Mẫu yêu cầu chịu ảnh hưởng</span>
+            {affectedRequestsCount > 0 ? (
+              <span className="eas-badge-warning">{affectedRequestsCount} mẫu bị khóa</span>
+            ) : (
+              <span className="eas-badge-neutral">0 mẫu bị khóa</span>
+            )}
+          </div>
+          <div className="eas-meta-stat-value">{affectedRequestsCount}</div>
+          <div className="eas-meta-stat-sub">
+            {affectedRequestsCount > 0
+              ? "Người dùng tại web_client bị khóa nút gửi đối với các mẫu này."
+              : "Tất cả các loại yêu cầu có thể tạo và gửi bình thường."}
+          </div>
+        </div>
+      </div>
+
+      {/* Active Circuit Breaker Notice Banner */}
+      {circuitBreakerActive && (
+        <div className="circuit-breaker-active-banner">
+          <div className="cb-banner-icon">⚡</div>
+          <div className="cb-banner-content">
+            <strong>CẢNH BÁO CIRCUIT BREAKER ĐANG KÍCH HOẠT:</strong>
+            <p>
+              Có <strong>{disabledCount} API</strong> đang bị ngắt kết nối. Toàn bộ <strong>{affectedRequestsCount} mẫu yêu cầu</strong> liên quan đã tự động chuyển sang trạng thái <strong>Tạm ngưng</strong> trên cả Web Client và Web Admin với thông báo rõ ràng cho người dùng.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Search Toolbar */}
+      <div className="api-admin-toolbar">
+        <div className="api-search-wrapper">
+          <span className="api-search-icon">🔍</span>
+          <input
+            type="text"
+            className="eas-input"
+            placeholder="Tìm kiếm theo tên API, endpoint, hệ thống nguồn..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="api-status-summary-pills">
+          <span className="status-pill active-pill">🟢 Đang bật: {enabledCount}</span>
+          {disabledCount > 0 && (
+            <span className="status-pill disabled-pill">🔴 Đã ngắt: {disabledCount}</span>
+          )}
+        </div>
+      </div>
+
+      {/* API Cards List */}
+      <div className="api-cards-container">
+        {loading ? (
+          <div className="eas-empty-state">
+            <div className="eas-spinner"></div>
+            <p>Đang tải danh mục kết nối API...</p>
+          </div>
+        ) : filteredApis.length === 0 ? (
+          <div className="eas-empty-state">
+            <span className="empty-icon">🔌</span>
+            <p>Không tìm thấy API nào phù hợp.</p>
+          </div>
+        ) : (
+          <div className="api-cards-grid">
+            {filteredApis.map((apiItem) => {
+              const isEnabled = apiItem.is_enabled;
+              return (
+                <div
+                  key={apiItem.id}
+                  className={`api-card ${isEnabled ? "api-card-enabled" : "api-card-disabled"}`}
+                >
+                  <div className="api-card-topbar">
+                    <div className="api-system-info">
+                      <span className="api-system-badge">{apiItem.source_system}</span>
+                      <span className="api-code-tag">{apiItem.api_code}</span>
+                    </div>
+
+                    {/* Circuit Breaker Toggle Switch */}
+                    <div className="circuit-breaker-toggle-wrap">
+                      <label className="cb-switch" title={isEnabled ? "Bấm để ngắt kết nối (Circuit Breaker)" : "Bấm để kích hoạt lại kết nối"} aria-label={isEnabled ? "Bấm để ngắt kết nối (Circuit Breaker)" : "Bấm để kích hoạt lại kết nối"}>
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={() => handleToggleClick(apiItem)}
+                          disabled={toggling}
+                        />
+                        <span className="cb-slider round"></span>
+                      </label>
+                      <span className={`cb-status-label ${isEnabled ? "status-on" : "status-off"}`}>
+                        {isEnabled ? "BẬT" : "NGẮT"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <h3 className="api-card-name">{apiItem.api_name}</h3>
+
+                  <div className="api-endpoint-box">
+                    <span className="api-method-badge">{apiItem.http_method || "GET"}</span>
+                    <code className="api-endpoint-code">{apiItem.endpoint_path}</code>
+                  </div>
+
+                  <div className="api-data-provided">
+                    <span className="data-provided-label">Dữ liệu cung cấp:</span>
+                    <p className="data-provided-desc">{apiItem.data_provided}</p>
+                  </div>
+
+                  {/* Linked Request Templates */}
+                  <div className="api-linked-requests">
+                    <div className="linked-requests-header">
+                      <span>Mẫu yêu cầu sử dụng API này ({apiItem.linked_count || 0}):</span>
+                    </div>
+                    <div className="linked-request-chips">
+                      {apiItem.linked_requests && apiItem.linked_requests.length > 0 ? (
+                        apiItem.linked_requests.map((r) => (
+                          <span
+                            key={r.code}
+                            className={`linked-chip ${isEnabled ? "" : "chip-disabled"}`}
+                            title={isEnabled ? `Mẫu: ${r.name}` : `[TẠM NGƯNG] ${r.name}`}
+                          >
+                            {!isEnabled && <span className="disabled-icon">⚠️ </span>}
+                            {r.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="no-linked-chip">Chưa có mẫu nào liên kết</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Footer Actions */}
+                  <div className="api-card-footer">
+                    <span className="api-circuit-indicator">
+                      {isEnabled ? (
+                        <span className="status-dot green"></span>
+                      ) : (
+                        <span className="status-dot red"></span>
+                      )}
+                      {isEnabled ? "Kết nối thông suốt" : "Circuit Breaker: Tạm ngưng"}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="btn-action btn-view-payload"
+                      onClick={() => setViewingPayload(apiItem)}
+                    >
+                      👁 Xem thử JSON Payload
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* MODAL: Xem thử JSON Payload Mẫu */}
+      {viewingPayload && (
+        <div className="eas-modal-overlay">
+          <div className="eas-modal-card json-viewer-modal">
+            <div className="eas-modal-header">
+              <div>
+                <h3>Cấu trúc dữ liệu JSON mẫu: {viewingPayload.api_code}</h3>
+                <span className="api-system-badge">{viewingPayload.source_system}</span>
+              </div>
+              <button
+                type="button"
+                className="eas-modal-close"
+                onClick={() => setViewingPayload(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="eas-modal-body">
+              <div className="json-endpoint-meta">
+                <span className="api-method-badge">{viewingPayload.http_method || "GET"}</span>
+                <code>{viewingPayload.endpoint_path}</code>
+              </div>
+
+              <div className="json-viewer-container">
+                <pre className="json-code-block">
+                  {JSON.stringify(viewingPayload.mock_payload || { status: "OK", source: viewingPayload.api_code }, null, 2)}
+                </pre>
+              </div>
+
+              <p className="json-viewer-note">
+                Dữ liệu trên là snapshot mẫu từ <code>ai_service/data/mock/</code> được AI Engine nạp làm ngữ cảnh để chấm điểm rủi ro và xác thực điều kiện phê duyệt.
+              </p>
+            </div>
+
+            <div className="eas-modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  navigator.clipboard?.writeText(JSON.stringify(viewingPayload.mock_payload || {}, null, 2));
+                  showToast("Đã sao chép JSON payload vào bộ nhớ tạm!", "info");
+                }}
+              >
+                📋 Sao chép JSON
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setViewingPayload(null)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Xác nhận ngắt kết nối API (Circuit Breaker) */}
+      {confirmToggleApi && (
+        <div className="eas-modal-overlay">
+          <div className="eas-modal-card danger-modal">
+            <div className="eas-modal-header">
+              <h3>Xác nhận Ngắt kết nối API (Circuit Breaker)</h3>
+              <button
+                type="button"
+                className="eas-modal-close"
+                onClick={() => setConfirmToggleApi(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="eas-modal-body">
+              <div className="circuit-breaker-warning-box">
+                <span className="cb-warn-icon">⚠️</span>
+                <div className="cb-warn-text">
+                  <strong>CẢNH BÁO TẠM NGƯNG YÊU CẦU:</strong>
+                  <p>
+                    Ngắt kết nối <strong>{confirmToggleApi.api_name}</strong> ({confirmToggleApi.source_system}) sẽ khiến toàn bộ <strong>{confirmToggleApi.linked_count || 0} mẫu yêu cầu</strong> liên quan chuyển sang trạng thái <strong>Tạm ngưng</strong> trên cả Web Admin và Web Client!
+                  </p>
+                </div>
+              </div>
+
+              <div className="affected-requests-preview">
+                <span className="preview-label">Các mẫu đơn sẽ bị khóa nút gửi:</span>
+                <ul>
+                  {(confirmToggleApi.linked_requests || []).map((r) => (
+                    <li key={r.code}>
+                      <strong>{r.name}</strong> <code>({r.code})</code>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <p className="cb-confirm-question">
+                Bạn có chắc chắn muốn ngắt kết nối API này không?
+              </p>
+            </div>
+
+            <div className="eas-modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setConfirmToggleApi(null)}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={() => executeToggle(confirmToggleApi)}
+                disabled={toggling}
+              >
+                {toggling ? "Đang xử lý..." : "Xác nhận Ngắt kết nối (Tắt API)"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`eas-toast-notification ${toast.type}`}>
+          {toast.msg}
+        </div>
+      )}
+    </div>
+  );
 }
+
+export default ApiAdministration;

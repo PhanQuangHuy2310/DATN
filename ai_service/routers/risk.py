@@ -327,7 +327,7 @@ def build_feature_vector(
     response_model=RiskResult,
     summary="Chấm điểm rủi ro thông minh (Multi-Domain XGBoost)",
 )
-async def score_risk(body: RiskInput):
+def score_risk(body: RiskInput):
     """
     Tự động chọn mô hình XGBoost phù hợp theo domain nghiệp vụ của yêu cầu:
     - **Finance** (advance_payment, contract_payment, ...): mô hình phát hiện gian lận tài chính

@@ -87,7 +87,18 @@ export default function RequestTypeMenu({ options = [], onSelect, disabled = fal
             return (
               <div className={`request-menu-option ${item.available ? "is-live" : "is-pending"}`} key={`${item.group}:${item.code}:${index}`}>
                 <div className="request-menu-option-main">
-                  <div className="request-menu-option-title"><strong>{item.label}</strong><span className={`request-menu-state ${item.available ? "enabled" : "pending"}`}>{item.available ? "Có thể tạo" : "Chưa kích hoạt"}</span></div>
+                  <div className="request-menu-option-title">
+                    <strong>{item.label}</strong>
+                    {item.isBlocked ? (
+                      <span className="request-menu-state" style={{ background: "#FEF2F2", color: "#DC2626", borderColor: "#FECACA" }}>
+                        ⚠️ Tạm ngưng (API tắt)
+                      </span>
+                    ) : (
+                      <span className={`request-menu-state ${item.available ? "enabled" : "pending"}`}>
+                        {item.available ? "Có thể tạo" : "Chưa kích hoạt"}
+                      </span>
+                    )}
+                  </div>
                   <p>{item.description || "Biểu mẫu theo quy chế được công bố"}</p>
                   <div className="request-menu-option-meta">
                     <span>{item.group || "Khác"}</span>
@@ -98,9 +109,10 @@ export default function RequestTypeMenu({ options = [], onSelect, disabled = fal
                   </div>
                   {!item.available && <small className="request-menu-warning">{item.disabled_reason || "Chưa công bố quy chế hoặc chưa được cấp quyền"}</small>}
                 </div>
-                <button type="button" disabled={disabled || !item.available} className={item.available ? "" : "secondary"}
-                  onClick={() => onSelect(item)} aria-label={`Chọn biểu mẫu ${item.label}`}>
-                  {item.available ? "Chọn biểu mẫu →" : "Chưa khả dụng"}
+                <button type="button" disabled={disabled || !item.available || item.isBlocked} className={item.available && !item.isBlocked ? "" : "secondary"}
+                  onClick={() => onSelect(item)} aria-label={`Chọn biểu mẫu ${item.label}`}
+                  title={item.isBlocked ? item.blockedNotice || "Tạm ngưng do API liên quan bị tắt" : undefined}>
+                  {item.isBlocked ? "Tạm ngưng (API tắt)" : item.available ? "Chọn biểu mẫu →" : "Chưa khả dụng"}
                 </button>
               </div>
             );

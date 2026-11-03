@@ -1,8 +1,9 @@
 import { Suspense, lazy, useEffect, useState } from "react";
+import { PermissionProvider } from "./hooks/usePermission.jsx";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
-import { canNavigate, canUsePortal } from "./rolePolicy.js";
+import { ADMIN_ROLES, canNavigate, canUsePortal } from "./rolePolicy.js";
 import { PERMISSIONS_CHANGED, createRefresher } from "./sessionRefresh.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
@@ -17,6 +18,7 @@ import ClientDashboard from "./components/ClientDashboard.jsx";
 import ClientRequests from "./components/ClientRequests.jsx";
 import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
 import { Notifications, Profile } from "./components/Admin.jsx";
+import { SystemUpdateDialog, SystemUpdateHistory } from "./components/SystemUpdates.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
 
 function AdminDashboard(props) {
@@ -55,7 +57,7 @@ function getRealtimeGreeting() {
   return "Chào buổi tối!";
 }
 
-function Login({ onLogin, portal = "client" }) {
+function Login({ onLogin, portal = "client", aiStatus }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -100,17 +102,39 @@ function Login({ onLogin, portal = "client" }) {
   async function submit(e) {
     e.preventDefault();
     const values = Object.fromEntries(new FormData(e.currentTarget));
+    const email = String(values.email || "").trim().toLowerCase();
+
+    // Strict portal separation check
+    if (portal === "admin") {
+      if (email !== "admin@eas.com") {
+        setError("Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).");
+        return;
+      }
+    } else if (portal === "client") {
+      if (email === "admin@eas.com") {
+        setError("Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).");
+        return;
+      }
+      if (aiStatus?.client_maintenance_lock) {
+        setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật hoàn tất.`);
+        return;
+      }
+    }
+
     setBusy(true);
     setError("");
     try {
       await initializeCsrf();
       const result = await api("/api/v1/auth/login", {
         method: "POST",
-        body: JSON.stringify(values),
+        headers: { "X-EAS-Portal": portal },
+        body: JSON.stringify({ ...values, email, portal }),
       });
       await onLogin(result.user);
     } catch (err) {
-      if (err?.code === "INVALID_CREDENTIALS" || err?.message?.includes("INVALID_CREDENTIALS") || String(err?.code).includes("CREDENTIALS") || err?.status === 401) {
+      if (err?.serverMessage) {
+        setError(err.serverMessage);
+      } else if (err?.code === "INVALID_CREDENTIALS" || err?.message?.includes("INVALID_CREDENTIALS") || String(err?.code).includes("CREDENTIALS") || err?.status === 401) {
         setError("Thông tin đăng nhập không hợp lệ.");
       } else {
         setError(errorText(err));
@@ -135,9 +159,6 @@ function Login({ onLogin, portal = "client" }) {
         </div>
 
         <div className="auth-hero-content">
-          <div className="auth-hero-brand">
-            <img src="/logo_white.png" alt="EAS Logo" className="auth-hero-logo-img" />
-          </div>
           <h1 className="auth-hero-title">
             {portal === "admin" ? "Enterprise Admin" : "Enterprise Approval"}
           </h1>
@@ -243,11 +264,15 @@ function Login({ onLogin, portal = "client" }) {
 
               <button
                 type="submit"
-                disabled={busy}
+                disabled={busy || (portal === "client" && aiStatus?.client_maintenance_lock)}
                 className="auth-btn-primary"
                 aria-label="Đăng nhập"
               >
-                {busy ? "Đang xác thực…" : "Đăng nhập"}
+                {busy
+                  ? "Đang xác thực…"
+                  : (portal === "client" && aiStatus?.client_maintenance_lock)
+                  ? `Hệ thống đang bảo trì (${aiStatus?.progress_percent ?? 0}%)`
+                  : "Đăng nhập"}
               </button>
 
               <button
@@ -343,6 +368,8 @@ const menu = [
   ["request-catalog", "Danh mục yêu cầu", "▤"],
   ["policy", "Quy chế & quy trình", "⚙"],
   ["ai-policy", "Bộ luật quy định AI", "✧"],
+  ["ai-rules", "Luật AI thủ công", "✧"],
+  ["release-workspace", "Phiên bản cấu hình quy trình", "⚙"],
   ["sla", "SLA & thông báo", "◷"],
   ["audit", "Nhật ký kiểm toán", "⌕"],
   ["system", "Cấu hình hệ thống", "⛭"],
@@ -352,7 +379,83 @@ const menu = [
   ["api-admin", "Quản lý API", "⌘"],
   ["events", "Nhật ký quản trị", "≡"],
 ];
-const ADMIN_LABELS = { home: "Tổng quan hệ thống", team: "Báo cáo phòng ban" };
+export function pageToModuleCode(key, portal = "admin") {
+  // Employee-portal pages that share a key with an admin module (AI guide,
+  // department roster) are governed by workflow roles, not admin modules.
+  if (portal !== "admin" && (key === "ai-process" || key === "team-employees")) return null;
+  switch (key) {
+    case "home":
+    case "dashboard":
+      return "dashboard";
+    case "mine":
+    case "requests_workflows":
+    case "request-catalog":
+    case "release-workspace":
+    case "ops":
+    case "approval":
+    case "execution":
+    case "acceptance":
+      return "requests_workflows";
+    case "org_chart":
+    case "org-chart":
+    case "org-client":
+    case "departments":
+      return "org_chart";
+    case "users":
+    case "identity":
+    case "team-employees":
+      return "users";
+    case "permissions":
+      return "permissions";
+    case "regulations":
+    case "policy":
+      return "regulations";
+    case "ai_engine":
+    case "ai-policy":
+    case "ai-process":
+    case "ai-rules":
+      return "ai_engine";
+    case "api_management":
+    case "api-admin":
+      return "api_management";
+    case "system_versions":
+    case "system":
+    case "sla":
+    case "audit":
+    case "events":
+      return "system_versions";
+    default:
+      return null;
+  }
+}
+
+const ADMIN_LABELS = {
+  home: "Tổng quan",
+  dashboard: "Tổng quan",
+  ops: "Theo dõi vận hành",
+  "request-catalog": "Yêu cầu & Quy trình",
+  requests_workflows: "Yêu cầu & Quy trình",
+  "org-chart": "Sơ đồ công ty",
+  org_chart: "Sơ đồ công ty",
+  departments: "Phòng ban",
+  users: "Người dùng",
+  identity: "Danh tính & phạm vi quyền",
+  "release-workspace": "Phiên bản cấu hình quy trình",
+  "ai-rules": "Luật AI thủ công",
+  permissions: "Phân quyền",
+  policy: "Quy định",
+  regulations: "Quy định",
+  "ai-policy": "Quản trị AI",
+  "ai-process": "Quản trị AI",
+  ai_engine: "Quản trị AI",
+  "api-admin": "Quản lý API",
+  api_management: "Quản lý API",
+  system: "Phiên bản hệ thống",
+  system_versions: "Phiên bản hệ thống",
+  sla: "Thông báo SLA",
+  audit: "Nhật ký kiểm toán",
+  team: "Báo cáo phòng ban",
+};
 const CLIENT_NAV = [
   ["Không gian cá nhân", ["home", "mine"]],
   ["Công việc được giao", ["approval", "execution", "acceptance", "delegations"]],
@@ -361,11 +464,19 @@ const CLIENT_NAV = [
   ["Tài khoản", ["profile"]],
 ];
 const ADMIN_NAV = [
+<<<<<<< HEAD
   ["Tổng quan", ["home", "ops"]],
   ["Người dùng & tổ chức", ["users", "departments", "permissions", "delegations", "org-chart"]],
   ["Cấu hình nghiệp vụ", ["request-catalog", "policy", "sla"]],
   ["Giám sát & kiểm toán", ["ai-process", "audit", "team"]],
   ["Hệ thống", ["system"]],
+=======
+  ["GIÁM SÁT", ["home"]],
+  ["LUỒNG CÔNG VIỆC", ["request-catalog"]],
+  ["TỔ CHỨC & NHÂN SỰ", ["org-chart", "users", "permissions"]],
+  ["TRI THỨC & AI", ["policy", "ai-policy"]],
+  ["HỆ THỐNG", ["api-admin", "system"]],
+>>>>>>> origin/main
 ];
 function pageLabel(key, portal) {
   return (portal === "admin" && ADMIN_LABELS[key]) || menu.find((m) => m[0] === key)?.[1] || "";
@@ -522,6 +633,15 @@ function renderNavIcon(key, fallback) {
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <circle cx="11.5" cy="14.5" r="2.5" />
           <path d="m16 18-2-2" />
+        </svg>
+      );
+    case "api-admin":
+      return (
+        <svg {...p}>
+          <rect x="2" y="2" width="20" height="8" rx="2" />
+          <rect x="2" y="14" width="20" height="8" rx="2" />
+          <line x1="6" y1="6" x2="6.01" y2="6" />
+          <line x1="6" y1="18" x2="6.01" y2="18" />
         </svg>
       );
     case "system":
@@ -795,6 +915,23 @@ function renderWorkspaceContent({
   searchText = "",
 }) {
   const canOpenAsAdmin = user.roles.includes("AUDITOR");
+  const mod = pageToModuleCode(page, portal);
+  if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
+    if (!user.permissions.by_module[mod].can_view) {
+      return (
+        <div className="access-denied-view panel" style={{ textAlign: "center", padding: "4rem 2rem", margin: "2rem auto", maxWidth: "600px" }}>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🚫</div>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Không có quyền truy cập</h2>
+          <p className="muted" style={{ marginBottom: "1.5rem" }}>
+            Tài khoản của bạn chưa được cấp quyền Xem cho chức năng <strong>{pageLabel(page, portal)}</strong>. Vui lòng liên hệ Quản trị viên để được cấp quyền.
+          </p>
+          <button type="button" className="primary" onClick={() => navigate("home")}>
+            Quay về trang Tổng quan
+          </button>
+        </div>
+      );
+    }
+  }
   if (editor) {
     return (
       <RequestEditor
@@ -824,7 +961,7 @@ function renderWorkspaceContent({
   }
   switch (page) {
     case "home":
-      if (portal === "admin") return user.roles.includes("OPS_ADMIN") ? <AdminDashboard navigate={navigate} /> : <AdminOverview navigate={navigate} user={user} />;
+      if (portal === "admin") return <AdminDashboard navigate={navigate} />;
       return portal === "client" ? (user.roles.includes("REQUESTER") ? <ClientDashboard navigate={navigate} onOpen={setSelected} user={user} /> : <AssignedWorkDashboard navigate={navigate} onOpen={setSelected} user={user}/>) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
     case "org-client":
       return <ClientOrgChart user={user} />;
@@ -841,18 +978,30 @@ function renderWorkspaceContent({
       return portal === "admin" ? <AdminScreen name="AuditLogPage" onOpen={setSelected} /> : <AdminScreen name="AuditorWorkspace" onOpen={(id) => setSelected(id)} />;
     case "events":
       return <AdminScreen name="AdminEvents" />;
-    case "identity":
     case "users":
-      return <AdminScreen name="IdentityAdmin" key="users" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />;
+      return <AdminScreen name="UserManagementPage" onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "identity":
+      return portal === "admin" ? (
+        <AdminScreen name="IdentityAdmin" key="identity" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />
+      ) : (
+        <AdminScreen name="UserManagementPage" onNavigateOrgChart={() => navigate("org-chart")} />
+      );
+    case "release-workspace":
+      return <AdminScreen name="PolicyWorkspace" canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />;
+    case "ai-rules":
+      return <AdminScreen name="AiPolicyAdmin" />;
     case "departments":
-      return <AdminScreen name="IdentityAdmin" key="departments" initialKind="departments" onNavigateOrgChart={() => navigate("org-chart")} />;
+      return <AdminScreen name="OrgChart" navigate={navigate} portal={portal} user={user} />;
     case "permissions":
-      return <AdminScreen name="IdentityAdmin" key="memberships" initialKind="memberships" onNavigateOrgChart={() => navigate("org-chart")} />;
+      return <AdminScreen name="RolePermissionMatrixPage" />;
     case "request-catalog":
-      return <AdminScreen name="IdentityAdmin" key="request-types" initialKind="request-types" />;
+    case "requests_workflows":
+      return <AdminScreen name="RequestWorkflowsPage" />;
     case "org-chart":
       return <AdminScreen name="OrgChart" navigate={navigate} portal={portal} user={user} />;
     case "api-admin":
+    case "mock_apis":
+    case "api_management":
       return <AdminScreen name="ApiAdministration" />;
     case "plan-catalog":
       return <AdminScreen name="PlanCatalog" />;
@@ -867,21 +1016,34 @@ function renderWorkspaceContent({
       return <AdminScreen name="SlaNotificationsPage" navigate={navigate} />;
 >>>>>>> 86172e9d9f550e4183a6abfffd2cfe3d13177dd5
     case "system":
-      return <AdminScreen name="SystemConfigPage" />;
+    case "system_versions":
+    case "versions":
+      return <AdminScreen name="SystemVersionsPage" />;
     case "ai-process":
-      return <AiProcessGuide user={user} portal={portal} onOpen={setSelected} navigate={navigate} />;
+    case "ai_engine":
+      return portal === "admin" ? (
+        <AdminScreen name="AiEngineManagementPage" />
+      ) : (
+        <AiProcessGuide user={user} portal={portal} onOpen={setSelected} navigate={navigate} />
+      );
     case "flow-diagrams":
       return <><PageHeader eyebrow="QUY TRÌNH" title="Sơ đồ luồng" description="Tra cứu các sơ đồ xử lý và vòng đời yêu cầu."/><WorkflowDiagrams /></>;
     case "policy":
+    case "regulations":
       return portal === "admin" ? (
-        <AdminScreen name="PolicyWorkspace" canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("permissions")} />
+        <AdminScreen name="RegulationsManagementPage" />
       ) : (
         <AdminScreen name="Policy" canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />
       );
     case "ai-policy":
-      return <AdminScreen name="AiPolicyAdmin" />;
+      return portal === "admin" ? <AdminScreen name="AiEngineManagementPage" /> : <AdminScreen name="AiPolicyAdmin" />;
     case "notifications":
-      return <Notifications onOpen={portal === "admin" && !canOpenAsAdmin ? undefined : setSelected} />;
+      return (
+        <>
+          <SystemUpdateHistory />
+          <Notifications onOpen={portal === "admin" && !canOpenAsAdmin ? undefined : setSelected} />
+        </>
+      );
     case "profile":
       return (
         <>
@@ -904,14 +1066,13 @@ function renderWorkspaceContent({
   }
 }
 
-const ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"];
 const navKeys = (groups) => groups.flatMap(([, keys]) => keys);
-const ADMIN_PAGES = new Set([...navKeys(ADMIN_NAV), "notifications"]);
+const ADMIN_PAGES = new Set([...navKeys(ADMIN_NAV), "ops", "sla", "audit", "identity", "departments", "notifications"]);
 const CLIENT_PAGES = new Set([...navKeys(CLIENT_NAV), "notifications"]);
 const UNIFIED_NAV = [...CLIENT_NAV, ...ADMIN_NAV.map(([group, keys]) => [group, keys.filter((key) => !navKeys(CLIENT_NAV).includes(key))])];
 
 /** Overview for administrators without OPS scope (policy admins, auditors). */
-function AdminOverview({ navigate, user }) {
+export function AdminOverview({ navigate, user }) {
   const tiles = [
     ["policy", "Quy chế & quy trình", "Soạn thảo biểu mẫu, luồng duyệt, SLA và công bố quy chế", "⚙"],
     ["audit", "Nhật ký kiểm toán", "Xác minh chuỗi nhật ký hồ sơ và tra cứu thay đổi quản trị", "⌕"],
@@ -933,7 +1094,7 @@ function AdminOverview({ navigate, user }) {
 function readFlag(key) { try { return window.localStorage.getItem(key) === "1"; } catch { return false; } }
 function writeFlag(key, value) { try { window.localStorage.setItem(key, value ? "1" : "0"); } catch { /* storage unavailable */ } }
 
-function Workspace({ user, onLogout, portal = "client" }) {
+function Workspace({ user, onLogout, portal = "client", theme = "light", toggleTheme = () => {} }) {
   const [page, setPage] = useState("home"),
     [selected, setSelected] = useState(null),
     [editor, setEditor] = useState(null),
@@ -956,6 +1117,10 @@ function Workspace({ user, onLogout, portal = "client" }) {
   function navigate(next, query = "") {
     if (!canNavigate(user.roles, next, user.capabilities)) return;
     if (!allowedPages.has(next)) return;
+    const mod = pageToModuleCode(next, portal);
+    if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
+      if (!user.permissions.by_module[mod].can_view) return;
+    }
     setPage(next);
     setSelected(null);
     setEditor(null);
@@ -981,13 +1146,15 @@ function Workspace({ user, onLogout, portal = "client" }) {
   }
   const primaryRole = getPrimaryRoleBadge(user.roles);
   const currentGroup = groups.find(([, keys]) => keys.includes(page))?.[0];
+  const activeTitle = editor ? (editor.id ? "Chỉnh sửa hồ sơ" : "Tạo yêu cầu mới") : selected ? "Chi tiết hồ sơ" : pageLabel(page, portal);
   const crumbs = [portal === "admin" ? "Quản trị" : "Không gian làm việc", currentGroup, pageLabel(page, portal), editor ? (editor.id ? "Chỉnh sửa hồ sơ" : "Tạo yêu cầu") : selected ? "Chi tiết hồ sơ" : null].filter(Boolean);
   // OPS admins only see request metadata (UC05), so admin search lands on the operations table.
   const adminSearch = portal === "admin" && user.roles.includes("OPS_ADMIN");
   const canSearch = portal !== "admin" || adminSearch;
 
   return (
-    <div className={"app-shell" + (collapsed ? " sidebar-collapsed" : "")}>
+    <PermissionProvider user={user}>
+      <div className={"app-shell" + (collapsed ? " sidebar-collapsed" : "")}>
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")} aria-label="Thanh điều hướng">
         <button type="button" className="secondary ds-icon-button sidebar-close" aria-label="Đóng điều hướng" onClick={() => setMenuOpen(false)}>×</button>
@@ -1009,7 +1176,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
             {portal === "admin" ? "EAS Admin" : "EAS Portal"}<small>{portal === "admin" ? "QUẢN TRỊ HỆ THỐNG" : "PHÊ DUYỆT DOANH NGHIỆP"}</small>
           </span>
         </a>
-        {portal !== "admin" && user.roles.includes("REQUESTER") && (
+        {portal !== "admin" && (user?.permissions?.by_module?.requests_workflows ? Boolean(user.permissions.by_module.requests_workflows.can_create) : user.roles.includes("REQUESTER")) && (
           <div className="sidebar-create-wrap">
             <button
               type="button"
@@ -1028,7 +1195,16 @@ function Workspace({ user, onLogout, portal = "client" }) {
         )}
         <nav aria-label="Điều hướng chính" className="sidebar-nav">
           {groups.map(([group, keys]) => {
-            const visible = keys.map((key) => menu.find((m) => m[0] === key)).filter((m) => m && allowedPages.has(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
+            const visible = keys.map((key) => menu.find((m) => m[0] === key)).filter((m) => {
+              if (!m) return false;
+              if (!allowedPages.has(m[0])) return false;
+              if (!canNavigate(user.roles, m[0], user.capabilities)) return false;
+              const mod = pageToModuleCode(m[0], portal);
+              if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
+                return Boolean(user.permissions.by_module[mod].can_view);
+              }
+              return true;
+            });
             if (!visible.length) return null;
             const isClosed = closedGroups.has(group);
             return (
@@ -1056,17 +1232,47 @@ function Workspace({ user, onLogout, portal = "client" }) {
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <button type="button" className="secondary menu-toggle" aria-label="Mở điều hướng" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
-          <nav className="ds-breadcrumb" aria-label="Vị trí hiện tại"><ol>
-            {crumbs.map((crumb, index) => <li key={crumb} aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb}</li>)}
-          </ol></nav>
+          <div className="topbar-left">
+            <button type="button" className="secondary menu-toggle" aria-label="Mở điều hướng" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
+            <div className="topbar-page-identity">
+              <span className="topbar-page-title">{activeTitle}</span>
+              <nav className="ds-breadcrumb" aria-label="Vị trí hiện tại"><ol>
+                {crumbs.map((crumb, index) => <li key={crumb} aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb}</li>)}
+              </ol></nav>
+            </div>
+          </div>
           {canSearch && <GlobalSearch portal={portal} onOpen={(id, item) => {
             if (adminSearch) {
               // Metadata-only scope: open the operations row instead of the restricted detail.
               if (user.roles.includes("AUDITOR")) openRequest(id); else navigate("ops", item?.code || "");
             } else openRequest(id);
-          }} />}
+          }} onNavigate={navigate} />}
           <div className="topbar-right client-topbar-actions">
+            <button
+              type="button"
+              className="secondary ds-icon-button theme-toggle-btn"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Chuyển sang giao diện Sáng" : "Chuyển sang giao diện Tối"}
+              title={theme === "dark" ? "Chuyển sang giao diện Sáng" : "Chuyển sang giao diện Tối"}
+            >
+              {theme === "dark" ? (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </button>
             <NotificationBell onOpen={portal === "admin" && !user.roles.includes("AUDITOR") ? () => navigate("notifications") : openRequest} onViewAll={() => navigate("notifications")} />
             <button type="button" className="client-account-link" disabled={portal === "admin"} onClick={() => navigate("profile")} aria-label={`Tài khoản ${user.display_name || "người dùng"}`}>
               <span className="client-avatar">{user.display_name?.slice(0, 1) || "U"}</span>
@@ -1100,6 +1306,7 @@ function Workspace({ user, onLogout, portal = "client" }) {
         </footer>
       </div>
     </div>
+    </PermissionProvider>
   );
 }
 
@@ -1119,16 +1326,148 @@ function fetchInitialSession() {
 }
 
 export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unified"), adminScreens = {} }) {
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem("eas.theme") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    } catch {
+      return "light";
+    }
+  });
+  useEffect(() => {
+    try {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("eas.theme", theme);
+    } catch {}
+  }, [theme]);
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
   return (
     <AdminScreensContext.Provider value={adminScreens}>
-      <PortalApp portal={portal} />
+      <PortalApp portal={portal} theme={theme} toggleTheme={toggleTheme} />
     </AdminScreensContext.Provider>
   );
 }
 
-function PortalApp({ portal }) {
+
+function useAiMaintenanceState() {
+  const [aiStatus, setAiStatus] = useState({
+    client_maintenance_lock: false,
+    sync_status: "COMPLETED",
+    active_regulation_version: "v1.0",
+    target_regulation_version: "v1.0",
+    progress_percent: 100,
+    current_step_index: 4,
+    current_step_label: "",
+    steps_detail: [],
+  });
+
+  useEffect(() => {
+    let active = true;
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch("/api/v1/system/ai-status");
+        if (res.ok) {
+          const data = await res.json();
+          if (active) setAiStatus(data);
+        }
+      } catch {}
+    };
+    fetchStatus();
+    const timer = setInterval(fetchStatus, 2000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  return aiStatus;
+}
+
+function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
+  const [countdown, setCountdown] = useState(5);
+  const targetV = aiStatus?.target_regulation_version || "mới";
+  const progress = aiStatus?.progress_percent ?? 0;
+  const currentStep = aiStatus?.current_step_index || 1;
+  const stepLabel = aiStatus?.current_step_label || "Đang đồng bộ dữ liệu quy định...";
+
+  useEffect(() => {
+    if (countdown <= 0) {
+      onLogout();
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCountdown((c) => c - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, onLogout]);
+
+  return (
+    <div className="client-maintenance-backdrop" role="dialog" aria-modal="true">
+      <div className="client-maintenance-card">
+        <div className="maintenance-icon-badge">
+          <div className="maintenance-radar-pulse"></div>
+          <span className="maintenance-robot-icon">🤖</span>
+        </div>
+
+        <h2 className="client-maintenance-title">
+          Hệ thống đang cập nhật và huấn luyện AI theo quy định mới
+          <span className="client-maintenance-version"> (Phiên bản {targetV})</span>
+        </h2>
+
+        <p className="client-maintenance-desc">
+          Vui lòng thoát ra và đăng nhập lại sau ít phút. Hệ thống đang đồng bộ tri thức và khóa truy cập người dùng để đảm bảo tính nhất quán dữ liệu.
+        </p>
+
+        <div className="client-maintenance-steps">
+          <div className={`m-step-item ${currentStep >= 1 ? (currentStep > 1 ? "done" : "active") : ""}`}>
+            <div className="m-step-dot">{currentStep > 1 ? "✓" : "1"}</div>
+            <span>Đồng bộ</span>
+          </div>
+          <div className="m-step-line"></div>
+          <div className={`m-step-item ${currentStep >= 2 ? (currentStep > 2 ? "done" : "active") : ""}`}>
+            <div className="m-step-dot">{currentStep > 2 ? "✓" : "2"}</div>
+            <span>Học quy định</span>
+          </div>
+          <div className="m-step-line"></div>
+          <div className={`m-step-item ${currentStep >= 3 ? (currentStep > 3 ? "done" : "active") : ""}`}>
+            <div className="m-step-dot">{currentStep > 3 ? "✓" : "3"}</div>
+            <span>Áp dụng</span>
+          </div>
+          <div className="m-step-line"></div>
+          <div className={`m-step-item ${currentStep >= 4 ? "done" : ""}`}>
+            <div className="m-step-dot">{currentStep >= 4 ? "✓" : "4"}</div>
+            <span>Hoàn tất</span>
+          </div>
+        </div>
+
+        <div className="client-maintenance-progress-box">
+          <div className="m-progress-header">
+            <span className="m-step-label">{stepLabel}</span>
+            <span className="m-percent">{progress}%</span>
+          </div>
+          <div className="m-progress-track">
+            <div className="m-progress-fill" style={{ width: `${progress}%` }}></div>
+          </div>
+        </div>
+
+        <div className="client-maintenance-footer">
+          <p className="client-countdown-notice">
+            Tự động đưa bạn ra màn hình chờ sau <strong>{countdown} giây</strong>...
+          </p>
+          <button type="button" className="btn-primary btn-logout-now" onClick={onLogout}>
+            Thoát ra ngay (Đăng xuất)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PortalApp({ portal, theme, toggleTheme }) {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
+  const aiStatus = useAiMaintenanceState();
+  // Only the open learning job locks users; a failed run (ERROR) keeps the old rules and stays unlocked.
+  const aiMaintenanceActive = Boolean(aiStatus?.client_maintenance_lock);
   async function load(loginUser) {
     if (loginUser?.must_change_password) {
       setUser({ ...loginUser, roles: [] });
@@ -1224,18 +1563,59 @@ function PortalApp({ portal }) {
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );
-  if (user && portal === "admin" && !canUsePortal(user.roles, "admin")) {
-    return <main className="auth-shell"><section className="panel"><h1>Không có quyền quản trị</h1><p>Tài khoản không được cấp quyền sử dụng trung tâm quản trị.</p><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
+  if (user && portal === "admin" && (user.email !== "admin@eas.com" || !canUsePortal(user.roles, "admin"))) {
+    return (
+      <main className="auth-shell">
+        <section className="panel">
+          <h1>Không có quyền quản trị</h1>
+          <p>Tài khoản nhân viên không được phép sử dụng Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).</p>
+          <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+            <a
+              href={import.meta.env.VITE_CLIENT_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:8080`}
+              className="btn-primary"
+              style={{ display: "inline-flex", alignItems: "center", textDecoration: "none", padding: "8px 16px", borderRadius: "6px" }}
+            >
+              Mở Cổng Nhân viên
+            </a>
+            <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
+          </div>
+        </section>
+      </main>
+    );
   }
   // Administrative identities are system-only (enforced again by the API);
   // an admin who also approves or executes keeps the employee portal.
-  if (user && portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role)) && !canUsePortal(user.roles, "client")) {
-    return <main className="auth-shell"><section className="panel"><h1>Tài khoản quản trị</h1><p>Tài khoản quản trị sử dụng cổng quản trị hệ thống riêng; không tạo hoặc xử lý yêu cầu trên cổng nhân viên.</p><a href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:${window.location.port === "8080" ? "8081" : "5174"}`}>Mở trung tâm quản trị</a><ActionForm onSubmit={logout} submitLabel="Đăng xuất" /></section></main>;
+  if (user && ((portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role)) && !canUsePortal(user.roles, "client")) || (portal === "client" && user.email === "admin@eas.com"))) {
+    return (
+      <main className="auth-shell">
+        <section className="panel">
+          <h1>Tài khoản quản trị</h1>
+          <p>Tài khoản Quản trị viên (admin@eas.com) không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).</p>
+          <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+            <a
+              href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:8081`}
+              className="btn-primary"
+              style={{ display: "inline-flex", alignItems: "center", textDecoration: "none", padding: "8px 16px", borderRadius: "6px" }}
+            >
+              Mở Cổng Quản trị
+            </a>
+            <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
+          </div>
+        </section>
+      </main>
+    );
   }
   return user ? (
-    <Workspace user={user} onLogout={logout} portal={portal} />
+    <>
+      <Workspace user={user} onLogout={logout} portal={portal} theme={theme} toggleTheme={toggleTheme} aiStatus={aiStatus} />
+      {portal === "client" && aiMaintenanceActive ? (
+        <ClientMaintenanceOverlay aiStatus={aiStatus} onLogout={logout} />
+      ) : (
+        <SystemUpdateDialog key={user.id} />
+      )}
+    </>
   ) : (
-    <Login onLogin={load} portal={portal} />
+    <Login onLogin={load} portal={portal} aiStatus={aiStatus} />
   );
   })();
   return <><ToastCenter />{screen}</>;

@@ -6,6 +6,7 @@ Khởi động: uvicorn main:app --reload --host 0.0.0.0 --port 8001
 
 import hmac
 import os
+import threading
 import time
 
 try:
@@ -154,10 +155,22 @@ app.include_router(policy.router, prefix="/ai/policy", tags=["Policy Rules"])
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
+def _warm_up_models() -> None:
+    """Load NLP and risk models once so the first user request is not slow."""
+    try:
+        classify.get_nlp_models()
+        for domain in risk.MODEL_FILES:
+            risk._load_model(domain)
+        logger.info("AI models warmed up")
+    except Exception as exc:  # noqa: BLE001 - warm-up is best effort
+        logger.warning(f"Model warm-up skipped: {exc}")
+
+
 @app.on_event("startup")
 async def warm_up_ocr():
-    # Background thread: /health answers immediately while models load.
+    # Background threads: /health answers immediately while models load.
     ocr.start_ocr_warmup()
+    threading.Thread(target=_warm_up_models, name="model-warmup", daemon=True).start()
 
 
 @app.get("/health", tags=["Health"])

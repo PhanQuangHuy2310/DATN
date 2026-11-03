@@ -109,6 +109,39 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   // result instead of issuing a second command.
   const submitKeys = useRef(new Map());
   const [confirmSend, setConfirmSend] = useState(false);
+  const [circuitBreaker, setCircuitBreaker] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchCb = () => {
+      fetch("/api/v1/system/api-circuit-breaker-status")
+        .then((r) => r.json())
+        .then((data) => {
+          if (active) setCircuitBreaker(data);
+        })
+        .catch(() => {});
+    };
+    fetchCb();
+    const interval = setInterval(fetchCb, 8000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const isTypeBlocked = Boolean(circuitBreaker?.disabled_request_types?.includes(type));
+  const typeBlockedNotice =
+    circuitBreaker?.disabled_type_notices?.[type] ||
+    "Yêu cầu này hiện không thể sử dụng do kết nối API đang bị tắt bởi Quản trị viên.";
+
+  const enrichedMenu = menu.map((m) => {
+    const isBlocked = Boolean(circuitBreaker?.disabled_request_types?.includes(m.code));
+    return {
+      ...m,
+      isBlocked,
+      blockedNotice: isBlocked ? circuitBreaker?.disabled_type_notices?.[m.code] : null,
+    };
+  });
   useEffect(() => {
     let active = true;
     api("/api/v1/meta/request-type-forms")
@@ -207,6 +240,10 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     void persist(e.currentTarget, false);
   }
   async function persist(form, send) {
+    if (send && isTypeBlocked) {
+      setError(typeBlockedNotice);
+      return;
+    }
     const payload = Object.fromEntries(new FormData(form));
     delete payload.file;
     for (const [name, , kind] of formFields) if (kind === "evidence") {
@@ -359,7 +396,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       {catalogLoading && <output>Đang tải danh mục biểu mẫu và quyền tạo đơn…</output>}
       {catalogError && <p role="alert" className="error">Không tải được danh mục: {catalogError}</p>}
       {!catalogLoading && !catalogError && stage === "choose" && (
-        <div ref={menuRef}><RequestTypeMenu options={menu} disabled={busy} onSelect={(choice) => {
+        <div ref={menuRef}><RequestTypeMenu options={enrichedMenu} disabled={busy} onSelect={(choice) => {
           setType(choice.code);
           setChosenLabel(choice.label);
           setStage("form");
@@ -381,6 +418,16 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
         {record?.code ? <div className="request-generated-code">Mã yêu cầu tự động: <strong>{record.code}</strong></div>
           : <p className="request-requester-note">Mã hồ sơ sẽ được hệ thống tự tạo khi lưu bản nháp hoặc gửi yêu cầu. Người yêu cầu, phòng ban, ngày tạo và người duyệt được xác định tự động. Bạn chỉ nhập các trường nghiệp vụ bên dưới.</p>}
       </div>}
+      {isTypeBlocked && (
+        <div className="eas-circuit-breaker-alert" role="alert">
+          <div className="eas-cb-alert-icon">⚠️</div>
+          <div className="eas-cb-alert-body">
+            <h4 className="eas-cb-alert-title">TẠM NGƯNG TIẾP NHẬN YÊU CẦU NÀY</h4>
+            <p className="eas-cb-alert-msg">{typeBlockedNotice}</p>
+            <div className="eas-cb-alert-badge">Hệ thống API đang bị ngắt kết nối (Circuit Breaker)</div>
+          </div>
+        </div>
+      )}
       {stage === "form" && <form ref={formElementRef} onSubmit={save} key={type}>
         <fieldset disabled={busy || catalogLoading || Boolean(catalogError) || (!current && !(fields[type]?.length))}>
           <div className="form-grid">
@@ -467,12 +514,21 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
             <button type="submit" name="action" value="draft" className="secondary">
               Lưu bản nháp
             </button>
-            <button type="submit" name="action" value="send">
+            <button
+              type="submit"
+              name="action"
+              value="send"
+              disabled={busy || isTypeBlocked}
+              title={isTypeBlocked ? typeBlockedNotice : undefined}
+              className={isTypeBlocked ? "btn-disabled-circuit-breaker" : ""}
+            >
               {busy
                 ? "Đang xử lý…"
-                : initial?.status === "NEEDS_INFO"
-                  ? "Gửi lại phê duyệt"
-                  : "Gửi phê duyệt"}
+                : isTypeBlocked
+                  ? "Không thể gửi (API bị ngắt)"
+                  : initial?.status === "NEEDS_INFO"
+                    ? "Gửi lại phê duyệt"
+                    : "Gửi phê duyệt"}
             </button>
           </div>
         </fieldset>

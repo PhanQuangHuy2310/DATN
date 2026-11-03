@@ -1,10 +1,14 @@
 from django.urls import path
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 from . import delegation_views, history_views, views
 =======
 from . import history_views, policy_views, views
 >>>>>>> 86172e9d9f550e4183a6abfffd2cfe3d13177dd5
+=======
+from . import announcement_views, history_views, policy_views, views
+>>>>>>> origin/main
 
 urlpatterns = [
     path("requests/<uuid:request_id>/history", history_views.history),
@@ -207,6 +211,12 @@ urlpatterns = [
         "policies/ai-rules/<uuid:version_id>/activate",
         policy_views.activate_ai_policy_version,
         name="policy-ai-rules-activate",
+    ),
+    path("announcements", announcement_views.announcements_view, name="announcements"),
+    path(
+        "announcements/<uuid:announcement_id>/read",
+        announcement_views.announcement_read_view,
+        name="announcement-read",
     ),
     path(
         "internal/ai-policy/active",

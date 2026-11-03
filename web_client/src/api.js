@@ -75,6 +75,7 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
         const error = new Error(code);
         error.status = response.status;
         error.fields = body?.error?.fields;
+        error.serverMessage = body?.error?.message || body?.message || "";
         error.correlationId = body?.correlation_id || response.headers.get("X-Correlation-ID") || "";
         if (isRead && [502, 503, 504].includes(response.status) && attempt < attempts - 1) {
           await pause(300 * (2 ** attempt));

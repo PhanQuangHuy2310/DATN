@@ -132,12 +132,19 @@ def grouped_train_validation_test_indices(
     labels = np.asarray(labels)
     groups = np.asarray(groups)
     if len(labels) != len(groups) or len(labels) < 10:
-        raise ValueError("Training data needs matching labels/groups and at least 10 rows.")
+        raise ValueError(
+            "Training data needs matching labels/groups and at least 10 rows."
+        )
     preserved_targets = [labels, *(np.asarray(values) for values in additional_labels)]
     if any(len(values) != len(labels) for values in preserved_targets):
         raise ValueError("All target arrays must have the same number of rows.")
-    if any(pd.isna(values).any() for values in preserved_targets) or pd.isna(groups).any():
-        raise ValueError("Training labels and title groups cannot contain missing values.")
+    if (
+        any(pd.isna(values).any() for values in preserved_targets)
+        or pd.isna(groups).any()
+    ):
+        raise ValueError(
+            "Training labels and title groups cannot contain missing values."
+        )
 
     all_label_sets = [set(values.tolist()) for values in preserved_targets]
     indices = np.arange(len(labels))
@@ -197,7 +204,9 @@ def _load_csv(path: Path, required_columns: list[str]) -> pd.DataFrame:
     header = pd.read_csv(path, nrows=0).columns.tolist()
     missing = sorted(set(required_columns) - set(header))
     if missing:
-        raise ValueError(f"{path.name} is missing required columns: {', '.join(missing)}")
+        raise ValueError(
+            f"{path.name} is missing required columns: {', '.join(missing)}"
+        )
     frame = pd.read_csv(path, usecols=required_columns, low_memory=False)
     if frame.empty:
         raise ValueError(f"Dataset is empty: {path}")
@@ -211,7 +220,9 @@ def _classification_metrics(
 ) -> dict[str, Any]:
     return {
         "accuracy": float(accuracy_score(expected, predicted)),
-        "f1_macro": float(f1_score(expected, predicted, labels=labels, average="macro")),
+        "f1_macro": float(
+            f1_score(expected, predicted, labels=labels, average="macro")
+        ),
         "f1_weighted": float(
             f1_score(expected, predicted, labels=labels, average="weighted")
         ),
@@ -222,7 +233,9 @@ def _classification_metrics(
             output_dict=True,
             zero_division=0,
         ),
-        "confusion_matrix": confusion_matrix(expected, predicted, labels=labels).tolist(),
+        "confusion_matrix": confusion_matrix(
+            expected, predicted, labels=labels
+        ).tolist(),
     }
 
 
@@ -250,8 +263,7 @@ def train_nlp_models(artifacts: Path, random_state: int) -> dict[str, Any]:
     frame["title"] = frame["title"].fillna("").astype(str).str.strip()
     frame["description"] = frame["description"].fillna("").astype(str).str.strip()
     frame = frame[
-        frame["title"].ne("")
-        & frame[list(NLP_TARGETS)].notna().all(axis=1)
+        frame["title"].ne("") & frame[list(NLP_TARGETS)].notna().all(axis=1)
     ].reset_index(drop=True)
     if frame.empty:
         raise ValueError("NLP dataset has no rows with text and complete labels.")
@@ -344,10 +356,15 @@ def _engineer_risk_features(
         result[f"{column}_enc"] = encoded.astype(np.float32)
 
     amount = pd.to_numeric(frame["amount_vnd"], errors="raise").astype(np.float64)
-    budget = pd.to_numeric(
-        frame["budget_remaining_vnd"], errors="raise"
-    ).astype(np.float64)
-    if amount.isna().any() or budget.isna().any() or (amount < 0).any() or (budget < 0).any():
+    budget = pd.to_numeric(frame["budget_remaining_vnd"], errors="raise").astype(
+        np.float64
+    )
+    if (
+        amount.isna().any()
+        or budget.isna().any()
+        or (amount < 0).any()
+        or (budget < 0).any()
+    ):
         raise ValueError("Amounts and budgets must be present and non-negative.")
 
     result["amount_log"] = np.log1p(amount)
@@ -374,9 +391,9 @@ def _engineer_risk_features(
     result["no_receipt_has_amount"] = (
         (amount > 0) & (result["has_receipt"] == 0)
     ).astype(np.int8)
-    result["high_rejection_rate"] = (
-        result["past_rejection_rate"] > 0.25
-    ).astype(np.int8)
+    result["high_rejection_rate"] = (result["past_rejection_rate"] > 0.25).astype(
+        np.int8
+    )
 
     engineered = result[RISK_FEATURES].astype(np.float32)
     if not np.isfinite(engineered.to_numpy()).all():
@@ -441,7 +458,9 @@ def _train_xgboost(
                     risk_scores[validation],
                     [
                         class_values[index]
-                        for index in np.asarray(model.predict(x[validation]), dtype=np.int32)
+                        for index in np.asarray(
+                            model.predict(x[validation]), dtype=np.int32
+                        )
                     ],
                 )
             ),
@@ -479,9 +498,10 @@ def train_risk_models(
     encoders = _category_encoders(master)
     master_features = _engineer_risk_features(master, encoders)
     master_labels = pd.to_numeric(master["risk_score"], errors="raise").to_numpy()
-    if not np.isfinite(master_labels).all() or not np.equal(
-        master_labels, np.floor(master_labels)
-    ).all():
+    if (
+        not np.isfinite(master_labels).all()
+        or not np.equal(master_labels, np.floor(master_labels)).all()
+    ):
         raise ValueError("risk_score labels must be complete integers.")
     master_labels = master_labels.astype(np.int32)
     if set(master_labels.tolist()) != {1, 2, 3, 4, 5}:
@@ -519,11 +539,18 @@ def train_risk_models(
         frame = _load_csv(path, RISK_INPUT_COLUMNS)
         features = _engineer_risk_features(frame, encoders)
         labels = pd.to_numeric(frame["risk_score"], errors="raise").to_numpy()
-        if not np.isfinite(labels).all() or not np.equal(labels, np.floor(labels)).all():
-            raise ValueError(f"{filename}: risk_score labels must be complete integers.")
+        if (
+            not np.isfinite(labels).all()
+            or not np.equal(labels, np.floor(labels)).all()
+        ):
+            raise ValueError(
+                f"{filename}: risk_score labels must be complete integers."
+            )
         labels = labels.astype(np.int32)
         if not set(labels.tolist()).issubset({1, 2, 3, 4, 5}):
-            raise ValueError(f"{filename}: risk_score labels must be in the range 1..5.")
+            raise ValueError(
+                f"{filename}: risk_score labels must be in the range 1..5."
+            )
         groups = frame["title"].map(_normalize_group).to_numpy()
         if np.any(groups == ""):
             raise ValueError(f"{filename}: dataset contains blank titles.")
@@ -540,14 +567,12 @@ def train_risk_models(
         features_filename = f"feature_cols_{domain}.json"
         joblib.dump(model, artifacts / model_filename)
         reverse_remap = {
-            str(index): int(label)
-            for label, index in class_to_index.items()
+            str(index): int(label) for label, index in class_to_index.items()
         }
         feature_metadata = {
             "feature_cols": RISK_FEATURES,
             "label_remap": {
-                str(label): int(index)
-                for label, index in class_to_index.items()
+                str(label): int(index) for label, index in class_to_index.items()
             },
             "reverse_remap": reverse_remap,
         }
@@ -569,9 +594,7 @@ def train_risk_models(
         }
         del frame, features, labels, groups, model
 
-    with (artifacts / "domain_model_registry.json").open(
-        "w", encoding="utf-8"
-    ) as file:
+    with (artifacts / "domain_model_registry.json").open("w", encoding="utf-8") as file:
         json.dump(registry, file, ensure_ascii=False, indent=2)
     return results, encoders
 

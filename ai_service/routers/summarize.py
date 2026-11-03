@@ -8,7 +8,10 @@ POST /ai/summarize/request
 Không train model — dùng Gemini 1.5 Flash với prompt engineering.
 """
 
+import hashlib
 import json
+import threading
+from collections import OrderedDict
 from typing import Any
 
 try:
@@ -171,10 +174,33 @@ def _local_extractive_summarize(req: SummarizeRequest) -> SummarizeResult:
 # ---------------------------------------------------------------------------
 
 
+# Identical requests get the same summary: answer from memory instead of
+# paying Gemini again. Bounded LRU, per worker process.
+_CACHE_SIZE = 512
+_cache: OrderedDict[str, SummarizeResult] = OrderedDict()
+_cache_lock = threading.Lock()
+
+
+def _cache_get(key: str) -> SummarizeResult | None:
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit is not None:
+            _cache.move_to_end(key)
+        return hit
+
+
+def _cache_put(key: str, value: SummarizeResult) -> None:
+    with _cache_lock:
+        _cache[key] = value
+        _cache.move_to_end(key)
+        while len(_cache) > _CACHE_SIZE:
+            _cache.popitem(last=False)
+
+
 @router.post(
     "/request", response_model=SummarizeResult, summary="Tóm tắt nội dung yêu cầu"
 )
-async def summarize_request(body: SummarizeRequest):
+def summarize_request(body: SummarizeRequest):
     """
     Tóm tắt yêu cầu bằng Gemini 1.5 Flash (fallback về trích xuất cục bộ nếu thiếu API key hoặc lỗi).
 
@@ -188,6 +214,11 @@ async def summarize_request(body: SummarizeRequest):
         # No external call without explicit authorization (privacy gate).
         logger.info("External AI disabled; using local extractive summary")
         return _local_extractive_summarize(body)
+
+    cache_key = hashlib.sha256(body.model_dump_json().encode("utf-8")).hexdigest()
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     response = None
     try:
@@ -218,12 +249,14 @@ async def summarize_request(body: SummarizeRequest):
 
         logger.info(f"Summarize OK | type={body.request_type} | tokens={tokens}")
 
-        return SummarizeResult(
+        result = SummarizeResult(
             summary=parsed.get("summary", ""),
             key_points=parsed.get("key_points", []),
             sentiment=parsed.get("sentiment", "normal"),
             tokens_used=tokens,
         )
+        _cache_put(cache_key, result)
+        return result
 
     except json.JSONDecodeError as e:
         logger.error(f"Gemini trả về không phải JSON: {e}")

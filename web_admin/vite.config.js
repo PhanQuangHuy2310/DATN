@@ -18,6 +18,8 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
   },
   server: {
+    port: 8081,
+    strictPort: true,
     fs: { allow: [resolve(root, "..")] },
     proxy: {
       "/api": { target: "http://127.0.0.1:8000", changeOrigin: false },

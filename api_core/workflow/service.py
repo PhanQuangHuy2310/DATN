@@ -15,6 +15,7 @@ from psycopg.types.json import Jsonb
 
 from api_core.audit import canonical_sha256
 from api_core.authn.models import Actor
+from api_core.catalog.integrations import unavailable_notice
 from api_core.catalog.plan_catalog import resolve_five_level_metadata
 from api_core.domain import (
     PayloadValidationError,
@@ -34,6 +35,7 @@ from api_core.workflow.constants import (
     ERR_STATE_CONFLICT,
     ERR_VERSION_CONFLICT,
 )
+from api_core.workflow.leave_sync import record_approved_leave
 
 SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
 SQL_COMPLETE_WORKFLOW = (
@@ -466,6 +468,15 @@ def _validate_create_draft_input(
     return type_code, origin_request_id, clean_title
 
 
+def _assert_integration_available(type_code: str, category: str | None) -> None:
+    """Server-side circuit breaker: a disabled integration closes its request types."""
+    notice = unavailable_notice(type_code, category)
+    if notice:
+        raise CommandError(
+            "INTEGRATION_UNAVAILABLE", status=409, fields={"type_code": [notice]}
+        )
+
+
 def create_draft(
     *,
     actor: Actor,
@@ -487,7 +498,7 @@ def create_draft(
 
         cursor.execute(
             """
-            SELECT rt.id::text,cr.id::text
+            SELECT rt.id::text,cr.id::text,rt.category
             FROM eas.request_type rt
             JOIN eas.config_release cr ON cr.id=rt.active_release_id
             WHERE rt.code=%s AND rt.is_active AND cr.state='PUBLISHED'
@@ -499,7 +510,8 @@ def create_draft(
         configured = cursor.fetchone()
         if not configured:
             raise CommandError("REQUEST_TYPE_NOT_CONFIGURED", status=409)
-        type_id, release_id = configured
+        type_id, release_id, category = configured
+        _assert_integration_available(type_code, category)
         _authorize(
             cursor,
             actor_id=actor.id,
@@ -521,7 +533,7 @@ def create_draft(
                 actor.id,
                 type_id,
                 release_id,
-                Jsonb(draft_payload) if draft_payload else None,
+                Jsonb(draft_payload or {}),
                 origin_request_id,
                 risk_w,
                 app_lvl,
@@ -1069,7 +1081,7 @@ def _fetch_submit_config(
     cursor.execute(
         """
         SELECT rt.id::text,rt.lifecycle,cr.id::text,cr.form_schema,
-               cr.route_rules,cr.actor_bindings,cr.sla_profile
+               cr.route_rules,cr.actor_bindings,cr.sla_profile,rt.category
         FROM eas.request_type rt
         JOIN eas.config_release cr ON cr.id=rt.active_release_id
         WHERE rt.code=%s AND rt.is_active AND cr.state='PUBLISHED'
@@ -1081,7 +1093,8 @@ def _fetch_submit_config(
     config = cursor.fetchone()
     if not config:
         raise CommandError("REQUEST_TYPE_NOT_CONFIGURED", status=409)
-    type_id, lifecycle, release_id, form, rules, bindings, sla = config
+    type_id, lifecycle, release_id, form, rules, bindings, sla, category = config
+    _assert_integration_available(type_code, category)
 
     if viewed_release_id is not None and viewed_release_id != release_id:
         raise CommandError("CONFIG_CHANGED", status=409)
@@ -1438,6 +1451,31 @@ def submit_request(
             department_id=actor.department_id,
             type_id=type_id,
         )
+        # Circuit Breaker check: verify if the request's API/domain is disabled
+        cursor.execute(
+            """
+            SELECT m.source_system, m.api_name
+            FROM eas.mock_apis m
+            WHERE m.is_enabled = false
+              AND (
+                lower(m.domain_key) = (
+                    SELECT lower(category) FROM eas.request_type WHERE code = %s
+                )
+                OR (lower(m.domain_key) = 'assets' AND (SELECT lower(category) FROM eas.request_type WHERE code = %s) = 'asset')
+                OR (lower(m.domain_key) = 'facilities' AND (SELECT lower(category) FROM eas.request_type WHERE code = %s) = 'facility')
+                OR (lower(m.domain_key) = 'travel' AND %s = 'BUSINESS_TRIP')
+              )
+            LIMIT 1
+            """,
+            [type_code, type_code, type_code, type_code],
+        )
+        disabled_api_row = cursor.fetchone()
+        if disabled_api_row:
+            src_name = disabled_api_row[0] or disabled_api_row[1]
+            raise CommandError(
+                f"Yêu cầu này hiện không thể gửi do kết nối API [{src_name}] đang bị tạm ngắt bởi Quản trị viên.",
+                status=503,
+            )
         try:
             normalized = validate_payload(
                 type_code=type_code,
@@ -2277,6 +2315,9 @@ def decide_approval(
             """,
             [next_status, now, approved_at, completed_at, request_id],
         )
+        if approved_at is not None:
+            # Fully approved leave/trip: show it in the employee's working status.
+            record_approved_leave(cursor, request_id, actor.display_name)
         _append_request_audit(
             cursor,
             request_id=request_id,

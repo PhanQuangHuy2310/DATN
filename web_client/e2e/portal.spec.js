@@ -11,7 +11,8 @@ const OTHER = "44444444-4444-4444-8444-444444444444";
 const USERS = {
   requester: { roles: ["REQUESTER", "ACCEPTOR"], capabilities: {} },
   approver: { roles: ["APPROVER", "REQUESTER", "ACCEPTOR"], capabilities: {} },
-  ops: { roles: ["OPS_ADMIN"], capabilities: { identity_manage: true } },
+  // The admin portal accepts only the single system administrator account.
+  ops: { email: "admin@eas.com", roles: ["OPS_ADMIN", "POLICY_ADMIN"], capabilities: { identity_manage: true } },
 };
 
 function listItem(overrides = {}) {
@@ -109,7 +110,7 @@ for (const width of [1440, 1024, 768, 375]) {
       await page.keyboard.press("Escape");
       await expect(page.locator(".sidebar.open")).toHaveCount(0);
     }
-    const search = page.getByRole("combobox", { name: /Tìm hồ sơ/ });
+    const search = page.getByRole("combobox", { name: /Tìm nhanh/ });
     await search.fill("REQ");
     await page.locator("#ds-global-search-results").getByRole("button", { name: /REQ-2026-0012/ }).click();
     await expect(search).toHaveValue("");
@@ -121,8 +122,8 @@ for (const width of [1440, 1024, 768, 375]) {
     await page.setViewportSize({ width, height: 900 });
     await mock(page, "ops");
     await page.goto(ADMIN);
-    await expect(page.getByRole("heading", { name: "Tổng quan hệ thống" })).toBeVisible();
-    await expect(page.getByText("Người dùng hoạt động")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tổng quan vận hành" })).toBeVisible();
+    await expect(page.getByText("Tổng yêu cầu phát sinh")).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await expectHeaderClearsHeading(page);
   });
@@ -175,7 +176,8 @@ test("request detail shows progress, all tabs and requires a reason to reject", 
 test("admin operations reassigns through a people picker with the step and version", async ({ page }) => {
   const calls = await mock(page, "ops");
   await page.goto(ADMIN);
-  await page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("button", { name: "Theo dõi vận hành" }).click();
+  // Operations is opened from the dashboard (the sidebar keeps the 9 admin modules).
+  await page.getByRole("button", { name: /Theo dõi chi tiết vận hành/ }).click();
   for (const header of ["Người tạo", "Người đang xử lý", "Phòng ban", "Giai đoạn", "Hạn xử lý", "Quá hạn"]) {
     await expect(page.getByRole("columnheader", { name: header })).toBeVisible();
   }
@@ -194,12 +196,12 @@ test("admin navigation exposes system modules and no request creation", async ({
   await mock(page, "ops");
   await page.goto(ADMIN);
   const nav = page.getByRole("navigation", { name: "Điều hướng chính" });
-  for (const label of ["Tổng quan hệ thống", "Theo dõi vận hành", "Quản lý người dùng", "Phòng ban", "Danh mục yêu cầu", "Ma trận phân quyền", "SLA & thông báo", "Quy trình AI", "Cấu hình hệ thống"]) {
-    await expect(nav.getByRole("button", { name: label, exact: true })).toBeVisible();
+  const modules = ["Tổng quan", "Yêu cầu & Quy trình", "Sơ đồ công ty", "Người dùng", "Phân quyền", "Quy định", "Quản trị AI", "Quản lý API", "Phiên bản hệ thống"];
+  for (const label of modules) {
+    await expect(nav.locator(".nav-text", { hasText: new RegExp(`^${label}$`) })).toBeVisible();
   }
+  await expect(nav.locator(".nav-item")).toHaveCount(modules.length);
   await expect(page.getByRole("button", { name: /Tạo yêu cầu mới/ })).toHaveCount(0);
-  await nav.getByRole("button", { name: "SLA & thông báo" }).click();
-  await expect(page.getByRole("cell", { name: "Quá hạn xử lý" })).toBeVisible();
   await page.getByRole("button", { name: "Thu gọn thanh điều hướng" }).click();
   await expect(page.locator(".app-shell.sidebar-collapsed")).toBeVisible();
 });
