@@ -426,11 +426,11 @@ const CLIENT_NAV = [
   ["Tài khoản", ["profile"]],
 ];
 const ADMIN_NAV = [
-  ["GIÁM SÁT", ["home"]],
-  ["LUỒNG CÔNG VIỆC", ["request-catalog", "release-workspace"]],
+  ["GIÁM SÁT", ["home", "ops", "team"]],
+  ["LUỒNG CÔNG VIỆC", ["request-catalog", "release-workspace", "sla"]],
   ["TỔ CHỨC & NHÂN SỰ", ["org-chart", "users", "identity", "permissions"]],
   ["TRI THỨC & AI", ["policy", "ai-process", "ai-rules"]],
-  ["HỆ THỐNG", ["api-admin", "system"]],
+  ["HỆ THỐNG", ["api-admin", "system", "audit"]],
 ];
 function pageLabel(key, portal) {
   return (portal === "admin" && ADMIN_LABELS[key]) || menu.find((m) => m[0] === key)?.[1] || "";
