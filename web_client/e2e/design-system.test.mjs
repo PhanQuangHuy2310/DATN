@@ -16,7 +16,8 @@ test("both portals load the shared design system last", () => {
 });
 
 test("client and admin keep separate navigation configurations", () => {
-  assert.match(app, /const CLIENT_NAV = \[\s*\["Không gian cá nhân", \["home", "mine"\]\],\s*\["Công việc được giao", \["approval", "execution", "acceptance"\]\],\s*\["Quản lý phòng ban", \["team", "team-employees"\]\],\s*\["Tổ chức & công cụ", \["org-client", "flow-diagrams", "ai-process"\]\],\s*\["Tài khoản", \["profile"\]\],/);
+  // Employee portal: the 5 business modules (shown per module "Xem" right), department pages, account.
+  assert.match(app, /const CLIENT_NAV = \[\s*\["GIÁM SÁT", \["home"\]\],\s*\["LUỒNG CÔNG VIỆC", \["requests"\]\],\s*\["TỔ CHỨC & NHÂN SỰ", \["org-client", "people"\]\],\s*\["TRI THỨC", \["regulations-view"\]\],\s*\["QUẢN LÝ PHÒNG BAN", \["team", "team-employees"\]\],\s*\["TÀI KHOẢN", \["profile"\]\],/);
   assert.match(app, /const ADMIN_NAV = \[/);
   for (const key of ["ops", "users", "departments", "permissions", "request-catalog", "policy", "sla", "ai-process", "audit", "system"]) {
     assert.match(app.slice(app.indexOf("const ADMIN_NAV")), new RegExp(`"${key}"`), key);

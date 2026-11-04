@@ -2,7 +2,7 @@
 
 | Thuộc tính | Giá trị |
 |---|---|
-| Trạng thái | BẢN NHÁP để chủ dự án đọc và chỉnh sửa |
+| Trạng thái | BẢN NHÁP để chủ dự án đọc và chỉnh sửa — cập nhật theo Client Phase 1–3 (mục 14) |
 | Ngày | 03/11/2026 |
 | Phạm vi | Cổng nhân viên (`web_client`), cổng quản trị (`web_admin`), API `api_core`, CSDL `eas` |
 | Nguồn sự thật | Mã nguồn hiện tại + dữ liệu live (đọc ngày 03/11/2026) + đối chiếu sản phẩm đang hoạt động (mục 10) |
@@ -26,7 +26,7 @@ Quy tắc bắt buộc:
 
 - **Backend là người quyết định cuối cùng.** UI chỉ ẩn/hiện cho dễ dùng; mọi thao tác đều được API kiểm tra lại (vai trò + phạm vi + trạng thái + SoD). Gọi thẳng API mà sai quyền → `403`.
 - **Một tài khoản quản trị duy nhất:** chỉ `admin@eas.com` đăng nhập được cổng quản trị và là tài khoản duy nhất giữ `OPS_ADMIN`, `POLICY_ADMIN`. Tài khoản này **không** đăng nhập được cổng nhân viên và không tạo/xử lý yêu cầu nghiệp vụ.
-- **Nhân viên không bao giờ có quyền quản trị:** các module chỉ-dành-cho-admin (`users`, `permissions`, `ai_engine`, `api_management`, `system_versions`) không thể cấp cho vai trò nhân viên hay cho từng nhân viên (API trả `422 ADMIN_MODULE_NOT_GRANTABLE`).
+- **Nhân viên không bao giờ có quyền quản trị hệ thống:** 4 module hệ thống (`permissions`, `ai_engine`, `api_management`, `system_versions`) không thể cấp cho vai trò nhân viên hay cho từng nhân viên (API trả `422 ADMIN_MODULE_NOT_GRANTABLE`) và không bao giờ xuất hiện ở cổng nhân viên. 5 module nghiệp vụ (`dashboard`, `requests_workflows`, `org_chart`, `users`, `regulations`) admin được cấp cho vai trò hoặc từng người (mục 14).
 - **Tài khoản hệ thống AI** (`ai.system@eas.com`) không đăng nhập được, không sửa/khoá/đổi quyền được.
 - Thu hồi vai trò có hiệu lực ngay ở request kế tiếp (vai trò đọc lại từ DB mỗi request; thu hồi còn đăng xuất phiên cũ).
 
@@ -66,7 +66,7 @@ Phạm vi: `APPROVER`/`EXECUTOR` thường gắn `DEPARTMENT` (chỉ phòng mìn
 
 Quyền của một người = hợp các vai trò đang hiệu lực, rồi **quyền riêng** (nếu có) ghi đè cho đúng module đó. Ma trận DB là nguồn duy nhất: không có dòng nào cho phép thì không có quyền (không rơi về quyền theo vai trò).
 
-> Ghi chú (lỗi cần sửa): UI dùng `requests_workflows.can_update` để hiện nút **Sửa** hồ sơ và `can_delete` để hiện nút **Huỷ**. `REQUESTER` chỉ có `XC` nên **nhân viên hiện không thấy nút sửa bản nháp/bổ sung và nút huỷ yêu cầu của chính mình** (API vẫn cho phép). Đề xuất: cấp `U`, `D` trên `requests_workflows` cho `REQUESTER` (giới hạn bởi lớp 4: chỉ hồ sơ của mình, chỉ ở trạng thái cho phép), hoặc bỏ điều kiện module khỏi 2 nút này.
+> Ghi chú (ĐÃ SỬA 03/11 — mục 14): UI dùng `requests_workflows.can_update` để hiện nút **Sửa** hồ sơ và `can_delete` để hiện nút **Huỷ**. `REQUESTER` chỉ có `XC` nên **nhân viên hiện không thấy nút sửa bản nháp/bổ sung và nút huỷ yêu cầu của chính mình** (API vẫn cho phép). Đề xuất: cấp `U`, `D` trên `requests_workflows` cho `REQUESTER` (giới hạn bởi lớp 4: chỉ hồ sơ của mình, chỉ ở trạng thái cho phép), hoặc bỏ điều kiện module khỏi 2 nút này.
 >
 > Ghi chú: `AUDITOR` có `C` trên "Yêu cầu & Quy trình" — mâu thuẫn với "chỉ đọc".
 
@@ -90,6 +90,8 @@ Quyền của một người = hợp các vai trò đang hiệu lực, rồi **q
 ---
 
 ## 5. Cổng nhân viên — menu theo vai trò
+
+> Từ Client Phase 1–3, menu cổng nhân viên theo 5 module nghiệp vụ — xem **mục 14.2**. Bảng dưới là thiết kế trước đó, giữ lại để đối chiếu.
 
 | Nhóm menu | Mục | REQUESTER | APPROVER | EXECUTOR | ACCEPTOR |
 |---|---|---|---|---|---|
@@ -343,3 +345,64 @@ Mỗi đợt: sửa backend trước, kiểm thử trên bản sao live, rồi g
 | Máy trạng thái, SoD | `api_core/workflow/service.py` |
 | AI học quy định, thông báo | `api_core/workflow/ai_learning.py`, migration `12_ai_learning_jobs_and_announcements.sql` |
 | Circuit breaker | `api_core/catalog/integrations.py` |
+
+| Quyền module (backend) | `api_core/authn/module_access.py` (`can`, `require_module`, `NEVER_FOR_EMPLOYEES`) |
+| API cổng nhân viên | `api_core/administration/workspace.py` (`/api/v1/workspace/*`) |
+| Nghỉ phép → trạng thái làm việc | `api_core/workflow/leave_sync.py` |
+| Màn hình dùng chung 2 cổng | `web_client/src/apiBase.js` (`/api/v1/admin` ↔ `/api/v1/workspace`), `web_client/src/components/ClientRequestsHub.jsx` |
+
+---
+
+## 14. Client Phase 1–3 — đã triển khai (03/11/2026)
+
+Kế hoạch: `plans/active/2026-11-03_client_phase_1_3_module_permissions.md`.
+
+### 14.1 Nguyên tắc đã áp dụng
+
+- **Quyền module do admin cấp quyết định cả giao diện lẫn API.** Admin bật "Xem" cho vai trò hoặc từng người ở trang Phân quyền → mục đó hiện trên sidebar cổng nhân viên (tự làm mới trong ~15 giây, không cần đăng nhập lại). Bật Thêm/Sửa/Xoá → nút tương ứng hiện; API `/api/v1/workspace/*` kiểm tra đúng quyền đó (không có quyền → `403`).
+- **Trình duyệt không gọi Supabase.** Đặc tả đề nghị `supabase.schema('eas')` và Realtime; làm vậy trái AGENTS.md và migration 13 đã thu hồi quyền `anon`. Mọi dữ liệu đi qua API Django, kết quả nghiệp vụ như nhau (trạng thái AI 2 giây/lần, quyền 15 giây/lần).
+- **Không ghi thẳng `eas.requests`.** 5 giai đoạn (Yêu cầu → Phê duyệt → Thực hiện → Nghiệm thu → Hoàn thành) là cách hiển thị của trạng thái thật; mọi thao tác đi qua quy trình có máy trạng thái, SoD và nhật ký.
+- **Khoá khi AI học** dựa trên `client_maintenance_lock` (job AI đang chạy), không dựa trên `sync_status !== 'COMPLETED'` — vì AI học lỗi thì giữ luật cũ và phải mở khoá.
+
+### 14.2 Cổng nhân viên
+
+| Nhóm | Mục | Hiện khi | Nút thao tác |
+|---|---|---|---|
+| GIÁM SÁT | Tổng quan | Xem `dashboard` (mặc định có) | — (chỉ xem). Số liệu theo phạm vi: nhân viên = yêu cầu của mình; trưởng phòng = phòng mình phụ trách; người duyệt toàn công ty = toàn công ty |
+| LUỒNG CÔNG VIỆC | Yêu cầu & Quy trình | Xem `requests_workflows` (mặc định có) | Tab: Tạo yêu cầu mới (cần Thêm) · Theo dõi 5 giai đoạn · Yêu cầu của tôi · Việc được giao (người duyệt/thực hiện/nghiệm thu) · **Cấu hình mẫu** (chỉ khi có Sửa hoặc Xoá) · Sơ đồ luồng · Quy trình AI |
+| TỔ CHỨC & NHÂN SỰ | Sơ đồ tổ chức | Xem `org_chart` (mặc định có) | — |
+| | Người dùng | Xem `users` (**mặc định không có**, admin cấp) | Thêm (Thêm) · Sửa, cập nhật nghỉ/công tác (Sửa) · Khoá/mở (Xoá). Không gán được vai trò Người phê duyệt (chỉ admin) |
+| TRI THỨC | Quy định | Xem `regulations` (mặc định có) | Thêm / Sửa (phiên bản phụ) / Xoá (phiên bản chính) theo quyền; mỗi thay đổi kích hoạt AI học lại |
+| QUẢN LÝ PHÒNG BAN | Tổng quan phòng ban, Nhân viên phòng ban | Có vai trò Người phê duyệt | — |
+| TÀI KHOẢN | Tài khoản cá nhân | Luôn | Đổi mật khẩu; uỷ quyền phê duyệt (người duyệt) |
+
+Header: tên trang · tìm kiếm · **trạng thái làm việc** (Đang làm / Nghỉ làm / Công tác) · sáng/tối · họ tên, chức danh, phòng ban · đăng xuất.
+
+Tạo yêu cầu: mỗi mẫu hiện tên, nhóm, phân loại A/B/C, SLA, các bước, hệ thống tích hợp. Hệ thống tích hợp đang bị admin tắt → thẻ đỏ "Yêu cầu này hiện không thể sử dụng do kết nối API của hệ thống [Tên hệ thống] đang bị tắt.", nút Tạo bị khoá; server cũng chặn.
+
+Nghỉ phép / Nghỉ phép đặc biệt / Công tác / Điều chỉnh chấm công (đi muộn, về sớm): khi được duyệt xong (kể cả AI tự duyệt) hệ thống ghi `user_leave_and_trips` → trạng thái làm việc đổi ngay trên cả 2 cổng.
+
+Sửa / Huỷ hồ sơ của chính mình: theo chủ hồ sơ + trạng thái (đã sửa lỗi mục 3). Quyền Sửa/Xoá module "Yêu cầu & Quy trình" nay chỉ có nghĩa là **cấu hình mẫu yêu cầu**.
+
+### 14.3 Kết quả nghiệm thu
+
+| Kiểm thử | Môi trường | Kết quả |
+|---|---|---|
+| 5 kịch bản liên thông 2 cổng trên trình duyệt thật (`web_client/e2e/cross_portal_scenarios.mjs`, ảnh + báo cáo `web_client/test-results/cross-portal/report.html`) | Bản sao live (Postgres cục bộ) | **21/21 bước đạt** |
+| Nghỉ phép hôm nay → người quản lý duyệt → trạng thái "Nghỉ làm" | Bản sao live | Đạt |
+| Hồi quy chỉ đọc trên live (48 kiểm tra) + API cổng nhân viên theo quyền | Live | 48/48; API không có quyền trả 403 |
+| Django / `npm test` / ESLint / ruff / build 2 cổng / kiểm tra bundle | — | 448 OK / 64 / 0 lỗi / sạch / đạt / đạt |
+
+Chi tiết 5 kịch bản:
+1. `admin@eas.com` vào Cổng Quản trị; bị chặn ở Cổng Nhân viên với thông báo "Từ chối truy cập…".
+2. `hung.nguyen@eas.com` bị chặn ở Cổng Quản trị; vào Cổng Nhân viên, sidebar không có 4 module hệ thống; header đủ 5 thành phần.
+3. Admin cấp quyền riêng "Người dùng" cho `hung.nguyen`: chưa cấp → không có mục; cấp Xem → mục hiện, không nút; thêm Thêm/Sửa/Xoá → từng nút hiện; khôi phục mặc định → mục biến mất.
+4. Admin sửa quy định → cổng nhân viên hiện màn hình AI đang học (bước + %), tự đăng xuất sau 3 giây, nút đăng nhập bị khoá kèm khung tiến trình; AI xong → đăng nhập lại được và nhận hộp "Hệ thống đã cập nhật quy định vX".
+5. Admin tắt API Nhân sự → mẫu Nghỉ phép báo không thể dùng, nút khoá; bật lại → dùng được (danh sách tự làm mới 15 giây).
+
+### 14.4 Còn lại / cần chủ dự án lưu ý
+
+- Live: cột `employee_code` của nhân viên đang trống (header hiển thị khi có dữ liệu).
+- Thông báo chặn ở cổng quản trị còn ghi số cổng 8080/8081 (đề xuất mục 12.1-6).
+- Cổng nhân viên hiện chạy dev ở `:5173`; trên máy này cổng 8080 đang bị Apache của EnterpriseDB chiếm.
+- `@supabase/supabase-js` và `src/supabase.js` không còn được dùng — có thể gỡ khi bạn đồng ý.

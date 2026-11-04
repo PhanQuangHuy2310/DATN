@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApiBase } from "../apiBase.js";
+import { usePermission } from "../hooks/usePermission.jsx";
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -14,6 +15,8 @@ const CATEGORIES = [
 
 export function RegulationsManagementPage() {
   const apiBase = useApiBase();
+  // Buttons follow the rights the admin granted on module "regulations".
+  const { canCreate, canUpdate, canDelete } = usePermission("regulations");
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
@@ -276,9 +279,11 @@ export function RegulationsManagementPage() {
           </div>
         </div>
 
-        <button type="button" className="btn-primary btn-add-regulation" onClick={openCreateModal}>
-          <span>+</span> Thêm quy định mới
-        </button>
+        {canCreate && (
+          <button type="button" className="btn-primary btn-add-regulation" onClick={openCreateModal}>
+            <span>+</span> Thêm quy định mới
+          </button>
+        )}
       </div>
 
       {/* Regulations Table / Grid */}
@@ -312,22 +317,26 @@ export function RegulationsManagementPage() {
                     >
                       👁 Xem
                     </button>
-                    <button
-                      type="button"
-                      className="btn-action btn-edit"
-                      title="Chỉnh sửa (Tăng Minor Version)"
-                      onClick={() => openEditModal(reg)}
-                    >
-                      ✎ Sửa
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-action btn-delete"
-                      title="Xóa quy định (Tăng Major Version)"
-                      onClick={() => setDeletingRegulation(reg)}
-                    >
-                      ✕ Xóa
-                    </button>
+                    {canUpdate && (
+                      <button
+                        type="button"
+                        className="btn-action btn-edit"
+                        title="Chỉnh sửa (Tăng Minor Version)"
+                        onClick={() => openEditModal(reg)}
+                      >
+                        ✎ Sửa
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        className="btn-action btn-delete"
+                        title="Xóa quy định (Tăng Major Version)"
+                        onClick={() => setDeletingRegulation(reg)}
+                      >
+                        ✕ Xóa
+                      </button>
+                    )}
                   </div>
                 </div>
 

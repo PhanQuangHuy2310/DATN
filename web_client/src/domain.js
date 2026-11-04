@@ -364,12 +364,11 @@ export function permissions(user, r) {
   const attempt = r.workflow?.attempt;
   const isExecutor = attempt?.executor_id === user.id;
   const hasApprovedStep = r.approval_steps?.some((s) => s.assignee_id === user.id);
-  const modPerms = user?.permissions?.by_module?.requests_workflows;
-  const canUpdate = modPerms ? Boolean(modPerms.can_update) : true;
-  const canDelete = modPerms ? Boolean(modPerms.can_delete) : true;
+  // Edit/cancel follow ownership + status (enforced again by the API). Module
+  // update/delete on "requests_workflows" means configuring request templates.
   return {
-    edit: owner && canUpdate && ["DRAFT", "NEEDS_INFO"].includes(r.status),
-    cancel: owner && canDelete && ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(r.status),
+    edit: owner && ["DRAFT", "NEEDS_INFO"].includes(r.status),
+    cancel: owner && ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(r.status),
     approve: granted.has("APPROVER") && r.status === "PENDING_APPROVAL" &&
       !own && activeStep?.assignee_id === user.id,
     claim: granted.has("EXECUTOR") && r.status === "READY_FOR_EXECUTION" &&

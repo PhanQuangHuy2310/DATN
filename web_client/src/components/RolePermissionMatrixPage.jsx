@@ -3,7 +3,6 @@ import { api } from "../api.js";
 import { useResource } from "./ui.jsx";
 import { notifyPermissionsChanged } from "../sessionRefresh.js";
 
-const EMPLOYEE_ROLES = new Set(["REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR"]);
 const SYSTEM_LOCKED_MODULES = new Set([
   "permissions",
   "ai_engine",
@@ -316,7 +315,7 @@ export default function RolePermissionMatrixPage() {
                   ) : (
                     matrixData.modules.map((m, idx) => {
                       // Admin-only modules can never be granted to employee roles (server enforces it too).
-                      const isLocked = SYSTEM_LOCKED_MODULES.has(m.code) || (m.target_app === "ADMIN" && EMPLOYEE_ROLES.has(roleId));
+                      const isLocked = SYSTEM_LOCKED_MODULES.has(m.code);
                       const isSavingView = savingKey === `${m.code}_can_view`;
                       const isSavingCreate = savingKey === `${m.code}_can_create`;
                       const isSavingUpdate = savingKey === `${m.code}_can_update`;
@@ -504,7 +503,7 @@ export default function RolePermissionMatrixPage() {
                 </thead>
                 <tbody>
                   {(userMatrixData?.modules || []).map((m, idx) => {
-                    const isLocked = SYSTEM_LOCKED_MODULES.has(m.code) || m.target_app === "ADMIN";
+                    const isLocked = SYSTEM_LOCKED_MODULES.has(m.code);
                     const isOverride = m.is_user_override;
                     const isSavingView = savingKey === `user_${m.code}_can_view`;
                     const isSavingCreate = savingKey === `user_${m.code}_can_create`;

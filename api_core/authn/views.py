@@ -611,9 +611,8 @@ JOB_TITLES = (
     ("POLICY_ADMIN", "Quản trị chính sách"),
     ("APPROVER", "Người phê duyệt"),
     ("EXECUTOR", "Người thực hiện"),
-    ("ACCEPTOR", "Người nghiệm thu"),
-    ("REQUESTER", "Nhân viên"),
 )
+# REQUESTER/ACCEPTOR are held by every employee, so they read "Nhân viên".
 
 
 def _job_title(roles) -> str:

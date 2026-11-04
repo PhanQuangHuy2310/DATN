@@ -14,12 +14,12 @@ import {
   useResource,
 } from "./components/ui.jsx";
 import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
-import ClientDashboard from "./components/ClientDashboard.jsx";
 import ClientRequests from "./components/ClientRequests.jsx";
-import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
 import { Notifications, Profile } from "./components/Admin.jsx";
 import { SystemUpdateDialog, SystemUpdateHistory } from "./components/SystemUpdates.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
+import { ApiBaseContext, WORKSPACE_API } from "./apiBase.js";
+import ClientRequestsHub from "./components/ClientRequestsHub.jsx";
 
 function AdminDashboard(props) {
   return <AdminScreen name="AdminDashboard" {...props} />;
@@ -96,7 +96,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
       }
     } else if (portal === "client") {
       if (email === "admin@eas.com") {
-        setError("Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).");
+        setError(`Từ chối truy cập: Tài khoản Quản trị viên hệ thống không được phép đăng nhập vào Cổng Nhân viên. Vui lòng đăng nhập tại Cổng Quản trị (${ADMIN_PORTAL_URL}).`);
         return;
       }
       if (aiStatus?.client_maintenance_lock) {
@@ -246,6 +246,14 @@ function Login({ onLogin, portal = "client", aiStatus }) {
                 </div>
               </div>
 
+              {portal === "client" && aiStatus?.client_maintenance_lock && (
+                <div className="login-maintenance-box" role="status">
+                  <strong>AI đang học quy định mới {aiStatus.target_regulation_version ? `(${aiStatus.target_regulation_version})` : ""}</strong>
+                  <span>{aiStatus.current_step_label || "Đang đồng bộ quy định…"}</span>
+                  <div className="m-progress-track"><div className="m-progress-fill" style={{ width: `${aiStatus.progress_percent ?? 0}%` }} /></div>
+                  <small>Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật tự động hoàn tất.</small>
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={busy || (portal === "client" && aiStatus?.client_maintenance_lock)}
@@ -332,6 +340,9 @@ function Login({ onLogin, portal = "client", aiStatus }) {
 
 const menu = [
   ["home", "Tổng quan", "◫"],
+  ["requests", "Yêu cầu & Quy trình", "▤"],
+  ["people", "Người dùng", "♙"],
+  ["regulations-view", "Quy định", "⚙"],
   ["mine", "Yêu cầu của tôi", "▤"],
   ["approval", "Chờ phê duyệt", "✓"],
   ["execution", "Công việc thực hiện", "▣"],
@@ -370,6 +381,12 @@ export function pageToModuleCode(key, portal = "admin") {
     case "home":
     case "dashboard":
       return "dashboard";
+    case "requests":
+      return "requests_workflows";
+    case "people":
+      return "users";
+    case "regulations-view":
+      return "regulations";
     case "mine":
     case "requests_workflows":
     case "request-catalog":
@@ -439,12 +456,15 @@ const ADMIN_LABELS = {
   audit: "Nhật ký kiểm toán",
   team: "Báo cáo phòng ban",
 };
+// Same 5 business modules as the admin portal; each item shows only when the
+// admin granted "Xem" on its module (system modules never appear here).
 const CLIENT_NAV = [
-  ["Không gian cá nhân", ["home", "mine"]],
-  ["Công việc được giao", ["approval", "execution", "acceptance"]],
-  ["Quản lý phòng ban", ["team", "team-employees"]],
-  ["Tổ chức & công cụ", ["org-client", "flow-diagrams", "ai-process"]],
-  ["Tài khoản", ["profile"]],
+  ["GIÁM SÁT", ["home"]],
+  ["LUỒNG CÔNG VIỆC", ["requests"]],
+  ["TỔ CHỨC & NHÂN SỰ", ["org-client", "people"]],
+  ["TRI THỨC", ["regulations-view"]],
+  ["QUẢN LÝ PHÒNG BAN", ["team", "team-employees"]],
+  ["TÀI KHOẢN", ["profile"]],
 ];
 const ADMIN_NAV = [
   ["GIÁM SÁT", ["home"]],
@@ -937,9 +957,19 @@ function renderWorkspaceContent({
   switch (page) {
     case "home":
       if (portal === "admin") return <AdminDashboard navigate={navigate} />;
-      return portal === "client" ? (user.roles.includes("REQUESTER") ? <ClientDashboard navigate={navigate} onOpen={setSelected} user={user} /> : <AssignedWorkDashboard navigate={navigate} onOpen={setSelected} user={user}/>) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+      return portal === "client" ? (
+        <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceDashboard navigate={navigate} workspace /></ApiBaseContext.Provider>
+      ) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+    case "requests":
+      return <ClientRequestsHub user={user} revision={revision} onOpen={setSelected} onNew={(init) => { setSelected(null); setEditor(init || {}); }} />;
+    case "people":
+      return <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceUsers onNavigateOrgChart={() => navigate("org-client")} /></ApiBaseContext.Provider>;
+    case "regulations-view":
+      return <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceRegulations /></ApiBaseContext.Provider>;
     case "org-client":
-      return <ClientOrgChart user={user} />;
+      return portal === "client" ? (
+        <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceOrgChart navigate={navigate} portal="client" user={user} /></ApiBaseContext.Provider>
+      ) : <ClientOrgChart user={user} />;
     case "team":
       return <TeamDashboard onOpen={portal === "admin" && !canOpenAsAdmin ? undefined : setSelected} />;
     case "team-employees":
@@ -1061,6 +1091,14 @@ export function AdminOverview({ navigate, user }) {
 }
 
 function readFlag(key) { try { return window.localStorage.getItem(key) === "1"; } catch { return false; } }
+// Screens shared with the admin portal, opened in the employee portal through
+// /api/v1/workspace (module rights granted by the admin). Loaded on demand.
+const WorkspaceDashboard = lazy(() => import("./components/AdminPages.jsx").then((m) => ({ default: m.AdminDashboard })));
+const WorkspaceUsers = lazy(() => import("./components/UserManagementPage.jsx"));
+const WorkspaceRegulations = lazy(() => import("./components/RegulationsManagementPage.jsx"));
+const WorkspaceOrgChart = lazy(() => import("./components/OrgChart.jsx"));
+const ADMIN_PORTAL_URL = import.meta.env.VITE_ADMIN_PORTAL_URL || "http://localhost:8081";
+
 function writeFlag(key, value) { try { window.localStorage.setItem(key, value ? "1" : "0"); } catch { /* storage unavailable */ } }
 
 function Workspace({ user, onLogout, portal = "client", theme = "light", toggleTheme = () => {} }) {
@@ -1087,6 +1125,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
     if (!canNavigate(user.roles, next, user.capabilities)) return;
     if (!allowedPages.has(next)) return;
     const mod = pageToModuleCode(next, portal);
+    if (mod && portal === "client" && !user?.permissions?.by_module?.[mod]?.can_view) return;
     if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
       if (!user.permissions.by_module[mod].can_view) return;
     }
@@ -1169,6 +1208,8 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
               if (!allowedPages.has(m[0])) return false;
               if (!canNavigate(user.roles, m[0], user.capabilities)) return false;
               const mod = pageToModuleCode(m[0], portal);
+              // Employee portal: a module page appears only after the admin grants "Xem".
+              if (mod && portal === "client") return Boolean(user?.permissions?.by_module?.[mod]?.can_view);
               if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
                 return Boolean(user.permissions.by_module[mod].can_view);
               }
@@ -1242,12 +1283,18 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
                 </svg>
               )}
             </button>
+            {portal !== "admin" && user.working_status && (
+              <span className={`working-status-badge ws-${String(user.working_status.code).toLowerCase()}`} title={user.working_status.detail}>
+                {user.working_status.label}
+              </span>
+            )}
             <NotificationBell onOpen={portal === "admin" && !user.roles.includes("AUDITOR") ? () => navigate("notifications") : openRequest} onViewAll={() => navigate("notifications")} />
             <button type="button" className="client-account-link" disabled={portal === "admin"} onClick={() => navigate("profile")} aria-label={`Tài khoản ${user.display_name || "người dùng"}`}>
               <span className="client-avatar">{user.display_name?.slice(0, 1) || "U"}</span>
               <div className="topbar-user-pill">
                 <strong className="topbar-display-name">{user.display_name || "Người dùng"}</strong>
-                <span className={`topbar-role-badge ${primaryRole.tone}`}>{primaryRole.name}</span>
+                <span className={`topbar-role-badge ${primaryRole.tone}`}>{user.job_title || primaryRole.name}</span>
+                {user.department_name && <small className="topbar-department">{user.department_name}</small>}
               </div>
             </button>
             <button type="button" className="secondary ds-icon-button" aria-label="Đăng xuất" title="Đăng xuất" onClick={onLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
@@ -1352,7 +1399,7 @@ function useAiMaintenanceState() {
 }
 
 function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(3);
   const targetV = aiStatus?.target_regulation_version || "mới";
   const progress = aiStatus?.progress_percent ?? 0;
   const currentStep = aiStatus?.current_step_index || 1;
@@ -1465,7 +1512,10 @@ function PortalApp({ portal, theme, toggleTheme }) {
     window.addEventListener("focus", refresher.trigger);
     window.addEventListener(PERMISSIONS_CHANGED, refresher.trigger);
     document.addEventListener("visibilitychange", onVisible);
+    // Rights granted or revoked by the admin show up within ~15 s on an open tab.
+    const poll = setInterval(() => document.visibilityState === "visible" && refresher.trigger(), 15000);
     return () => {
+      clearInterval(poll);
       refresher.dispose();
       window.removeEventListener("focus", refresher.trigger);
       window.removeEventListener(PERMISSIONS_CHANGED, refresher.trigger);

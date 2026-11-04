@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { ApiBaseContext, WORKSPACE_API } from "../apiBase.js";
 import { date, statuses } from "../domain.js";
 import { usePermission } from "../hooks/usePermission.jsx";
@@ -30,6 +30,14 @@ const QUEUE_ROLES = { APPROVER: "approval", EXECUTOR: "execution", ACCEPTOR: "ac
  * A template whose integration is switched off by the admin cannot be used. */
 function CatalogTab({ onNew }) {
   const catalog = useResource(`${WORKSPACE_API}/request-catalog`);
+  // Integration switches change at any time: refresh on open and every 15 s.
+  const reloadCatalog = catalog.reload;
+  useEffect(() => {
+    reloadCatalog();
+    const timer = setInterval(reloadCatalog, 15000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload is recreated each render
+  }, []);
   const { canCreate } = usePermission("requests_workflows");
   const [query, setQuery] = useState("");
   const [lifecycle, setLifecycle] = useState("ALL");

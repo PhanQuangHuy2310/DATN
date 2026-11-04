@@ -52,6 +52,17 @@ RESOLVER_LABELS = {
     "DIRECTOR": "Ban giám đốc",
     "FINANCE": "Tài chính",
     "REQUESTER": "Người yêu cầu",
+    "HR_MANAGER": "Trưởng phòng Nhân sự",
+    "IT_MANAGER": "Trưởng phòng CNTT",
+    "CTO": "Giám đốc Công nghệ",
+    "CISO": "Giám đốc An ninh thông tin",
+    "SECURITY": "Bộ phận An ninh",
+    "LEGAL": "Pháp chế",
+    "MARKETING_MANAGER": "Trưởng phòng Marketing",
+    "OPERATIONS_MANAGER": "Trưởng phòng Vận hành",
+    "PROCUREMENT_MANAGER": "Trưởng bộ phận Mua sắm",
+    "PROJECT_MANAGER": "Quản lý dự án",
+    "WAREHOUSE_MANAGER": "Quản lý kho",
 }
 TYPE_SQL = """
     SELECT rt.id::text, rt.code, rt.name, rt.category, rt.lifecycle, rt.is_active,

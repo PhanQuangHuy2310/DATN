@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
 import { PermissionGuard } from "./PermissionGuard.jsx";
+import { usePermission } from "../hooks/usePermission.jsx";
 import { Modal } from "./ui.jsx";
 
 const STAGE_LABELS = {
@@ -38,6 +39,7 @@ const CATEGORY_META = {
 
 export default function RequestWorkflowsPage() {
   const apiBase = useApiBase();
+  const { canUpdate } = usePermission("requests_workflows");
   const [categories, setCategories] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [mockApis, setMockApis] = useState([]);
@@ -225,7 +227,9 @@ export default function RequestWorkflowsPage() {
           </p>
         </div>
         <div className="rw-header-actions">
-          <PermissionGuard module="requests_workflows" action="create">
+          {/* "create" on this module means creating business requests; adding a
+              request type is configuration, so it needs "update". */}
+          <PermissionGuard module="requests_workflows" action="update">
             <button
               type="button"
               className="rw-btn-primary"
@@ -267,7 +271,7 @@ export default function RequestWorkflowsPage() {
                       <span className="rw-cat-sla">Cam kết SLA: <strong>{cat.sla_hours} giờ</strong></span>
                     </div>
                   </div>
-                  <PermissionGuard module="requests_workflows" action="update">
+                  {cat.editable !== false && <PermissionGuard module="requests_workflows" action="update">
                     <button
                       type="button"
                       className="rw-btn-secondary rw-btn-sm"
@@ -279,7 +283,7 @@ export default function RequestWorkflowsPage() {
                       </svg>
                       <span>Sửa quy trình chuẩn</span>
                     </button>
-                  </PermissionGuard>
+                  </PermissionGuard>}
                 </div>
 
                 <p className="rw-cat-desc">{cat.description || meta.summary}</p>
@@ -421,6 +425,7 @@ export default function RequestWorkflowsPage() {
                           <div className="rw-category-select-wrap">
                             <select
                               value={tpl.category_code}
+                              disabled={!canUpdate}
                               onChange={(e) => handleCategoryChange(tpl, e.target.value)}
                               className={`rw-cat-select rw-cat-select-${tpl.category_code.toLowerCase()}`}
                               title="Thay đổi phân loại sẽ tự động cập nhật lại các bước quy trình"
@@ -453,6 +458,7 @@ export default function RequestWorkflowsPage() {
                                   prev.map((t) => (t.id === tpl.id ? { ...t, automation_weight: val } : t))
                                 );
                               }}
+                              disabled={!canUpdate}
                               onMouseUp={(e) => handleWeightChange(tpl, e.target.value)}
                               onTouchEnd={(e) => handleWeightChange(tpl, e.target.value)}
                               className="rw-weight-slider"
