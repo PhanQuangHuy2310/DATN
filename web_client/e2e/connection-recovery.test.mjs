@@ -30,7 +30,7 @@ test('many widgets cannot launch an unlimited number of concurrent GET requests'
   }
 });
 
-test('explicit user action can probe during circuit cooldown and recover', async () => {
+test('a failed API does not make subsequent GETs fail without trying the server', async () => {
   const original = globalThis.fetch;
   let calls = 0;
   let broken = true;
@@ -43,12 +43,77 @@ test('explicit user action can probe during circuit cooldown and recover', async
     };
     await assert.rejects(api('/api/v1/initial-failure'), (e) => e.status === 503);
     const afterFailure = calls;
-    await assert.rejects(api('/api/v1/normal-cooldown'), (e) => e.message === 'BACKEND_TEMPORARILY_UNAVAILABLE');
-    assert.equal(calls, afterFailure);
     broken = false;
-    assert.deepEqual(await api('/api/v1/explicit-retry', { forceProbe: true }), { ok: true });
+    // Formerly the second GET immediately raised BACKEND_TEMPORARILY_UNAVAILABLE
+    // without making any request, forcing the user to refresh manually.
+    assert.deepEqual(await api('/api/v1/after-idle-recovery'), { ok: true });
+    assert.ok(calls > afterFailure);
     assert.deepEqual(await api('/api/v1/after-recovery'), { ok: true });
   } finally {
     globalThis.fetch = original;
+  }
+});
+
+test('concurrent health and authentication requests bypass slow data GET queue', async () => {
+  const original = globalThis.fetch;
+  const releases = [];
+  let pending = 0;
+  let authCompleted = false;
+  try {
+    globalThis.fetch = (path) => {
+      if (String(path).endsWith('/auth/me') || String(path).endsWith('/health/live')) {
+        authCompleted = true;
+        return Promise.resolve(json(200, { user: null }));
+      }
+      pending++;
+      return new Promise((resolve) => { releases.push(() => resolve(json(200, { ok: true }))); });
+    };
+    const busy = Array.from({ length: 5 }, (_, i) => api(`/api/v1/busy-${i}`));
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    assert.equal(pending, 5);
+    await api('/api/v1/auth/me');
+    assert.equal(authCompleted, true);
+    releases.forEach((release) => release());
+    await Promise.all(busy);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('a timed-out read ends with an actionable error instead of hanging', async () => {
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = (_url, { signal }) => new Promise((_resolve, reject) => {
+      signal.addEventListener('abort', () => {
+        const error = new Error('aborted');
+        error.name = 'AbortError';
+        reject(error);
+      }, { once: true });
+    });
+    await assert.rejects(api('/api/v1/read-timeout', { timeoutMs: 40 }),
+      (error) => error.message === 'REQUEST_TIMED_OUT' && error.status === 0);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('a failed mutation is not retried (avoids duplicate workflow actions)', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalDocument = globalThis.document;
+  let sent = 0;
+  try {
+    globalThis.document = { cookie: '' };
+    globalThis.fetch = async () => {
+      sent++;
+      return json(503, { error: { code: 'DATABASE_TEMPORARILY_UNAVAILABLE' } });
+    };
+    await assert.rejects(
+      api('/api/v1/requests/submit', { method: 'POST', body: '{}', silent: true }),
+      (error) => error.status === 503,
+    );
+    assert.equal(sent, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.document = originalDocument;
   }
 });

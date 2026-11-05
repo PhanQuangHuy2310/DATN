@@ -99,26 +99,9 @@ class RouteDecision:
     approver_ids: tuple[str, ...]
     executor_id: str | None
     acceptor_id: str | None
-<<<<<<< HEAD
-    # (approval step, original requester ID, new approver ID)
+    # Preserve both contracts: SoD audit events and route adjustments.
     sod_escalations: tuple[tuple[int, str, str], ...] = ()
-    # (candidate ID, rejection reason) — audit information, never a UI identity list.
     sod_skipped: tuple[tuple[str, str], ...] = ()
-
-    @property
-    def resolved_route(self) -> list[dict[str, object]]:
-        escalated_steps = {step for step, _, _ in self.sod_escalations}
-        return [
-            {
-                "step_no": index, "assignee_id": actor_id, "resolver": slot,
-                **({"sod_escalated": True} if index in escalated_steps else {}),
-            }
-            for index, (slot, actor_id) in enumerate(
-                zip(self.approver_slots, self.approver_ids), start=1
-            )
-        ]
-=======
-    # One entry per rule step the router had to change, for the audit trail.
     adjustments: tuple[dict[str, object], ...] = ()
 
     @property
@@ -128,20 +111,18 @@ class RouteDecision:
             for a in self.adjustments
             if a.get("step_index") is not None
         }
-        route: list[dict[str, object]] = []
+        escalated = {step for step, _, _ in self.sod_escalations}
+        route = []
         for index, (slot, actor_id) in enumerate(
             zip(self.approver_slots, self.approver_ids), start=1
         ):
-            item: dict[str, object] = {
-                "step_no": index,
-                "assignee_id": actor_id,
-                "resolver": slot,
-            }
+            item = {"step_no": index, "assignee_id": actor_id, "resolver": slot}
             if index in notes:
                 item["adjusted"] = notes[index]
+            if index in escalated:
+                item["sod_escalated"] = True
             route.append(item)
         return route
->>>>>>> origin/main
 
 
 def _uuid(value: object, label: str) -> str:
@@ -310,6 +291,7 @@ def _resolve_approvers(
     requester: str,
     manager: str | None,
     department_bindings: dict[str, Any],
+    eligible_superiors: tuple[str, ...] = (),
 ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[dict[str, object], ...]]:
     """Map approver slots to people without blocking legitimate requesters.
 
@@ -324,10 +306,28 @@ def _resolve_approvers(
     out_slots: list[str] = []
     out_ids: list[str] = []
     adjustments: list[dict[str, object]] = []
+    # Reserve named approvers before selecting an escalation candidate so
+    # escalation cannot silently take a later approval step's identity.
+    reserved = {
+        actor for slot in slots
+        for actor, _ in [_slot_actor(slot, manager, department_bindings)]
+        if actor is not None and actor != requester
+    }
     for rule_step, slot in enumerate(slots, start=1):
         actor, reason = _slot_actor(slot, manager, department_bindings)
         if actor == requester:
-            actor, reason = _escalate_self_approval(requester, manager)
+            if eligible_superiors:
+                replacement = next(
+                    (candidate for raw in eligible_superiors
+                     if (candidate := _uuid(raw, "Eligible superior")) != requester
+                     and candidate not in reserved and candidate not in out_ids),
+                    None,
+                )
+                if replacement is None:
+                    raise RoutingError("ROUTE_SOD_ESCALATION_UNRESOLVED")
+                actor, reason = replacement, "SOD_ESCALATED"
+            else:
+                actor, reason = _escalate_self_approval(requester, manager)
         if actor is not None and actor in out_ids:
             actor, reason = None, "DUPLICATE_SKIPPED"
         if actor is not None:
@@ -431,64 +431,31 @@ def resolve_route(
             return _uuid(fallback or requester_id, slot)
         return _uuid(department_bindings.get(slot), slot)
 
-<<<<<<< HEAD
-    approvers = list(actor_for(slot) for slot in slots)
-=======
->>>>>>> origin/main
     requester = _uuid(requester_id, "REQUESTER")
     approver_slots, approvers, adjustments = _resolve_approvers(
         list(slots),
         requester=requester,
         manager=manager_id,
         department_bindings=department_bindings,
+        eligible_superiors=eligible_superiors,
     )
     executor = actor_for(executor_slot)
     acceptor = actor_for(acceptor_slot)
 
-    escalations: list[tuple[int, str, str]] = []
-    skipped: list[tuple[str, str]] = []
-    if requester in approvers and eligible_superiors:
-        # Only the server may supply eligible_superiors after a scoped grant,
-        # active-account and non-admin check. Exclude existing participants so
-        # no two approval levels can be signed by the same person.
-        reserved = {user_id for user_id in approvers if user_id != requester}
-        if executor:
-            reserved.add(executor)
-        for step, user_id in enumerate(approvers, start=1):
-            if user_id != requester:
-                continue
-            replacement = None
-            for superior in eligible_superiors:
-                superior = _uuid(superior, "Eligible superior")
-                if superior == requester or superior in reserved:
-                    skipped.append((superior, "SOD_OR_ALREADY_ASSIGNED"))
-                    continue
-                replacement = superior
-                break
-            if replacement is None:
-                raise RoutingError("ROUTE_SOD_ESCALATION_UNRESOLVED")
-            approvers[step - 1] = replacement
-            reserved.add(replacement)
-            escalations.append((step, requester, replacement))
-    elif requester in approvers and not eligible_superiors:
-        raise RoutingError("Requester cannot approve own request")
-
-    _validate_resolved_actors(requester, tuple(approvers), executor, acceptor)
+    # Expose a stable SoD trail for workflow audits and the existing UI.
+    escalations = tuple(
+        (int(item["step_index"]), requester, str(item["assignee_id"]))
+        for item in adjustments
+        if item["reason"] == "SOD_ESCALATED" and item["step_index"] is not None
+    )
+    _validate_resolved_actors(requester, approvers, executor, acceptor)
 
     return RouteDecision(
         matched_rule_id=rule_id,
-<<<<<<< HEAD
-        approver_slots=tuple(slots),
-        approver_ids=tuple(approvers),
-        executor_id=executor,
-        acceptor_id=acceptor,
-        sod_escalations=tuple(escalations),
-        sod_skipped=tuple(skipped),
-=======
         approver_slots=approver_slots,
         approver_ids=approvers,
         executor_id=executor,
         acceptor_id=acceptor,
+        sod_escalations=escalations,
         adjustments=adjustments,
->>>>>>> origin/main
     )

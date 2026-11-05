@@ -5,7 +5,7 @@ import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
 import { canNavigate, canUsePortal } from "./rolePolicy.js";
 import { PERMISSIONS_CHANGED, createRefresher } from "./sessionRefresh.js";
-import RoleTasks from "./components/RoleTasks.jsx";
+
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
 import {
   ActionForm,
@@ -14,26 +14,33 @@ import {
   useResource,
 } from "./components/ui.jsx";
 import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
-import ClientRequests from "./components/ClientRequests.jsx";
-import Notifications from "./components/NotificationsPage.jsx";
-import Profile from "./components/ProfilePage.jsx";
+
+
+
 import { SystemUpdateDialog, SystemUpdateHistory } from "./components/SystemUpdates.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
 import { ApiBaseContext, WORKSPACE_API } from "./apiBase.js";
-import ClientRequestsHub from "./components/ClientRequestsHub.jsx";
+
 import { formatVnd } from "./formatters.js";
 
 function AdminDashboard(props) {
   return <AdminScreen name="AdminDashboard" {...props} />;
 }
 // Screens opened after the first page load are split into their own chunks.
+// Load only the current workspace screen; the login shell stays small.
+const RoleTasks = lazy(() => import("./components/RoleTasks.jsx"));
+const ClientRequests = lazy(() => import("./components/ClientRequests.jsx"));
+const Notifications = lazy(() => import("./components/NotificationsPage.jsx"));
+const Profile = lazy(() => import("./components/ProfilePage.jsx"));
+const ClientRequestsHub = lazy(() => import("./components/ClientRequestsHub.jsx"));
+const TeamDashboard = lazy(() => import("./components/TeamDashboard.jsx"));
 const RequestEditor = lazy(() => import("./components/RequestEditor.jsx"));
 const RequestDetail = lazy(() => import("./components/RequestDetail.jsx"));
 const WorkflowDiagrams = lazy(() => import("./components/WorkflowDiagrams.jsx"));
 const AiProcessGuide = lazy(() => import("./components/AiProcessGuide.jsx"));
 const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
 const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
-import TeamDashboard from "./components/TeamDashboard.jsx";
+
 import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
 import { PageHeader, ShellSkeleton, TableSkeleton } from "./components/design.jsx";
 function getRealtimeGreeting() {
@@ -90,29 +97,11 @@ function Login({ onLogin, portal = "client", aiStatus }) {
     const values = Object.fromEntries(new FormData(e.currentTarget));
     const email = String(values.email || "").trim().toLowerCase();
 
-<<<<<<< HEAD
     // The server validates portal access from current role memberships;
     // email addresses are not authorization policies.
     if (portal === "client" && aiStatus?.client_maintenance_lock) {
       setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được sau khi quá trình cập nhật hoàn tất.`);
       return;
-=======
-    // Strict portal separation check
-    if (portal === "admin") {
-      if (email !== "admin@eas.com") {
-        setError("Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).");
-        return;
-      }
-    } else if (portal === "client") {
-      if (email === "admin@eas.com") {
-        setError(`Từ chối truy cập: Tài khoản Quản trị viên hệ thống không được phép đăng nhập vào Cổng Nhân viên. Vui lòng đăng nhập tại Cổng Quản trị (${ADMIN_PORTAL_URL}).`);
-        return;
-      }
-      if (aiStatus?.client_maintenance_lock) {
-        setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật hoàn tất.`);
-        return;
-      }
->>>>>>> origin/main
     }
 
     setBusy(true);
@@ -1443,12 +1432,15 @@ function useAiMaintenanceState() {
     let failureStreak = 0;
     let lastAttempt = 0;
     let controller = null;
+    let deadlineTimer = null;
     const fetchStatus = async () => {
       if (!active || inFlight) return;
       inFlight = true;
       lastAttempt = Date.now();
       let maintenance = false;
       controller = new AbortController();
+      // Direct health polling must not wait indefinitely on a stale socket.
+      deadlineTimer = window.setTimeout(() => controller?.abort(), 12000);
       try {
         const res = await fetch("/api/v1/system/ai-status", {
           cache: "no-store", signal: controller.signal,
@@ -1462,6 +1454,8 @@ function useAiMaintenanceState() {
         // Preserve the last known state; 503 is an outage, not a new AI step.
         failureStreak = Math.min(6, failureStreak + 1);
       } finally {
+        window.clearTimeout(deadlineTimer);
+        deadlineTimer = null;
         inFlight = false;
         controller = null;
         if (active) {
@@ -1484,6 +1478,7 @@ function useAiMaintenanceState() {
     return () => {
       active = false;
       window.clearTimeout(pending);
+      window.clearTimeout(deadlineTimer);
       controller?.abort();
       document.removeEventListener("visibilitychange", onVisible);
     };
@@ -1585,6 +1580,7 @@ function PortalApp({ portal, theme, toggleTheme }) {
     }
     try {
       setUser((await api("/api/v1/auth/me")).user);
+      setError("");
     } catch (e) {
       if (e.message === "PASSWORD_CHANGE_REQUIRED")
         setUser({ roles: [], must_change_password: true });
@@ -1597,7 +1593,12 @@ function PortalApp({ portal, theme, toggleTheme }) {
     if (!signedIn) return undefined;
     const refresher = createRefresher(() => {
       api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } })
-        .then((r) => r?.user && setUser(r.user))
+        .then((r) => {
+          // Optional /me responds 200 with user:null after session expiry.
+          // Clear the UI session rather than leaving every other API at 401.
+          if (r?.user) setUser(r.user);
+          else setUser(null);
+        })
         .catch((e) => {
           if (e.status === 401) setUser(null);
         });
@@ -1618,22 +1619,48 @@ function PortalApp({ portal, theme, toggleTheme }) {
   }, [signedIn]);
   useEffect(() => {
     let active = true;
-    fetchInitialSession()
-      .then((r) => {
-        if (active) setUser(r?.user || null);
-      })
-      .catch((e) => {
+    let pending = null;
+    let failures = 0;
+    let checking = false;
+    const loadSession = async () => {
+      if (!active || checking) return;
+      checking = true;
+      try {
+        const response = await fetchInitialSession();
         if (active) {
-          if (e.message === "PASSWORD_CHANGE_REQUIRED")
-            setUser({ roles: [], must_change_password: true });
-          // During an AI learning lock the login page shows the progress bar,
-          // so a reload must land there instead of a generic connection error.
-          else if (e.status === 401 || e.status === 403 || e.message === "SYSTEM_UNDER_MAINTENANCE") setUser(null);
-          else setError(errorText(e));
+          setUser(response?.user || null);
+          setError("");
+          failures = 0;
         }
-      });
+      } catch (e) {
+        if (!active) return;
+        if (e.message === "PASSWORD_CHANGE_REQUIRED") setUser({ roles: [], must_change_password: true });
+        else if (e.status === 401 || e.status === 403 || e.message === "SYSTEM_UNDER_MAINTENANCE") setUser(null);
+        else {
+          setError(errorText(e));
+          if (failures < 4) {
+            const delay = Math.min(12000, 1500 * 2 ** failures++);
+            pending = window.setTimeout(loadSession, delay);
+          }
+        }
+      } finally {
+        checking = false;
+      }
+    };
+    const onReconnect = () => {
+      if (!active || checking || !failures || document.visibilityState !== "visible") return;
+      window.clearTimeout(pending);
+      pending = null;
+      void loadSession();
+    };
+    void loadSession();
+    window.addEventListener("online", onReconnect);
+    document.addEventListener("visibilitychange", onReconnect);
     return () => {
       active = false;
+      window.clearTimeout(pending);
+      window.removeEventListener("online", onReconnect);
+      document.removeEventListener("visibilitychange", onReconnect);
     };
   }, []);
   async function logout() {
@@ -1677,7 +1704,7 @@ function PortalApp({ portal, theme, toggleTheme }) {
       <main id="main" className="content">
         <h1>Đổi mật khẩu để tiếp tục</h1>
         <p>Tài khoản đang sử dụng mật khẩu tạm.</p>
-        <Profile user={user} onChanged={() => { void load(); }} />
+        <Suspense fallback={<ShellSkeleton />}><Profile user={user} onChanged={() => { void load(); }} /></Suspense>
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );

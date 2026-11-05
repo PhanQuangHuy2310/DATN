@@ -427,54 +427,6 @@ export function permissions(user, r) {
 }
 
 export const date = (v) => (v ? new Date(v).toLocaleString("vi-VN") : "—");
-<<<<<<< HEAD
-export function errorText(e) {
-  if (e?.serverMessage) {
-    return e.serverMessage + (e.correlationId ? ` (Mã lỗi: ${e.correlationId})` : "");
-  }
-  const messages = {
-    ACCESS_DENIED: "Bạn không có quyền truy cập vào cổng này.",
-    VERSION_CONFLICT:
-      "Dữ liệu đã thay đổi. Hãy tải lại hồ sơ trước khi tiếp tục.",
-    REQUEST_STATE_CONFLICT: "Trạng thái đã thay đổi. Hãy tải lại hồ sơ.",
-    FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
-    DELEGATION_OVERLAP: "Đã có ủy quyền khác trùng khoảng thời gian này.",
-    DELEGATE_NOT_APPROVER: "Người nhận phải là người duyệt đang hoạt động.",
-    INVALID_DELEGATION_WINDOW: "Khoảng thời gian ủy quyền không hợp lệ (tối đa 90 ngày).",
-    DELEGATION_NOT_INSTALLED: "Tính năng ủy quyền chưa được cài trên cơ sở dữ liệu.",
-    SYSTEM_ACCOUNT_LOCKED: "Tài khoản hệ thống không thể sửa, vô hiệu hóa hay đổi quyền.",
-    AI_APPROVAL_NOT_REVOCABLE: "Đã quá 24 giờ hoặc hồ sơ không còn do AI duyệt; không thể thu hồi.",
-    INVALID_CREDENTIALS: "Tên đăng nhập hoặc mật khẩu không đúng.",
-    DATABASE_QUERY_FAILED: "Máy chủ gặp lỗi truy vấn dữ liệu. Vui lòng báo quản trị viên kèm mã lỗi để kiểm tra Backend.",
-    DATABASE_TEMPORARILY_UNAVAILABLE: "Kết nối cơ sở dữ liệu đang gián đoạn hoặc quá thời gian chờ. Vui lòng thử lại sau vài giây; nếu còn lỗi hãy gửi mã lỗi cho quản trị viên.",
-    BACKEND_TEMPORARILY_UNAVAILABLE: "Máy chủ đang gián đoạn kết nối. Hệ thống tạm giảm truy vấn để tránh quá tải; vui lòng thử lại sau ít phút.",
-    SERVER_ERROR: "Máy chủ đang gặp lỗi (HTTP 500). Vui lòng thử lại sau.",
-    INVALID_RESPONSE: "Máy chủ trả về dữ liệu không đúng định dạng. Hãy kiểm tra log Backend.",
-    ADMIN_PORTAL_ONLY: "Tài khoản quản trị chỉ được phép sử dụng chức năng quản lý hệ thống.",
-    REQUEST_TIMEOUT_UNKNOWN: "Kết nối quá thời gian xử lý. Kiểm tra trạng thái trước khi thực hiện lại để tránh trùng lặp.",
-    CATALOG_EXPANSION_DISABLED: "Chức năng thêm loại yêu cầu chưa được DBA phê duyệt/mở khóa migration. Danh mục P0 vẫn hoạt động bình thường.",
-    REQUEST_TYPE_NOT_CONFIGURED: "Loại yêu cầu này chưa có phiên bản quy chế đã công bố.",
-    ROUTE_CONFIGURATION_INVALID: "Quy trình chưa gán đủ người duyệt/thực hiện/nghiệm thu hợp lệ. Liên hệ quản trị viên quy chế.",
-    ATTACHMENT_REQUIRED: "Loại yêu cầu này bắt buộc đính kèm tài liệu hợp lệ trước khi gửi.",
-    DEPARTMENT_SCOPE_VIOLATION: "Bạn không được chọn phòng ban khác với phòng ban của mình.",
-    INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng.",
-    PASSWORD_REUSE_NOT_ALLOWED: "Mật khẩu mới phải khác mật khẩu cũ.",
-    PASSWORD_POLICY_VIOLATION: "Mật khẩu mới phải có 15–128 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt và không chứa tên đăng nhập.",
-    LOGIN_RATE_LIMITED: "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.",
-    PASSWORD_CHANGE_RATE_LIMITED: "Bạn đã nhập sai mật khẩu hiện tại quá nhiều lần. Vui lòng thử lại sau.",
-    VALIDATION_FAILED: "Dữ liệu chưa hợp lệ.",
-    VALIDATION_STALE:
-      "Cấu hình đã thay đổi. Hãy kiểm tra lại trước khi công bố.",
-    ATTACHMENT_NOT_CLEAN: "Tệp chưa vượt qua kiểm tra. Hãy kiểm tra lại tệp.",
-  };
-  return (
-    (messages[e.message] || (e.status === 401
-      ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
-      : e.message)) +
-    (e.fields ? " " + JSON.stringify(e.fields) : "") +
-    (e.correlationId ? ` (Mã lỗi: ${e.correlationId})` : "")
-  );
-=======
 
 const FIELD_REASON_LABELS = {
   REQUIRED: "Vui lòng nhập thông tin bắt buộc",
@@ -503,7 +455,6 @@ function formatFieldIssueItem(item) {
     .replace(/\bPARENTAL\b/g, "nghỉ thai sản")
     .replace(/\bSICK\b/g, "nghỉ ốm")
     .replace(/^INVALID_[A-Z0-9_]+$/, "Giá trị không hợp lệ");
->>>>>>> origin/main
 }
 
 function formatValidationFields(rawFields) {
@@ -623,6 +574,8 @@ const ERROR_MESSAGES = {
   PASSWORD_RESET_DELIVERY_FAILED: "Không thể gửi thông báo đặt lại mật khẩu lúc này. Vui lòng liên hệ bộ phận CNTT.",
   DATABASE_QUERY_FAILED: "Hệ thống gặp sự cố khi truy xuất dữ liệu. Vui lòng thử lại sau ít phút.",
   DATABASE_TEMPORARILY_UNAVAILABLE: "Kết nối dữ liệu đang bận. Vui lòng thử lại sau vài giây.",
+  NETWORK_UNAVAILABLE: "Không kết nối được với máy chủ. Kiểm tra mạng hoặc trạng thái Backend và thử lại.",
+  REQUEST_TIMED_OUT: "Máy chủ phản hồi quá chậm. Hệ thống đang thử kết nối lại; dữ liệu trước đó vẫn được giữ.",
   SERVER_ERROR: "Hệ thống đang bận xử lý hoặc gặp sự cố tạm thời. Vui lòng thử lại sau.",
   INTERNAL_SERVER_ERROR: "Hệ thống gặp sự cố nội bộ tạm thời. Vui lòng thử lại sau.",
   INVALID_RESPONSE: "Phản hồi từ máy chủ bị gián đoạn. Vui lòng tải lại trang và thử lại.",

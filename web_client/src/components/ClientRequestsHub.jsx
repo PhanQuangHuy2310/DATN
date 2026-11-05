@@ -11,7 +11,7 @@ import {
   TableSkeleton,
 } from "./design.jsx";
 import { Badge, ResourceState, useResource } from "./ui.jsx";
-import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
+const WorkflowDiagrams = lazy(() => import("./WorkflowDiagrams.jsx"));
 
 const RequestWorkflowsPage = lazy(() => import("./RequestWorkflowsPage.jsx"));
 const AiProcessGuide = lazy(() => import("./AiProcessGuide.jsx"));
@@ -42,8 +42,13 @@ function CatalogTab({ onNew }) {
   const catalog = useResource(`${WORKSPACE_API}/request-catalog`);
   const reloadCatalog = catalog.reload;
   useEffect(() => {
-    reloadCatalog();
-    const timer = setInterval(reloadCatalog, 15000);
+    // useResource loads on mount; an extra immediate reload would issue the
+    // same SQL twice (and bypass the in-flight shared request).
+    // Configuration changes invalidate resources on writes. A light periodic
+    // refresh catches remote policy updates without hammering Supabase.
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") reloadCatalog();
+    }, 90000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload is recreated each render
   }, []);
@@ -332,7 +337,7 @@ export default function ClientRequestsHub({
             <AiProcessGuide user={user} onOpen={onOpen} portal="client" />
           )}
         </Suspense>
-        {tab === "diagrams" && <WorkflowDiagrams />}
+        {tab === "diagrams" && <Suspense fallback={<CardGridSkeleton count={4} />}><WorkflowDiagrams /></Suspense>}
       </div>
     </>
   );

@@ -127,8 +127,8 @@ export default function ClientRequests({
     `/api/v1/requests?${params.toString()}&_revision=${revision}`,
   );
   const catalog = useResource("/api/v1/request-types");
-  const orgMeta = useResource("/api/v1/meta/org-chart");
-  const departments = orgMeta.data?.departments || [];
+  const departmentOptions = useResource("/api/v1/meta/departments");
+  const departments = departmentOptions.data?.items || [];
   const names = Object.fromEntries(
     (catalog.data?.items || []).map((item) => [item.code, item.name]),
   );

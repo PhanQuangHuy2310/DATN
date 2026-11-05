@@ -250,19 +250,47 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
 
   useEffect(() => {
     let active = true;
-    const fetchCb = () => {
-      fetch("/api/v1/system/api-circuit-breaker-status")
-        .then((r) => r.json())
-        .then((data) => {
-          if (active) setCircuitBreaker(data);
-        })
-        .catch(() => {});
+    let busy = false;
+    let retries = 0;
+    let timer = null;
+    let controller = null;
+    const fetchCb = async () => {
+      if (!active || busy) return;
+      busy = true;
+      controller = new AbortController();
+      try {
+        const data = await api("/api/v1/system/api-circuit-breaker-status", {
+          timeoutMs: 12000,
+          signal: controller.signal,
+        });
+        if (active) setCircuitBreaker(data);
+        retries = 0;
+      } catch {
+        // Preserve last known restricted request types when the server is slow.
+        retries = Math.min(4, retries + 1);
+      } finally {
+        busy = false;
+        controller = null;
+        if (active) {
+          timer = window.setTimeout(fetchCb,
+            document.visibilityState === "hidden" ? 120000
+              : retries ? Math.min(60000, 8000 * 2 ** retries) : 30000);
+        }
+      }
     };
-    fetchCb();
-    const interval = setInterval(fetchCb, 8000);
+    const onVisible = () => {
+      if (!active || document.visibilityState !== "visible" || busy) return;
+      window.clearTimeout(timer);
+      timer = null;
+      void fetchCb();
+    };
+    void fetchCb();
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       active = false;
-      clearInterval(interval);
+      window.clearTimeout(timer);
+      controller?.abort();
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 

@@ -7,11 +7,7 @@ from api_core.health.schema_contract import (
     has_required_eas_tables,
 )
 from api_core.health.views import (
-<<<<<<< HEAD
-    EXPECTED_MOCK_RELATIONS,
     database_readiness,
-=======
->>>>>>> origin/main
     assess_mock_sources,
     assess_request_types,
     assess_runtime_role,

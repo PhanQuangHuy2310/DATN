@@ -195,20 +195,63 @@ export function useResource(url) {
 
   useEffect(() => onDataChanged(() => setMutationVersion((v) => v + 1)), []);
   useEffect(() => {
-    if (!url) {
-      return;
-    }
+    if (!url) return;
     let active = true;
-    getResource(url)
-      .then((data) => {
+    let fetching = false;
+    let failed = false;
+    let retryCount = 0;
+    let timer = null;
+
+    const retryable = (e) => e?.status === 0
+      || [408, 429, 500, 502, 503, 504].includes(e?.status)
+      || ["NETWORK_UNAVAILABLE", "REQUEST_TIMED_OUT"].includes(e?.message);
+
+    const refresh = async () => {
+      if (!active || fetching) return;
+      fetching = true;
+      try {
+        const data = await getResource(url);
+        failed = false;
+        retryCount = 0;
         if (active) setState({ url, data, error: "", loading: false, refreshing: false });
-      })
-      .catch((e) => {
-        if (active)
-          setState((s) => ({ ...s, loading: false, refreshing: false, error: errorText(e) }));
-      });
+      } catch (e) {
+        failed = true;
+        if (active) {
+          setState((old) => ({ ...old, loading: false, refreshing: false, error: errorText(e) }));
+          // Only safe GETs are retried here; write actions are never repeated.
+          // Back off and stop after a few attempts rather than filling Console.
+          if (retryable(e) && retryCount < 4 && document.visibilityState !== "hidden") {
+            const delay = e?.status === 429
+              ? Math.max(15000, e?.retryAfterMs || 0)
+              : Math.min(12000, 1500 * 2 ** retryCount);
+            retryCount += 1;
+            timer = window.setTimeout(() => {
+              timer = null;
+              invalidateResource(url);
+              void refresh();
+            }, delay);
+          }
+        }
+      } finally {
+        fetching = false;
+      }
+    };
+    const onReconnect = () => {
+      if (!active || !failed || fetching || document.visibilityState !== "visible") return;
+      window.clearTimeout(timer);
+      timer = null;
+      retryCount = 0;
+      invalidateResource(url);
+      void refresh();
+    };
+    void refresh();
+    window.addEventListener("online", onReconnect);
+    document.addEventListener("visibilitychange", onReconnect);
     return () => {
       active = false;
+      window.clearTimeout(timer);
+      window.removeEventListener("online", onReconnect);
+      document.removeEventListener("visibilitychange", onReconnect);
     };
   }, [url, version, mutationVersion]);
   return {

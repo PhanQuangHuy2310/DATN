@@ -5,6 +5,22 @@ const TOAST_EVENT = "eas:toast";
 const inFlight = new Map();
 const cached = new Map();
 const CACHE_TTL_MS = 20000;
+// Keep dropdowns warm but don't delay remote admin changes for minutes.
+const STATIC_CACHE_TTL_MS = 90 * 1000;
+// Query strings, pagination and filters can otherwise grow this map forever.
+const MAX_CACHED_RESOURCES = 120;
+function storeResource(path, data) {
+  // Reinserting a key keeps recent pages hot (small bounded LRU cache).
+  cached.delete(path);
+  cached.set(path, { timestamp: Date.now(), data });
+  while (cached.size > MAX_CACHED_RESOURCES) {
+    cached.delete(cached.keys().next().value);
+  }
+}
+function resourceTtl(path) {
+  return /^\/api\/v1\/(?:meta\/departments|request-types(?:\?|$)|meta\/request-types(?:\?|$))/.test(path)
+    ? STATIC_CACHE_TTL_MS : CACHE_TTL_MS;
+}
 let generation = 0;
 
 // One disconnected Supabase/API must not trigger a page-wide GET stampede.
@@ -12,6 +28,8 @@ let generation = 0;
 const MAX_PARALLEL_READS = 5;
 let activeReads = 0;
 const readWaiters = [];
+// Adaptive pacing limits bursts without refusing future reads while the DB
+// has already recovered. A failed widget must not keep all pages offline.
 const backendOutage = { failures: 0, retryAt: 0 };
 const HEALTH_PATH = /^\/health\//;
 
@@ -41,15 +59,12 @@ function sharedOutage(error) {
 }
 
 function markOutage() {
-  backendOutage.failures = Math.min(5, backendOutage.failures + 1);
-  backendOutage.retryAt = Date.now() + Math.min(60000, 4000 * 2 ** (backendOutage.failures - 1));
+  backendOutage.failures = Math.min(4, backendOutage.failures + 1);
+  backendOutage.retryAt = Date.now() + Math.min(4000, 500 * 2 ** (backendOutage.failures - 1));
 }
 
-function unavailableDuringCooldown() {
-  const error = new Error("BACKEND_TEMPORARILY_UNAVAILABLE");
-  error.status = 503;
-  error.retryAfterMs = Math.max(0, backendOutage.retryAt - Date.now());
-  return error;
+function isRetryableStatus(error) {
+  return sharedOutage(error) && [502, 503, 504].includes(error?.status);
 }
 
 export function invalidateResources() {
@@ -96,10 +111,15 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
   const isRead = method === "GET" || method === "HEAD";
   // Health checks must always be callable while the regular API is recovering.
   const isDiagnostic = HEALTH_PATH.test(path);
-  const release = isRead ? await readPermit() : () => {};
+  // Keep auth and health probes responsive even when five slow data widgets
+  // are already running. All other reads remain bounded by the semaphore.
+  const priority = isDiagnostic || /^\/api\/v1\/auth\/(me|csrf)$/.test(path);
+  const release = isRead && !priority ? await readPermit() : () => {};
   try {
-    if (isRead && !isDiagnostic && !forceProbe && Date.now() < backendOutage.retryAt) {
-      throw unavailableDuringCooldown();
+    // A short shared pause replaces the old hard-fail 60-second circuit.
+    // Every new request still gets a real attempt; success resets the backoff.
+    if (isRead && !isDiagnostic && !forceProbe && backendOutage.retryAt > Date.now()) {
+      await pause(Math.min(backendOutage.retryAt - Date.now(), 4000));
     }
     const headers = new Headers(options.headers || {});
     if (!(options.body instanceof FormData) && options.body !== undefined) headers.set("Content-Type", "application/json");
@@ -109,10 +129,16 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
     }
     // A DB-down response is retried at most once. Never retry a mutation.
     // Readiness returns structured 503 diagnostics, so never retry that probe.
-    const attempts = isRead && path !== "/health/ready" ? 2 : 1;
+    const attempts = isRead && !isDiagnostic ? 2 : 1;
+    const deadline = Date.now() + (timeoutMs ?? (isRead ? 40000 : 45000));
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs || (isRead ? 15000 : 30000));
+      let timedOut = false;
+      // A single read is allowed time for a slow Supabase query, but all
+      // attempts share a total deadline (no 30s * N runaway spinner).
+      const remaining = Math.max(1, deadline - Date.now());
+      const attemptBudget = isRead ? Math.min(30000, remaining) : remaining;
+      const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, attemptBudget);
       const onAbort = () => controller.abort();
       options.signal?.addEventListener("abort", onAbort, { once: true });
       if (options.signal?.aborted) controller.abort();
@@ -130,8 +156,10 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
           error.fields = body?.error?.fields;
           error.serverMessage = body?.error?.message || body?.message || "";
           error.correlationId = body?.correlation_id || response.headers.get("X-Correlation-ID") || "";
-          if (isRead && [502, 503, 504].includes(response.status) && attempt < attempts - 1) {
-            await pause(300 * (2 ** attempt));
+          const retryAfter = Number(response.headers.get("Retry-After"));
+          if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterMs = Math.min(60000, retryAfter * 1000);
+          if (isRead && isRetryableStatus(error) && attempt < attempts - 1 && deadline - Date.now() > 1000) {
+            await pause(350 + Math.floor(Math.random() * 200));
             continue;
           }
           throw error;
@@ -142,25 +170,34 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
           throw error;
         }
         // A successful application/health request shows that the API recovered.
-        if (isRead) {
+        if (isRead && !isDiagnostic && path !== "/api/v1/auth/csrf") {
           backendOutage.failures = 0;
           backendOutage.retryAt = 0;
         }
-        if (!isRead && method !== "OPTIONS" && !silent && !path.includes("/ai/")) {
-          notify(mutationMessage(path));
-          invalidateResources();
+        if (!isRead && method !== "OPTIONS") {
+          if (path === "/api/v1/auth/login" || path === "/api/v1/auth/logout") {
+            invalidateResources();
+          } else if (!silent && !path.includes("/ai/")) {
+            invalidateResources();
+          }
+          if (!silent && !path.includes("/ai/")) notify(mutationMessage(path));
         }
         return body;
       } catch (error) {
         if (options.signal?.aborted) throw error;
-        if (isRead && attempt < attempts - 1 && (error.name === "AbortError" || error instanceof TypeError)) {
-          await pause(300 * (2 ** attempt));
+        const transportError = error.name === "AbortError" || error instanceof TypeError;
+        if (isRead && transportError && attempt < attempts - 1 && deadline - Date.now() > 1000) {
+          await pause(350 + Math.floor(Math.random() * 200));
           continue;
         }
         if (isRead && !isDiagnostic && sharedOutage(error)) markOutage();
-        if (!isRead && !silent) notify(error.name === "AbortError" ? "Yêu cầu quá thời gian phản hồi. Kiểm tra trạng thái trước khi thử lại." : "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại.", "error");
-        if (!isRead && error.name === "AbortError") {
-          throw new Error("REQUEST_TIMEOUT_UNKNOWN");
+        if (!isRead && !silent) notify(timedOut ? "Yêu cầu quá thời gian phản hồi. Kiểm tra trạng thái trước khi thử lại." : "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại.", "error");
+        if (transportError) {
+          const failure = new Error(timedOut || error.name === "AbortError"
+            ? (isRead ? "REQUEST_TIMED_OUT" : "REQUEST_TIMEOUT_UNKNOWN")
+            : "NETWORK_UNAVAILABLE");
+          failure.status = 0;
+          throw failure;
         }
         throw error;
       } finally {
@@ -175,7 +212,7 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
 
 export function getResource(path) {
   const previous = cached.get(path);
-  if (previous && Date.now() - previous.timestamp < CACHE_TTL_MS) return Promise.resolve(previous.data);
+  if (previous && Date.now() - previous.timestamp < resourceTtl(path)) return Promise.resolve(previous.data);
   if (inFlight.has(path)) return inFlight.get(path);
   const currentGeneration = generation;
   const request = api(path).catch((error) => {
@@ -188,7 +225,7 @@ export function getResource(path) {
     }
     throw error;
   }).then((result) => {
-    if (generation === currentGeneration) cached.set(path, { timestamp: Date.now(), data: result });
+    if (generation === currentGeneration) storeResource(path, result);
     return result;
   }).finally(() => { if (inFlight.get(path) === request) inFlight.delete(path); });
   inFlight.set(path, request);

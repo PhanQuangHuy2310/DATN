@@ -57,11 +57,13 @@ test('a confirmed shared database outage backs off other GETs, not diagnostic pr
     await api('/health/db');
     await assert.rejects(api('/api/v1/test-db-outage'), (e) => e.status === 503);
     assert.equal(seen.length, 3, 'one health call and at most two backend reads');
+    // The recovered transport uses a short shared backoff but DOES try again:
+    // it must not hard-fail every new GET until a manual page reload.
     await assert.rejects(api('/api/v1/test-other-resource'), (e) =>
-      e.status === 503 && e.message === 'BACKEND_TEMPORARILY_UNAVAILABLE');
-    assert.equal(seen.length, 3, 'shared outage must prevent new traffic');
+      e.status === 503 && e.message === 'DATABASE_TEMPORARILY_UNAVAILABLE');
+    assert.equal(seen.length, 5, 'shared outage uses at most two attempts per read');
     await api('/health/db');
-    assert.equal(seen.length, 4, 'diagnostics remain reachable during cooldown');
+    assert.equal(seen.length, 6, 'diagnostics remain reachable during cooldown');
   } finally {
     globalThis.fetch = original;
   }
@@ -80,7 +82,7 @@ test('an endpoint-specific AI 503 does not trip the database outage circuit', as
     await api('/health/db');
     await assert.rejects(api('/api/v1/test-ai-service'), (e) => e.message === 'AI_SERVICE_UNAVAILABLE');
     assert.deepEqual(await api('/api/v1/test-other-working-service'), {ok:true});
-    assert.equal(calls, 4, 'AI returns twice, other service still works');
+    assert.equal(calls, 3, 'endpoint-specific AI 503 is not retried; other services remain available');
   } finally {
     globalThis.fetch = original;
   }

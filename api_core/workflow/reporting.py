@@ -32,43 +32,51 @@ def list_notifications(actor: Actor, query_params: dict[str, str]) -> dict[str, 
 
     unread_only = query_params.get("unread") in ("true", "1")
 
+    # One PostgreSQL round trip instead of separate COUNT and SELECT calls.
+    # LEFT JOIN LATERAL guarantees one result row (and the unread count) even
+    # when the requested page is empty or offset exceeds the final page.
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT COUNT(*) FROM eas.notification WHERE recipient_id = %s AND read_at IS NULL",
-            [actor.id],
-        )
-        unread_count = cursor.fetchone()[0]
-
-        cursor.execute(
             """
-            SELECT id::text, event_id::text, request_id::text, label, read_at, created_at
-            FROM eas.notification
-            WHERE recipient_id = %s
-              AND (%s::boolean IS FALSE OR read_at IS NULL)
-            ORDER BY created_at DESC, id DESC
-            LIMIT %s OFFSET %s
+            WITH unread AS (
+              SELECT COUNT(*) AS unread_count FROM eas.notification
+              WHERE recipient_id = %s AND read_at IS NULL
+            )
+            SELECT unread.unread_count, n.id::text, n.event_id::text,
+                   n.request_id::text, n.label, n.read_at, n.created_at
+            FROM unread
+            LEFT JOIN LATERAL (
+              SELECT id, event_id, request_id, label, read_at, created_at
+              FROM eas.notification
+              WHERE recipient_id = %s
+                AND (%s::boolean IS FALSE OR read_at IS NULL)
+              ORDER BY created_at DESC, id DESC
+              LIMIT %s OFFSET %s
+            ) n ON TRUE
             """,
-            [actor.id, unread_only, limit + 1, offset],
+            [actor.id, actor.id, unread_only, limit + 1, offset],
         )
         rows = cursor.fetchall()
 
+    unread_count = rows[0][0] if rows else 0
+    valid_rows = [row for row in rows if row[1] is not None]
     items = [
         {
-            "id": row[0],
-            "event_id": row[1],
-            "request_id": row[2],
-            "label": row[3],
-            "read_at": row[4].isoformat() if row[4] else None,
-            "created_at": row[5].isoformat(),
+            "id": row[1],
+            "event_id": row[2],
+            "request_id": row[3],
+            "label": row[4],
+            "read_at": row[5].isoformat() if row[5] else None,
+            "created_at": row[6].isoformat(),
         }
-        for row in rows[:limit]
+        for row in valid_rows[:limit]
     ]
-
     return {
         "items": items,
         "unread_count": unread_count,
-        "next_offset": offset + limit if len(rows) > limit else None,
+        "next_offset": offset + limit if len(valid_rows) > limit else None,
     }
+
 
 
 def mark_notification_read(actor: Actor, notification_id: str) -> dict[str, Any]:

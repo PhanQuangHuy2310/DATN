@@ -3,7 +3,7 @@ import { api } from "../api.js";
 import { date, types } from "../domain.js";
 import { Badge, useResource } from "./ui.jsx";
 import { useDebounced } from "./design.jsx";
-import { formatNotificationLabel } from "./NotificationsPage.jsx";
+import { formatNotificationLabel } from "./notificationLabels.js";
 
 function useDismiss(open, setOpen) {
   const ref = useRef(null);
