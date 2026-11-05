@@ -74,7 +74,7 @@ sequenceDiagram
     participant Storage as "Encrypted Object Storage"
     participant DB as "PostgreSQL (eas Schema)"
 
-    Req->>GW: POST /api/v1/attachments/upload (Multipart/form-data)
+    Req->>GW: POST /api/v1/request-drafts/{id}/attachments (Multipart/form-data)
     GW->>Core: Nhận luồng dữ liệu stream
     Core->>Core: 1. Đọc Magic Bytes (Kiểm tra phần đầu tệp thật)
     alt Không đúng định dạng PDF/JPG/PNG cho phép
@@ -158,7 +158,7 @@ sequenceDiagram
     participant DB as "PostgreSQL (eas Schema)"
     participant Outbox as "Outbox Event Queue"
 
-    App->>Core: POST /api/v1/requests/{id}/decision\nBody: {decision: 'APPROVE'|'REJECT'|'NEEDS_INFO', note, expected_version}
+    App->>Core: POST /api/v1/requests/{id}/approval-decisions\nBody: {decision: 'APPROVE'|'REJECT'|'NEEDS_INFO', note, expected_version}
     
     Core->>DB: BEGIN TRANSACTION
     Core->>DB: SELECT * FROM eas.request WHERE id = %s FOR UPDATE
@@ -214,19 +214,19 @@ sequenceDiagram
     actor Worker as "Workflow Background Task"
     participant Engine as "Auto-Approve Engine"
     participant AI as "AI Service (:8001)"
-    participant MockSys as "Mock Enterprise APIs"
+    participant MockSys as "Mock Systems API (:8100)"
     participant DB as "PostgreSQL (eas Schema)"
 
     Worker->>Engine: Kích hoạt đánh giá Auto-Approval (request_id)
-    Engine->>DB: Đọc cấu hình loại đơn (`request_type`), mẫu vòng đời, automation_weight
-    DB-->>Engine: Trả về thông số: Lifecycle A, Automation Weight = 80%
+    Engine->>DB: Đọc cấu hình loại đơn (`request_type`), mẫu vòng đời, bản chụp `request_revision.risk_weight`
+    DB-->>Engine: Trả về thông số: Lifecycle A, risk_weight <= 2
 
-    Engine->>AI: POST /ai/auto-approve/evaluate {request_data, attachments}
+    Engine->>AI: POST /ai/auto-approve/evaluate {request_data, attachments} (X-Internal-Secret)
     AI->>AI: Chấm điểm rủi ro và trích xuất dữ liệu hóa đơn VAT
     AI-->>Engine: Trả về: {auto_approve_eligible: true, risk_weight: 1, anomaly_flags: []}
 
-    Engine->>MockSys: GET /api/v1/mock/finance/budget-check (Kiểm tra hạn mức ngân sách)
-    MockSys-->>Engine: Hạn mức phòng ban còn đủ, chưa vượt trần
+    Engine->>MockSys: GET /mock-api/v1/finance/... & /hr/leave-balances (X-Integration-Secret, role eas_mock)
+    MockSys-->>Engine: Hạn mức ngân sách / quỹ phép còn đủ, chưa vượt trần
 
     alt Hội tụ đủ 100% điều kiện: Lifecycle A + Risk <= 2 + Hạn mức OK + Circuit Breaker BẬT
         Engine->>DB: BEGIN TRANSACTION
@@ -267,7 +267,7 @@ sequenceDiagram
     Core-->>Exe: 200 OK (Đã tiếp nhận công việc thành công)
 
     Note over Exe,DB: GIAI ĐOẠN 2: THỰC HIỆN VÀ NỘP BIÊN BẢN
-    Exe->>Core: POST /api/v1/requests/{id}/submit-result {result_note, evidence_attachments}
+    Exe->>Core: POST /api/v1/requests/{id}/execution/submit {result_note, evidence_attachments}
     Core->>DB: BEGIN TRANSACTION
     Core->>DB: UPDATE eas.execution_attempt SET status = 'SUBMITTED', completed_at = now()
     
@@ -283,7 +283,7 @@ sequenceDiagram
         Core-->>Exe: 200 OK (Đã chuyển tiếp hồ sơ sang bộ phận nghiệm thu)
 
         Note over Acc,DB: GIAI ĐOẠN 3: NGHIỆM THU BÀN GIAO ĐỘC LẬP
-        Acc->>Core: POST /api/v1/requests/{id}/accept {verdict: 'ACCEPT'|'REWORK', note}
+        Acc->>Core: POST /api/v1/requests/{id}/acceptance-decisions {verdict: 'ACCEPT'|'REWORK', note}
         Core->>DB: BEGIN TRANSACTION
         alt Acceptor trùng với Executor (Vi phạm SoD)
             Core->>DB: ROLLBACK
@@ -396,7 +396,7 @@ sequenceDiagram
     participant Core as "Audit Ledger Service"
     participant DB as "PostgreSQL (eas Schema)"
 
-    Auditor->>Core: POST /api/v1/audit/verify-chain {from_date, to_date}
+    Auditor->>Core: GET /api/v1/requests/{id}/audit/verify (hoặc CLI: python manage.py audit_verify)
     Core->>DB: SELECT * FROM eas.audit_head ORDER BY checkpoint_seq DESC LIMIT 1
     DB-->>Core: Lấy mã băm trạm kiểm soát gần nhất (Last Checkpoint Hash)
 
@@ -470,7 +470,7 @@ sequenceDiagram
     participant DB as "PostgreSQL (eas Schema)"
     participant Storage as "Export Vault"
 
-    User->>Core: POST /api/v1/privacy/export-request {reason: 'Personal backup'}
+    User->>Core: CLI: python manage.py privacy_case --action access --subject-email <email> (Không mở API công khai)
     Core->>Core: Xác thực mật khẩu và gửi OTP xác nhận danh tính
     User->>Core: Nhập mã OTP xác thực 6 số
     Core->>DB: INSERT INTO eas.privacy_request (actor_id, type='EXPORT', status='PROCESSING')
@@ -527,7 +527,7 @@ sequenceDiagram
     participant DB as "PostgreSQL (eas Schema)"
     participant Outbox as "Outbox Queue"
 
-    Mgr->>Core: POST /api/v1/requests/{id}/revoke-ai-approval\nBody: {reason: 'Phát hiện sai sót nghiệp vụ phát sinh sau duyệt'}
+    Mgr->>Core: POST /api/v1/requests/{id}/ai-approval/revoke\nBody: {reason: 'Phát hiện sai sót nghiệp vụ phát sinh sau duyệt'}
     
     Core->>DB: BEGIN TRANSACTION
     Core->>DB: SELECT * FROM eas.request WHERE id = %s FOR UPDATE
@@ -641,20 +641,20 @@ sequenceDiagram
     participant Core as "Draft Service"
     participant DB as "PostgreSQL (eas Schema)"
 
-    User->>Core: GET /api/v1/requests/{id}/draft
+    User->>Core: GET /api/v1/requests/{id}
     DB-->>Core: Trả về bản nháp: content = "Đề xuất mua máy", version = 3
     Core-->>User: Hiển thị form nháp (version = 3)
 
-    UserB->>Core: GET /api/v1/requests/{id}/draft
+    UserB->>Core: GET /api/v1/requests/{id}
     DB-->>Core: Trả về bản nháp: content = "Đề xuất mua máy", version = 3
     Core-->>UserB: Hiển thị form nháp (version = 3)
 
-    User->>Core: PUT /api/v1/requests/{id}/draft {content: "Mua laptop Dell", expected_version: 3}
-    Core->>DB: UPDATE eas.request_revision SET content = %s, version = 4 WHERE id = %s AND version = 3
+    User->>Core: PATCH /api/v1/requests/{id} {content: "Mua laptop Dell", expected_version: 3}
+    Core->>DB: UPDATE eas.request SET draft_payload = %s, lock_version = 4 WHERE id = %s AND lock_version = 3
     DB-->>Core: 1 row updated (Thành công)
     Core-->>User: 200 OK (Đã lưu bản nháp version = 4)
 
-    UserB->>Core: PUT /api/v1/requests/{id}/draft {content: "Mua máy bàn Asus", expected_version: 3}
+    UserB->>Core: PATCH /api/v1/requests/{id} {content: "Mua máy bàn Asus", expected_version: 3}
     Core->>DB: UPDATE eas.request_revision SET content = %s, version = 4 WHERE id = %s AND version = 3
     DB-->>Core: 0 rows updated (Do version trong DB hiện đã là 4!)
     Core-->>UserB: 409 Conflict (Bản nháp đã được sửa đổi từ thiết bị khác, vui lòng tải lại dữ liệu mới nhất)
@@ -673,7 +673,7 @@ sequenceDiagram
     participant Core as "Workflow Engine"
     participant DB as "PostgreSQL (eas Schema)"
 
-    App->>Core: POST /api/v1/requests/{id}/decision {decision: 'NEEDS_INFO', note: 'Thiếu hóa đơn VAT và báo giá 3 bên'}
+    App->>Core: POST /api/v1/requests/{id}/approval-decisions {decision: 'NEEDS_INFO', note: 'Thiếu hóa đơn VAT và báo giá 3 bên'}
     Core->>DB: UPDATE eas.request SET status = 'NEEDS_INFO', current_stage = 1
     Core->>DB: INSERT INTO eas.outbox_event (Event: REQUEST_NEEDS_INFO)
     Core-->>App: 200 OK (Đã trả hồ sơ về cho người tạo đơn)
@@ -681,7 +681,7 @@ sequenceDiagram
     Req->>Core: GET /api/v1/requests/{id}
     Core-->>Req: Trả về hồ sơ kèm ghi chú yêu cầu của cấp trên
     Req->>Core: Tải bổ sung tệp đính kèm hóa đơn VAT mới
-    Req->>Core: POST /api/v1/requests/{id}/resubmit {clarification_text: 'Đã bổ sung báo giá 3 bên'}
+    Req->>Core: POST /api/v1/requests/{id}/submit {clarification_text: 'Đã bổ sung báo giá 3 bên'}
     
     Core->>DB: BEGIN TRANSACTION
     Core->>DB: INSERT INTO eas.request_revision (request_id, revision_num = revision_num + 1, content)
@@ -705,17 +705,16 @@ sequenceDiagram
     participant Core as "Execution Issue Service"
     participant DB as "PostgreSQL (eas Schema)"
 
-    Exe->>Core: POST /api/v1/requests/{id}/report-issue {issue_type: 'OUT_OF_STOCK', description: 'Nhà cung cấp báo hết hàng'}
+    Exe->>Core: POST /api/v1/requests/{id}/execution/issues {kind: 'BLOCKED', reason: 'Nhà cung cấp báo hết hàng'}
     Core->>DB: BEGIN TRANSACTION
-    Core->>DB: INSERT INTO eas.execution_issue (request_id, executor_id, issue_type, description, status='OPEN')
-    Core->>DB: UPDATE eas.request SET status = 'BLOCKED'
+    Core->>DB: INSERT INTO eas.execution_issue (request_id, executor_id, kind, reason)
     Core->>DB: INSERT INTO eas.outbox_event (Event: EXECUTION_BLOCKED_ALERT)
     Core->>DB: COMMIT TRANSACTION
-    Core-->>Exe: 200 OK (Đã ghi nhận sự cố, hồ sơ tạm dừng)
+    Core-->>Exe: 200 OK (Đã ghi nhận sự cố vướng mắc)
 
-    Ops->>Core: GET /api/v1/admin/operations/blocked-tasks
-    Core-->>Ops: Hiển thị danh sách hồ sơ bị kẹt do thiếu hàng
-    Ops->>Core: POST /api/v1/admin/requests/{id}/resolve-issue {action: 'SWITCH_SUPPLIER', new_executor_id: Exe2.id}
+    Ops->>Core: GET /api/v1/ops/requests
+    Core-->>Ops: Hiển thị danh sách hồ sơ cần điều phối vận hành
+    Ops->>Core: POST /api/v1/requests/{id}/reassign {target_kind: 'EXECUTOR', new_assignee_id: Exe2.id, reason: 'Đổi người xử lý do vướng nguồn hàng'}
     Core->>DB: UPDATE eas.execution_issue SET status = 'RESOLVED'
     Core->>DB: UPDATE eas.request SET status = 'READY_FOR_EXECUTION'
     Core-->>Ops: 200 OK (Sự cố đã được tháo gỡ)
@@ -734,7 +733,7 @@ sequenceDiagram
     participant DB as "PostgreSQL (eas Schema)"
     actor NewApp as "Người duyệt thay thế"
 
-    Ops->>Core: POST /api/v1/admin/requests/{id}/reassign-step\nBody: {step_id, current_assignee, new_assignee: NewApp.id, reason: 'Quản lý đi công tác nước ngoài'}
+    Ops->>Core: POST /api/v1/requests/{id}/reassign\nBody: {target_kind: 'APPROVAL_STEP', step_id, new_assignee_id: NewApp.id, reason: 'Quản lý đi công tác nước ngoài'}
     
     Core->>Core: 1. Kiểm tra NewApp có thuộc vai trò tương đương trong phòng ban?
     Core->>Core: 2. Kiểm tra NewApp có trùng với Requester (SoD Guard)?
@@ -768,7 +767,7 @@ sequenceDiagram
         Req->>Core: POST /api/v1/requests/{id}/withdraw
         Core->>DB: BEGIN TX 1: SELECT * FROM eas.request WHERE id = %s FOR UPDATE
     and Approver gửi lệnh duyệt đơn
-        App->>Core: POST /api/v1/requests/{id}/decision {decision: 'APPROVE'}
+        App->>Core: POST /api/v1/requests/{id}/approval-decisions {decision: 'APPROVE'}
         Core->>DB: BEGIN TX 2: SELECT * FROM eas.request WHERE id = %s FOR UPDATE
     end
 
@@ -799,12 +798,12 @@ sequenceDiagram
     participant DB as "PostgreSQL (eas Schema)"
 
     par Admin thu hồi quyền Approver
-        Admin->>Core: DELETE /api/v1/admin/users/{id}/roles/APPROVER
+        Admin->>Core: DELETE /api/v1/admin/role_membership/{record_id} (hoặc POST /api/v1/admin/rbac/user-permission)
         Core->>DB: BEGIN TX 1: DELETE FROM eas.role_membership WHERE user_id = %s
         Core->>DB: TX 1: UPDATE eas.system_security_state SET security_epoch = security_epoch + 1
         Core->>DB: TX 1: COMMIT
     and Approver bấm ký duyệt hồ sơ
-        App->>Core: POST /api/v1/requests/{id}/decision {decision: 'APPROVE'}
+        App->>Core: POST /api/v1/requests/{id}/approval-decisions {decision: 'APPROVE'}
         Core->>Core: Kiểm tra Actor Role trong Session bộ đệm
     end
 

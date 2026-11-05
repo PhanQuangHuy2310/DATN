@@ -64,7 +64,11 @@ CORE_FIELD_LABELS = {
     "end_date": "Ngày kết thúc",
     "handover_user_id": "Người nhận bàn giao công việc",
     "special_leave_type": "Loại chế độ nghỉ đặc biệt",
+    "leave_kind": "Hình thức nghỉ (có lương / không lương)",
     "room_name": "Phòng họp / Không gian",
+    "room_code": "Phòng họp",
+    "vehicle_code": "Xe công vụ",
+    "asset_category": "Nhóm thiết bị",
     "booking_date": "Ngày sử dụng",
     "start_time": "Giờ bắt đầu (HH:MM)",
     "end_time": "Giờ kết thúc (HH:MM)",
@@ -97,15 +101,18 @@ CORE_FIELD_LABELS = {
 
 
 def resolve_field_labels(code: str) -> dict[str, str]:
-    specific = (
-        catalog_v2_item(code)
-        or plan_item(code)
-        or enterprise_item(code)
-        or next(
-            (x for x in approval_menu_blueprint()["types"] if x["code"] == code), {}
-        )
-    ).get("field_labels", {})
-    return {**CORE_FIELD_LABELS, **specific}
+    # Merge every source, lowest priority first: catalog_v2 items carry no
+    # field_labels, so an `a or b` chain hid the plan/enterprise labels.
+    sources = (
+        next((x for x in approval_menu_blueprint()["types"] if x["code"] == code), {}),
+        enterprise_item(code),
+        plan_item(code),
+        catalog_v2_item(code),
+    )
+    labels = dict(CORE_FIELD_LABELS)
+    for source in sources:
+        labels.update((source or {}).get("field_labels") or {})
+    return labels
 
 
 def approval_type_name(code):
@@ -251,15 +258,57 @@ def catalog_v2_menu_rows():
     ]
 
 
-def _build_requester_menu(items, states):
+SQL_MENU = """
+    SELECT g.code, g.name, g.description, m.code, m.type_code, m.label, m.preset
+    FROM eas.request_menu_item m
+    JOIN eas.request_group g ON g.code = m.group_code
+    WHERE m.is_active
+    ORDER BY g.sort_order, m.sort_order, m.label
+"""
+
+
+def _db_menu_rows(cursor):
+    """Groups and menu items from eas.request_group / request_menu_item (migration 17).
+
+    None before the migration: the seed catalogue is used instead.
+    """
+    cursor.execute("SELECT to_regclass('eas.request_menu_item') IS NOT NULL")
+    if not cursor.fetchone()[0]:
+        return None, None
+    cursor.execute(SQL_MENU)
+    groups, rows = {}, []
+    for g_code, g_name, g_desc, m_code, type_code, label, preset in cursor.fetchall():
+        groups.setdefault(
+            g_code, {"code": g_code, "label": g_name, "description": g_desc, "count": 0}
+        )["count"] += 1
+        seed = catalog_v2_item(type_code) or {}
+        rows.append(
+            {
+                "group": g_name,
+                "category": g_code,
+                "menu_code": m_code,
+                "label": label,
+                "code": type_code,
+                "preset": preset or {},
+                "risk_weight": seed.get("risk_weight"),
+                "approval_level": seed.get("approval_level"),
+                "lifecycle": seed.get("lifecycle"),
+                "description": seed.get("approval_route") or "",
+            }
+        )
+    return list(groups.values()), rows
+
+
+def _build_requester_menu(items, states, rows=None):
     available = {item["code"]: item for item in items}
     menu = []
-    for row in catalog_v2_menu_rows():
+    for row in rows if rows is not None else catalog_v2_menu_rows():
         code = row["code"]
         state = states.get(code)
         match = available.get(code)
-        valid = bool(match and match["lifecycle"] == row["lifecycle"])
-        blocker, reason = request_option_blocker(state, row["lifecycle"])
+        lifecycle = row["lifecycle"] or (match or {}).get("lifecycle")
+        valid = bool(match and match["lifecycle"] == lifecycle)
+        blocker, reason = request_option_blocker(state, lifecycle)
         risk_w, app_lvl = resolve_five_level_metadata(
             code,
             match["risk_weight"] if match else row.get("risk_weight"),
@@ -268,6 +317,7 @@ def _build_requester_menu(items, states):
         menu.append(
             {
                 **row,
+                "lifecycle": lifecycle,
                 "risk_weight": risk_w,
                 "approval_level": app_lvl,
                 "available": valid,
@@ -306,10 +356,17 @@ def request_type_forms(request):
     with connection.cursor() as cursor:
         items = _fetch_requester_form_items(cursor, actor)
         states = _fetch_requester_type_states(cursor, actor)
-    menu = _build_requester_menu(items, states)
+        groups, rows = _db_menu_rows(cursor)
+    menu = _build_requester_menu(items, states, rows)
+    if groups is None:
+        groups = [
+            {**g, "count": sum(1 for r in menu if r.get("category") == g["code"])}
+            for g in catalog_v2()["groups"]
+        ]
     return JsonResponse(
         {
             "items": items,
+            "groups": groups,
             "approval_menu": menu,
             "five_level_framework": five_level_framework(),
             "request_code_generated_by_server": True,

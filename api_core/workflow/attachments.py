@@ -94,8 +94,8 @@ def register_attachment(
                 """
                 INSERT INTO eas.attachment(
                   id,request_id,uploader_id,storage_key,object_version,original_name,
-                  mime,size_bytes,sha256,scan_state,scan_attempts,scanned_at
-                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'CLEAN',1,%s)
+                  mime,size_bytes,sha256,scan_state,scan_attempts,scanned_at,created_at
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'CLEAN',1,%s,%s)
                 """,
                 [
                     attachment_id,
@@ -107,6 +107,7 @@ def register_attachment(
                     mime,
                     len(data),
                     digest,
+                    now,
                     now,
                 ],
             )
@@ -227,8 +228,8 @@ def register_execution_evidence(
                 """
                 INSERT INTO eas.attachment(
                   id,request_id,uploader_id,storage_key,object_version,original_name,
-                  mime,size_bytes,sha256,scan_state,scan_attempts,scanned_at
-                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'CLEAN',1,%s)
+                  mime,size_bytes,sha256,scan_state,scan_attempts,scanned_at,created_at
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'CLEAN',1,%s,%s)
                 """,
                 [
                     attachment_id,
@@ -240,6 +241,7 @@ def register_execution_evidence(
                     mime,
                     len(data),
                     digest,
+                    now,
                     now,
                 ],
             )

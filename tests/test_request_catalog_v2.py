@@ -16,7 +16,23 @@ BINDINGS = json.loads(
     (ROOT / "tests/fixtures/department_bindings.json").read_text(encoding="utf-8")
 )
 MIGRATIONS = ROOT / "database/migrations"
+# 12 groups by nature of the request (docs/PHAN_LOAI_YEU_CAU.md, migration 17).
 GROUPS = [
+    "ABSENCE",
+    "WORKTIME",
+    "BORROW",
+    "PROVISION",
+    "PAYMENT",
+    "PROCUREMENT",
+    "PEOPLE",
+    "SUPPORT",
+    "WORK",
+    "LEGAL",
+    "SALES",
+    "ASSET",
+]
+# Department-based groups written by migration 09 (replaced by migration 17).
+LEGACY_GROUPS = [
     "FINANCE",
     "RESOURCE",
     "FACILITY",
@@ -63,7 +79,7 @@ def bindings_doc():
 
 
 class CatalogShapeTests(unittest.TestCase):
-    def test_ten_groups_58_active_13_new_8_deprecated(self):
+    def test_twelve_groups_58_active_13_new_8_deprecated(self):
         self.assertEqual([g["code"] for g in CATALOG["groups"]], GROUPS)
         self.assertEqual(len(ACTIVE), 58)
         self.assertEqual({i["code"] for i in CATALOG["items"] if i["new"]}, NEW_CODES)
@@ -175,18 +191,22 @@ class MigrationConsistencyTests(unittest.TestCase):
     def test_regroup_covers_every_type_and_ten_groups(self):
         part = catalog_part(1)
         # All 66 codes, including the 13 new ones (restores them after a rollback).
+        # Migration 09 still writes the legacy department groups.
         for item in CATALOG["items"]:
             active = "true" if item["status"] == "ACTIVE" else "false"
-            self.assertIn(
-                f"('{item['code']}', '{item['name']}', '{item['category']}', "
-                f"{item['risk_weight']}, {item['approval_level']}, {active})",
+            self.assertRegex(
                 part,
+                re.escape(f"('{item['code']}', '{item['name']}', '")
+                + r"[A-Z]+"
+                + re.escape(
+                    f"', {item['risk_weight']}, {item['approval_level']}, {active})"
+                ),
             )
         constraint = re.search(
             r"ADD CONSTRAINT request_type_category_valid\s+(CHECK.*);", part
         ).group(1)
         self.assertEqual(
-            re.findall(r"'([A-Z]+)'::character varying", constraint), GROUPS
+            re.findall(r"'([A-Z]+)'::character varying", constraint), LEGACY_GROUPS
         )
 
     def test_new_types_part_inserts_exactly_the_13_types(self):

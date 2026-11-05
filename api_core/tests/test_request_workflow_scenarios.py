@@ -135,8 +135,8 @@ class AssignDownTests(SimpleTestCase):
 
     def test_final_approver_assigns_direct_report_as_executor(self):
         cursor = MagicMock()
-        # no next step, is direct report, has EXECUTOR role, executor still valid
-        cursor.fetchone.side_effect = [None, (1,), (True,), (True,)]
+        # no next step, borrows nothing, is direct report, has EXECUTOR role, valid
+        cursor.fetchone.side_effect = [None, None, (1,), (True,), (True,)]
         assignment = {}
         status, *_ = self.approve(
             cursor, assigned=self.subordinate, assignment=assignment
@@ -153,7 +153,7 @@ class AssignDownTests(SimpleTestCase):
 
     def test_cannot_assign_someone_who_is_not_a_direct_report(self):
         cursor = MagicMock()
-        cursor.fetchone.side_effect = [None, None]
+        cursor.fetchone.side_effect = [None, None, None]
         with self.assertRaises(CommandError) as raised:
             self.approve(cursor, assigned=self.subordinate)
         self.assertEqual(raised.exception.code, "ASSIGNEE_INVALID")
@@ -320,8 +320,17 @@ class RejectPathTests(SimpleTestCase):
             cursor, str(uuid4()), str(uuid4()), "NEEDS_INFO", datetime.now(timezone.utc)
         )
         self.assertEqual(status, "NEEDS_INFO")
-        # Attachments are copied back into the requester's editable draft.
-        self.assertIn("INSERT INTO eas.draft_attachment", _sql(cursor))
+        # Attachments are copied back into the requester's editable draft by
+        # decide_approval, after the request row is already NEEDS_INFO.
+        import inspect
+
+        from api_core.workflow import service
+
+        source = inspect.getsource(service.decide_approval)
+        status_update = source.index("UPDATE eas.request SET status=%s")
+        copy_back = source.index("INSERT INTO eas.draft_attachment")
+        self.assertLess(status_update, copy_back)
+        self.assertIn('if outcome == "NEEDS_INFO":', source[status_update:copy_back])
 
     @patch("api_core.workflow.service._is_actor_valid_for_role", return_value=True)
     def test_acceptor_rework_returns_to_previous_step_executor(self, _valid):
@@ -442,7 +451,9 @@ class PermissionChangeTests(SimpleTestCase):
 
 
 class AbsentAssigneeTests(SimpleTestCase):
-    """Scenario 9: absent executors are replaced using HRM attendance."""
+    """Scenario 9: executors on approved leave / business trip are replaced.
+
+    Attendance is derived from eas.user_leave_and_trips (no HRM feed)."""
 
     def pick(self, fetches):
         cursor = MagicMock()
@@ -461,26 +472,28 @@ class AbsentAssigneeTests(SimpleTestCase):
 
     def test_absent_executor_is_replaced_by_present_colleague(self):
         substitute = str(uuid4())
-        (executor, reason), cursor = self.pick([(True,), ("ABSENT",), (substitute,)])
+        (executor, reason), cursor = self.pick(
+            [(True,), ("PAID_LEAVE",), (substitute,)]
+        )
         self.assertEqual(executor, substitute)
-        self.assertEqual(reason, "PLANNED_EXECUTOR_ABSENT")
+        self.assertEqual(reason, "PLANNED_EXECUTOR_PAID_LEAVE")
         candidate_sql = cursor.execute.call_args_list[-1].args[0]
-        self.assertIn("COALESCE(a.status, 'PRESENT') = 'PRESENT'", candidate_sql)
+        self.assertIn("NOT", candidate_sql)
+        self.assertIn("eas.user_leave_and_trips", candidate_sql)
+        self.assertNotIn("mock_hr", candidate_sql)
         self.assertIn("rm.role = 'EXECUTOR'", candidate_sql)
 
     def test_executor_on_leave_without_substitute_keeps_assignment(self):
-        (executor, reason), _ = self.pick([(True,), ("LEAVE",), None])
+        (executor, reason), _ = self.pick([(True,), ("BUSINESS_TRIP",), None])
         self.assertEqual(executor, self.planned)
         self.assertEqual(reason, "NO_PRESENT_SUBSTITUTE")
 
     def test_present_or_unrecorded_executor_is_kept(self):
-        for fetches in ([(True,), ("PRESENT",)], [(True,), None]):
-            with self.subTest(fetches=fetches):
-                (executor, reason), _ = self.pick(fetches)
-                self.assertEqual(executor, self.planned)
-                self.assertIsNone(reason)
+        (executor, reason), _ = self.pick([(True,), None])
+        self.assertEqual(executor, self.planned)
+        self.assertIsNone(reason)
 
-    def test_without_attendance_feed_everyone_counts_as_present(self):
+    def test_without_leave_table_everyone_counts_as_present(self):
         (executor, _reason), cursor = self.pick([(False,)])
         self.assertEqual(executor, self.planned)
         self.assertEqual(cursor.execute.call_count, 1)
@@ -489,11 +502,13 @@ class AbsentAssigneeTests(SimpleTestCase):
         cursor = MagicMock()
         substitute = str(uuid4())
         planned = str(uuid4())
-        # no next step, attendance feed ok, planned absent, substitute, role valid
+        # no next step, borrows nothing, leave table readable, planned on leave,
+        # substitute, role valid
         cursor.fetchone.side_effect = [
             None,
+            None,
             (True,),
-            ("ABSENT",),
+            ("PAID_LEAVE",),
             (substitute,),
             (True,),
         ]
@@ -517,7 +532,7 @@ class AbsentAssigneeTests(SimpleTestCase):
             {
                 "planned_executor_id": planned,
                 "executor_id": substitute,
-                "reason": "PLANNED_EXECUTOR_ABSENT",
+                "reason": "PLANNED_EXECUTOR_PAID_LEAVE",
             },
         )
 

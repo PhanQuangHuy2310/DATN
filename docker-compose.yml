@@ -42,7 +42,7 @@ services:
     restart: unless-stopped
 
   # ── API Gateway (Nginx Reverse Proxy) ──
-  # Route: /api/* → api_core | /api/v1/mock/* → 8 mock schema | /ai/* → ai_service
+  # Route: /api/* → api_core (AI và Mock Systems chỉ gọi nội bộ, không qua gateway)
   # Port 8088 để không đụng web (8080). Chi tiết: api_gateway/README.md
   gateway:
     build:
@@ -60,8 +60,6 @@ services:
       - ALL
     depends_on:
       api:
-        condition: service_healthy
-      ai-service:
         condition: service_healthy
     restart: unless-stopped
 
@@ -110,6 +108,8 @@ services:
       EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
       EAS_WORKER_INTERNAL_SECRET: ${EAS_WORKER_INTERNAL_SECRET:-}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5}
+      EAS_MOCK_API_URL: http://mock_systems:8000/mock-api/v1
+      EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
     ports:
       - "127.0.0.1:8000:8000"
     read_only: true
@@ -136,6 +136,38 @@ services:
       clamav:
         condition: service_started
 
+  # Simulated external systems (HRM, assets, facilities, ITSM, ERP...). Separate
+  # process and database role (eas_mock): EAS reaches them only over this API.
+  # docs/TICH_HOP_HE_THONG_NGOAI.md
+  mock_systems:
+    build:
+      context: .
+      dockerfile: api_core/Dockerfile
+    environment:
+      EAS_SERVICE: mock
+      EAS_MOCK_DATABASE_URL: ${EAS_MOCK_DATABASE_URL:?Set EAS_MOCK_DATABASE_URL to the eas_mock_login DSN}
+      DATABASE_URL: ${EAS_MOCK_DATABASE_URL:?Set EAS_MOCK_DATABASE_URL to the eas_mock_login DSN}
+      EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
+      DJANGO_SECRET_KEY: ${EAS_DJANGO_SECRET_KEY:?Set EAS_DJANGO_SECRET_KEY to a random runtime secret}
+      SUPABASE_URL: ${EAS_SUPABASE_URL:?Set EAS_SUPABASE_URL to the project URL}
+      EAS_ENV: ${EAS_ENV:-development}
+      EAS_ALLOW_ADMIN_DB: "false"
+      DJANGO_ALLOWED_HOSTS: mock_systems,localhost,127.0.0.1
+      EAS_SSL_REDIRECT: "false"
+      REDIS_URL: redis://redis:6379/1
+      LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
   worker:
     build:
       context: .
@@ -160,6 +192,8 @@ services:
       EAS_WORKER_INTERNAL_SECRET: ${EAS_WORKER_INTERNAL_SECRET:-}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5.0}
       REDIS_URL: redis://redis:6379/0
+      EAS_MOCK_API_URL: http://mock_systems:8000/mock-api/v1
+      EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
     read_only: true
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
@@ -211,22 +245,6 @@ services:
       - SETUID
     restart: unless-stopped
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
-    profiles:
-      - search-optional
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "127.0.0.1:9200:9200"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q 'green\\|yellow'"]
-      interval: 20s
-      timeout: 10s
-      retries: 5
-
   ai-service:
     build:
       context: ./ai_service
@@ -236,11 +254,13 @@ services:
     cap_drop:
       - ALL
     ports:
-      # Chỉ bind localhost: client ngoài phải đi qua gateway (/ai/*)
+      # Chỉ bind localhost để debug; client ngoài gọi AI qua api_core, không qua gateway.
       - "127.0.0.1:8001:8001"
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
+      - EAS_MOCK_API_URL=http://mock_systems:8000/mock-api/v1
+      - EAS_MOCK_API_SECRET=${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
       - EAS_API_INTERNAL_URL=http://api:8000
       - EAS_ENV=${EAS_ENV:-development}
       - OCR_USE_GPU=false
@@ -248,9 +268,7 @@ services:
       - ./ai_service/models:/app/models        # Persist trained models
       - ./ai_service/training/data:/app/training/data
       # PaddleOCR models: downloaded once, reused across restarts and rebuilds.
-      - ai_ocr_models:/home/aiuser/.paddleocr
-      # Snapshot dữ liệu mock đã chuẩn hóa (scripts/mock_data_normalizer.js) — chỉ đọc
-      - ./ai_service/data/mock:/app/data/mock:ro
+      - ai_ocr_models:/home/aiuser/.paddlex
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s

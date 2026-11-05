@@ -249,6 +249,8 @@ class AIServiceClient:
         leave_balance_remaining: int = 0,
         room_available: bool | None = None,
         correlation_id: str | None = None,
+        requester_email: str | None = None,
+        room_code: str | None = None,
     ) -> dict:
         """
         Gọi AI /auto-approve/evaluate và trả về:
@@ -283,6 +285,9 @@ class AIServiceClient:
             "days_requested": days_requested,
             "leave_balance_remaining": leave_balance_remaining,
             "room_available": room_available,
+            # Lets the AI look up leave balance / room status in the external systems.
+            "requester_email": requester_email,
+            "room_code": room_code,
         }
 
         try:

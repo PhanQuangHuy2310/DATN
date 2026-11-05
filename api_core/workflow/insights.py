@@ -577,7 +577,7 @@ def _readable_request(cursor, actor: Actor, request_id: str):
     cursor.execute(  # NOSONAR python:S2077 - READ_SCOPE_SQL is a constant fragment
         f"""
         SELECT r.id::text, r.code, r.status, r.requester_id::text, rt.code, rt.name,
-               rt.lifecycle, COALESCE(v.risk_weight, r.risk_weight, rt.risk_weight),
+               rt.lifecycle, COALESCE(v.risk_weight, rt.risk_weight),
                COALESCE(v.payload, r.draft_payload), COALESCE(v.amount_vnd, r.draft_amount_vnd),
                d.name, cr.form_schema,
                (SELECT COUNT(*) FROM eas.revision_attachment ra

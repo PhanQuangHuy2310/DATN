@@ -2871,6 +2871,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   color: #0369a1;
   border: 1px solid #bae6fd;
 }
+.status-off-hours {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
 .status-locked {
   background: #fee2e2;
   color: #991b1b;
@@ -2891,6 +2896,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .dot-green { background: #22c55e; }
 .dot-amber { background: #f59e0b; }
 .dot-blue { background: #0284c7; }
+.dot-gray { background: #94a3b8; }
 .dot-red { background: #ef4444; }
 
 /* Drilldown Badge Button */
@@ -5271,3 +5277,13 @@ input:disabled + .slider {
   transform: translateX(20px);
 }
 
+
+/* Request taxonomy: large groups first (docs/PHAN_LOAI_YEU_CAU.md). */
+.request-group-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin:8px 0 16px;}
+.request-group-card {display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:14px 16px;border:1px solid #dce6f5;border-radius:12px;background:#f7faff;color:#1f3557;white-space:normal;box-shadow:none;}
+.request-group-card:hover {background:#eaf2ff;border-color:#9cbbf0;}
+.request-group-card strong {font-size:15px;}
+.request-group-card span {font-size:12.5px;color:#55667f;line-height:1.35;}
+.request-group-card small {font-size:12px;color:#173c88;font-weight:650;}
+.request-group-back {display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:8px 0 12px;}
+input.is-preset {background:#f1f5f9;color:#334155;cursor:not-allowed;}

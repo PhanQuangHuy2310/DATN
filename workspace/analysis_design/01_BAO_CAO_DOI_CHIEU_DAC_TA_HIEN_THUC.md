@@ -80,14 +80,14 @@ Hội đồng IT áp dụng các tiêu chuẩn công nghiệp quốc tế và qu
   - 10 Sơ đồ Thực thể Quan hệ (Domain ERDs).
 
 #### 2. Hiện thực Kỹ thuật trong Repository (Codebase & Database):
-- Toàn bộ 16 Use Cases P0 được cài đặt qua các router Django REST Framework trong [api_core/workflow/urls.py](file:///D:/DATN/code/enterprise_approval_system/api_core/workflow/urls.py):
-  - `POST /api/v1/workflow/requests/` (Khởi tạo bản nháp / nộp đơn - `UC03`).
-  - `POST /api/v1/workflow/requests/{id}/approval-decisions/` (Phê duyệt / Từ chối / Yêu cầu giải trình - `UC06`).
-  - `POST /api/v1/workflow/requests/{id}/claims/` (Tiếp nhận thực hiện từ nhóm chuyên trách - `UC09`).
-  - `POST /api/v1/workflow/requests/{id}/acceptance/` (Nghiệm thu độc lập - `UC10`).
-  - `POST /api/v1/workflow/config/releases/` (Phát hành cấu hình quy trình động - `UC13`).
-  - `GET /api/v1/workflow/audit/verify/` (Kiểm toán chuỗi băm Hash-Chain - `UC15`).
-  - `POST /api/v1/workflow/privacy/purge/` (Ẩn danh hóa dữ liệu GDPR / Nghị định 13 - `UC17`).
+- Toàn bộ 16 Use Cases P0 được cài đặt qua các router Django trong [api_core/workflow/urls.py](file:///D:/DATN/code/enterprise_approval_system/api_core/workflow/urls.py):
+  - `POST /api/v1/requests` (tạo nháp) và `POST /api/v1/requests/{id}/submit` hoặc `POST /api/v1/requests/submit` (nộp đơn - `UC03`, `UC04`).
+  - `POST /api/v1/requests/{id}/approval-decisions` (Phê duyệt / Từ chối / Yêu cầu giải trình - `UC06`).
+  - `POST /api/v1/requests/{id}/claim` (Tiếp nhận thực hiện từ nhóm chuyên trách - `UC10`).
+  - `POST /api/v1/requests/{id}/acceptance-decisions` (Nghiệm thu độc lập - `UC12`).
+  - `POST /api/v1/config-releases`, `/{release_id}/validate`, `/{release_id}/publish` (Phát hành cấu hình quy trình động - `UC02`).
+  - `GET /api/v1/requests/{id}/audit/verify` và lệnh `python manage.py audit_verify` (Kiểm toán chuỗi băm Hash-Chain - `UC15`).
+  - Lệnh quản trị `python manage.py privacy_case` (Ẩn danh hóa dữ liệu có duyệt kép `eas.privacy_case_approval` theo GDPR / Nghị định 13).
 - Chuẩn hóa 3 Mẫu Vòng đời Nghiệp vụ (3-Tier Lifecycle Model):
   - **Lifecycle A (Phê duyệt đơn giản):** Chỉ gồm các bước duyệt của cấp quản lý (`SUBMITTED` $\rightarrow$ `IN_APPROVAL` $\rightarrow$ `APPROVED` $\rightarrow$ `CLOSED`). Áp dụng cho: Nghỉ phép, Làm thêm giờ, Làm việc từ xa.
   - **Lifecycle B (Phê duyệt + Thực hiện):** Sau khi được duyệt, chuyển sang hàng đợi thực hiện của bộ phận chuyên môn (`APPROVED` $\rightarrow$ `READY_FOR_EXECUTION` $\rightarrow$ `IN_EXECUTION` $\rightarrow$ `EXECUTED` $\rightarrow$ `CLOSED`). Áp dụng cho: Cấp bản quyền phần mềm, Sửa chữa thiết bị văn phòng.

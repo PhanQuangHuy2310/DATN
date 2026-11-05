@@ -39,23 +39,26 @@ def enterprise_catalog():
     return data
 
 
+# Request groups by nature (docs/PHAN_LOAI_YEU_CAU.md); same codes as eas.request_group.
 CATALOG_V2_GROUPS = (
-    "FINANCE",
-    "RESOURCE",
-    "FACILITY",
+    "ABSENCE",
+    "WORKTIME",
+    "BORROW",
+    "PROVISION",
+    "PAYMENT",
+    "PROCUREMENT",
+    "PEOPLE",
+    "SUPPORT",
     "WORK",
-    "HR",
-    "TIME",
-    "IT",
     "LEGAL",
     "SALES",
-    "ADMIN",
+    "ASSET",
 )
 
 
 @lru_cache(maxsize=1)
 def catalog_v2():
-    """Approved 10-group catalogue (58 active types, 8 deprecated duplicates)."""
+    """Seed catalogue: 12 groups by nature, 58 active types, 8 deprecated duplicates."""
     data = json.loads(
         Path(__file__).with_name("catalog_v2.json").read_text(encoding="utf-8")
     )
@@ -67,7 +70,7 @@ def catalog_v2():
         or len({x["code"] for x in items}) != len(items)
         or any(x["category"] not in CATALOG_V2_GROUPS for x in items)
     ):
-        raise RuntimeError("Invalid 10-group request catalogue")
+        raise RuntimeError("Invalid request catalogue groups")
     return data
 
 

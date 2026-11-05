@@ -14,7 +14,8 @@ joblib==1.4.2
 imbalanced-learn==0.12.3
 
 # ===== OCR =====
--r requirements-paddle.txt
+# PaddleOCR 3.x lives in requirements-paddle.txt (own Docker layer).
+numpy==1.26.4
 Pillow==13.0.0
 
 # ===== LLM / Summarize =====

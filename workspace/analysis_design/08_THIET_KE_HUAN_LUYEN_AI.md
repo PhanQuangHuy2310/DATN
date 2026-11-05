@@ -96,7 +96,7 @@ sequenceDiagram
     Django->>DB: UPDATE eas.system_state SET client_maintenance_lock = true
     
     Note over Client,Django: KHÓA BẢO TRÌ CỔNG NHÂN VIÊN TỰ ĐỘNG TỨC THÌ
-    Client->>Django: GET /api/v1/system/maintenance-state
+    Client->>Django: GET /api/v1/system/maintenance
     Django-->>Client: {client_maintenance_lock: true, current_step: 1, step_label: 'Đang chụp quy chế...'}
     Client->>Client: Hiển thị màn hình chờ bảo trì toàn trang, tạm khóa nút nộp đơn mới!
 

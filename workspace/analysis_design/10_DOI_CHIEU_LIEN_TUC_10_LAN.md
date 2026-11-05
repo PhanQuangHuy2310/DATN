@@ -48,22 +48,22 @@ Quy trình thẩm định được thiết kế gồm **10 vòng kiểm định 
 
 #### 2. Đối chiếu 16 Ca sử dụng Cốt lõi (Use Cases P0):
 - Đối soát chi tiết 16 mã Use Case từ `UC01` đến `UC15` và `UC17` (Mã `UC16` giữ làm vùng đệm tương lai):
-  - `UC01` (Đăng nhập & Phiên làm việc): Cài đặt tại `POST /api/v1/auth/login/` với Cookie `HttpOnly`.
-  - `UC02` (Tra cứu Danh mục Yêu cầu): Cài đặt tại `GET /api/v1/workflow/config/request-types/`.
-  - `UC03` (Khởi tạo & Nộp Đơn Yêu cầu): Cài đặt tại `POST /api/v1/workflow/requests/` với Idempotency Token.
-  - `UC04` (Tải lên & Quét Tệp Đính kèm): Cài đặt tại `POST /api/v1/workflow/attachments/upload/` với ClamAV scan.
-  - `UC05` (Theo dõi Tiến độ Đơn): Cài đặt tại `GET /api/v1/workflow/requests/{id}/history/`.
-  - `UC06` (Thực hiện Phê duyệt / Từ chối / Giải trình): Cài đặt tại `POST /api/v1/workflow/requests/{id}/approval-decisions/`.
-  - `UC07` (Rút lại Đơn Yêu cầu): Cài đặt tại `POST /api/v1/workflow/requests/{id}/cancellation/`.
-  - `UC08` (Tiếp nhận Yêu cầu từ Hàng đợi Đội nhóm): Cài đặt tại `POST /api/v1/workflow/requests/{id}/claims/`.
-  - `UC09` (Thực thi & Bàn giao Kết quả): Cài đặt tại `POST /api/v1/workflow/requests/{id}/execution-submit/`.
-  - `UC10` (Nghiệm thu Kết quả Độc lập): Cài đặt tại `POST /api/v1/workflow/requests/{id}/acceptance/`.
-  - `UC11` (Báo cáo Sự cố & Trả về Làm lại): Cài đặt tại `POST /api/v1/workflow/requests/{id}/issue-report/`.
-  - `UC12` (Tái Phân công Xử lý): Cài đặt tại `POST /api/v1/workflow/requests/{id}/reassign/`.
-  - `UC13` (Phát hành Cấu hình Quy trình): Cài đặt tại `POST /api/v1/workflow/config/releases/`.
-  - `UC14` (Quản trị Ma trận Phân quyền RBAC): Cài đặt tại `POST /api/v1/admin/rbac/matrix/`.
-  - `UC15` (Kiểm toán Sổ cái Chuỗi băm): Cài đặt tại `GET /api/v1/workflow/audit/verify/`.
-  - `UC17` (Ẩn danh hóa Dữ liệu Cá nhân GDPR): Cài đặt tại `POST /api/v1/workflow/privacy/purge/`.
+  - `UC01` (Đăng nhập & Phiên làm việc): Cài đặt tại `POST /api/v1/auth/login` với Cookie `HttpOnly`.
+  - `UC02` (Tra cứu Danh mục Yêu cầu): Cài đặt tại `GET /api/v1/request-types` và `GET /api/v1/meta/request-type-forms` (12 nhóm `eas.request_group`, 61 mục menu `eas.request_menu_item`).
+  - `UC03` (Khởi tạo & Nộp Đơn Yêu cầu): Cài đặt tại `POST /api/v1/requests` (tạo nháp) và `POST /api/v1/requests/{id}/submit` (hoặc `POST /api/v1/requests/submit`) với Idempotency Token.
+  - `UC04` (Tải lên & Quét Tệp Đính kèm): Cài đặt tại `POST /api/v1/request-drafts/{id}/attachments` và `POST /api/v1/requests/{id}/attachments` với ClamAV scan.
+  - `UC05` (Theo dõi Tiến độ Đơn): Cài đặt tại `GET /api/v1/requests/{id}/history`.
+  - `UC06` (Thực hiện Phê duyệt / Từ chối / Giải trình): Cài đặt tại `POST /api/v1/requests/{id}/approval-decisions`.
+  - `UC07` (Rút lại Đơn Yêu cầu): Cài đặt tại `POST /api/v1/requests/{id}/cancel` (`/withdraw` là bí danh).
+  - `UC08` (Tiếp nhận Yêu cầu từ Hàng đợi Đội nhóm): Cài đặt tại `POST /api/v1/requests/{id}/claim`.
+  - `UC09` (Thực thi & Bàn giao Kết quả): Cài đặt tại `POST /api/v1/requests/{id}/execution/start` rồi `POST /api/v1/requests/{id}/execution/submit`.
+  - `UC10` (Nghiệm thu Kết quả Độc lập): Cài đặt tại `POST /api/v1/requests/{id}/acceptance-decisions`.
+  - `UC11` (Báo cáo Sự cố & Trả về Làm lại): Cài đặt tại `POST /api/v1/requests/{id}/execution/issues`.
+  - `UC12` (Tái Phân công Xử lý): Cài đặt tại `POST /api/v1/requests/{id}/reassign`.
+  - `UC13` (Phát hành Cấu hình Quy trình): Cài đặt tại `POST /api/v1/config-releases`, `.../{release_id}/validate` và `.../{release_id}/publish`.
+  - `UC14` (Quản trị Ma trận Phân quyền RBAC): Cài đặt tại `POST /api/v1/admin/rbac/matrix` và `/api/v1/admin/rbac/user-permission`.
+  - `UC15` (Kiểm toán Sổ cái Chuỗi băm): Cài đặt tại `GET /api/v1/requests/{id}/audit/verify` và lệnh `python manage.py audit_verify`.
+  - `UC17` (Ẩn danh hóa Dữ liệu Cá nhân GDPR): Thực hiện qua lệnh quản trị `python manage.py privacy_case` (có duyệt kép `eas.privacy_case_approval` và legal hold `eas.retention_hold`).
 
 #### 3. Bằng chứng Kỹ thuật:
 - File định tuyến API: [api_core/workflow/urls.py](file:///D:/DATN/code/enterprise_approval_system/api_core/workflow/urls.py).
@@ -182,7 +182,7 @@ Quy trình thẩm định được thiết kế gồm **10 vòng kiểm định 
 - **Biện pháp Bảo vệ Thực chiến:**
   1. *Probability Calibration:* Áp dụng hiệu chuẩn xác suất để loại bỏ hiện tượng mô hình quá tự tin (Overconfidence).
   2. *Cổng An toàn Kép (Dual-Condition Auto-Approval Gate):* AI chỉ được duyệt khi đồng thời điểm rủi ro $\le 0.15$ VÀ không vi phạm bất kỳ Business Rule nào của doanh nghiệp.
-  3. *Quy trình Giám sát Con người (Human-in-the-loop):* Cho phép cán bộ thẩm định thu hồi quyết định của AI trong 24 giờ qua endpoint `POST /api/v1/workflow/ai/revoke-approval/`.
+  3. *Quy trình Giám sát Con người (Human-in-the-loop):* Cho phép cán bộ thẩm định thu hồi quyết định của AI trong 24 giờ qua endpoint `POST /api/v1/requests/{id}/ai-approval/revoke`.
 
 #### 3. Bằng chứng Kỹ thuật:
 - Mã nguồn kiểm soát cổng an toàn: [ai_service/api/inference.py](file:///D:/DATN/code/enterprise_approval_system/ai_service/api/inference.py).
@@ -258,7 +258,7 @@ $$\text{Block}_n = \{ \text{ID}, \text{Actor}, \text{Action}, \text{Timestamp}, 
 
 #### 3. Kiểm chứng Kịch bản Phát hiện Tấn công Giả mạo Dữ liệu (Tamper-evidence Test):
 - Hội đồng IT thực hiện can thiệp trực tiếp vào cơ sở dữ liệu: Dùng tài khoản DBA sửa đổi giá trị tiền của đơn yêu cầu từ 5.000.000 VNĐ thành 50.000.000 VNĐ.
-- Thực thi API kiểm tra: `GET /api/v1/workflow/audit/verify/`.
+- Thực thi API kiểm tra: `GET /api/v1/requests/{id}/audit/verify` (và lệnh `python manage.py audit_verify`).
 - Kết quả trả về: Hệ thống phát hiện ngay lập tức sự gián đoạn chuỗi băm tại khối số #104, chỉ rõ mã giao dịch bị sửa đổi trái phép và gửi cảnh báo mức độ khẩn cấp (CRITICAL ALERT) cho Quản trị viên.
 
 #### 4. Bằng chứng Kỹ thuật:

@@ -3,51 +3,71 @@
  "origin": "Danh mục 10 nhóm đã duyệt 2026-11-01 (58 loại dùng: 45 giữ, 13 mới; 8 loại ngưng)",
  "groups": [
   {
-   "code": "FINANCE",
-   "label": "Tài chính & Mua sắm"
+   "code": "ABSENCE",
+   "label": "Vắng mặt",
+   "description": "Không có mặt tại nơi làm việc trong một khoảng giờ hoặc ngày"
   },
   {
-   "code": "RESOURCE",
-   "label": "Cấp phát tài nguyên"
+   "code": "WORKTIME",
+   "label": "Chấm công & giờ làm",
+   "description": "Sửa hoặc bổ sung giờ công, làm thêm giờ"
   },
   {
-   "code": "FACILITY",
-   "label": "Mượn cơ sở vật chất"
+   "code": "BORROW",
+   "label": "Mượn & đặt chỗ",
+   "description": "Dùng tạm có thời hạn, hết hạn trả lại"
+  },
+  {
+   "code": "PROVISION",
+   "label": "Cấp phát & quyền truy cập",
+   "description": "Được cấp hẳn tài sản hoặc quyền để làm việc, hoặc thu hồi"
+  },
+  {
+   "code": "PAYMENT",
+   "label": "Tạm ứng & thanh toán",
+   "description": "Tiền chi ra hoặc hoàn lại"
+  },
+  {
+   "code": "PROCUREMENT",
+   "label": "Mua sắm & ngân sách",
+   "description": "Mua mới hoặc thay đổi ngân sách"
+  },
+  {
+   "code": "PEOPLE",
+   "label": "Nhân sự & chế độ",
+   "description": "Quyết định về một nhân sự trong vòng đời làm việc"
+  },
+  {
+   "code": "SUPPORT",
+   "label": "Hỗ trợ & sự cố",
+   "description": "Có thứ đang hỏng hoặc gặp sự cố cần xử lý"
   },
   {
    "code": "WORK",
-   "label": "Công việc"
-  },
-  {
-   "code": "HR",
-   "label": "Nhân sự"
-  },
-  {
-   "code": "TIME",
-   "label": "Nghỉ phép & Chấm công"
-  },
-  {
-   "code": "IT",
-   "label": "CNTT & Bảo mật"
+   "label": "Công việc & dự án",
+   "description": "Giao hoặc khởi tạo một đầu việc có kế hoạch"
   },
   {
    "code": "LEGAL",
-   "label": "Pháp chế & Hợp đồng"
+   "label": "Văn bản & pháp chế",
+   "description": "Văn bản ràng buộc pháp lý cần thẩm định hoặc ký"
   },
   {
    "code": "SALES",
-   "label": "Kinh doanh & Marketing"
+   "label": "Kinh doanh & marketing",
+   "description": "Chính sách bán hàng và quảng bá"
   },
   {
-   "code": "ADMIN",
-   "label": "Hành chính & Kho"
+   "code": "ASSET",
+   "label": "Kho & tài sản cố định",
+   "description": "Thay đổi vị trí hoặc trạng thái tài sản công ty"
   }
  ],
  "items": [
   {
    "code": "ADVANCE_LARGE",
    "name": "Tạm ứng dự án lớn (>50tr)",
-   "category": "FINANCE",
+   "category": "PAYMENT",
    "status": "ACTIVE",
    "risk_weight": 4,
    "approval_level": 3,
@@ -82,7 +102,7 @@
   {
    "code": "ADVANCE_MEDIUM",
    "name": "Tạm ứng chi phí (10-50tr)",
-   "category": "FINANCE",
+   "category": "PAYMENT",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 2,
@@ -116,7 +136,7 @@
   {
    "code": "ADVANCE_SMALL",
    "name": "Tạm ứng chi phí (<10tr)",
-   "category": "FINANCE",
+   "category": "PAYMENT",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 2,
@@ -150,7 +170,7 @@
   {
    "code": "BUDGET_REALLOCATION",
    "name": "Điều chuyển & bổ sung ngân sách liên bộ phận",
-   "category": "FINANCE",
+   "category": "PROCUREMENT",
    "status": "ACTIVE",
    "risk_weight": 5,
    "approval_level": 5,
@@ -187,7 +207,7 @@
   {
    "code": "EQUIPMENT",
    "name": "Mua sắm thiết bị / tài sản",
-   "category": "FINANCE",
+   "category": "PROCUREMENT",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 3,
@@ -243,7 +263,7 @@
   {
    "code": "EXPENSE_CLAIM",
    "name": "Thanh toán chi phí",
-   "category": "FINANCE",
+   "category": "PAYMENT",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 3,
@@ -289,7 +309,7 @@
   {
    "code": "PURCHASE_REQUEST",
    "name": "Đề nghị mua sắm",
-   "category": "FINANCE",
+   "category": "PROCUREMENT",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 3,
@@ -345,7 +365,7 @@
   {
    "code": "REFUND_COMPENSATION",
    "name": "Hoàn tiền / Đền bù",
-   "category": "FINANCE",
+   "category": "PAYMENT",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 1,
@@ -378,7 +398,7 @@
   {
    "code": "REIMBURSEMENT",
    "name": "Quyết toán tạm ứng",
-   "category": "FINANCE",
+   "category": "PAYMENT",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 2,
@@ -412,7 +432,7 @@
   {
    "code": "SAAS_LICENSE_BUY",
    "name": "Mua bản quyền phần mềm mới",
-   "category": "FINANCE",
+   "category": "PROCUREMENT",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 3,
@@ -447,7 +467,7 @@
   {
    "code": "SALARY_ADVANCE",
    "name": "Ứng lương",
-   "category": "FINANCE",
+   "category": "PAYMENT",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 2,
@@ -513,7 +533,7 @@
   {
    "code": "SUPPLIER_ONBOARDING",
    "name": "Thẩm định & phê duyệt nhà cung cấp mới",
-   "category": "FINANCE",
+   "category": "PROCUREMENT",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 3,
@@ -548,7 +568,7 @@
   {
    "code": "TAX_INVOICE_ISSUE",
    "name": "Phát hành / điều chỉnh hóa đơn VAT",
-   "category": "FINANCE",
+   "category": "PAYMENT",
    "status": "ACTIVE",
    "risk_weight": 1,
    "approval_level": 1,
@@ -581,7 +601,7 @@
   {
    "code": "VENDOR_PAYMENT",
    "name": "Thanh toán Hợp đồng Vendor",
-   "category": "FINANCE",
+   "category": "PAYMENT",
    "status": "ACTIVE",
    "risk_weight": 5,
    "approval_level": 3,
@@ -616,7 +636,7 @@
   {
    "code": "ACCESS",
    "name": "Cấp tài khoản & quyền truy cập",
-   "category": "RESOURCE",
+   "category": "PROVISION",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 2,
@@ -664,7 +684,7 @@
   {
    "code": "LAPTOP_PROVISION",
    "name": "Cấp máy tính / thiết bị làm việc",
-   "category": "RESOURCE",
+   "category": "PROVISION",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 1,
@@ -697,7 +717,7 @@
   {
    "code": "OFFICE_SUPPLIES",
    "name": "Cấp văn phòng phẩm",
-   "category": "RESOURCE",
+   "category": "PROVISION",
    "status": "ACTIVE",
    "risk_weight": 1,
    "approval_level": 1,
@@ -730,7 +750,7 @@
   {
    "code": "RESOURCE_REVOKE",
    "name": "Thu hồi tài khoản / thiết bị",
-   "category": "RESOURCE",
+   "category": "PROVISION",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 1,
@@ -808,7 +828,7 @@
   {
    "code": "ACCESS_FACILITY",
    "name": "Cấp thẻ ra vào",
-   "category": "FACILITY",
+   "category": "PROVISION",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 2,
@@ -842,7 +862,7 @@
   {
    "code": "EQUIPMENT_BORROW",
    "name": "Mượn thiết bị / đồ dùng",
-   "category": "FACILITY",
+   "category": "BORROW",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 2,
@@ -876,7 +896,7 @@
   {
    "code": "ROOM_BOOKING",
    "name": "Đặt phòng họp",
-   "category": "FACILITY",
+   "category": "BORROW",
    "status": "ACTIVE",
    "risk_weight": 1,
    "approval_level": 1,
@@ -909,7 +929,7 @@
   {
    "code": "VEHICLE_BOOKING",
    "name": "Mượn xe công vụ",
-   "category": "FACILITY",
+   "category": "BORROW",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 1,
@@ -948,6 +968,14 @@
       "minLength": 5,
       "maxLength": 150
      },
+     "vehicle_code": {
+      "type": "string",
+      "enum": [
+       "CAR-HCM-01",
+       "CAR-HCM-02",
+       "CAR-HCM-03"
+      ]
+     },
      "destination": {
       "type": "string",
       "minLength": 2,
@@ -974,6 +1002,7 @@
     },
     "required": [
      "title",
+     "vehicle_code",
      "destination",
      "start_date",
      "end_date",
@@ -993,7 +1022,7 @@
   {
    "code": "VISITOR_SECURITY_PASS",
    "name": "Thẻ an ninh khách & đối tác ra vào",
-   "category": "FACILITY",
+   "category": "PROVISION",
    "status": "ACTIVE",
    "risk_weight": 1,
    "approval_level": 1,
@@ -1242,7 +1271,7 @@
   {
    "code": "BUSINESS_TRIP",
    "name": "Đăng ký đi công tác",
-   "category": "HR",
+   "category": "ABSENCE",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 3,
@@ -1288,7 +1317,7 @@
   {
    "code": "DISCIPLINE_REQ",
    "name": "Đề xuất kỷ luật",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 4,
    "approval_level": 3,
@@ -1362,7 +1391,7 @@
   {
    "code": "EMPLOYEE_ONBOARDING",
    "name": "Tiếp nhận nhân viên mới",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 2,
@@ -1396,7 +1425,7 @@
   {
    "code": "HR_CERTIFICATE",
    "name": "Xin giấy xác nhận công tác / thu nhập",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 1,
    "approval_level": 1,
@@ -1464,7 +1493,7 @@
   {
    "code": "INTERNAL_TRANSFER",
    "name": "Điều chuyển nội bộ",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 3,
@@ -1499,7 +1528,7 @@
   {
    "code": "PROMOTION_REQ",
    "name": "Đề xuất thăng chức",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 4,
    "approval_level": 3,
@@ -1586,7 +1615,7 @@
   {
    "code": "RECRUITMENT_REQ",
    "name": "Yêu cầu tuyển dụng nhân sự",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 4,
    "approval_level": 4,
@@ -1622,7 +1651,7 @@
   {
    "code": "RESIGNATION",
    "name": "Thôi việc / Bàn giao",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 4,
    "approval_level": 3,
@@ -1657,7 +1686,7 @@
   {
    "code": "REWARD_REQ",
    "name": "Đề xuất khen thưởng",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 3,
@@ -1742,7 +1771,7 @@
   {
    "code": "SALARY_ADJUSTMENT",
    "name": "Điều chỉnh lương",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 5,
    "approval_level": 4,
@@ -1823,7 +1852,7 @@
   {
    "code": "TRAINING_COURSE",
    "name": "Đăng ký đào tạo & chứng chỉ nghề nghiệp",
-   "category": "HR",
+   "category": "PEOPLE",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 2,
@@ -1857,7 +1886,7 @@
   {
    "code": "ATTENDANCE_ADJUSTMENT",
    "name": "Điều chỉnh chấm công",
-   "category": "TIME",
+   "category": "ABSENCE",
    "status": "ACTIVE",
    "risk_weight": 1,
    "approval_level": 1,
@@ -1890,7 +1919,7 @@
   {
    "code": "LEAVE",
    "name": "Nghỉ phép",
-   "category": "TIME",
+   "category": "ABSENCE",
    "status": "ACTIVE",
    "risk_weight": 1,
    "approval_level": 2,
@@ -1934,7 +1963,7 @@
   {
    "code": "LEAVE_SPECIAL",
    "name": "Nghỉ phép đặc biệt",
-   "category": "TIME",
+   "category": "ABSENCE",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 3,
@@ -1980,7 +2009,7 @@
   {
    "code": "OVERTIME_REQ",
    "name": "Đăng ký làm thêm giờ (OT)",
-   "category": "TIME",
+   "category": "WORKTIME",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 1,
@@ -2013,7 +2042,7 @@
   {
    "code": "WFH_REQ",
    "name": "Làm việc từ xa (WFH)",
-   "category": "TIME",
+   "category": "ABSENCE",
    "status": "ACTIVE",
    "risk_weight": 1,
    "approval_level": 1,
@@ -2046,7 +2075,7 @@
   {
    "code": "DATA_UAT_EXPORT",
    "name": "Trích xuất dữ liệu / UAT",
-   "category": "IT",
+   "category": "WORK",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 2,
@@ -2080,7 +2109,7 @@
   {
    "code": "FEATURE_RELEASE",
    "name": "Feature Request / Release",
-   "category": "IT",
+   "category": "WORK",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 2,
@@ -2114,7 +2143,7 @@
   {
    "code": "IT_SUPPORT",
    "name": "Yêu cầu hỗ trợ IT",
-   "category": "IT",
+   "category": "SUPPORT",
    "status": "ACTIVE",
    "risk_weight": 1,
    "approval_level": 1,
@@ -2147,7 +2176,7 @@
   {
    "code": "PROD_DATA_ACCESS",
    "name": "Cấp quyền Dữ liệu nhạy cảm/Server",
-   "category": "IT",
+   "category": "PROVISION",
    "status": "ACTIVE",
    "risk_weight": 5,
    "approval_level": 3,
@@ -2182,7 +2211,7 @@
   {
    "code": "SECURITY_INCIDENT_HOTFIX",
    "name": "Khắc phục sự cố bảo mật & Hotfix khẩn cấp",
-   "category": "IT",
+   "category": "SUPPORT",
    "status": "ACTIVE",
    "risk_weight": 5,
    "approval_level": 5,
@@ -2219,7 +2248,7 @@
   {
    "code": "SERVER_FIREWALL",
    "name": "Cấp Server / Firewall",
-   "category": "IT",
+   "category": "PROVISION",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 3,
@@ -2581,7 +2610,7 @@
   {
    "code": "ASSET_DISPOSAL",
    "name": "Thanh lý & hủy tài sản cố định",
-   "category": "ADMIN",
+   "category": "ASSET",
    "status": "ACTIVE",
    "risk_weight": 4,
    "approval_level": 4,
@@ -2617,7 +2646,7 @@
   {
    "code": "FACILITY_REPAIR",
    "name": "Sửa chữa sự cố văn phòng",
-   "category": "ADMIN",
+   "category": "SUPPORT",
    "status": "ACTIVE",
    "risk_weight": 2,
    "approval_level": 1,
@@ -2650,7 +2679,7 @@
   {
    "code": "WAREHOUSE_TRANSFER",
    "name": "Luân chuyển kho",
-   "category": "ADMIN",
+   "category": "ASSET",
    "status": "ACTIVE",
    "risk_weight": 3,
    "approval_level": 1,
@@ -2683,7 +2712,7 @@
   {
    "code": "ASSET_PURCHASE",
    "name": "Mua sắm tài sản phòng ban",
-   "category": "FINANCE",
+   "category": "PROCUREMENT",
    "status": "DEPRECATED",
    "merged_into": "EQUIPMENT",
    "risk_weight": 4,
@@ -2719,7 +2748,7 @@
   {
    "code": "SOFTWARE_ACCESS",
    "name": "Cấp tài khoản / VPN",
-   "category": "RESOURCE",
+   "category": "PROVISION",
    "status": "DEPRECATED",
    "merged_into": "ACCESS",
    "risk_weight": 2,
@@ -2754,7 +2783,7 @@
   {
    "code": "ROOM_STUDIO",
    "name": "Mượn phòng họp / Studio",
-   "category": "FACILITY",
+   "category": "BORROW",
    "status": "DEPRECATED",
    "merged_into": "ROOM_BOOKING",
    "risk_weight": 1,
@@ -2788,7 +2817,7 @@
   {
    "code": "ROOM_VEHICLE",
    "name": "Mượn phòng họp / Xe công vụ",
-   "category": "FACILITY",
+   "category": "BORROW",
    "status": "DEPRECATED",
    "merged_into": "ROOM_BOOKING",
    "risk_weight": 1,
@@ -2822,7 +2851,7 @@
   {
    "code": "LEAVE_ANNUAL",
    "name": "Nghỉ phép dưới 3 ngày",
-   "category": "TIME",
+   "category": "ABSENCE",
    "status": "DEPRECATED",
    "merged_into": "LEAVE",
    "risk_weight": 1,
@@ -2856,7 +2885,7 @@
   {
    "code": "LEAVE_LONG",
    "name": "Nghỉ phép từ 3 ngày",
-   "category": "TIME",
+   "category": "ABSENCE",
    "status": "DEPRECATED",
    "merged_into": "LEAVE",
    "risk_weight": 3,
@@ -2891,7 +2920,7 @@
   {
    "code": "OVERTIME_APPROVAL",
    "name": "Đăng ký làm thêm giờ (OT)",
-   "category": "TIME",
+   "category": "WORKTIME",
    "status": "DEPRECATED",
    "merged_into": "OVERTIME_REQ",
    "risk_weight": 2,
@@ -2925,7 +2954,7 @@
   {
    "code": "FACILITY_MAINTENANCE",
    "name": "Sửa chữa cơ sở vật chất",
-   "category": "ADMIN",
+   "category": "SUPPORT",
    "status": "DEPRECATED",
    "merged_into": "FACILITY_REPAIR",
    "risk_weight": 2,

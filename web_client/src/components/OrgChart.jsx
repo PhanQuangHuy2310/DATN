@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useApiBase } from "../apiBase.js";
+import { CardGridSkeleton } from "./design.jsx";
 import { useResource, ResourceState } from "./ui.jsx";
 
 const DEPT_COLORS = {
@@ -19,12 +20,16 @@ const DEPT_COLORS = {
   DEPT_OPS: { bg: "#ecfeff", border: "#06b6d4", text: "#155e75", badge: "#0891b2", icon: "⚙️" },
 };
 
-export default function OrgChart({ navigate, portal = "client" }) {
+export default function OrgChart({ navigate, portal = "client", user }) {
   const apiBase = useApiBase();
   const treeRes = useResource(`${apiBase}/org-chart-tree`);
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [zoom, setZoom] = useState(1);
+  const canOpenUsers =
+    Boolean(navigate) &&
+    (portal === "admin" || Boolean(user?.permissions?.by_module?.users?.can_view));
+  const usersRoute = portal === "admin" ? "users" : "people";
 
   const summary = treeRes.data?.summary || {
     total_departments: 8,
@@ -66,13 +71,13 @@ export default function OrgChart({ navigate, portal = "client" }) {
           </p>
         </div>
         <div className="org-chart-actions" style={{ display: "flex", gap: "10px" }}>
-          {navigate && (
+          {canOpenUsers && (
             <button
               type="button"
               className="primary"
-              onClick={() => navigate("users")}
+              onClick={() => navigate(usersRoute)}
             >
-              + Quản lý người dùng
+              {portal === "admin" ? "+ Quản lý người dùng" : "Danh sách nhân sự →"}
             </button>
           )}
           <button
@@ -98,19 +103,19 @@ export default function OrgChart({ navigate, portal = "client" }) {
           </span>
           <span
             className="stat-pill stat-working"
-            style={{ background: "#e8f8ed", color: "#0f5132", borderColor: "#42b86c" }}
+            style={{ background: "var(--ds-success-soft)", color: "var(--ds-success)", borderColor: "var(--ds-success)" }}
           >
             🟢 Đang làm: <strong>{summary.working_count}</strong>
           </span>
           <span
             className="stat-pill stat-leave"
-            style={{ background: "#fff6eb", color: "#8f4400", borderColor: "#f0932b" }}
+            style={{ background: "var(--ds-warning-soft)", color: "var(--ds-warning)", borderColor: "var(--ds-warning)" }}
           >
             🟡 Nghỉ làm: <strong>{summary.leave_count}</strong>
           </span>
           <span
             className="stat-pill stat-trip"
-            style={{ background: "#eaf3ff", color: "#084298", borderColor: "#4b8fe2" }}
+            style={{ background: "var(--ds-primary-soft)", color: "var(--ds-primary)", borderColor: "var(--ds-primary)" }}
           >
             🔵 Công tác: <strong>{summary.trip_count}</strong>
           </span>
@@ -144,7 +149,7 @@ export default function OrgChart({ navigate, portal = "client" }) {
       </div>
 
       {/* Main Diagram Area with Scaling */}
-      <ResourceState resource={treeRes}>
+      <ResourceState resource={treeRes} skeleton={<CardGridSkeleton count={6} />}>
         <div className="org-canvas-viewport">
           <div
             className="org-tree-root"
@@ -328,7 +333,7 @@ export default function OrgChart({ navigate, portal = "client" }) {
           >
             <div className="org-modal-header">
               <div>
-                <h3 id="org-modal-title" style={{ fontSize: "18px", fontWeight: 700, color: "#1e293b" }}>
+                <h3 id="org-modal-title" style={{ fontSize: "18px", fontWeight: 700, color: "var(--ds-ink)" }}>
                   {selectedNode.name} ({selectedNode.code})
                 </h3>
                 <p className="muted" style={{ margin: "4px 0 0", fontSize: "13px" }}>
@@ -356,6 +361,7 @@ export default function OrgChart({ navigate, portal = "client" }) {
                   {selectedNode.employees.map((u) => {
                     const isLeave = u.working_status_code === "NGHI_LAM";
                     const isTrip = u.working_status_code === "CONG_TAC";
+                    const isOffHours = u.working_status_code === "NGOAI_GIO";
 
                     return (
                       <div
@@ -367,8 +373,8 @@ export default function OrgChart({ navigate, portal = "client" }) {
                           justifyContent: "space-between",
                           padding: "10px 14px",
                           borderRadius: "8px",
-                          background: "#f8fafc",
-                          border: "1px solid #e2e8f0",
+                          background: "var(--ds-canvas)",
+                          border: "1px solid var(--ds-line)",
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -378,21 +384,21 @@ export default function OrgChart({ navigate, portal = "client" }) {
                               width: "36px",
                               height: "36px",
                               borderRadius: "50%",
-                              background: "#e2e8f0",
+                              background: "var(--ds-neutral-soft)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                               fontWeight: 700,
-                              color: "#334155",
+                              color: "var(--ds-ink)",
                             }}
                           >
                             {(u.full_name || "U").slice(0, 1).toUpperCase()}
                           </div>
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: "13.5px", color: "#0f172a" }}>
+                            <div style={{ fontWeight: 600, fontSize: "13.5px", color: "var(--ds-ink)" }}>
                               {u.full_name}
                             </div>
-                            <div style={{ fontSize: "12px", color: "#64748b" }}>
+                            <div style={{ fontSize: "12px", color: "var(--ds-muted)" }}>
                               <span>{u.job_title || "Nhân viên"}</span> • <span>{u.email}</span>
                             </div>
                           </div>
@@ -403,8 +409,8 @@ export default function OrgChart({ navigate, portal = "client" }) {
                             <span
                               className="status-tag trip"
                               style={{
-                                background: "#cfe2ff",
-                                color: "#084298",
+                                background: "var(--ds-primary-soft)",
+                                color: "var(--ds-primary)",
                                 padding: "3px 8px",
                                 borderRadius: "4px",
                                 fontSize: "11.5px",
@@ -417,8 +423,8 @@ export default function OrgChart({ navigate, portal = "client" }) {
                             <span
                               className="status-tag leave"
                               style={{
-                                background: "#ffe5d0",
-                                color: "#8f4400",
+                                background: "var(--ds-warning-soft)",
+                                color: "var(--ds-warning)",
                                 padding: "3px 8px",
                                 borderRadius: "4px",
                                 fontSize: "11.5px",
@@ -427,12 +433,26 @@ export default function OrgChart({ navigate, portal = "client" }) {
                             >
                               🟡 Nghỉ làm
                             </span>
+                          ) : isOffHours ? (
+                            <span
+                              className="status-tag off-hours"
+                              style={{
+                                background: "var(--ds-neutral-soft)",
+                                color: "var(--ds-muted)",
+                                padding: "3px 8px",
+                                borderRadius: "4px",
+                                fontSize: "11.5px",
+                                fontWeight: 600,
+                              }}
+                            >
+                              ⚪ {u.working_status_label || "Ngoài giờ"}
+                            </span>
                           ) : (
                             <span
                               className="status-tag active"
                               style={{
-                                background: "#d1e7dd",
-                                color: "#0f5132",
+                                background: "var(--ds-success-soft)",
+                                color: "var(--ds-success)",
                                 padding: "3px 8px",
                                 borderRadius: "4px",
                                 fontSize: "11.5px",
@@ -457,22 +477,24 @@ export default function OrgChart({ navigate, portal = "client" }) {
                 justifyContent: "space-between",
                 alignItems: "center",
                 padding: "16px 20px",
-                borderTop: "1px solid #e2e8f0",
+                borderTop: "1px solid var(--ds-line)",
               }}
             >
               <span className="muted" style={{ fontSize: "13px" }}>
                 Tổng cộng: <strong>{selectedNode.employees?.length || 0}</strong> nhân sự
               </span>
-              {navigate && (
+              {canOpenUsers && (
                 <button
                   type="button"
                   className="secondary"
                   onClick={() => {
                     setSelectedNode(null);
-                    navigate("users");
+                    navigate(usersRoute);
                   }}
                 >
-                  Quản lý trong Người dùng & Trạng thái làm việc →
+                  {portal === "admin"
+                    ? "Quản lý trong Người dùng & Trạng thái làm việc →"
+                    : "Mở danh sách Người dùng →"}
                 </button>
               )}
             </div>

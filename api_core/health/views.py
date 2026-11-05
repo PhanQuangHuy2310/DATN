@@ -20,25 +20,20 @@ from api_core.http import correlation_id
 log = logging.getLogger("eas.database")
 from redis.exceptions import RedisError
 
-EXPECTED_MOCK_RELATIONS = {
-    "mock_hr.department",
-    "mock_hr.employee_directory",
-    "mock_hr.leave_balance",
-    "mock_assets.asset_catalog",
-    "mock_assets.asset_loan",
-    "mock_facilities.resource_catalog",
-    "mock_crm.customer_directory",
-    "mock_crm.contract",
-    "mock_procurement.supplier_directory",
-    "mock_procurement.catalog_item",
-    "mock_it.application_catalog",
-    "mock_it.access_role",
-    "mock_it.service_catalog",
-    "mock_finance.cost_center_budget",
-    "mock_finance.expense_category",
-    "mock_travel.travel_policy",
-    "mock_travel.travel_option",
-}
+from api_core.integrations import client
+from api_core.workflow.errors import CommandError
+
+MOCK_SCHEMAS = (
+    "mock_hr",
+    "mock_assets",
+    "mock_facilities",
+    "mock_crm",
+    "mock_procurement",
+    "mock_it",
+    "mock_finance",
+    "mock_travel",
+)
+REQUIRED_MOCK_MIGRATIONS = {"001", "002", "003", "005"}
 
 
 def assess_runtime_role(
@@ -76,12 +71,13 @@ def assess_runtime_role(
 
 
 def assess_mock_sources(
-    rows: list[tuple[str, bool]], versions: set[str]
+    reachable: bool, versions: set[str], eas_reads_mock: bool
 ) -> dict[str, bool]:
-    available = {name for name, can_read in rows if can_read}
+    """External systems answer over their API; EAS itself cannot read their tables."""
     return {
-        "mock_source_contract_complete": available == EXPECTED_MOCK_RELATIONS,
-        "mock_source_migrations_current": {"001", "002", "003"}.issubset(versions),
+        "mock_systems_api_reachable": reachable,
+        "mock_source_migrations_current": REQUIRED_MOCK_MIGRATIONS.issubset(versions),
+        "eas_role_has_no_mock_table_access": not eas_reads_mock,
     }
 
 
@@ -179,19 +175,18 @@ def database_readiness() -> tuple[bool, dict[str, object], dict[str, object]]:
         if settings.EAS_REQUIRE_MOCK_SOURCES:
             cursor.execute(
                 """
-                SELECT relation_name,
-                       to_regclass(relation_name) IS NOT NULL
-                       AND has_table_privilege(current_user,relation_name,'SELECT')
-                FROM unnest(%s::text[]) AS relation_name
-                ORDER BY relation_name
+                SELECT bool_or(has_schema_privilege(current_user, n.oid, 'USAGE'))
+                FROM pg_namespace n WHERE n.nspname = ANY(%s)
                 """,
-                [sorted(EXPECTED_MOCK_RELATIONS)],
+                [list(MOCK_SCHEMAS)],
             )
-            mock_rows = cursor.fetchall()
-            cursor.execute("SELECT version FROM mock_hr.schema_migration")
-            checks.update(
-                assess_mock_sources(mock_rows, {row[0] for row in cursor.fetchall()})
-            )
+            eas_reads_mock = bool(cursor.fetchone()[0])
+            try:
+                versions = set(client.get("health", "health")["schema_versions"])
+                reachable = True
+            except CommandError:
+                versions, reachable = set(), False
+            checks.update(assess_mock_sources(reachable, versions, eas_reads_mock))
 
     return all(bool(value) for value in checks.values()), checks, catalog
 

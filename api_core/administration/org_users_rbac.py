@@ -280,7 +280,7 @@ def org_chart_tree_view(request):
         parent = node_map.get(n["parent_id"]) if n["parent_id"] else None
         (parent["children"] if parent else tree).append(node_map[n["id"]])
 
-    status_count = {"DANG_LAM": 0, "NGHI_LAM": 0, "CONG_TAC": 0}
+    status_count = {"DANG_LAM": 0, "NGHI_LAM": 0, "CONG_TAC": 0, "NGOAI_GIO": 0}
     for u in users:
         status_count[u["working_status_code"]] = (
             status_count.get(u["working_status_code"], 0) + 1
@@ -293,6 +293,7 @@ def org_chart_tree_view(request):
                 "working_count": status_count["DANG_LAM"],
                 "leave_count": status_count["NGHI_LAM"],
                 "trip_count": status_count["CONG_TAC"],
+                "off_hours_count": status_count["NGOAI_GIO"],
             },
             "departments": nodes,
             "tree": tree,
@@ -396,7 +397,7 @@ def users_management_list(request):
         if role:
             items = [u for u in items if role in u["roles"]]
         status = request.GET.get("status", "").strip().upper()
-        if status in ("DANG_LAM", "NGHI_LAM", "CONG_TAC"):
+        if status in ("DANG_LAM", "NGHI_LAM", "CONG_TAC", "NGOAI_GIO"):
             items = [u for u in items if u["working_status_code"] == status]
         return JsonResponse({"items": items, "total": len(items)})
 

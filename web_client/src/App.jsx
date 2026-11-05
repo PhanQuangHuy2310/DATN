@@ -15,11 +15,13 @@ import {
 } from "./components/ui.jsx";
 import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
 import ClientRequests from "./components/ClientRequests.jsx";
-import { Notifications, Profile } from "./components/Admin.jsx";
+import Notifications from "./components/NotificationsPage.jsx";
+import Profile from "./components/ProfilePage.jsx";
 import { SystemUpdateDialog, SystemUpdateHistory } from "./components/SystemUpdates.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
 import { ApiBaseContext, WORKSPACE_API } from "./apiBase.js";
 import ClientRequestsHub from "./components/ClientRequestsHub.jsx";
+import { formatVnd } from "./formatters.js";
 
 function AdminDashboard(props) {
   return <AdminScreen name="AdminDashboard" {...props} />;
@@ -33,7 +35,7 @@ const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
 const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
 import TeamDashboard from "./components/TeamDashboard.jsx";
 import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
-import { PageHeader } from "./components/design.jsx";
+import { PageHeader, ShellSkeleton, TableSkeleton } from "./components/design.jsx";
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
@@ -653,6 +655,7 @@ function renderNavIcon(key, fallback) {
 function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) {
   const [status, setStatus] = useState(""),
     [type, setType] = useState(""),
+    [departmentId, setDepartmentId] = useState(""),
     [offset, setOffset] = useState(0),
     [limit, setLimit] = useState(20),
     [query, setQuery] = useState(""),
@@ -669,9 +672,12 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
     params.set("tab", page);
   if (status) params.set("status", status);
   if (type) params.set("type_code", type);
+  if (departmentId) params.set("department_id", departmentId);
   if (from) params.set("created_from", from + "T00:00:00+07:00");
   if (to) params.set("created_to", to + "T23:59:59.999999+07:00");
   const availableTypes = useResource("/api/v1/request-types");
+  const orgMeta = useResource(page === "ops" ? "" : "/api/v1/meta/org-chart");
+  const departments = orgMeta.data?.departments || [];
   const r = useResource(
     `/api/v1/${page === "ops" ? "ops/requests" : "requests"}?${params}&_revision=${revision}`,
   );
@@ -684,14 +690,14 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
           <p className="eyebrow">CỔNG DỊCH VỤ EAS / QUẢN LÝ HỒ SƠ</p>
           <h1>{menu.find((m) => m[0] === page)?.[1]}</h1>
           <p className="muted">
-            Theo dõi tiến độ, xử lý công việc và tra cứu lịch sử.
+            Theo dõi tiến độ, người gửi, phòng ban, người đang phụ trách và hạn xử lý SLA của từng hồ sơ.
           </p>
         </div>
         {canCreate && user.roles.includes("REQUESTER") && (
           <button type="button" onClick={onNew}>+ Tạo yêu cầu mới</button>
         )}
       </div>
-      <section className="request-summary-strip" aria-label="Thống kê hồ sơ trên trang">
+      <section className="request-summary-strip" aria-label="Thống kê hồ sơ hiển thị">
         {[
           ["Tất cả", "", "◫"],
           ["Cần bổ sung", "NEEDS_INFO", "!"],
@@ -707,7 +713,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
             <span className="mini-stat-icon" aria-hidden="true">{icon}</span>
             <span className="mini-stat-label">{label}</span>
             <strong>{code ? items.filter((item) => item.status === code).length : items.length}</strong>
-            <small>trên trang đang tải</small>
+            <small>hồ sơ hiển thị</small>
           </button>
         ))}
       </section>
@@ -718,7 +724,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ví dụ: REQ-2026-001"
+              placeholder="Mã REQ, tiêu đề hoặc tên người gửi…"
             />
           </label>
           <label>
@@ -738,6 +744,25 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
               ))}
             </select>
           </label>
+          {departments.length > 1 && (
+            <label>
+              Phòng ban
+              <select
+                value={departmentId}
+                onChange={(e) => {
+                  setDepartmentId(e.target.value);
+                  setOffset(0);
+                }}
+              >
+                <option value="">Tất cả phòng ban</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             Trạng thái
             <select
@@ -785,7 +810,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
         </div>
         <div className="section-head">
           <small className="muted">
-            Dữ liệu hiển thị theo phạm vi được cấp quyền
+            Dữ liệu hiển thị theo phạm vi được cấp quyền · Đang hiển thị <strong>{filtered.length}</strong> hồ sơ
           </small>
           <div className="actions">
             <button
@@ -793,6 +818,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
               onClick={() => {
                 setStatus("");
                 setType("");
+                setDepartmentId("");
                 setOffset(0);
                 setQuery("");
                 setFrom("");
@@ -807,7 +833,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
           </div>
         </div>
       </section>
-      <ResourceState resource={r}>
+      <ResourceState resource={r} skeleton={<TableSkeleton rows={5} cols={6} />}>
         {page === "ops" ? (
           <AdminScreen name="Operations" items={filtered} onRefresh={r.reload} />
         ) : (
@@ -817,38 +843,64 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
                 <thead>
                   <tr>
                     <th>Mã yêu cầu</th>
-                    <th>Nghiệp vụ</th>
+                    <th>Tiêu đề &amp; Nghiệp vụ</th>
+                    <th>Người gửi / Phòng ban</th>
                     <th>Trạng thái</th>
-                    <th>Cập nhật</th>
+                    <th>Người đang xử lý</th>
+                    <th>Hạn / Cập nhật</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((i) => (
-                    <tr key={i.id}>
-                      <td data-label="Mã yêu cầu" className="request-code">{i.code}</td>
-                      <td data-label="Nghiệp vụ">
-                        <span className="type-icon">
-                          {i.type_code === "LEAVE"
-                            ? "◷"
-                            : i.type_code === "ACCESS"
-                              ? "◇"
-                              : "▣"}
-                        </span>
-                        {availableTypes.data?.items?.find(t => t.code === i.type_code)?.name || types[i.type_code] || "Loại yêu cầu"}
-                        <small className="muted" style={{display: "block"}}>Mức rủi ro {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · {i.approval_level || typeLevels[i.type_code]?.approval_level || 1} cấp duyệt</small>
-                      </td>
-                      <td data-label="Trạng thái">
-                        <Badge value={i.status} />
-                      </td>
-                      <td data-label="Cập nhật">{date(i.updated_at)}</td>
-                      <td data-label="Thao tác">
-                        <button type="button" className="link" onClick={() => onOpen(i.id)}>
-                          Xem chi tiết →
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map((i) => {
+                    const typeName = availableTypes.data?.items?.find((t) => t.code === i.type_code)?.name || i.type_name || types[i.type_code] || "Loại yêu cầu";
+                    return (
+                      <tr key={i.id} className={i.overdue ? "is-overdue" : ""}>
+                        <td data-label="Mã yêu cầu" className="request-code">{i.code}</td>
+                        <td data-label="Tiêu đề & Nghiệp vụ">
+                          {i.title ? (
+                            <>
+                              <strong>{i.title}</strong>
+                              <span className="ds-cell-sub">
+                                {typeName}
+                                {i.amount_vnd > 0 ? ` · ${formatVnd(i.amount_vnd)}` : ""}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="type-icon">
+                                {i.type_code === "LEAVE"
+                                  ? "◷"
+                                  : i.type_code === "ACCESS"
+                                    ? "◇"
+                                    : "▣"}
+                              </span>
+                              {typeName}
+                              <small className="muted" style={{display: "block"}}>
+                                Mức rủi ro {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · {i.approval_level || typeLevels[i.type_code]?.approval_level || 1} cấp duyệt
+                              </small>
+                            </>
+                          )}
+                        </td>
+                        <td data-label="Người gửi / Phòng ban">
+                          {i.requester_name || "—"}
+                          {i.department_name && <span className="ds-cell-sub">{i.department_name}</span>}
+                        </td>
+                        <td data-label="Trạng thái">
+                          <Badge value={i.status} />
+                        </td>
+                        <td data-label="Người đang xử lý">{i.current_assignee_name || "—"}</td>
+                        <td data-label="Hạn / Cập nhật" className={i.overdue ? "overdue" : ""}>
+                          {i.due_at ? `${date(i.due_at)}${i.overdue ? " · Quá hạn" : ""}` : date(i.updated_at)}
+                        </td>
+                        <td data-label="Thao tác">
+                          <button type="button" className="link" onClick={() => onOpen(i.id)}>
+                            Xem chi tiết →
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1532,7 +1584,9 @@ function PortalApp({ portal, theme, toggleTheme }) {
         if (active) {
           if (e.message === "PASSWORD_CHANGE_REQUIRED")
             setUser({ roles: [], must_change_password: true });
-          else if (e.status === 401 || e.status === 403) setUser(null);
+          // During an AI learning lock the login page shows the progress bar,
+          // so a reload must land there instead of a generic connection error.
+          else if (e.status === 401 || e.status === 403 || e.message === "SYSTEM_UNDER_MAINTENANCE") setUser(null);
           else setError(errorText(e));
         }
       });
@@ -1569,8 +1623,8 @@ function PortalApp({ portal, theme, toggleTheme }) {
     );
   if (user === undefined)
     return (
-      <main id="main" className="empty" aria-live="polite">
-        Đang khởi tạo EAS Portal…
+      <main id="main" aria-live="polite">
+        <ShellSkeleton />
       </main>
     );
   if (user?.must_change_password)

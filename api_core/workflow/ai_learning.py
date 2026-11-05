@@ -761,20 +761,24 @@ def _finish_applied(job: dict[str, Any], owner: str, result: dict[str, Any]) -> 
                 Jsonb(announcement["guidance"]),
             ],
         )
-        cursor.execute(
-            """
-            INSERT INTO eas.system_versions_changelog (system_version, change_type, change_scope, title, description, new_value, changed_by)
-            VALUES (%s, 'REGULATION', %s, %s, %s, %s, 'AI learning job')
-            """,
-            [
-                f"v{version}",
-                "MINOR" if version.split(".")[-1] != "0" else "MAJOR",
-                announcement["title"],
-                announcement["summary"],
-                Jsonb(
-                    {"rules": len(result["policy"]["rules"]), **result["verification"]}
-                ),
-            ],
+        from api_core.workflow.service import record_system_change
+
+        record_system_change(
+            cursor,
+            actor_id=None,
+            change_type="REGULATION",
+            change_scope="MINOR" if version.split(".")[-1] != "0" else "MAJOR",
+            system_version=f"v{version}",
+            title=announcement["title"],
+            description=announcement["summary"],
+            new_value={
+                "rules": len(result["policy"]["rules"]),
+                **result["verification"],
+            },
+            target_type="ai_learning_job",
+            target_id=str(job["id"]),
+            extra_details={"changed_by": "AI learning job"},
+            correlation_id=str(uuid4()),
         )
         cursor.execute(
             """

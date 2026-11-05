@@ -49,3 +49,14 @@ class LeaveRecordTests(SimpleTestCase):
                 "IT_SUPPORT", {"start_date": "2026-11-05", "end_date": "2026-11-06"}
             )
         )
+
+    def test_unpaid_leave_is_recorded_as_unpaid(self):
+        kind, _, _ = leave_record(
+            "LEAVE",
+            {
+                "start_date": "2026-11-05",
+                "end_date": "2026-11-05",
+                "leave_kind": "KHONG_LUONG",
+            },
+        )
+        self.assertEqual(kind, "UNPAID_LEAVE")

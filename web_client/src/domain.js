@@ -1,4 +1,5 @@
 import { catalogTypeLevels, catalogTypeNames } from "./catalogV2.js";
+
 export const statuses = {
   DRAFT: "Bản nháp",
   PENDING_APPROVAL: "Chờ phê duyệt",
@@ -10,10 +11,12 @@ export const statuses = {
   REJECTED: "Bị từ chối",
   CANCELLED: "Đã hủy",
 };
+
 export const types = {
   LEAVE: "Nghỉ phép",
   LEAVE_SPECIAL: "Nghỉ phép đặc biệt",
   ROOM_BOOKING: "Đặt phòng họp",
+  VEHICLE_BOOKING: "Đặt xe công vụ",
   EXPENSE_CLAIM: "Thanh toán chi phí",
   ACCESS: "Cấp quyền truy cập",
   ACCESS_FACILITY: "Cấp quyền ra vào",
@@ -70,6 +73,7 @@ export const types = {
   BUDGET_REALLOCATION: "Điều chuyển & bổ sung ngân sách liên bộ phận",
   SECURITY_INCIDENT_HOTFIX: "Khắc phục sự cố bảo mật & Hotfix khẩn cấp",
 };
+
 export const riskLevels = {
   1: "Cấp 1 — Rất thấp",
   2: "Cấp 2 — Thấp",
@@ -77,6 +81,7 @@ export const riskLevels = {
   4: "Cấp 4 — Cao",
   5: "Cấp 5 — Trọng yếu",
 };
+
 export const approvalLevels = {
   1: "Duyệt 1 cấp (Quản lý trực tiếp)",
   2: "Duyệt 2 cấp (Trưởng bộ phận)",
@@ -84,6 +89,7 @@ export const approvalLevels = {
   4: "Duyệt 4 cấp (Giám đốc Khối / Tài chính)",
   5: "Duyệt 5 cấp (Tổng Giám đốc / CTO / CISO)",
 };
+
 export const resolverLabels = {
   DIRECT_MANAGER: "Quản lý trực tiếp",
   PROJECT_MANAGER: "Giám đốc Dự án (PM)",
@@ -100,10 +106,12 @@ export const resolverLabels = {
   CTO: "Giám đốc Công nghệ (CTO)",
   DIRECTOR: "Tổng Giám đốc / Ban Giám đốc (CEO)",
 };
+
 export const typeLevels = {
   LEAVE: { risk_weight: 1, approval_level: 3 },
   LEAVE_SPECIAL: { risk_weight: 2, approval_level: 3 },
   ROOM_BOOKING: { risk_weight: 1, approval_level: 1 },
+  VEHICLE_BOOKING: { risk_weight: 2, approval_level: 2 },
   EXPENSE_CLAIM: { risk_weight: 3, approval_level: 3 },
   ACCESS: { risk_weight: 3, approval_level: 2 },
   ACCESS_FACILITY: { risk_weight: 2, approval_level: 2 },
@@ -155,9 +163,11 @@ export const typeLevels = {
   BUDGET_REALLOCATION: { risk_weight: 5, approval_level: 5 },
   SECURITY_INCIDENT_HOTFIX: { risk_weight: 5, approval_level: 5 },
 };
-// The approved 10-group catalogue overrides older names and levels.
+
+// The approved catalogue overrides older names and levels.
 Object.assign(types, catalogTypeNames);
 Object.assign(typeLevels, catalogTypeLevels);
+
 export const roles = {
   REQUESTER: "Người gửi yêu cầu",
   APPROVER: "Người phê duyệt",
@@ -165,7 +175,7 @@ export const roles = {
   ACCEPTOR: "Người nghiệm thu",
   POLICY_ADMIN: "Quản trị chính sách",
   OPS_ADMIN: "Quản trị vận hành",
-  AUDITOR: "Người kiểm tra",
+  AUDITOR: "Kiểm toán viên",
 };
 
 export function getPrimaryRoleBadge(userRoles = []) {
@@ -179,21 +189,22 @@ export function getPrimaryRoleBadge(userRoles = []) {
   if (userRoles.includes("REQUESTER")) return { name: "Người gửi yêu cầu", tone: "badge-requester" };
   return { name: "Thành viên", tone: "badge-default" };
 }
+
 export const fields = {
   LEAVE: [
     ["title", "Tiêu đề", "text"],
     ["reason", "Lý do", "textarea"],
     ["start_date", "Ngày bắt đầu", "date"],
     ["end_date", "Ngày kết thúc", "date"],
-    ["handover_user_id", "ID người nhận bàn giao", "text"],
+    ["handover_user_id", "Người nhận bàn giao công việc", "text"],
   ],
   ACCESS: [
     ["title", "Tiêu đề", "text"],
     ["reason", "Lý do", "textarea"],
-    ["app_code", "Mã ứng dụng", "text"],
+    ["app_code", "Hệ thống / Ứng dụng", "text"],
     ["requested_role", "Quyền đề nghị", "text"],
-    ["duration_days", "Số ngày", "number"],
-    ["purpose", "Mục đích", "textarea"],
+    ["duration_days", "Số ngày cấp quyền", "number"],
+    ["purpose", "Mục đích sử dụng", "textarea"],
   ],
   EQUIPMENT: [
     ["title", "Tiêu đề", "text"],
@@ -205,14 +216,29 @@ export const fields = {
     ["location", "Nơi sử dụng", "text"],
   ],
 };
+
 export const fieldLabels = {
   title: "Tiêu đề yêu cầu",
   reason: "Lý do / Diễn giải chi tiết",
+  description: "Mô tả chi tiết",
+  notes: "Ghi chú bổ sung",
+  note: "Ghi chú",
+  comment: "Nhận xét",
   start_date: "Ngày bắt đầu",
   end_date: "Ngày kết thúc",
+  borrow_date: "Ngày mượn",
+  return_date: "Ngày hoàn trả dự kiến",
   handover_user_id: "Người nhận bàn giao công việc",
   special_leave_type: "Loại chế độ nghỉ đặc biệt",
   room_name: "Phòng họp / Không gian",
+  room_code: "Phòng họp",
+  leave_kind: "Hình thức nghỉ",
+  vehicle_code: "Xe công vụ",
+  pickup_location: "Điểm đón",
+  dropoff_location: "Điểm đến",
+  passenger_count: "Số hành khách",
+  driver_required: "Yêu cầu tài xế",
+  asset_category: "Nhóm thiết bị / Tài sản",
   booking_date: "Ngày sử dụng",
   start_time: "Giờ bắt đầu",
   end_time: "Giờ kết thúc",
@@ -225,20 +251,23 @@ export const fieldLabels = {
   beneficiary_account: "Tài khoản thụ hưởng",
   app_code: "Hệ thống / Ứng dụng",
   requested_role: "Quyền đề nghị",
-  duration_days: "Số ngày",
+  duration_days: "Thời hạn sử dụng (ngày)",
   facility_zone: "Khu vực cần ra vào",
   access_window: "Khung giờ đăng ký",
   destination: "Địa điểm công tác",
   transportation: "Phương tiện di chuyển",
   support_category: "Nhóm hỗ trợ kỹ thuật",
+  change_type: "Phân loại thay đổi / hỗ trợ",
   urgency: "Mức độ ưu tiên",
+  priority: "Độ ưu tiên",
   device_asset_tag: "Mã tài sản / Tên thiết bị",
   item_name: "Tên thiết bị / Vật tư",
   quantity: "Số lượng",
   specification: "Cấu hình / Thông số kỹ thuật",
-  specs: "Cấu hình",
-  location: "Nơi sử dụng",
+  specs: "Cấu hình kỹ thuật",
+  location: "Địa điểm sử dụng",
   leave_type: "Loại nghỉ phép",
+  leave_days: "Số ngày nghỉ",
   evidence_file: "Tài liệu minh chứng",
   item_list: "Danh sách vật phẩm",
   device_type: "Loại thiết bị",
@@ -265,15 +294,15 @@ export const fieldLabels = {
   partner_name: "Tên đối tác",
   contract_value: "Giá trị hợp đồng (VND)",
   contract_pdf: "Bản thảo hợp đồng (PDF)",
-  environment: "Môi trường dữ liệu",
+  environment: "Môi trường hệ thống",
   data_scope: "Phạm vi dữ liệu",
   release_version: "Phiên bản phát hành",
   change_log: "Nội dung thay đổi",
-  rollback_plan: "Phương án hoàn tác (Rollback)",
+  rollback_plan: "Phương án hoàn tác",
   test_report_file: "Báo cáo kiểm thử (UAT)",
   server_ip: "Địa chỉ IP / Máy chủ",
-  port_range: "Dải cổng (Port)",
-  protocol: "Giao thức",
+  port_range: "Dải cổng mạng",
+  protocol: "Giao thức kết nối",
   adjustment_date: "Ngày điều chỉnh công",
   check_in_time: "Giờ vào thực tế",
   check_out_time: "Giờ ra thực tế",
@@ -299,15 +328,14 @@ export const fieldLabels = {
   expense_date: "Ngày phát sinh chi phí",
   receipt_file: "Chứng từ / Hóa đơn đính kèm",
   contract_no: "Số hợp đồng",
-  vendor_name: "Tên nhà cung cấp (Vendor)",
+  vendor_name: "Tên nhà cung cấp",
   tax_code: "Mã số thuế",
   invoice_pdf: "Hóa đơn điện tử (PDF)",
   system_code: "Mã hệ thống / CSDL",
   access_type: "Loại quyền truy cập",
   software_name: "Tên phần mềm",
-  seats: "Số lượng license (Seats)",
+  seats: "Số lượng bản quyền",
   billing_cycle: "Chu kỳ thanh toán",
-  asset_category: "Nhóm tài sản",
   urgency_level: "Mức độ khẩn cấp",
   visitor_name: "Họ tên khách / đối tác",
   visitor_org: "Đơn vị / Công ty đối tác",
@@ -323,20 +351,35 @@ export const fieldLabels = {
   deal_value_vnd: "Tổng giá trị đơn hàng gốc (VND)",
   supplier_name: "Tên pháp nhân nhà cung cấp",
   supply_category: "Nhóm hàng hóa / dịch vụ cung ứng",
-  job_title: "Vị trí / Chức danh tuyển dụng",
+  job_title: "Vị trí / Chức danh",
   headcount: "Số lượng cần tuyển",
   salary_budget_vnd: "Quỹ lương dự kiến / tháng (VND)",
   target_channel: "Kênh triển khai chính",
   asset_code: "Mã tài sản cố định",
-  disposal_method: "Hình thức xử lý (Thanh lý / Tiêu hủy)",
-  residual_value_vnd: "Giá trị thu hồi / Giá trị còn lại (VND)",
+  disposal_method: "Hình thức xử lý tài sản",
+  residual_value_vnd: "Giá trị thu hồi / còn lại (VND)",
   fiscal_quarter: "Kỳ ngân sách (Quý / Năm)",
   source_budget_code: "Mã ngân sách nguồn (Điều giảm)",
   target_budget_code: "Mã ngân sách đích (Bổ sung)",
   system_affected: "Hệ thống / Dịch vụ bị ảnh hưởng",
-  severity_level: "Mức độ nghiêm trọng (CVSS / P0-P1)",
-  hotfix_version: "Phiên bản bản vá / Commit tag",
+  severity_level: "Mức độ nghiêm trọng",
+  hotfix_version: "Phiên bản bản vá",
+  result_note: "Ghi chú kết quả thực hiện",
+  external_reference: "Mã tham chiếu nghiệm thu / hệ thống ngoài",
+  attachment_ids: "Tệp đính kèm",
+  requester_name: "Người gửi yêu cầu",
+  department_name: "Phòng ban",
+  current_assignee_name: "Người đang xử lý",
+  due_at: "Hạn xử lý",
 };
+
+export function resolveFieldLabel(name, { technical = false } = {}) {
+  if (!name) return "Thông tin";
+  if (fieldLabels[name]) return fieldLabels[name];
+  if (technical) return name;
+  return "Thông tin bổ sung";
+}
+
 export const labels = {
   ...statuses,
   ACTIVE: "Đang xử lý",
@@ -353,6 +396,7 @@ export const labels = {
   INFECTED: "Tệp bị cách ly",
   ERROR: "Kiểm tra thất bại",
 };
+
 /** UC06/UC10/UC12: client affordances mirror SoD and FSM.
  * API transaction and scoped role membership remain the source of truth.
  */
@@ -364,8 +408,6 @@ export function permissions(user, r) {
   const attempt = r.workflow?.attempt;
   const isExecutor = attempt?.executor_id === user.id;
   const hasApprovedStep = r.approval_steps?.some((s) => s.assignee_id === user.id);
-  // Edit/cancel follow ownership + status (enforced again by the API). Module
-  // update/delete on "requests_workflows" means configuring request templates.
   return {
     edit: owner && ["DRAFT", "NEEDS_INFO"].includes(r.status),
     cancel: owner && ["DRAFT", "NEEDS_INFO", "PENDING_APPROVAL"].includes(r.status),
@@ -378,57 +420,248 @@ export function permissions(user, r) {
     accept: granted.has("ACCEPTOR") && r.status === "WAITING_FOR_ACCEPTANCE" &&
       r.workflow?.lifecycle === "C" && r.workflow?.acceptor_id === user.id &&
       attempt?.state === "SUBMITTED" && !isExecutor,
-    // Within 24h of an AI auto-approval any approver (not the requester) may
-    // send the request back to manual review; the server re-checks scope.
     revokeAi: granted.has("APPROVER") && !own && r.status === "COMPLETED" &&
       Boolean(r.ai_auto_approval?.revocable) &&
       Date.now() < Date.parse(r.ai_auto_approval?.revocable_until || 0),
   };
 }
+
 export const date = (v) => (v ? new Date(v).toLocaleString("vi-VN") : "—");
-export function errorText(e) {
-  if (e?.serverMessage) {
-    return e.serverMessage + (e.correlationId ? ` (Mã lỗi: ${e.correlationId})` : "");
-  }
-  const messages = {
-    ACCESS_DENIED: "Bạn không có quyền truy cập vào cổng này.",
-    VERSION_CONFLICT:
-      "Dữ liệu đã thay đổi. Hãy tải lại hồ sơ trước khi tiếp tục.",
-    REQUEST_STATE_CONFLICT: "Trạng thái đã thay đổi. Hãy tải lại hồ sơ.",
-    FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
-    DELEGATION_OVERLAP: "Đã có ủy quyền khác trùng khoảng thời gian này.",
-    DELEGATE_NOT_APPROVER: "Người nhận phải là người duyệt đang hoạt động.",
-    INVALID_DELEGATION_WINDOW: "Khoảng thời gian ủy quyền không hợp lệ (tối đa 90 ngày).",
-    DELEGATION_NOT_INSTALLED: "Tính năng ủy quyền chưa được cài trên cơ sở dữ liệu.",
-    SYSTEM_ACCOUNT_LOCKED: "Tài khoản hệ thống không thể sửa, vô hiệu hóa hay đổi quyền.",
-    AI_APPROVAL_NOT_REVOCABLE: "Đã quá 24 giờ hoặc hồ sơ không còn do AI duyệt; không thể thu hồi.",
-    INVALID_CREDENTIALS: "Tên đăng nhập hoặc mật khẩu không đúng.",
-    DATABASE_QUERY_FAILED: "Máy chủ gặp lỗi truy vấn dữ liệu. Vui lòng báo quản trị viên kèm mã lỗi để kiểm tra Backend.",
-    DATABASE_TEMPORARILY_UNAVAILABLE: "Kết nối cơ sở dữ liệu đang gián đoạn hoặc quá thời gian chờ. Vui lòng thử lại sau vài giây; nếu còn lỗi hãy gửi mã lỗi cho quản trị viên.",
-    SERVER_ERROR: "Máy chủ đang gặp lỗi (HTTP 500). Vui lòng thử lại sau.",
-    INVALID_RESPONSE: "Máy chủ trả về dữ liệu không đúng định dạng. Hãy kiểm tra log Backend.",
-    ADMIN_PORTAL_ONLY: "Tài khoản quản trị chỉ được phép sử dụng chức năng quản lý hệ thống.",
-    REQUEST_TIMEOUT_UNKNOWN: "Kết nối quá thời gian xử lý. Kiểm tra trạng thái trước khi thực hiện lại để tránh trùng lặp.",
-    CATALOG_EXPANSION_DISABLED: "Chức năng thêm loại yêu cầu chưa được DBA phê duyệt/mở khóa migration. Danh mục P0 vẫn hoạt động bình thường.",
-    REQUEST_TYPE_NOT_CONFIGURED: "Loại yêu cầu này chưa có phiên bản quy chế đã công bố.",
-    ROUTE_CONFIGURATION_INVALID: "Quy trình chưa gán đủ người duyệt/thực hiện/nghiệm thu hợp lệ. Liên hệ quản trị viên quy chế.",
-    ATTACHMENT_REQUIRED: "Loại yêu cầu này bắt buộc đính kèm tài liệu hợp lệ trước khi gửi.",
-    DEPARTMENT_SCOPE_VIOLATION: "Bạn không được chọn phòng ban khác với phòng ban của mình.",
-    INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng.",
-    PASSWORD_REUSE_NOT_ALLOWED: "Mật khẩu mới phải khác mật khẩu cũ.",
-    PASSWORD_POLICY_VIOLATION: "Mật khẩu mới phải có 15–128 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt và không chứa tên đăng nhập.",
-    LOGIN_RATE_LIMITED: "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.",
-    PASSWORD_CHANGE_RATE_LIMITED: "Bạn đã nhập sai mật khẩu hiện tại quá nhiều lần. Vui lòng thử lại sau.",
-    VALIDATION_FAILED: "Dữ liệu chưa hợp lệ.",
-    VALIDATION_STALE:
-      "Cấu hình đã thay đổi. Hãy kiểm tra lại trước khi công bố.",
-    ATTACHMENT_NOT_CLEAN: "Tệp chưa vượt qua kiểm tra. Hãy kiểm tra lại tệp.",
-  };
-  return (
-    (messages[e.message] || (e.status === 401
-      ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
-      : e.message)) +
-    (e.fields ? " " + JSON.stringify(e.fields) : "") +
-    (e.correlationId ? ` (Mã lỗi: ${e.correlationId})` : "")
-  );
+
+const FIELD_REASON_LABELS = {
+  REQUIRED: "Vui lòng nhập thông tin bắt buộc",
+  FIELD_REQUIRED: "Vui lòng nhập thông tin bắt buộc",
+  INVALID_TYPE: "Định dạng dữ liệu không hợp lệ",
+  INVALID_FORMAT: "Định dạng không đúng quy chuẩn",
+  MIN_LENGTH: "Nội dung quá ngắn so với quy định",
+  MAX_LENGTH: "Nội dung vượt quá độ dài cho phép",
+  MIN_VALUE: "Giá trị thấp hơn mức tối thiểu cho phép",
+  MAX_VALUE: "Giá trị vượt quá hạn mức tối đa cho phép",
+  OUT_OF_RANGE: "Giá trị nằm ngoài phạm vi cho phép",
+  UNKNOWN_EXTERNAL_CODE: "Mã danh mục không tồn tại trên hệ thống tích hợp",
+  EXTERNAL_CODE_INACTIVE: "Danh mục đã chọn hiện đang tạm ngưng hoặc bảo trì",
+  ROLE_NOT_IN_APPLICATION: "Quyền đề nghị không thuộc ứng dụng đã chọn",
+  EXPENSE_DAILY_LIMIT_EXCEEDED: "Số tiền vượt hạn mức chi tiêu theo ngày của hạng mục này",
+  END_BEFORE_START: "Thời gian kết thúc phải sau thời gian bắt đầu",
+};
+
+function formatFieldIssueItem(item) {
+  if (!item) return "";
+  const text = String(item).trim();
+  if (FIELD_REASON_LABELS[text]) return FIELD_REASON_LABELS[text];
+  // Translate quota codes inside HRM messages like "Quỹ ANNUAL còn 5 ngày"
+  return text
+    .replace(/\bANNUAL\b/g, "nghỉ phép năm")
+    .replace(/\bPARENTAL\b/g, "nghỉ thai sản")
+    .replace(/\bSICK\b/g, "nghỉ ốm")
+    .replace(/^INVALID_[A-Z0-9_]+$/, "Giá trị không hợp lệ");
 }
+
+function formatValidationFields(rawFields) {
+  if (!rawFields) return "";
+  if (Array.isArray(rawFields)) {
+    const names = rawFields.map((f) => fieldLabels[f] || "Trường thông tin").filter(Boolean);
+    return names.length ? ` (Kiểm tra lại: ${names.join(", ")})` : "";
+  }
+  if (typeof rawFields === "object") {
+    const parts = [];
+    for (const [key, issues] of Object.entries(rawFields)) {
+      const label = fieldLabels[key] || "Thông tin biểu mẫu";
+      const list = Array.isArray(issues) ? issues : [issues];
+      const detail = list.map(formatFieldIssueItem).filter(Boolean).join(", ");
+      parts.push(detail ? `${label}: ${detail}` : label);
+    }
+    return parts.length ? ` — ${parts.join("; ")}` : "";
+  }
+  return "";
+}
+
+const ERROR_MESSAGES = {
+  ACCESS_DENIED: "Bạn không có quyền truy cập vào khu vực này.",
+  UNAUTHORIZED: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+  AUTHENTICATION_REQUIRED: "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.",
+  FORBIDDEN: "Tài khoản của bạn không có quyền thực hiện thao tác này.",
+  MODULE_FORBIDDEN: "Bạn chưa được cấp quyền sử dụng phân hệ chức năng này.",
+  ADMIN_PORTAL_ONLY: "Tài khoản quản trị chỉ được phép thao tác trên Cổng Quản trị hệ thống.",
+  ACTOR_NOT_ACTIVE: "Tài khoản hiện đang tạm khóa hoặc ngừng hoạt động.",
+  SYSTEM_ACCOUNT_LOCKED: "Tài khoản hệ thống được bảo vệ và không thể thay đổi.",
+  SELF_ADMIN_CHANGE_FORBIDDEN: "Theo nguyên tắc phân tách nhiệm vụ, bạn không thể tự thay đổi quyền của chính mình.",
+  SO_D_VIOLATION: "Thao tác bị từ chối theo nguyên tắc phân tách nhiệm vụ (không tự duyệt/nghiệm thu hồ sơ của chính mình).",
+  SOD_VIOLATION: "Thao tác bị từ chối theo nguyên tắc phân tách nhiệm vụ (không tự duyệt/nghiệm thu hồ sơ của chính mình).",
+  VERSION_CONFLICT: "Hồ sơ vừa được cập nhật bởi người khác. Vui lòng tải lại trang trước khi tiếp tục.",
+  STATE_CONFLICT: "Trạng thái hồ sơ đã thay đổi. Vui lòng tải lại để xem thông tin mới nhất.",
+  REQUEST_STATE_CONFLICT: "Trạng thái hồ sơ đã thay đổi. Vui lòng tải lại để xem thông tin mới nhất.",
+  LIFECYCLE_CONFLICT: "Quy trình xử lý của hồ sơ không hỗ trợ thao tác ở bước hiện tại.",
+  TARGET_IMMUTABLE: "Dữ liệu này đã chốt và không thể chỉnh sửa.",
+  EXPECTED_VERSION_REQUIRED: "Thiếu thông tin phiên bản hồ sơ. Vui lòng tải lại trang và thử lại.",
+  ACTIVE_STEP_NOT_FOUND: "Hiện không còn bước xử lý nào đang mở cho bạn trên hồ sơ này.",
+  REQUEST_NOT_FOUND: "Không tìm thấy hồ sơ yêu cầu hoặc bạn không có quyền xem hồ sơ này.",
+  NOT_FOUND: "Không tìm thấy dữ liệu yêu cầu.",
+  RESOURCE_NOT_FOUND: "Không tìm thấy tài nguyên được chọn.",
+  USER_NOT_FOUND: "Không tìm thấy thông tin nhân sự.",
+  REVISION_NOT_FOUND: "Không tìm thấy phiên bản nội dung của hồ sơ.",
+  REQUEST_TYPE_NOT_FOUND: "Loại yêu cầu không tồn tại trong danh mục hệ thống.",
+  UNKNOWN_TYPE_CODE: "Loại yêu cầu chưa được đăng ký trong danh mục.",
+  TYPE_CODE_REQUIRED: "Vui lòng chọn loại yêu cầu trước khi tiếp tục.",
+  TITLE_REQUIRED: "Vui lòng nhập tiêu đề yêu cầu.",
+  DECISION_REASON_REQUIRED: "Vui lòng nhập lý do chi tiết (tối thiểu 10 ký tự) cho quyết định này.",
+  CANCELLATION_REASON_REQUIRED: "Vui lòng nhập lý do hủy yêu cầu (tối thiểu 10 ký tự).",
+  ACCEPTANCE_REASON_REQUIRED: "Vui lòng nhập nhận xét nghiệm thu (tối thiểu 10 ký tự).",
+  REVOKE_REASON_REQUIRED: "Vui lòng nhập lý do thu hồi phê duyệt tự động.",
+  DELEGATION_REASON_REQUIRED: "Vui lòng nhập lý do ủy quyền phê duyệt.",
+  REASON_INVALID: "Lý do nhập vào chưa hợp lệ (cần từ 10 đến 2.000 ký tự).",
+  RESULT_NOTE_INVALID: "Vui lòng nhập ghi chú kết quả thực hiện rõ ràng hơn (tối thiểu 10 ký tự).",
+  EXTERNAL_REFERENCE_INVALID: "Mã tham chiếu kết quả thực hiện không hợp lệ.",
+  ISSUE_REASON_INVALID: "Vui lòng mô tả chi tiết vướng mắc phát sinh (tối thiểu 10 ký tự).",
+  DELEGATION_OVERLAP: "Khoảng thời gian này đã trùng với một ủy quyền đang hiệu lực khác.",
+  DELEGATE_NOT_APPROVER: "Người nhận ủy quyền phải là nhân sự có vai trò Phê duyệt đang hoạt động.",
+  CANNOT_DELEGATE_TO_SELF: "Bạn không thể tự ủy quyền phê duyệt cho chính mình.",
+  INVALID_DELEGATION: "Thông tin thiết lập ủy quyền chưa hợp lệ.",
+  INVALID_DELEGATION_WINDOW: "Khoảng thời gian ủy quyền không hợp lệ (tối đa 90 ngày và ngày kết thúc phải sau ngày bắt đầu).",
+  DELEGATION_NOT_INSTALLED: "Chức năng ủy quyền phê duyệt hiện đang tạm ngưng.",
+  AI_APPROVAL_NOT_REVOCABLE: "Đã quá thời hạn 24 giờ hoặc hồ sơ không phải do AI tự động duyệt nên không thể thu hồi.",
+  AI_SERVICE_UNAVAILABLE: "Trợ lý AI hiện đang bận hoặc bảo trì. Bạn vẫn có thể gửi và xử lý hồ sơ bình thường.",
+  AI_SERVICE_ERROR: "Trợ lý AI tạm thời chưa phản hồi được yêu cầu phân tích. Vui lòng thử lại sau.",
+  INTEGRATION_UNAVAILABLE: "Kết nối đến hệ thống nghiệp vụ liên quan (Nhân sự / Tài chính / CNTT / Hành chính) đang tạm ngắt hoặc bảo trì. Vui lòng thử lại sau.",
+  LEAVE_BALANCE_EXCEEDED: "Số ngày đăng ký vượt quá quỹ ngày phép còn lại của bạn trên hệ thống Nhân sự.",
+  BUDGET_EXCEEDED: "Giá trị đề nghị vượt quá hạn mức ngân sách khả dụng của phòng ban trong năm nay.",
+  EXPENSE_DAILY_LIMIT_EXCEEDED: "Số tiền vượt hạn mức chi tiêu theo ngày của hạng mục chi phí đã chọn.",
+  ROLE_NOT_IN_APPLICATION: "Quyền truy cập đề nghị không thuộc hệ thống/ứng dụng đã chọn.",
+  RESOURCE_UNAVAILABLE: "Phòng họp / Xe công vụ / Thiết bị đã có lịch đặt trùng trong khung giờ này. Vui lòng chọn khung giờ hoặc tài nguyên khác.",
+  RESOURCE_PREEMPTED: "Tài nguyên vừa được ưu tiên cấp cho một yêu cầu khẩn cấp hơn. Vui lòng chọn khung giờ hoặc tài nguyên khác.",
+  RESOURCE_OUT_OF_SERVICE: "Phòng họp / Xe công vụ / Thiết bị này đang bảo trì hoặc tạm ngưng phục vụ.",
+  RESOURCE_CAPACITY_EXCEEDED: "Số người tham dự vượt quá sức chứa tiêu chuẩn của phòng họp / xe đã chọn.",
+  RESOURCE_UNKNOWN: "Tài nguyên đã chọn không tồn tại hoặc đã ngừng sử dụng.",
+  ASSIGNEE_UNAVAILABLE: "Người phụ trách xử lý hiện đang vắng mặt và chưa có người nhận ủy quyền thay thế.",
+  ASSIGNEE_INVALID: "Người được phân công xử lý không hợp lệ hoặc không thuộc phạm vi phụ trách.",
+  ROUTE_ACTOR_INACTIVE: "Một nhân sự trong tuyến duyệt hiện đã ngừng hoạt động. Vui lòng báo Quản trị quy chế cập nhật.",
+  ROUTE_CONFIGURATION_INVALID: "Tuyến phê duyệt của loại yêu cầu này chưa đủ người phụ trách hợp lệ. Vui lòng liên hệ bộ phận Quản trị quy chế.",
+  REQUEST_TYPE_NOT_CONFIGURED: "Loại yêu cầu này hiện chưa có quy trình phê duyệt được công bố.",
+  CATALOG_EXPANSION_DISABLED: "Chức năng mở rộng danh mục hiện đang khóa.",
+  ATTACHMENT_REQUIRED: "Loại yêu cầu này bắt buộc đính kèm chứng từ / tài liệu hợp lệ trước khi gửi.",
+  EXECUTION_EVIDENCE_REQUIRED: "Vui lòng tải lên tệp minh chứng kết quả thực hiện trước khi hoàn tất.",
+  EQUIPMENT_QUOTE_REQUIRED: "Đề nghị mua sắm thiết bị vượt ngưỡng quy định bắt buộc đính kèm báo giá nhà cung cấp.",
+  ATTACHMENT_NOT_CLEAN: "Tệp đính kèm đang được quét an toàn hoặc không hợp lệ. Vui lòng kiểm tra lại tệp.",
+  ATTACHMENT_NOT_READY: "Tệp đính kèm đang trong quá trình kiểm tra an toàn, vui lòng đợi vài giây rồi thử lại.",
+  ATTACHMENT_INVALID: "Định dạng tệp đính kèm không được hỗ trợ hoặc tệp bị hỏng.",
+  ATTACHMENT_NOT_FOUND: "Không tìm thấy tệp đính kèm trên hệ thống lưu trữ.",
+  FILE_REQUIRED: "Vui lòng chọn tệp tài liệu để tải lên.",
+  FILE_NAME_INVALID: "Tên tệp không hợp lệ. Vui lòng đổi tên tệp ngắn gọn và không chứa ký tự đặc biệt.",
+  FILE_SIZE_INVALID: "Dung lượng tệp vượt quá giới hạn cho phép (tối đa 10 MB) hoặc tệp rỗng.",
+  FILE_NOT_READY: "Tệp chưa sẵn sàng để tải xuống.",
+  STORAGE_UNAVAILABLE: "Dịch vụ lưu trữ tệp đính kèm đang tạm gián đoạn. Vui lòng thử lại sau ít phút.",
+  DEPARTMENT_SCOPE_VIOLATION: "Bạn chỉ được phép tạo hoặc xử lý hồ sơ thuộc phạm vi phòng ban của mình.",
+  AMOUNT_NOT_ALLOWED: "Loại yêu cầu này không áp dụng trường số tiền.",
+  INVALID_AMOUNT: "Số tiền nhập vào không hợp lệ (vui lòng nhập số nguyên dương).",
+  INVALID_TIME_RANGE: "Khoảng thời gian bắt đầu và kết thúc không hợp lệ.",
+  INVALID_DATETIME: "Ngày hoặc giờ nhập vào không đúng định dạng.",
+  INVALID_DATE_FILTER: "Bộ lọc khoảng ngày chưa đúng định dạng.",
+  PERIOD_INVALID: "Khoảng thời gian thống kê không hợp lệ (ngày bắt đầu phải trước ngày kết thúc và tối đa 12 tháng).",
+  INVALID_PAGINATION: "Tham số phân trang không hợp lệ.",
+  INVALID_SEARCH: "Từ khóa tìm kiếm không hợp lệ.",
+  INVALID_PAYLOAD: "Thông tin biểu mẫu gửi lên chưa đúng quy chuẩn. Vui lòng kiểm tra lại các trường đã nhập.",
+  INVALID_DRAFT_REQUEST: "Thông tin lưu nháp chưa hợp lệ. Vui lòng kiểm tra lại các trường trong biểu mẫu.",
+  INVALID_SUBMISSION: "Thông tin gửi duyệt chưa đầy đủ hoặc không hợp lệ.",
+  UNKNOWN_FIELD: "Biểu mẫu có trường thông tin không thuộc cấu hình hiện hành. Vui lòng tải lại trang.",
+  INVALID_CREDENTIALS: "Email đăng nhập hoặc mật khẩu không chính xác.",
+  INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không chính xác.",
+  INVALID_PASSWORD_CHANGE: "Thông tin đổi mật khẩu chưa đầy đủ hoặc không hợp lệ.",
+  PASSWORD_CHANGE_REQUIRED: "Bạn cần đổi mật khẩu lần đầu trước khi sử dụng hệ thống.",
+  PASSWORD_REUSE_NOT_ALLOWED: "Mật khẩu mới không được trùng với mật khẩu đang sử dụng.",
+  PASSWORD_POLICY_VIOLATION: "Mật khẩu mới cần dài từ 15–128 ký tự, bao gồm chữ hoa, chữ thường, chữ số, ký tự đặc biệt và không chứa địa chỉ email của bạn.",
+  LOGIN_RATE_LIMITED: "Tài khoản tạm khóa đăng nhập ngắn hạn do nhập sai nhiều lần. Vui lòng thử lại sau ít phút.",
+  PASSWORD_CHANGE_RATE_LIMITED: "Bạn đã nhập sai mật khẩu hiện tại quá số lần quy định. Vui lòng thử lại sau ít phút.",
+  PASSWORD_RESET_DELIVERY_FAILED: "Không thể gửi thông báo đặt lại mật khẩu lúc này. Vui lòng liên hệ bộ phận CNTT.",
+  DATABASE_QUERY_FAILED: "Hệ thống gặp sự cố khi truy xuất dữ liệu. Vui lòng thử lại sau ít phút.",
+  DATABASE_TEMPORARILY_UNAVAILABLE: "Kết nối dữ liệu đang bận. Vui lòng thử lại sau vài giây.",
+  SERVER_ERROR: "Hệ thống đang bận xử lý hoặc gặp sự cố tạm thời. Vui lòng thử lại sau.",
+  INTERNAL_SERVER_ERROR: "Hệ thống gặp sự cố nội bộ tạm thời. Vui lòng thử lại sau.",
+  INVALID_RESPONSE: "Phản hồi từ máy chủ bị gián đoạn. Vui lòng tải lại trang và thử lại.",
+  REQUEST_TIMEOUT_UNKNOWN: "Kết nối quá thời gian chờ phản hồi. Vui lòng kiểm tra lại danh sách hồ sơ trước khi gửi lại để tránh trùng lặp.",
+  IDEMPOTENCY_KEY_REQUIRED: "Phiên gửi biểu mẫu thiếu khóa xác thực. Vui lòng thử lại.",
+  IDEMPOTENCY_KEY_REUSED: "Thao tác đang được xử lý, vui lòng không bấm lặp lại.",
+  VALIDATION_FAILED: "Một số thông tin trên biểu mẫu chưa hợp lệ",
+  VALIDATION_STALE: "Cấu hình quy chế vừa thay đổi. Vui lòng kiểm tra lại trước khi thực hiện.",
+};
+
+export function errorText(e) {
+  if (!e) return "Đã xảy ra lỗi không xác định. Vui lòng thử lại.";
+  if (e.serverMessage) {
+    return e.serverMessage;
+  }
+  const code = String(e.message || "").trim();
+  const fieldSummary = formatValidationFields(e.fields);
+
+  let base = ERROR_MESSAGES[code];
+  if (!base) {
+    if (e.status === 401) {
+      base = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+    } else if (e.status === 403) {
+      base = "Bạn không có quyền thực hiện thao tác này.";
+    } else if (e.status === 404) {
+      base = "Không tìm thấy dữ liệu yêu cầu.";
+    } else if (e.status === 429) {
+      base = "Bạn đang thao tác quá nhanh. Vui lòng đợi ít phút rồi thử lại.";
+    } else if (e.status >= 500) {
+      base = "Hệ thống đang bận hoặc gặp sự cố tạm thời. Vui lòng thử lại sau.";
+    } else if (/^INVALID_([A-Z0-9_]+)$/.test(code)) {
+      const rawField = code.replace(/^INVALID_/, "").toLowerCase();
+      const friendly = fieldLabels[rawField];
+      base = friendly
+        ? `Thông tin "${friendly}" chưa hợp lệ. Vui lòng kiểm tra lại.`
+        : "Thông tin nhập vào chưa đúng định dạng quy định.";
+    } else if (/^[A-Z0-9_]{4,}$/.test(code)) {
+      base = "Không thể hoàn tất thao tác do dữ liệu chưa thỏa điều kiện nghiệp vụ. Vui lòng kiểm tra lại.";
+    } else {
+      base = code || "Không thể hoàn tất thao tác. Vui lòng thử lại.";
+    }
+  }
+
+  const refSuffix = e.status >= 500 && e.correlationId
+    ? ` (Mã hỗ trợ kỹ thuật: ${String(e.correlationId).slice(0, 8)})`
+    : "";
+
+  const text = `${base}${fieldSummary}${refSuffix}`.trim();
+  return /[.!?]$/.test(text) ? text : `${text}.`;
+}
+
+// Display names of enum values in request forms & detail views.
+export const enumLabels = {
+  CO_LUONG: "Nghỉ phép có hưởng lương",
+  KHONG_LUONG: "Nghỉ không hưởng lương",
+  KET_HON: "Nghỉ kết hôn",
+  TANG_CHE: "Nghỉ tang chế",
+  THAI_SAN: "Nghỉ thai sản",
+  NGHI_OM_DAI_NGAY: "Nghỉ ốm dài ngày",
+  KHAC: "Trường hợp khác",
+  MAY_BAY: "Máy bay",
+  TAU_HOA: "Tàu hỏa",
+  XE_CONG_TY: "Xe công vụ công ty",
+  XE_KHACH_TAXI: "Xe khách / Taxi",
+  BINH_THUONG: "Bình thường",
+  THAP: "Thấp",
+  TRUNG_BINH: "Trung bình",
+  CAO: "Cao",
+  KHAN_CAP: "Khẩn cấp",
+  LOW: "Thấp",
+  MEDIUM: "Trung bình",
+  HIGH: "Cao",
+  CRITICAL: "Nghiêm trọng",
+  ANNUAL: "Phép năm",
+  PARENTAL: "Thai sản",
+  SICK: "Nghỉ ốm",
+  MEETING_ROOM: "Phòng họp",
+  VEHICLE: "Xe công vụ",
+  AVAILABLE: "Sẵn sàng",
+  RESERVED: "Đã đặt lịch",
+  MAINTENANCE: "Đang bảo trì",
+  DANG_LAM: "Đang làm việc",
+  NGHI_LAM: "Đang nghỉ phép",
+  CONG_TAC: "Đang công tác",
+  NGOAI_GIO: "Ngoài giờ làm việc",
+  USER: "Nhân sự",
+  SYSTEM: "Hệ thống tự động",
+  AI: "Trợ lý AI",
+  PASS: "Toàn vẹn hợp lệ",
+  FAIL: "Phát hiện sai lệch",
+};

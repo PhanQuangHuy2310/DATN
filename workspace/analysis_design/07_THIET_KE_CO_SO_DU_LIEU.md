@@ -94,26 +94,45 @@ erDiagram
 
 ---
 
-### SƠ ĐỒ 2: HÌNH PL-33 - MIỀN DANH MỤC & BẢN PHÁT HÀNH CẤU HÌNH ĐỘNG (ER-05)
-*Quản lý 18 loại yêu cầu chuẩn hóa, vòng đời A/B/C và các bản phát hành cấu hình bất biến.*
+### SƠ ĐỒ 2: HÌNH PL-33 - MIỀN DANH MỤC, 12 NHÓM YÊU CẦU & BẢN PHÁT HÀNH CẤU HÌNH ĐỘNG (ER-05)
+*Quản lý 66 loại yêu cầu (58 loại đang hoạt động), 12 nhóm lớn theo mục đích người dùng (`eas.request_group`), 61 mục chọn trên menu (`eas.request_menu_item`), vòng đời A/B/C và các bản phát hành cấu hình bất biến.*
 
 ```mermaid
 erDiagram
+    REQUEST_GROUP ||--o{ REQUEST_TYPE : "phân nhóm chính"
+    REQUEST_GROUP ||--o{ REQUEST_MENU_ITEM : "hiển thị trên menu"
+    REQUEST_TYPE ||--o{ REQUEST_MENU_ITEM : "ánh xạ loại + preset"
     REQUEST_TYPE ||--o{ CONFIG_RELEASE : "có nhiều bản phát hành"
     CONFIG_RELEASE ||--o{ APPROVAL_ROUTE : "chứa các lộ trình duyệt"
     APPROVAL_ROUTE ||--o{ STEP_DEFINITION : "chứa các bước duyệt"
 
+    REQUEST_GROUP {
+        string code PK "12 nhóm: ABSENCE, WORKTIME, BORROW, PROVISION, PAYMENT, PROCUREMENT, PEOPLE, SUPPORT, WORK, LEGAL, SALES, ASSET"
+        string name "Tên nhóm hiển thị"
+        string description "Mô tả điểm chung theo nhu cầu người gửi"
+        smallint sort_order "Thứ tự hiển thị"
+    }
+
+    REQUEST_MENU_ITEM {
+        string code PK "61 mục: 56 loại trực tiếp + 5 preset (PAID_LEAVE, UNPAID_LEAVE, LATE_IN, EARLY_OUT, MISSED_CHECK_IN)"
+        string group_code FK "Thuộc nhóm lớn"
+        string type_code FK "Trỏ tới request_type.code"
+        string label "Nhãn hiển thị trên menu"
+        jsonb preset "Trường điền sẵn và khóa trên UI"
+        smallint sort_order
+        boolean is_active
+    }
+
     REQUEST_TYPE {
         uuid id PK
-        string code UK "Mã loại đơn (LEAVE_ANNUAL, ASSET_PURCHASE, ...)"
+        string code UK "Mã loại đơn (LEAVE, ROOM_BOOKING, EXPENSE_CLAIM, ...)"
         string name "Tên loại đơn"
-        string category_code "A: Chỉ duyệt, B: Thi công, C: Nghiệm thu"
-        string group_code "HR, FINANCE, IT, ASSETS, ..."
+        string lifecycle "A: Chỉ duyệt, B: Thi công, C: Nghiệm thu"
+        string category FK "FK -> request_group.code (12 nhóm lớn)"
         boolean is_active "Đang mở cho phép nộp"
         uuid active_release_id FK "Bản phát hành hiệu lực"
-        integer risk_weight "Trọng số rủi ro (1-5)"
-        uuid linked_api_id FK "Liên kết Mock API"
-        timestamp created_at
+        smallint risk_weight "Nguồn duy nhất trọng số rủi ro (1-5)"
+        smallint approval_level "Số cấp duyệt (1-5)"
     }
 
     CONFIG_RELEASE {
@@ -493,34 +512,36 @@ erDiagram
 
 ---
 
-## 3. TỔNG HỢP 8 SCHEMAS MOCK NGOẠI VI & BẢNG `eas.mock_apis` (CIRCUIT BREAKER)
+## 3. TỔNG HỢP 8 SCHEMAS HỆ THỐNG NGOÀI (`mock_*`) QUA MOCK SYSTEMS API & BẢNG `eas.mock_apis` (CIRCUIT BREAKER)
 
-Hệ thống EAS tích hợp 8 Schemas Mock mô phỏng toàn diện các hệ thống thông tin của một tập đoàn lớn, được quản lý thời gian thực qua bảng điều khiển Circuit Breaker:
+8 schema `mock_*` giả lập 8 hệ thống thông tin độc lập của doanh nghiệp, được cô lập hoàn toàn phía sau dịch vụ **Mock Systems API** (`mock_systems` chạy ở cổng `:8100`, dùng role CSDL riêng `eas_mock`). Các role của EAS (`eas_api`, `eas_worker`) **đã bị thu hồi toàn bộ quyền SQL trên `mock_*`** (Migration 17); EAS chỉ giao tiếp với hệ thống ngoài qua HTTP `/mock-api/v1/<hệ thống>/...` kèm header `X-Integration-Secret` (qua client duy nhất `api_core/integrations/client.py`, timeout 5s) và kiểm tra công tắc Circuit Breaker trong `eas.mock_apis`:
 
-| Schema Name | Hệ Thống Mô Phỏng | Các Bảng Chính | Mục Đích Tích Hợp Vào EAS | Trạng Thái Circuit Breaker |
+| Schema Name | Hệ Thống Mô Phỏng | Các Bảng Chính | Mục Đích Tích Hợp Qua `/mock-api/v1/...` | Trạng Thái Circuit Breaker |
 |:---|:---|:---|:---|:---:|
-| `mock_hr` | Quản trị Nhân sự (HRIS) | `department`, `employee`, `leave_balance` | Nạp quỹ phép năm, chấm công 08:00-17:30, mức lương cơ bản. | Quản lý qua `API_HR` |
-| `mock_finance` | Kế toán & Ngân sách (ERP) | `cost_center_budget`, `expense_category` | Đối soát hạn mức ngân sách phòng ban, lịch sử tạm ứng/hoàn ứng. | Quản lý qua `API_FINANCE` |
-| `mock_it` | Hạ tầng & Cấp quyền (ITSM) | `application`, `access_role`, `user_access` | Cấp quyền phần mềm, license phần mềm, thiết bị CNTT. | Quản lý qua `API_IT` |
-| `mock_procurement`| Mua sắm & Chuỗi cung ứng | `supplier`, `catalog_item`, `purchase_order` | Bảng giá vật tư, danh mục nhà cung cấp, báo giá 3 bên. | Quản lý qua `API_PROCUREMENT`|
-| `mock_assets` | Quản lý Tài sản (EAM) | `asset_category`, `asset`, `asset_loan` | Danh mục tài sản cố định, mã tài sản, khấu hao. | Quản lý qua `API_ASSETS` |
-| `mock_facilities` | Cơ sở vật chất (Facilities)| `site`, `resource`, `reservation` | Đặt phòng họp, điều phối xe công tác, thẻ ra vào tòa nhà. | Quản lý qua `API_FACILITIES` |
-| `mock_travel` | Quản lý Công tác phí | `travel_policy`, `travel_option` | Định mức công tác phí khách sạn, vé máy bay theo chức danh. | Quản lý qua `API_TRAVEL` |
-| `mock_crm` | Quản hệ Khách hàng (CRM) | `customer`, `contract`, `support_case` | Hồ sơ khách hàng, giá trị hợp đồng, chiết khấu thương mại. | Quản lý qua `API_CRM` |
+| `mock_hr` | Quản trị Nhân sự (HRIS) | `department`, `employee`, `leave_balance`, `leave_usage` | Đồng bộ danh bạ nhân sự (`sync_hr_directory`), kiểm tra quỹ phép còn lại khi gửi và trừ quỹ phép khi duyệt (`POST /mock-api/v1/hr/leave-usages`). | Quản lý qua `API_HR` |
+| `mock_finance` | Kế toán & Ngân sách (ERP) | `cost_center_budget`, `expense_category`, `budget_commitment` | Danh mục loại chi phí & hạn mức ngày, kiểm tra ngân sách trung tâm chi phí và ghi cam kết chi khi duyệt (`POST /mock-api/v1/finance/commitments`). | Quản lý qua `API_FINANCE` |
+| `mock_it` | Hạ tầng & Cấp quyền (ITSM) | `application`, `access_role`, `user_access`, `it_service` | Danh mục ứng dụng & vai trò truy cập, ghi nhận cấp quyền khi đơn hoàn tất (`POST /mock-api/v1/it/user-access`). | Quản lý qua `API_IT` |
+| `mock_procurement`| Mua sắm & Chuỗi cung ứng | `supplier`, `catalog_item`, `purchase_order` | Bảng giá vật tư, danh mục nhà cung cấp phục vụ AI đối soát ngữ cảnh. | Quản lý qua `API_PROCUREMENT`|
+| `mock_assets` | Quản lý Tài sản (EAM) | `asset_category`, `asset`, `asset_loan` | Kiểm tra tồn kho thiết bị, giữ chỗ khi duyệt cuối (duyệt trước thắng), ưu tiên BGĐ thu hồi (`RESOURCE_PREEMPTED`), worker tự trả khi hết hạn. | Quản lý qua `API_ASSETS` |
+| `mock_facilities` | Cơ sở vật chất (Facilities)| `site`, `resource`, `reservation` | Đặt phòng họp & xe công vụ qua API giữ chỗ/huỷ/trả, kiểm tra sức chứa, ưu tiên BGĐ thu hồi đơn nhân viên trùng giờ. | Quản lý qua `API_FACILITIES` |
+| `mock_travel` | Quản lý Công tác phí | `travel_policy`, `travel_option` | Định mức công tác phí khách sạn, vé máy bay theo chức danh phục vụ AI kiểm tra. | Quản lý qua `API_TRAVEL` |
+| `mock_crm` | Quan hệ Khách hàng (CRM) | `customer`, `contract`, `support_case` | Hồ sơ khách hàng, giá trị hợp đồng, chiết khấu thương mại phục vụ AI kiểm tra. | Quản lý qua `API_CRM` |
 
 ### Cấu trúc Bảng Điều Khiển Circuit Breaker (`eas.mock_apis`)
 ```sql
 CREATE TABLE eas.mock_apis (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    api_code VARCHAR(32) UNIQUE NOT NULL,      -- 'API_HR', 'API_FINANCE', 'API_IT'...
-    api_name VARCHAR(128) NOT NULL,            -- 'HR & Attendance Service API'
-    source_system VARCHAR(64) NOT NULL,       -- 'HRM', 'ERP Finance', 'ITSM'...
-    endpoint_path VARCHAR(256) NOT NULL,      -- '/api/v1/mock/hr'
-    http_method VARCHAR(8) DEFAULT 'GET',
+    api_code TEXT UNIQUE NOT NULL,             -- 'API_HR', 'API_FINANCE', 'API_IT'...
+    api_name TEXT NOT NULL,                    -- 'HR & Attendance Service API'
+    source_system TEXT NOT NULL,               -- 'HRM', 'ERP Finance', 'ITSM'...
+    endpoint_path TEXT NOT NULL,               -- '/mock-api/v1/hr/...' (gọi nội bộ kèm X-Integration-Secret)
+    http_method TEXT DEFAULT 'GET',
+    domain_key TEXT NOT NULL,
     data_provided TEXT NOT NULL,               -- Mô tả dữ liệu cung cấp
-    mock_payload JSONB NOT NULL,               -- Dữ liệu mẫu JSON phục vụ AI nạp ngữ cảnh
+    mock_payload JSONB NOT NULL DEFAULT '{}',  -- Dữ liệu mẫu JSON hiển thị trên trang Quản lý API
     is_enabled BOOLEAN DEFAULT true,           -- CÔNG TẮC CIRCUIT BREAKER (Bật/Tắt)
-    created_at TIMESTAMPTZ DEFAULT now()
+    updated_by TEXT DEFAULT 'System Admin',
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 ```
-- **Cơ chế ngắt mạch tự động:** Khi Admin bấm **TẮT** `is_enabled = false` trên một API (ví dụ `API_HR`), ngay lập tức Cổng Web Admin và Web Client tự động phát hiện và khóa toàn bộ 16 mẫu đơn nhân sự liên quan với thông báo rõ ràng: `"⚠️ Yêu cầu này hiện không thể sử dụng do kết nối API [HRM] đang bị tắt"`. Phía Backend từ chối ngay giao dịch với mã lỗi `409 INTEGRATION_UNAVAILABLE`.
+- **Cơ chế ngắt mạch tự động:** Khi Admin bấm **TẮT** `is_enabled = false` trên một API (ví dụ `API_HR`), ngay lập tức Cổng Web Admin và Web Client tự động phát hiện và khóa các mẫu đơn liên quan với thông báo rõ ràng: `"⚠️ Yêu cầu này hiện không thể sử dụng do kết nối API [HRM] đang bị tắt"`. Phía Backend (`api_core/integrations/client.py`) chặn lời gọi và từ chối giao dịch với mã lỗi `503 INTEGRATION_UNAVAILABLE`.

@@ -70,11 +70,11 @@ class AiDockerfileTests(unittest.TestCase):
         runtime = DOCKERFILE.split("AS runtime", 1)[1]
         self.assertIn("--home /home/aiuser aiuser", runtime)
         self.assertIn("HOME=/home/aiuser", runtime)
-        self.assertIn("/home/aiuser/.paddleocr", runtime)
+        self.assertIn("/home/aiuser/.paddlex", runtime)
 
     def test_ocr_models_persist_in_a_named_volume(self):
         compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
-        self.assertIn("ai_ocr_models:/home/aiuser/.paddleocr", compose)
+        self.assertIn("ai_ocr_models:/home/aiuser/.paddlex", compose)
         self.assertRegex(compose, r"(?m)^volumes:\s+ai_ocr_models:")
 
     def test_dockerignore_keeps_local_venv_out_of_context(self):
@@ -82,13 +82,22 @@ class AiDockerfileTests(unittest.TestCase):
         for entry in (".venv*", "**/__pycache__", ".env", "training/data"):
             self.assertIn(entry, ignored)
 
-    def test_requirements_still_pin_the_full_stack(self):
+    def test_paddle_is_pinned_to_the_patched_3x_stack(self):
+        # paddlepaddle 2.6.2 / protobuf 3.20.2 carried CVEs (audit S7, 05/11/2026).
         main = (AI / "requirements.txt").read_text(encoding="utf-8")
         paddle = (AI / "requirements-paddle.txt").read_text(encoding="utf-8")
-        self.assertIn("-r requirements-paddle.txt", main)
-        for pin in ("paddlepaddle==2.6.2", "paddleocr==2.8.1", "numpy==1.26.4"):
+        for pin in ("paddlepaddle==3.3.1", "paddleocr==3.7.0", "protobuf==5.29.6"):
             self.assertIn(pin, paddle)
             self.assertNotIn(pin, main)
+        for vulnerable in (
+            "paddlepaddle==2.",
+            "paddleocr==2.",
+            "protobuf==3.",
+            "imgaug",
+        ):
+            self.assertNotIn(vulnerable, paddle)
+        self.assertIn("ARG ENABLE_PADDLE_OCR=true", DOCKERFILE)
+        self.assertIn("pip==26.2 setuptools==84.1.0", DOCKERFILE)
 
 
 class RootDockerContextTests(unittest.TestCase):
@@ -219,7 +228,9 @@ class PortalCodeSplitTests(unittest.TestCase):
         imports = [line for line in app.splitlines() if line.startswith("import ")]
         for screen in ADMIN_SCREENS:
             self.assertFalse([line for line in imports if screen in line], screen)
-        admin_import = next(line for line in imports if "components/Admin.jsx" in line)
+        admin_import = next(
+            (line for line in imports if "components/Admin.jsx" in line), ""
+        )
         for name in ("AdminEvents", "Operations", "Policy"):
             self.assertNotIn(name, admin_import)
 

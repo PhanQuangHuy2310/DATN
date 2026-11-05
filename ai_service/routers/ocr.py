@@ -179,10 +179,18 @@ def get_ocr_engine():
             if _ocr_engine is None:
                 from paddleocr import PaddleOCR
 
+                # PaddleOCR 3.x API (2.x had CVEs, audit S7). Document
+                # orientation / unwarping models are skipped: invoices are photos
+                # or scans already upright, and each extra model costs memory.
                 _ocr_engine = PaddleOCR(
-                    use_angle_cls=True,
                     lang=settings.ocr_lang,
-                    use_gpu=settings.ocr_use_gpu,
+                    device="gpu" if settings.ocr_use_gpu else "cpu",
+                    use_textline_orientation=True,
+                    use_doc_orientation_classify=False,
+                    use_doc_unwarping=False,
+                    # oneDNN in paddlepaddle 3.3 fails on CPU with
+                    # "ConvertPirAttribute2RuntimeAttribute not support".
+                    enable_mkldnn=False,
                 )
     return _ocr_engine
 
@@ -199,7 +207,7 @@ def _model_download_lock():
     except ImportError:  # Windows dev run: single process, nothing to share
         yield
         return
-    lock_dir = os.path.join(os.path.expanduser("~"), ".paddleocr")
+    lock_dir = os.path.join(os.path.expanduser("~"), ".paddlex")
     os.makedirs(lock_dir, exist_ok=True)
     with open(os.path.join(lock_dir, ".init.lock"), "w") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
@@ -237,17 +245,14 @@ def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float]:
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         img_array = np.array(img)
 
-        result = ocr_engine.ocr(img_array, cls=True)
-        if not result or not result[0]:
+        result = ocr_engine.predict(img_array)
+        if not result:
             return "", 0.0
-
-        lines = []
-        confidences = []
-        for line in result[0]:
-            text = line[1][0]
-            conf = line[1][1]
-            lines.append(text)
-            confidences.append(conf)
+        page = result[0]
+        lines = [str(text) for text in page["rec_texts"]]
+        confidences = [float(score) for score in page["rec_scores"]]
+        if not lines:
+            return "", 0.0
 
         raw_text = "\n".join(lines)
         avg_conf = sum(confidences) / len(confidences) if confidences else 0.0
@@ -387,6 +392,23 @@ def validate_safe_image_url(url: str) -> None:
             )
 
 
+MAX_URL_IMAGE_BYTES = 10 * 1024 * 1024
+
+
+def _check_connected_peer(resp) -> None:
+    """Reject the response if the socket is connected to a non-public address."""
+    stream = resp.extensions.get("network_stream")
+    peer = stream.get_extra_info("server_addr") if stream is not None else None
+    if not peer:
+        raise HTTPException(status_code=400, detail="Không xác định được máy chủ ảnh.")
+    ip = ipaddress.ip_address(peer[0])
+    if not ip.is_global or ip.is_multicast:
+        raise HTTPException(
+            status_code=400,
+            detail="Máy chủ ảnh thuộc dải mạng bị cấm (SSRF protection).",
+        )
+
+
 @router.post("/extract-url", response_model=OCRResult, summary="Bóc tách từ URL ảnh")
 async def extract_from_url(body: OCRUrlRequest):
     """
@@ -398,12 +420,25 @@ async def extract_from_url(body: OCRUrlRequest):
     import httpx
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(body.image_url)  # NOSONAR
+        # No redirects (a redirect could point inside the network), size capped
+        # while streaming, and the address actually connected to is checked
+        # again: DNS may answer differently than during validation (rebinding).
+        async with (
+            httpx.AsyncClient(timeout=30, follow_redirects=False) as client,
+            client.stream("GET", body.image_url) as resp,  # NOSONAR
+        ):
+            _check_connected_peer(resp)
             resp.raise_for_status()
-
-            image_bytes = resp.content
+            chunks, size = [], 0
+            async for chunk in resp.aiter_bytes():
+                size += len(chunk)
+                if size > MAX_URL_IMAGE_BYTES:
+                    raise HTTPException(status_code=413, detail="Ảnh vượt quá 10MB.")
+                chunks.append(chunk)
+            image_bytes = b"".join(chunks)
             content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0]
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning(f"OCR image download failed: {type(e).__name__}: {e}")
         raise HTTPException(status_code=400, detail="Không tải được ảnh từ URL.") from e

@@ -32,5 +32,5 @@ class RequiredSchemaTableTests(unittest.TestCase):
         self.assertEqual(missing_required_eas_tables(missing), ["request_revision"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

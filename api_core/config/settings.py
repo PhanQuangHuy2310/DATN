@@ -58,7 +58,15 @@ MIDDLEWARE = [
     "api_core.middleware.ApiDatabaseErrorMiddleware",
 ]
 
-ROOT_URLCONF = "api_core.config.urls"
+# One codebase, two services. EAS_SERVICE=mock runs the simulated external
+# systems (HRM, assets, facilities, ITSM, ERP...) as a separate HTTP service with
+# its own database role; EAS itself only reaches them through that API.
+EAS_SERVICE = os.getenv("EAS_SERVICE", "api").strip().lower()
+ROOT_URLCONF = (
+    "api_core.mock_sources.service_urls"
+    if EAS_SERVICE == "mock"
+    else "api_core.config.urls"
+)
 WSGI_APPLICATION = "api_core.config.wsgi.application"
 ASGI_APPLICATION = "api_core.config.asgi.application"
 
@@ -68,7 +76,13 @@ if ENVIRONMENT == "test":
     }
 else:
     try:
-        DATABASES = {"default": parse_database_url(os.getenv("DATABASE_URL", ""))}
+        DATABASES = {
+            "default": parse_database_url(
+                os.getenv("EAS_MOCK_DATABASE_URL") or os.getenv("DATABASE_URL", "")
+                if EAS_SERVICE == "mock"
+                else os.getenv("DATABASE_URL", "")
+            )
+        }
     except DatabaseUrlError as exc:
         raise RuntimeError(str(exc)) from None
 
@@ -296,6 +310,25 @@ if ENVIRONMENT == "production" and (
     raise RuntimeError(
         "EAS_WORKER_INTERNAL_SECRET must be a random secret of at least 32 characters in production"
     )
+
+# Simulated external systems (docs/TICH_HOP_HE_THONG_NGOAI.md).
+EAS_MOCK_API_URL = os.getenv(
+    "EAS_MOCK_API_URL",
+    "http://127.0.0.1:8100/mock-api/v1"
+    if ENVIRONMENT in {"development", "test"}
+    else "http://mock_systems:8000/mock-api/v1",
+).rstrip("/")
+EAS_MOCK_API_SECRET = os.getenv("EAS_MOCK_API_SECRET", "")
+if not EAS_MOCK_API_SECRET and ENVIRONMENT in {"development", "test"}:
+    EAS_MOCK_API_SECRET = "eas-local-dev-mock-integration-secret-2026"
+if ENVIRONMENT == "production" and (
+    len(EAS_MOCK_API_SECRET) < 32
+    or EAS_MOCK_API_SECRET == "eas-local-dev-mock-integration-secret-2026"
+):
+    raise RuntimeError(
+        "EAS_MOCK_API_SECRET must be a random secret of at least 32 characters in production"
+    )
+EAS_MOCK_API_TIMEOUT_SECONDS = float(os.getenv("EAS_MOCK_API_TIMEOUT_SECONDS", "5"))
 
 LOGGING = {
     "version": 1,

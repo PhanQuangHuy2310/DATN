@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useApiBase } from "../apiBase.js";
 import { usePermission } from "../hooks/usePermission.jsx";
 import { api } from "../api.js";
+import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
 
 const CATEGORIES = [
@@ -48,7 +49,7 @@ export function RegulationsManagementPage() {
       setRegulations(res.regulations || []);
       setAiState(res.ai_state || null);
     } catch (err) {
-      if (!silent) showToast("Không thể tải danh sách quy định: " + (err.message || ""), "error");
+      if (!silent) showToast("Không thể tải danh sách quy định: " + errorText(err), "error");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -105,7 +106,7 @@ export function RegulationsManagementPage() {
       setShowCreateModal(false);
       loadData();
     } catch (err) {
-      showToast("Lỗi khi thêm quy định: " + (err.message || ""), "error");
+      showToast("Lỗi khi thêm quy định: " + errorText(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -132,7 +133,7 @@ export function RegulationsManagementPage() {
       setEditingRegulation(null);
       loadData();
     } catch (err) {
-      showToast("Lỗi khi cập nhật quy định: " + (err.message || ""), "error");
+      showToast("Lỗi khi cập nhật quy định: " + errorText(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -149,7 +150,7 @@ export function RegulationsManagementPage() {
       setDeletingRegulation(null);
       loadData();
     } catch (err) {
-      showToast("Lỗi khi xóa quy định: " + (err.message || ""), "error");
+      showToast("Lỗi khi xóa quy định: " + errorText(err), "error");
     } finally {
       setSubmitting(false);
     }
