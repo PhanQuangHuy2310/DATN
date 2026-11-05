@@ -7,8 +7,13 @@ server, and the client shows the same notice.
 
 from __future__ import annotations
 
+import logging
+
 from django.core.cache import cache
 from django.db import connection
+from redis.exceptions import RedisError
+
+log = logging.getLogger(__name__)
 
 # domain_key -> request types whose workflow calls that external system
 # (docs/TICH_HOP_HE_THONG_NGOAI.md §4). Grouping categories are presentation
@@ -53,7 +58,12 @@ def notice_for(source: str) -> str:
 
 def disabled_apis() -> list[tuple[str, str, str]]:
     """(api_code, domain_key, source) of disabled APIs; cached a few seconds."""
-    rows = cache.get(CACHE_KEY)
+    # The cache only spares a query; a cache outage must fall back to the DB.
+    try:
+        rows = cache.get(CACHE_KEY)
+    except (RedisError, OSError):
+        log.warning("Integration cache unavailable; reading eas.mock_apis directly")
+        rows = None
     if rows is None:
         with connection.cursor() as cur:
             cur.execute("SELECT to_regclass('eas.mock_apis') IS NOT NULL")
@@ -64,12 +74,18 @@ def disabled_apis() -> list[tuple[str, str, str]]:
                 "COALESCE(source_system, api_name) FROM eas.mock_apis WHERE NOT is_enabled"
             )
             rows = [tuple(r) for r in cur.fetchall()]
-        cache.set(CACHE_KEY, rows, CACHE_SECONDS)
+        try:
+            cache.set(CACHE_KEY, rows, CACHE_SECONDS)
+        except (RedisError, OSError):
+            pass
     return rows
 
 
 def invalidate() -> None:
-    cache.delete(CACHE_KEY)
+    try:
+        cache.delete(CACHE_KEY)
+    except (RedisError, OSError):
+        log.warning("Integration cache unavailable; entry expires within %ss", CACHE_SECONDS)
 
 
 def blocks(domain_key: str, type_code: str, category: str | None) -> bool:

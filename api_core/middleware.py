@@ -13,6 +13,7 @@ from hashlib import sha256
 from django.conf import settings
 from django.core.cache import cache
 from django.db import DatabaseError
+from redis.exceptions import RedisError
 
 from api_core.db_diagnostics import api_db_failure, failure_category, sqlstate
 from api_core.http import api_error, correlation_id
@@ -144,6 +145,20 @@ class ApiDatabaseErrorMiddleware:
             # No raw driver message, SQL, credentials, host or user info in response.
             headers = {"Retry-After": "3"} if status == 503 else None
             return api_error(request, code, status=status, headers=headers)
+
+        if isinstance(exception, RedisError):
+            # Shared security state (login throttling, locks) lives in Redis.
+            # Without it the request is refused (fail closed) as a retryable 503.
+            log.error(
+                "API cache failure: path=%s exception_type=%s correlation_id=%s",
+                request.path,
+                type(exception).__name__,
+                request_id,
+                extra={"correlation_id": request_id},
+            )
+            return api_error(
+                request, "CACHE_UNAVAILABLE", status=503, headers={"Retry-After": "5"}
+            )
 
         log.exception(
             "Unhandled API failure: path=%s exception_type=%s correlation_id=%s",

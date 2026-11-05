@@ -52,6 +52,12 @@ Dữ liệu nằm trên **một database Supabase** có sẵn, không cần cài
 
 Mở **mỗi lệnh dưới đây trong một cửa sổ PowerShell riêng**, tại thư mục dự án, theo đúng thứ tự. Mỗi cửa sổ phải giữ mở trong lúc dùng hệ thống.
 
+Trước tiên mở Docker Desktop, rồi bật Redis (bộ nhớ đệm dùng chung cho chống dò mật khẩu, giới hạn truy cập và khoá khi AI học). Chỉ cần chạy một lần; Redis chạy nền cho đến khi tắt Docker:
+
+```powershell
+docker compose up -d redis
+```
+
 | # | Lệnh | Dịch vụ |
 |---|---|---|
 | 1 | `.\start_mock_local.cmd` | Mock Systems API |
@@ -75,7 +81,8 @@ Tắt hệ thống: bấm `Ctrl+C` trong từng cửa sổ.
 Mở http://127.0.0.1:8000/health/ready. Kết quả đúng có `"status": "ready"`, trong đó:
 
 - `mock_systems_api_reachable` là `true`;
-- `eas_role_has_no_mock_table_access` là `true`.
+- `eas_role_has_no_mock_table_access` là `true`;
+- `shared_security_cache` là `true` (Redis đang chạy).
 
 ## 5. Cách khác: chạy bằng Docker
 
@@ -94,6 +101,7 @@ Web nhân viên mở ở http://127.0.0.1:8080, web quản trị ở http://127.
 | Báo thiếu `.venv` hoặc `node_modules` | Chưa làm bước 2.4 |
 | `Copy .env.example to .env…` hoặc `Missing EAS_MOCK_DATABASE_URL` | Chưa có file `.env` đúng ở thư mục dự án (bước 2.3) |
 | Gửi đơn mượn phòng/xe/thiết bị, nghỉ phép, mua sắm, cấp quyền báo `INTEGRATION_UNAVAILABLE` | Cửa sổ `start_mock_local.cmd` chưa chạy hoặc đã tắt |
+| Đăng nhập báo "Hệ thống bảo mật tạm thời gián đoạn" (`CACHE_UNAVAILABLE`) | Redis chưa chạy: mở Docker Desktop rồi chạy `docker compose up -d redis` |
 | Báo `INTEGRATION_DISABLED` | Quản trị đã tắt kết nối hệ thống đó: vào web quản trị → Cấu hình hệ thống → API & tích hợp |
 | Cổng 8000 / 8100 / 5173 / 5174 đã bị dùng | Tắt chương trình đang chiếm cổng, hoặc cửa sổ cũ của chính hệ thống này |
 | Quên mật khẩu quản trị | `.\.venv\Scripts\python.exe set_temporary_admin_password.py` để tạo mật khẩu tạm (bắt buộc đổi khi đăng nhập) |
