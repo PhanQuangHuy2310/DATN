@@ -16,7 +16,7 @@ from typing import Any
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from django.conf import settings
-from django.db import connection, transaction
+from django.db import IntegrityError, connection, transaction
 from psycopg.types.json import Jsonb
 
 from api_core.authn.models import Actor
@@ -36,12 +36,13 @@ from api_core.workflow.service import (
 logger = logging.getLogger(__name__)
 
 SQL_AUTO_APPROVE_CONTEXT = """
-    SELECT r.status, r.lock_version, r.risk_weight, rt.code, i.lifecycle,
+    SELECT r.status, r.lock_version, v.risk_weight, rt.code, i.lifecycle,
            u.display_name, d.code, s.id::text, s.assignee_id::text, v.amount_vnd,
            NOT EXISTS (
              SELECT 1 FROM eas.audit_event e
              WHERE e.request_id = r.id AND e.action = 'AI_AUTO_APPROVE_REVOKED'
-           )
+           ),
+           u.email, v.payload->>'room_code'
     FROM eas.request r
     JOIN eas.request_type rt ON rt.id = r.type_id
     JOIN eas.request_revision v ON v.id = r.current_revision_id
@@ -88,6 +89,8 @@ def _load_context(request_id: str) -> dict[str, Any] | None:
         "assignee_id",
         "amount_vnd",
         "ai_allowed",
+        "requester_email",
+        "room_code",
     )
     return dict(zip(keys, row, strict=True))
 
@@ -120,6 +123,8 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         risk_score=context["risk_weight"],
         requester_name=context["requester_name"],
         requester_dept=context["department_code"],
+        requester_email=context.get("requester_email"),
+        room_code=context.get("room_code"),
         amount=float(context["amount_vnd"] or 0),
         correlation_id=correlation_id,
     )
@@ -169,6 +174,15 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
     except CommandError as exc:
         # Version/state races roll the takeover back; a human still decides.
         logger.info("AI auto-approve skipped: request=%s code=%s", request_id, exc.code)
+        return None
+    except IntegrityError:
+        # Databases without migration 14 keep UNIQUE(instance_id, assignee_id),
+        # so the AI account cannot take a second step of one instance. Roll back
+        # and leave the step to its human approver instead of failing with 500.
+        logger.info(
+            "AI auto-approve skipped: request=%s code=STEP_TAKEOVER_CONFLICT",
+            request_id,
+        )
         return None
     return result.body
 

@@ -67,6 +67,10 @@ class Settings(BaseSettings):
 
     # --- Policy rules source of truth (api_core, eas.ai_policy_version) ---
     eas_api_internal_url: str = "http://api:8000"
+    # Simulated external systems (docs/TICH_HOP_HE_THONG_NGOAI.md): the AI reads
+    # them through their API, never from snapshots or the database.
+    eas_mock_api_url: str = "http://mock_systems:8000/mock-api/v1"
+    eas_mock_api_secret: str = ""
 
     # --- Auto-Approve ---
     auto_approve_max_risk: int = 2

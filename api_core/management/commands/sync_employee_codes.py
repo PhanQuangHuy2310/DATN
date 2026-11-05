@@ -1,4 +1,7 @@
-"""Copy HRM employee codes (mock_hr.employee_directory) onto eas.app_user.
+"""Copy HRM employee codes onto eas.app_user, read through the HRM API.
+
+eas.app_user keeps a reference copy (employee_code) of the HRM record because
+login, routing and audit need local data (docs/TICH_HOP_HE_THONG_NGOAI.md §3).
 
 Match order: exact work email, then unique normalized full name. Accounts and
 employees that do not match are reported, never guessed. Dry run by default;
@@ -11,6 +14,8 @@ import unicodedata
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
+
+from api_core.integrations import client
 
 
 def normalize_name(value: str) -> str:
@@ -65,10 +70,11 @@ class Command(BaseCommand):
                 """
             )
             accounts = cursor.fetchall()
-            cursor.execute(
-                "SELECT employee_code, work_email, display_name FROM mock_hr.employee_directory"
-            )
-            employees = cursor.fetchall()
+        # The HRM system is external: EAS only calls its API.
+        employees = [
+            (e["employee_code"], e["work_email"], e["display_name"])
+            for e in client.get("hr", "hr/employees")["items"]
+        ]
         matches, unmatched_accounts, unmatched_codes, ambiguous = match_employees(
             accounts, employees
         )

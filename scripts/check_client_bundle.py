@@ -14,7 +14,9 @@ ADMIN_MARKERS = (
     "Yêu cầu đặt lại mật khẩu",
     "Danh mục 10 nhóm (58 loại)",
     "/api/v1/admin/api-catalog",
-    "/api/v1/admin/departments",
+    # Departments now use the shared /api/v1/{admin,workspace} prefix; the RBAC
+    # matrix stays admin-only.
+    "/api/v1/admin/rbac/role-permission",
     "ops/outbox",
     "/api/v1/admin-events",
     "config-releases",

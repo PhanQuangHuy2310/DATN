@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from django.conf import settings
-from django.db import connection
+from django.db import DatabaseError, connection
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils import timezone as django_timezone
 from django.utils.http import content_disposition_header
@@ -149,8 +149,8 @@ def request_list(request: HttpRequest) -> JsonResponse:
     sql = """
         SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                r.updated_at, r.created_at,
-               COALESCE(r.risk_weight, rt.risk_weight),
-               COALESCE(r.approval_level, rt.approval_level),
+               COALESCE(v.risk_weight, rt.risk_weight),
+               COALESCE(v.approval_level, rt.approval_level),
                u.display_name,
                (SELECT au.display_name FROM eas.approval_step ast2
                   JOIN eas.workflow_instance wi2 ON wi2.id = ast2.instance_id
@@ -173,16 +173,27 @@ def request_list(request: HttpRequest) -> JsonResponse:
                (SELECT st.due_at FROM eas.sla_stage st
                  WHERE st.request_id = r.id AND st.closed_at IS NULL
                  ORDER BY st.started_at DESC LIMIT 1),
-               rt.name
+               rt.name,
+               COALESCE(
+                 NULLIF(TRIM(v.payload->>'title'), ''),
+                 NULLIF(TRIM(r.draft_payload->>'title'), ''),
+                 rt.name
+               ),
+               COALESCE(v.department_id, u.department_id)::text,
+               d.name,
+               COALESCE(v.amount_vnd, r.draft_amount_vnd),
+               r.requester_id::text
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
         LEFT JOIN eas.app_user u ON u.id = r.requester_id
+        LEFT JOIN eas.department d ON d.id = COALESCE(v.department_id, u.department_id)
         WHERE (%s::text IS NULL OR r.status = %s)
           AND (%s::uuid IS NULL OR r.requester_id = %s::uuid)
           AND (%s::text IS NULL OR (STRPOS(LOWER(r.code), LOWER(%s::text)) > 0
                OR STRPOS(LOWER(COALESCE(v.payload->>'title', r.draft_payload->>'title', '')),
-                         LOWER(%s::text)) > 0))
+                         LOWER(%s::text)) > 0
+               OR STRPOS(LOWER(COALESCE(u.display_name, '')), LOWER(%s::text)) > 0))
           AND (%s::text IS NULL OR rt.code = %s)
           AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
           AND (%s::timestamptz IS NULL OR r.created_at >= %s::timestamptz)
@@ -311,6 +322,7 @@ def request_list(request: HttpRequest) -> JsonResponse:
         search_filter,
         search_filter,
         search_filter,
+        search_filter,
         type_code_filter,
         type_code_filter,
         dept_filter,
@@ -374,6 +386,11 @@ def request_list(request: HttpRequest) -> JsonResponse:
                 # Server clock decides overdue so clients never disagree.
                 "overdue": bool(len(row) > 12 and row[12] and row[12] < now),
                 "type_name": row[13] if len(row) > 13 else None,
+                "title": row[14] if len(row) > 14 else None,
+                "department_id": row[15] if len(row) > 15 else None,
+                "department_name": row[16] if len(row) > 16 else None,
+                "amount_vnd": row[17] if len(row) > 17 else None,
+                "requester_id": row[18] if len(row) > 18 else None,
             }
         )
     return JsonResponse(
@@ -440,8 +457,8 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
             SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                    r.requester_id::text, r.draft_payload, v.payload, v.revision_no,
                    r.created_at, r.updated_at,
-                   COALESCE(v.risk_weight, r.risk_weight, rt.risk_weight),
-                   COALESCE(v.approval_level, r.approval_level, rt.approval_level),
+                   COALESCE(v.risk_weight, rt.risk_weight),
+                   COALESCE(v.approval_level, rt.approval_level),
                    (SELECT COALESCE(json_agg(json_build_object(
                         'step_no', s.step_no, 'assignee_id', s.assignee_id,
                         'state', s.state, 'activated_at', s.activated_at,
@@ -468,11 +485,17 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
                          ORDER BY a.attempt_no DESC LIMIT 1))
                       FROM eas.workflow_instance wi
                      WHERE wi.request_id = r.id AND wi.revision_id = r.current_revision_id
-                     LIMIT 1)
+                     LIMIT 1),
+                   u.display_name,
+                   COALESCE(v.department_id, u.department_id)::text,
+                   d.name,
+                   COALESCE(v.amount_vnd, r.draft_amount_vnd),
+                   rt.name
             FROM eas.request r
             JOIN eas.request_type rt ON rt.id = r.type_id
             LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
             LEFT JOIN eas.app_user u ON u.id = r.requester_id
+            LEFT JOIN eas.department d ON d.id = COALESCE(v.department_id, u.department_id)
             WHERE r.id = %s
               AND (
                 r.requester_id = %s
@@ -541,6 +564,30 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
     else:
         raw_app_level = None
     risk_w, app_lvl = resolve_five_level_metadata(row[2], raw_risk, raw_app_level)
+    resolved_users: dict[str, str] = {}
+    if isinstance(effective_payload, dict):
+        candidate_uuids: list[str] = []
+        for val in effective_payload.values():
+            if isinstance(val, str) and len(val) == 36:
+                try:
+                    candidate_uuids.append(str(UUID(val)))
+                except (ValueError, TypeError):
+                    continue
+        if candidate_uuids:
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT id::text, display_name FROM eas.app_user WHERE id = ANY(%s::uuid[])",
+                        [candidate_uuids],
+                    )
+                    resolved_users = {
+                        urow[0]: urow[1]
+                        for urow in (cursor.fetchall() or [])
+                        if urow and len(urow) >= 2 and urow[1]
+                    }
+            except (DatabaseError, AttributeError, TypeError):
+                resolved_users = {}
+
     ai_approval = None
     if row[3] == "COMPLETED":
         from api_core.workflow.auto_approval import ai_approval_info
@@ -554,10 +601,16 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
                 "id": row[0],
                 "code": row[1],
                 "type_code": row[2],
+                "type_name": row[19] if len(row) > 19 else None,
                 "status": row[3],
                 "lock_version": row[4],
                 "requester_id": row[5],
+                "requester_name": row[15] if len(row) > 15 else None,
+                "department_id": row[16] if len(row) > 16 else None,
+                "department_name": row[17] if len(row) > 17 else None,
+                "amount_vnd": row[18] if len(row) > 18 else None,
                 "payload": effective_payload,
+                "resolved_users": resolved_users,
                 "revision_no": row[8],
                 "created_at": row[9].isoformat(),
                 "updated_at": row[10].isoformat(),

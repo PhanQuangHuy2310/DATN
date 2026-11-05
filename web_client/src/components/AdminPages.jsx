@@ -20,7 +20,8 @@ const OUTBOX_STATES = { PENDING: "Đang chờ gửi", PROCESSING: "Đang gửi",
 const shortDate = (value) => new Date(value).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh" });
 
 function DepartmentSelect({ value, onChange, label = "Phòng ban" }) {
-  const list = useResource("/api/v1/admin/departments?limit=100&active=true");
+  const apiBase = useApiBase();
+  const list = useResource(`${apiBase}/departments?limit=100&active=true`);
   return <label>{label}<select value={value} onChange={(e) => onChange(e.target.value)}>
     <option value="">Tất cả phòng ban</option>
     {(list.data?.items || []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}

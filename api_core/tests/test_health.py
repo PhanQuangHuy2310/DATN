@@ -7,8 +7,11 @@ from api_core.health.schema_contract import (
     has_required_eas_tables,
 )
 from api_core.health.views import (
+<<<<<<< HEAD
     EXPECTED_MOCK_RELATIONS,
     database_readiness,
+=======
+>>>>>>> origin/main
     assess_mock_sources,
     assess_request_types,
     assess_runtime_role,
@@ -25,15 +28,17 @@ class SchemaContractTests(SimpleTestCase):
 
 class ReadinessLogicTests(SimpleTestCase):
     def test_mock_source_readiness_requires_every_relation_and_migration(self):
-        rows = [(name, True) for name in EXPECTED_MOCK_RELATIONS]
-        self.assertTrue(all(assess_mock_sources(rows, {"001", "002", "003"}).values()))
+        ok = {"001", "002", "003", "005"}
+        self.assertTrue(all(assess_mock_sources(True, ok, False).values()))
         self.assertFalse(
-            assess_mock_sources(rows[:-1], {"001", "002", "003"})[
-                "mock_source_contract_complete"
-            ]
+            assess_mock_sources(False, ok, False)["mock_systems_api_reachable"]
         )
         self.assertFalse(
-            assess_mock_sources(rows, {"001"})["mock_source_migrations_current"]
+            assess_mock_sources(True, {"001"}, False)["mock_source_migrations_current"]
+        )
+        # EAS must reach external systems only through their API.
+        self.assertFalse(
+            assess_mock_sources(True, ok, True)["eas_role_has_no_mock_table_access"]
         )
 
     def test_superuser_with_nonstandard_name_is_rejected_by_capability(self):

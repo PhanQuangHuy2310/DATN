@@ -1,117 +1,107 @@
 # Enterprise Approval System (EAS)
 
-EAS là hệ thống tiếp nhận và phê duyệt yêu cầu nội bộ. Repository gồm hai cổng web, API Django, dịch vụ AI tùy chọn, worker nền và các gói SQL PostgreSQL/Supabase.
+EAS là hệ thống tiếp nhận và phê duyệt yêu cầu nội bộ doanh nghiệp. Hệ thống gồm:
 
-## Khởi động local trên Windows
+- cổng web cho nhân viên và cổng web cho quản trị;
+- API Django và worker xử lý nền;
+- dịch vụ AI (tùy chọn);
+- dịch vụ **Mock Systems**, giả lập các hệ thống ngoài: nhân sự, tài sản, toà nhà, IT, tài chính…
 
-Yêu cầu: Python 3.12 cho API, Python 3.11 cho AI và Node.js 22.12 trở lên. Kiểm tra runtime Python đã cài bằng `py -0p`. Nếu thiếu phiên bản cần thiết, hãy cài Python trước khi tạo virtual environment; `venv` không thể tự cài runtime. AI là tùy chọn nếu chỉ chạy API và hai cổng web.
+Tài liệu này hướng dẫn **chạy hệ thống trên máy Windows**.
 
-1. Sao chép `.env.example` thành `.env` tại thư mục gốc và cấu hình các biến phía server. Không đặt database/Supabase secret vào biến frontend.
-2. Tạo môi trường và cài API:
+## 1. Hệ thống gồm những gì
+
+| Dịch vụ | Địa chỉ sau khi chạy | Bắt buộc |
+|---|---|---|
+| Mock Systems API | http://127.0.0.1:8100 | Có |
+| API (backend) | http://127.0.0.1:8000 | Có |
+| Worker nền (thông báo, SLA, tự trả đồ mượn) | — | Có |
+| Web nhân viên | http://127.0.0.1:5173 | Có |
+| Web quản trị | http://127.0.0.1:5174 | Có |
+| AI service | http://127.0.0.1:8001 | Không: thiếu AI thì hệ thống dùng quy tắc dự phòng |
+
+Dữ liệu nằm trên **một database Supabase** có sẵn, không cần cài database trên máy.
+
+## 2. Chuẩn bị (một lần)
+
+1. Cài **Python 3.12** (https://www.python.org, chọn "Add python.exe to PATH") và **Node.js 22.12 trở lên** (https://nodejs.org). Muốn dùng AI thì cài thêm **Python 3.11**.
+2. Giải nén dự án. Mở **PowerShell** tại thư mục dự án (thư mục chứa file này).
+3. Nhận file **`.env`** từ chủ dự án và đặt vào thư mục dự án.
+
+   > **Bảo mật:** `.env` chứa mật khẩu database và các khoá bí mật. Không gửi qua kênh công khai, không đưa lên GitHub, không chia sẻ ảnh chụp nội dung file. Repository đã có sẵn `.gitignore` cho `.env`.
+
+4. Cài thư viện:
 
    ```powershell
    py -3.12 -m venv .venv
    .\.venv\Scripts\python.exe -m pip install -r api_core\requirements.txt
+   cd web_client; npm ci; cd ..
+   cd web_admin;  npm ci; cd ..
    ```
 
-3. Nếu cần chức năng AI, tạo môi trường và cài AI (có thể bỏ qua nếu chỉ chạy API và web):
+   Nếu dùng AI:
 
    ```powershell
    py -3.11 -m venv ai_service\.venv-ai
    .\ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-local.txt
    ```
 
-4. Cài từng ứng dụng web:
+5. Kiểm tra kết nối database: `.\check_local.cmd`.
 
-   ```powershell
-   cd web_client
-   npm ci
-   cd ..\web_admin
-   npm ci
-   cd ..
-   ```
+## 3. Chạy hệ thống (mỗi lần dùng)
 
-5. Mở các terminal riêng tại thư mục gốc và chạy `start_backend_local.cmd`, `start_worker_local.cmd`, `start_frontend_local.cmd`, `start_admin_local.cmd`. Chạy thêm `start_ai_local.cmd` nếu đã cài môi trường AI và muốn bật AI.
+Mở **mỗi lệnh dưới đây trong một cửa sổ PowerShell riêng**, tại thư mục dự án, theo đúng thứ tự. Mỗi cửa sổ phải giữ mở trong lúc dùng hệ thống.
 
-Cổng nhân viên: `http://127.0.0.1:5173`; cổng quản trị: `http://127.0.0.1:5174`; API: `http://127.0.0.1:8000`; AI health: `http://127.0.0.1:8001/health`. Hai cổng web dùng chung mã giao diện trong `web_client`.
+| # | Lệnh | Dịch vụ |
+|---|---|---|
+| 1 | `.\start_mock_local.cmd` | Mock Systems API |
+| 2 | `.\start_backend_local.cmd` | API backend |
+| 3 | `.\start_worker_local.cmd` | Worker nền |
+| 4 | `.\start_ai_local.cmd` | AI (bỏ qua nếu không dùng) |
+| 5 | `.\start_frontend_local.cmd` | Web nhân viên |
+| 6 | `.\start_admin_local.cmd` | Web quản trị |
 
-## Docker Compose
+Sau đó mở trình duyệt:
 
-Cấu hình `.env` ở thư mục gốc rồi chạy:
+- **Web nhân viên:** http://127.0.0.1:5173
+- **Web quản trị:** http://127.0.0.1:5174
+
+Đăng nhập bằng email và mật khẩu do chủ dự án cung cấp. Lần đầu đăng nhập bằng mật khẩu tạm, hệ thống yêu cầu đổi mật khẩu.
+
+Tắt hệ thống: bấm `Ctrl+C` trong từng cửa sổ.
+
+## 4. Kiểm tra hệ thống đã chạy đúng
+
+Mở http://127.0.0.1:8000/health/ready. Kết quả đúng có `"status": "ready"`, trong đó:
+
+- `mock_systems_api_reachable` là `true`;
+- `eas_role_has_no_mock_table_access` là `true`.
+
+## 5. Cách khác: chạy bằng Docker
+
+Cần Docker Desktop. Đặt file `.env` vào thư mục dự án rồi chạy:
 
 ```powershell
 docker compose --env-file .env up --build
 ```
 
-Hai cổng web được expose ở port 8080 và 8081. Compose khởi tạo Redis và kết nối API với AI service. API và worker nên dùng database login riêng; không dùng schema owner hoặc Supabase `service_role` làm runtime login.
+Web nhân viên mở ở http://127.0.0.1:8080, web quản trị ở http://127.0.0.1:8081. Tắt bằng `docker compose down`.
 
-## Database và khôi phục tài khoản
+## 6. Lỗi thường gặp
 
-Installer baseline, kiểm tra chỉ đọc, seed/regression dành riêng cho development và hướng dẫn migration nằm trong [database/README.md](./database/README.md). Thay đổi production phải dùng migration tăng dần đã review; không chạy lại installer baseline trên database có dữ liệu.
-
-### Redis khi chạy ngoài Docker
-
-Redis của Docker Compose được publish ra máy tại `127.0.0.1:6380` (đổi bằng `EAS_REDIS_HOST_PORT`) để không đụng Redis khác đang chạy ở cổng 6379 trên máy — không cần gỡ Redis đó. Khi chạy `manage.py`/`run_worker_local.py` ngoài Docker, đặt trong `.env` một trong hai cách:
-
-- `REDIS_URL=redis://127.0.0.1:6380/0`, hoặc
-- `EAS_REDIS_PORT=6380` (tùy chọn `EAS_REDIS_HOST`, mặc định `127.0.0.1`).
-
-`REDIS_URL` luôn được ưu tiên; để trống tất cả thì môi trường development dùng cache trong bộ nhớ.
-
-### Mật khẩu tài khoản seed và admin
-
-Repo không chứa mật khẩu mặc định nào. Tài khoản seed (hash giữ chỗ) chỉ đăng nhập được khi bạn tự đặt trong `.env` local:
-
-- `EAS_DEV_DEFAULT_PASSWORD` — chỉ có hiệu lực ở `EAS_ENV=development`, cho phép đăng nhập tài khoản còn hash giữ chỗ. Để trống thì không ai đăng nhập được bằng hash giữ chỗ.
-- `EAS_SEED_PASSWORD` (≥15 ký tự) — dùng cho `python fix_seed_passwords_local.py`: thay hash giữ chỗ bằng hash Argon2 của mật khẩu này và **bắt buộc đổi mật khẩu ở lần đăng nhập đầu**.
-- Admin: dùng `python set_temporary_admin_password.py` (sinh mật khẩu tạm ngẫu nhiên, buộc đổi khi đăng nhập). Không ghi mật khẩu thật vào code, commit hay log.
-
-Migration đăng nhập email/reset và migration Gmail aliases [đã được áp dụng và xác minh](./database/EAS_Supabase_SQL/README_VI.md) trên Supabase DATN. 42 tài khoản thử nghiệm hiện dùng alias Gmail riêng, tất cả chuyển về cùng inbox; phiên cũ đã bị vô hiệu hóa. API và hai web portal đã được rebuild local bằng Docker Compose; API báo ready. Gmail đã chấp nhận email thử nghiệm SMTP. Hướng dẫn và giới hạn nằm trong [API Core](./api_core/README.md) và [database migrations](./database/README.md).
-
-## Kiểm thử và mức sẵn sàng
-
-- API: từ thư mục gốc chạy `.\.venv\Scripts\python.exe manage.py test`.
-- Web nhân viên: trong `web_client`, chạy `npm run lint`, `npm test`, `npm run build`; kiểm thử trình duyệt hai cổng: `npm run test:portal`.
-- Web quản trị: trong `web_admin`, chạy `npm run build`.
-- Bộ kiểm thử gốc: `.\.venv\Scripts\python.exe tests\run_tests.py`; lint theo CI: `ruff check api_core manage.py test_logger.py scripts tests` và `ruff format --check api_core manage.py test_logger.py scripts`.
-- SQL validation: làm theo [hướng dẫn gói EAS Supabase SQL](./database/EAS_Supabase_SQL/README_VI.md).
-
-Test local pass không đồng nghĩa hệ thống đã sẵn sàng production. Migration Supabase, SMTP, E2E staging, load, backup/restore và kiểm tra triển khai cần được xác minh riêng.
-
-## Hướng dẫn theo phân hệ
-
-Giữ hướng dẫn chi tiết cạnh các phân hệ phức tạp:
-
-- [API Core](./api_core/README.md) · [AI service](./ai_service/README.md) · [API Gateway](./api_gateway/README.md)
-- [Database](./database/README.md) · [Triển khai](./deploy/README.md) · [Kiểm thử](./tests/README.md)
-- [Web](./web_client/README.md) · [Ứng dụng mobile](./mobile_app/README.md)
-- [Sơ đồ kỹ thuật](./docs/README.md)
-
-- Cổng nhân viên và cổng quản trị đều có menu **Sơ đồ luồng** (chỉ đọc); gồm 9 sơ đồ: tạo/gửi, vòng đời A/B/C, bổ sung/gửi lại, hủy/rút, quản trị, AI, đồng bộ UI. Có tìm kiếm, lọc, xem lớn, phóng to/thu nhỏ, tải ảnh WebP; không gọi API hay thao tác thay đổi dữ liệu.
-- Trong **chi tiết hồ sơ**, tab **Sơ đồ luồng** nằm cạnh **Tiến trình**, tự chọn vòng đời A/B/C từ `request.workflow.lifecycle` trả về bởi Django. Nếu hồ sơ chưa có workflow, fallback theo đúng 18 mã trong `api_core/catalog/plan_types.json`; không phỏng đoán vòng đời nếu thiếu thông tin. Thư viện chung vẫn hiển thị.
-- Tệp ảnh được tối ưu tại `web_client/public/flow-diagrams/`. `web_admin/vite.config.js` dùng `web_client/public` làm nguồn public chung để hai app dùng một bộ ảnh. Mọi sơ đồ chỉ là **hình minh họa tổng quan**, không thay thế chính sách đã công bố hoặc trạng thái xử lý hiện thời từ Supabase.
-- Kiểm tra sau khi giải nén: `cd web_client && npm ci && npm run build && npm test`, sau đó `cd ..\web_admin && npm ci && npm run build`; mở một hồ sơ, chuyển sang **Sơ đồ luồng**, thử phóng to và tải ảnh.
-
-## 02/11/2026 — Hệ thống thiết kế thống nhất cho hai cổng web
-
-**Hệ thống thiết kế**
-
-- `web_client/src/design-system.css` được nạp **sau cùng** ở cả hai cổng: biến màu (xanh navy chủ đạo; xanh lá/cam/đỏ/xám theo ngữ nghĩa), khoảng cách bội số 8px, bo góc 8–12px, chuyển động 150–250ms, hỗ trợ `prefers-reduced-motion`, viền focus rõ ràng. Các file CSS cũ vẫn giữ để không vỡ trang chưa chuyển hết; quy tắc mới ghi đè có chủ đích.
-- Thành phần dùng chung trong `components/design.jsx`: `PageHeader`, `PageTabs`, `StatCard`, `StatusBadge`, `EmptyState`, `Skeleton`, `ConfirmDialog`, `WorkflowTimeline`, `SearchInput`. `ClientPageHeader`/`ClientStatCard` cũ trỏ về cùng thành phần. Trạng thái tải dùng skeleton thay vì vòng xoay.
-- Khung ứng dụng: header dính (breadcrumb, tìm kiếm hồ sơ theo **mã hoặc tiêu đề** trong đúng phạm vi quyền, chuông thông báo có số chưa đọc và danh sách 6 thông báo mới — bấm để mở hồ sơ và đánh dấu đã đọc), sidebar theo nhóm có thể thu gọn nhóm và thu gọn cả thanh (ghi nhớ trên trình duyệt), ngăn kéo trên di động có nút đóng và phím Esc. Trang quản trị (người dùng, tổ chức, vận hành…) được tách gói tải riêng, nhân viên không phải tải.
-
-**Điều hướng**
-
-| Cổng nhân viên | Cổng quản trị |
+| Hiện tượng | Cách xử lý |
 |---|---|
-| Không gian cá nhân: Tổng quan, Yêu cầu của tôi | Tổng quan: Tổng quan hệ thống, Theo dõi vận hành |
-| Công việc được giao: Chờ phê duyệt, Công việc thực hiện, Chờ nghiệm thu | Người dùng & tổ chức: Quản lý người dùng, Phòng ban, Ma trận phân quyền, Sơ đồ tổ chức |
-| Quản lý phòng ban (APPROVER/AUDITOR): Tổng quan phòng ban, Nhân viên phòng ban | Cấu hình nghiệp vụ: Danh mục yêu cầu, Quy chế & quy trình (phiên bản quy chế, 18 mẫu, sơ đồ luồng), SLA & thông báo |
-| Tổ chức & công cụ: Sơ đồ tổ chức, Sơ đồ luồng, Quy trình AI | Giám sát & kiểm toán: Quy trình AI, Nhật ký kiểm toán (hồ sơ + quản trị), Báo cáo phòng ban |
-| Tài khoản: Tài khoản cá nhân | Hệ thống: Cấu hình hệ thống (bảo trì, API & tích hợp) |
+| Báo thiếu `.venv` hoặc `node_modules` | Chưa làm bước 2.4 |
+| `Copy .env.example to .env…` hoặc `Missing EAS_MOCK_DATABASE_URL` | Chưa có file `.env` đúng ở thư mục dự án (bước 2.3) |
+| Gửi đơn mượn phòng/xe/thiết bị, nghỉ phép, mua sắm, cấp quyền báo `INTEGRATION_UNAVAILABLE` | Cửa sổ `start_mock_local.cmd` chưa chạy hoặc đã tắt |
+| Báo `INTEGRATION_DISABLED` | Quản trị đã tắt kết nối hệ thống đó: vào web quản trị → Cấu hình hệ thống → API & tích hợp |
+| Cổng 8000 / 8100 / 5173 / 5174 đã bị dùng | Tắt chương trình đang chiếm cổng, hoặc cửa sổ cũ của chính hệ thống này |
+| Quên mật khẩu quản trị | `.\.venv\Scripts\python.exe set_temporary_admin_password.py` để tạo mật khẩu tạm (bắt buộc đổi khi đăng nhập) |
+| Thông báo, nhắc hạn, trả đồ mượn không chạy | Cửa sổ `start_worker_local.cmd` chưa chạy |
 
-Cổng quản trị không có chức năng tạo yêu cầu. Theo UC05, quản trị vận hành chỉ xem **thông tin điều phối**: tìm kiếm và thông báo dẫn tới bảng vận hành; chỉ kiểm toán viên mở được chi tiết hồ sơ.
+## 7. Tài liệu thêm
 
+<<<<<<< HEAD
 **Màn hình**
 
 - **Chi tiết hồ sơ:** khối tình trạng (giai đoạn, người đang xử lý, bước kế tiếp, hạn/quá hạn, lý do quyết định) và các tab Thông tin · Tiến trình xử lý (dòng thời gian) · Người phê duyệt · Tệp đính kèm · Đánh giá AI · Lịch sử hoạt động · Sơ đồ luồng. Nhật ký hoạt động hiển thị bằng tiếng Việt, không còn bảng kỹ thuật (hash, mã định danh).
@@ -270,3 +260,10 @@ Kiểm tra bằng trình duyệt hoặc PowerShell: `http://127.0.0.1:8000/healt
 ```
 
 Nếu `/health/live` lỗi: kiểm tra container API và log. Nếu `live=200, db=503`: xác minh `EAS_API_DATABASE_URL`/SSL/mạng Supabase/pooler và xem SQLSTATE trong log đã được che thông tin nhạy cảm. Nếu `db=200, ready=503`: sửa **đúng check false**, không đổi password hoặc database bừa. Nếu cả ba trả 200 nhưng API Admin còn 503: lấy mã lỗi + correlation ID của response và log API để tìm endpoint cụ thể. Thực hiện restart/rebuild container sau khi cập nhật code; frontend cũ vẫn có thể tiếp tục polling cho đến khi thay bản build mới.
+=======
+- Phân loại yêu cầu (12 nhóm): [docs/PHAN_LOAI_YEU_CAU.md](./docs/PHAN_LOAI_YEU_CAU.md)
+- Tích hợp hệ thống ngoài (Mock Systems): [docs/TICH_HOP_HE_THONG_NGOAI.md](./docs/TICH_HOP_HE_THONG_NGOAI.md)
+- Thiết kế cơ sở dữ liệu: [docs/THIET_KE_SCHEMA_EAS_V2.md](./docs/THIET_KE_SCHEMA_EAS_V2.md). Dựng database mới: [database/README.md](./database/README.md)
+- Theo phân hệ: [API](./api_core/README.md) · [AI](./ai_service/README.md) · [Web](./web_client/README.md) · [Mobile](./mobile_app/README.md) · [Kiểm thử](./tests/README.md) · [Triển khai](./deploy/README.md)
+- Lịch sử thay đổi: thư mục [changelogs/](./changelogs/)
+>>>>>>> origin/main

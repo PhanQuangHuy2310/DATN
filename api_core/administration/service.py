@@ -223,8 +223,12 @@ def _list_filters(kind, query):
     }
     if q:
         cols = searchable[kind]
-        clauses.append("(" + " OR ".join(f"t.{col} ILIKE %s" for col in cols) + ")")
-        params.extend([f"%{q}%"] * len(cols))
+        # Escape LIKE wildcards: user text is matched literally.
+        literal = q.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        clauses.append(
+            "(" + " OR ".join(f"t.{col} ILIKE %s ESCAPE '\\'" for col in cols) + ")"
+        )
+        params.extend([f"%{literal}%"] * len(cols))
     if active:
         clauses.append("t.is_active=%s")
         params.append(active == "true")

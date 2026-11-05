@@ -26,7 +26,7 @@ test('client routes exclude unrelated profiles and administration while preservi
 test('dashboard requests a strictly requester-scoped report, with backend scope validation', () => {
  const dashboard=readFileSync(new URL('../src/components/ClientDashboard.jsx',import.meta.url),'utf8');
  const backend=readFileSync(new URL('../../api_core/workflow/reporting.py',import.meta.url),'utf8');
- assert.match(dashboard,/scope:"mine"/);
+ assert.match(dashboard,/scope:\s*"mine"/);
  assert.match(backend,/scope not in \(None, "mine"\)/);
  assert.match(backend,/r.requester_id = %s::uuid/);
 });
@@ -92,4 +92,11 @@ test('request detail and editor surface real progress, route preview and persist
  assert.match(preview,/\/api\/v1\/requests\/route-preview/);
  assert.match(preview,/silent: true/);
  assert.match(ai,/\/ai-assessments/);
+});
+test('AI assist suggests another form but never switches it on its own', () => {
+ const ai=readFileSync(new URL('../src/components/AiAssist.jsx',import.meta.url),'utf8');
+ const classifyHandler=ai.slice(ai.indexOf('/api/v1/ai/classify'),ai.indexOf('/api/v1/ai/risk-score'));
+ assert.doesNotMatch(classifyHandler,/onSuggestType/);
+ assert.match(ai,/Chuyển sang biểu mẫu này/);
+ assert.doesNotMatch(ai,/type === "EQUIPMENT" \? 3 : 2/);
 });

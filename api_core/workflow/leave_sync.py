@@ -42,8 +42,11 @@ def leave_record(
         start, end = _day(payload.get("start_date")), _day(payload.get("end_date"))
         if not start or not end or end < start:
             return None
+        kind = LEAVE_TYPES[type_code]
+        if type_code == "LEAVE" and payload.get("leave_kind") == "KHONG_LUONG":
+            kind = "UNPAID_LEAVE"  # "Nghỉ không lương" menu entry
         return (
-            LEAVE_TYPES[type_code],
+            kind,
             datetime.combine(start, time.min, VN_TZ),
             datetime.combine(end, time(23, 59, 59), VN_TZ),
         )

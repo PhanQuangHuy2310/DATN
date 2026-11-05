@@ -629,9 +629,8 @@ JOB_TITLES = (
     ("POLICY_ADMIN", "Quản trị chính sách"),
     ("APPROVER", "Người phê duyệt"),
     ("EXECUTOR", "Người thực hiện"),
-    ("ACCEPTOR", "Người nghiệm thu"),
-    ("REQUESTER", "Nhân viên"),
 )
+# REQUESTER/ACCEPTOR are held by every employee, so they read "Nhân viên".
 
 
 def _job_title(roles) -> str:
@@ -876,7 +875,7 @@ def me(request: HttpRequest) -> JsonResponse:
     profile: dict[str, Any] = {}
     try:
         with connection.cursor() as cursor:
-            # One round trip: identity capability + profile shown in the header.
+            # One round trip: identity capability + profile shown in the header & profile page.
             cursor.execute(
                 """SELECT EXISTS (
                       SELECT 1 FROM eas.role_membership rm
@@ -886,9 +885,11 @@ def me(request: HttpRequest) -> JsonResponse:
                         AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
                         AND rm.scope_kind = 'GLOBAL' AND rm.type_scope = 'ALL'
                    ), u.employee_code, d.code, d.name,
-                   ws.status_code, ws.status_label, ws.detail_reason
+                   ws.status_code, ws.status_label, ws.detail_reason,
+                   u.manager_id::text, m.display_name
                    FROM eas.app_user u
                    LEFT JOIN eas.department d ON d.id = u.department_id
+                   LEFT JOIN eas.app_user m ON m.id = u.manager_id
                    LEFT JOIN LATERAL eas.get_user_working_status(u.id, now()) ws ON true
                    WHERE u.id = %s""",
                 [actor.id],
@@ -905,6 +906,8 @@ def me(request: HttpRequest) -> JsonResponse:
                         "label": row[5] or "Đang làm",
                         "detail": row[6] or "",
                     },
+                    "manager_id": row[7] if len(row) > 7 else None,
+                    "manager_name": row[8] if len(row) > 8 else None,
                 }
     except (DatabaseError, AttributeError):
         can_manage_identity = False

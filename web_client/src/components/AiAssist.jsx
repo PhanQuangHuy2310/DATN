@@ -17,11 +17,11 @@ function mapPredictedType(predicted) {
   return null;
 }
 
-function riskPayload(type, amount) {
+function riskPayload(type, amount, lifecycle, riskWeight) {
   return {
     request_type: type.toLowerCase(),
-    lifecycle_template: type === "EQUIPMENT" ? "B" : "A",
-    risk_weight: type === "EQUIPMENT" ? 3 : 2,
+    lifecycle_template: lifecycle || "A",
+    risk_weight: Number(riskWeight) || 3,
     amount_vnd: amount,
   };
 }
@@ -29,12 +29,13 @@ function riskPayload(type, amount) {
 /**
  * Hỗ trợ nội dung và phân tích rủi ro; không thay quyết định của người duyệt.
  */
-export function AiRequestAssist({ type, getValues, onSuggestType }) {
+export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSuggestType }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [classify, setClassify] = useState(null),
     [risk, setRisk] = useState(null),
-    [steps, setSteps] = useState({});
+    [steps, setSteps] = useState({}),
+    [suggested, setSuggested] = useState(null);
 
   async function run() {
     const { title = "", reason = "", amount_vnd: amount = 0 } = getValues();
@@ -46,6 +47,7 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
     setError("");
     setClassify(null);
     setRisk(null);
+    setSuggested(null);
     setSteps({ classify: "running", risk: "running" });
     const tasks = await Promise.allSettled([
       api("/api/v1/ai/classify", {
@@ -53,15 +55,16 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
       }).then((response) => {
         setClassify(response.data);
         setSteps((prev) => ({ ...prev, classify: response.data?.fallback_used ? "fallback" : "done" }));
-        const suggested = mapPredictedType(response.data?.predicted_request_type);
-        if (suggested && suggested !== type) onSuggestType?.(suggested);
+        // Only suggest: switching the form discards what the user typed.
+        const mapped = mapPredictedType(response.data?.predicted_request_type);
+        setSuggested(mapped && mapped !== type ? mapped : null);
         return response;
       }).catch((error) => {
         setSteps((prev) => ({ ...prev, classify: "error" }));
         throw error;
       }),
       api("/api/v1/ai/risk-score", {
-        method: "POST", body: JSON.stringify(riskPayload(type, Number(amount) || 0)),
+        method: "POST", body: JSON.stringify(riskPayload(type, Number(amount) || 0, lifecycle, riskWeight)),
       }).then((response) => {
         setRisk(response.data);
         setSteps((prev) => ({ ...prev, risk: response.data?.fallback_used ? "fallback" : "done" }));
@@ -113,6 +116,15 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
               <em>Gợi ý: {classify.workflow_suggestion}</em>
             </>
           )}
+        </p>
+      )}
+      {suggested && onSuggestType && (
+        <p className="ai-suggest-switch">
+          AI thấy nội dung giống loại <strong>{types[suggested] || suggested}</strong> hơn.{" "}
+          <button type="button" className="secondary" onClick={() => { onSuggestType(suggested); setSuggested(null); }}>
+            Chuyển sang biểu mẫu này
+          </button>{" "}
+          <small className="muted">(dữ liệu đã nhập ở biểu mẫu hiện tại sẽ không được giữ)</small>
         </p>
       )}
       {risk && (

@@ -2,44 +2,52 @@
 // Do not edit by hand.
 export const CATALOG_GROUPS = Object.freeze([
   {
-    "code": "FINANCE",
-    "label": "Tài chính & Mua sắm"
+    "code": "ABSENCE",
+    "label": "Vắng mặt"
   },
   {
-    "code": "RESOURCE",
-    "label": "Cấp phát tài nguyên"
+    "code": "WORKTIME",
+    "label": "Chấm công & giờ làm"
   },
   {
-    "code": "FACILITY",
-    "label": "Mượn cơ sở vật chất"
+    "code": "BORROW",
+    "label": "Mượn & đặt chỗ"
+  },
+  {
+    "code": "PROVISION",
+    "label": "Cấp phát & quyền truy cập"
+  },
+  {
+    "code": "PAYMENT",
+    "label": "Tạm ứng & thanh toán"
+  },
+  {
+    "code": "PROCUREMENT",
+    "label": "Mua sắm & ngân sách"
+  },
+  {
+    "code": "PEOPLE",
+    "label": "Nhân sự & chế độ"
+  },
+  {
+    "code": "SUPPORT",
+    "label": "Hỗ trợ & sự cố"
   },
   {
     "code": "WORK",
-    "label": "Công việc"
-  },
-  {
-    "code": "HR",
-    "label": "Nhân sự"
-  },
-  {
-    "code": "TIME",
-    "label": "Nghỉ phép & Chấm công"
-  },
-  {
-    "code": "IT",
-    "label": "CNTT & Bảo mật"
+    "label": "Công việc & dự án"
   },
   {
     "code": "LEGAL",
-    "label": "Pháp chế & Hợp đồng"
+    "label": "Văn bản & pháp chế"
   },
   {
     "code": "SALES",
-    "label": "Kinh doanh & Marketing"
+    "label": "Kinh doanh & marketing"
   },
   {
-    "code": "ADMIN",
-    "label": "Hành chính & Kho"
+    "code": "ASSET",
+    "label": "Kho & tài sản cố định"
   }
 ]);
 
@@ -47,7 +55,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ADVANCE_LARGE",
     "name": "Tạm ứng dự án lớn (>50tr)",
-    "category": "FINANCE",
+    "category": "PAYMENT",
     "status": "ACTIVE",
     "risk_weight": 4,
     "approval_level": 3,
@@ -57,7 +65,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ADVANCE_MEDIUM",
     "name": "Tạm ứng chi phí (10-50tr)",
-    "category": "FINANCE",
+    "category": "PAYMENT",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 2,
@@ -67,7 +75,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ADVANCE_SMALL",
     "name": "Tạm ứng chi phí (<10tr)",
-    "category": "FINANCE",
+    "category": "PAYMENT",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 2,
@@ -77,7 +85,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "BUDGET_REALLOCATION",
     "name": "Điều chuyển & bổ sung ngân sách liên bộ phận",
-    "category": "FINANCE",
+    "category": "PROCUREMENT",
     "status": "ACTIVE",
     "risk_weight": 5,
     "approval_level": 5,
@@ -87,7 +95,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "EQUIPMENT",
     "name": "Mua sắm thiết bị / tài sản",
-    "category": "FINANCE",
+    "category": "PROCUREMENT",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 3,
@@ -97,7 +105,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "EXPENSE_CLAIM",
     "name": "Thanh toán chi phí",
-    "category": "FINANCE",
+    "category": "PAYMENT",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 3,
@@ -107,7 +115,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "PURCHASE_REQUEST",
     "name": "Đề nghị mua sắm",
-    "category": "FINANCE",
+    "category": "PROCUREMENT",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 3,
@@ -117,7 +125,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "REFUND_COMPENSATION",
     "name": "Hoàn tiền / Đền bù",
-    "category": "FINANCE",
+    "category": "PAYMENT",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 1,
@@ -127,7 +135,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "REIMBURSEMENT",
     "name": "Quyết toán tạm ứng",
-    "category": "FINANCE",
+    "category": "PAYMENT",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 2,
@@ -137,7 +145,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "SAAS_LICENSE_BUY",
     "name": "Mua bản quyền phần mềm mới",
-    "category": "FINANCE",
+    "category": "PROCUREMENT",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 3,
@@ -147,7 +155,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "SALARY_ADVANCE",
     "name": "Ứng lương",
-    "category": "FINANCE",
+    "category": "PAYMENT",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 2,
@@ -157,7 +165,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "SUPPLIER_ONBOARDING",
     "name": "Thẩm định & phê duyệt nhà cung cấp mới",
-    "category": "FINANCE",
+    "category": "PROCUREMENT",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 3,
@@ -167,7 +175,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "TAX_INVOICE_ISSUE",
     "name": "Phát hành / điều chỉnh hóa đơn VAT",
-    "category": "FINANCE",
+    "category": "PAYMENT",
     "status": "ACTIVE",
     "risk_weight": 1,
     "approval_level": 1,
@@ -177,7 +185,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "VENDOR_PAYMENT",
     "name": "Thanh toán Hợp đồng Vendor",
-    "category": "FINANCE",
+    "category": "PAYMENT",
     "status": "ACTIVE",
     "risk_weight": 5,
     "approval_level": 3,
@@ -187,7 +195,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ACCESS",
     "name": "Cấp tài khoản & quyền truy cập",
-    "category": "RESOURCE",
+    "category": "PROVISION",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 2,
@@ -197,7 +205,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "LAPTOP_PROVISION",
     "name": "Cấp máy tính / thiết bị làm việc",
-    "category": "RESOURCE",
+    "category": "PROVISION",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 1,
@@ -207,7 +215,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "OFFICE_SUPPLIES",
     "name": "Cấp văn phòng phẩm",
-    "category": "RESOURCE",
+    "category": "PROVISION",
     "status": "ACTIVE",
     "risk_weight": 1,
     "approval_level": 1,
@@ -217,7 +225,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "RESOURCE_REVOKE",
     "name": "Thu hồi tài khoản / thiết bị",
-    "category": "RESOURCE",
+    "category": "PROVISION",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 1,
@@ -227,7 +235,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ACCESS_FACILITY",
     "name": "Cấp thẻ ra vào",
-    "category": "FACILITY",
+    "category": "PROVISION",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 2,
@@ -237,7 +245,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "EQUIPMENT_BORROW",
     "name": "Mượn thiết bị / đồ dùng",
-    "category": "FACILITY",
+    "category": "BORROW",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 2,
@@ -247,7 +255,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ROOM_BOOKING",
     "name": "Đặt phòng họp",
-    "category": "FACILITY",
+    "category": "BORROW",
     "status": "ACTIVE",
     "risk_weight": 1,
     "approval_level": 1,
@@ -257,7 +265,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "VEHICLE_BOOKING",
     "name": "Mượn xe công vụ",
-    "category": "FACILITY",
+    "category": "BORROW",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 1,
@@ -267,7 +275,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "VISITOR_SECURITY_PASS",
     "name": "Thẻ an ninh khách & đối tác ra vào",
-    "category": "FACILITY",
+    "category": "PROVISION",
     "status": "ACTIVE",
     "risk_weight": 1,
     "approval_level": 1,
@@ -307,7 +315,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "BUSINESS_TRIP",
     "name": "Đăng ký đi công tác",
-    "category": "HR",
+    "category": "ABSENCE",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 3,
@@ -317,7 +325,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "DISCIPLINE_REQ",
     "name": "Đề xuất kỷ luật",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 4,
     "approval_level": 3,
@@ -327,7 +335,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "EMPLOYEE_ONBOARDING",
     "name": "Tiếp nhận nhân viên mới",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 2,
@@ -337,7 +345,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "HR_CERTIFICATE",
     "name": "Xin giấy xác nhận công tác / thu nhập",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 1,
     "approval_level": 1,
@@ -347,7 +355,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "INTERNAL_TRANSFER",
     "name": "Điều chuyển nội bộ",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 3,
@@ -357,7 +365,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "PROMOTION_REQ",
     "name": "Đề xuất thăng chức",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 4,
     "approval_level": 3,
@@ -367,7 +375,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "RECRUITMENT_REQ",
     "name": "Yêu cầu tuyển dụng nhân sự",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 4,
     "approval_level": 4,
@@ -377,7 +385,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "RESIGNATION",
     "name": "Thôi việc / Bàn giao",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 4,
     "approval_level": 3,
@@ -387,7 +395,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "REWARD_REQ",
     "name": "Đề xuất khen thưởng",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 3,
@@ -397,7 +405,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "SALARY_ADJUSTMENT",
     "name": "Điều chỉnh lương",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 5,
     "approval_level": 4,
@@ -407,7 +415,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "TRAINING_COURSE",
     "name": "Đăng ký đào tạo & chứng chỉ nghề nghiệp",
-    "category": "HR",
+    "category": "PEOPLE",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 2,
@@ -417,7 +425,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ATTENDANCE_ADJUSTMENT",
     "name": "Điều chỉnh chấm công",
-    "category": "TIME",
+    "category": "ABSENCE",
     "status": "ACTIVE",
     "risk_weight": 1,
     "approval_level": 1,
@@ -427,7 +435,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "LEAVE",
     "name": "Nghỉ phép",
-    "category": "TIME",
+    "category": "ABSENCE",
     "status": "ACTIVE",
     "risk_weight": 1,
     "approval_level": 2,
@@ -437,7 +445,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "LEAVE_SPECIAL",
     "name": "Nghỉ phép đặc biệt",
-    "category": "TIME",
+    "category": "ABSENCE",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 3,
@@ -447,7 +455,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "OVERTIME_REQ",
     "name": "Đăng ký làm thêm giờ (OT)",
-    "category": "TIME",
+    "category": "WORKTIME",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 1,
@@ -457,7 +465,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "WFH_REQ",
     "name": "Làm việc từ xa (WFH)",
-    "category": "TIME",
+    "category": "ABSENCE",
     "status": "ACTIVE",
     "risk_weight": 1,
     "approval_level": 1,
@@ -467,7 +475,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "DATA_UAT_EXPORT",
     "name": "Trích xuất dữ liệu / UAT",
-    "category": "IT",
+    "category": "WORK",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 2,
@@ -477,7 +485,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "FEATURE_RELEASE",
     "name": "Feature Request / Release",
-    "category": "IT",
+    "category": "WORK",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 2,
@@ -487,7 +495,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "IT_SUPPORT",
     "name": "Yêu cầu hỗ trợ IT",
-    "category": "IT",
+    "category": "SUPPORT",
     "status": "ACTIVE",
     "risk_weight": 1,
     "approval_level": 1,
@@ -497,7 +505,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "PROD_DATA_ACCESS",
     "name": "Cấp quyền Dữ liệu nhạy cảm/Server",
-    "category": "IT",
+    "category": "PROVISION",
     "status": "ACTIVE",
     "risk_weight": 5,
     "approval_level": 3,
@@ -507,7 +515,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "SECURITY_INCIDENT_HOTFIX",
     "name": "Khắc phục sự cố bảo mật & Hotfix khẩn cấp",
-    "category": "IT",
+    "category": "SUPPORT",
     "status": "ACTIVE",
     "risk_weight": 5,
     "approval_level": 5,
@@ -517,7 +525,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "SERVER_FIREWALL",
     "name": "Cấp Server / Firewall",
-    "category": "IT",
+    "category": "PROVISION",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 3,
@@ -597,7 +605,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ASSET_DISPOSAL",
     "name": "Thanh lý & hủy tài sản cố định",
-    "category": "ADMIN",
+    "category": "ASSET",
     "status": "ACTIVE",
     "risk_weight": 4,
     "approval_level": 4,
@@ -607,7 +615,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "FACILITY_REPAIR",
     "name": "Sửa chữa sự cố văn phòng",
-    "category": "ADMIN",
+    "category": "SUPPORT",
     "status": "ACTIVE",
     "risk_weight": 2,
     "approval_level": 1,
@@ -617,7 +625,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "WAREHOUSE_TRANSFER",
     "name": "Luân chuyển kho",
-    "category": "ADMIN",
+    "category": "ASSET",
     "status": "ACTIVE",
     "risk_weight": 3,
     "approval_level": 1,
@@ -627,7 +635,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ASSET_PURCHASE",
     "name": "Mua sắm tài sản phòng ban",
-    "category": "FINANCE",
+    "category": "PROCUREMENT",
     "status": "DEPRECATED",
     "risk_weight": 4,
     "approval_level": 3,
@@ -637,7 +645,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "SOFTWARE_ACCESS",
     "name": "Cấp tài khoản / VPN",
-    "category": "RESOURCE",
+    "category": "PROVISION",
     "status": "DEPRECATED",
     "risk_weight": 2,
     "approval_level": 2,
@@ -647,7 +655,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ROOM_STUDIO",
     "name": "Mượn phòng họp / Studio",
-    "category": "FACILITY",
+    "category": "BORROW",
     "status": "DEPRECATED",
     "risk_weight": 1,
     "approval_level": 1,
@@ -657,7 +665,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "ROOM_VEHICLE",
     "name": "Mượn phòng họp / Xe công vụ",
-    "category": "FACILITY",
+    "category": "BORROW",
     "status": "DEPRECATED",
     "risk_weight": 1,
     "approval_level": 1,
@@ -667,7 +675,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "LEAVE_ANNUAL",
     "name": "Nghỉ phép dưới 3 ngày",
-    "category": "TIME",
+    "category": "ABSENCE",
     "status": "DEPRECATED",
     "risk_weight": 1,
     "approval_level": 1,
@@ -677,7 +685,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "LEAVE_LONG",
     "name": "Nghỉ phép từ 3 ngày",
-    "category": "TIME",
+    "category": "ABSENCE",
     "status": "DEPRECATED",
     "risk_weight": 3,
     "approval_level": 2,
@@ -687,7 +695,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "OVERTIME_APPROVAL",
     "name": "Đăng ký làm thêm giờ (OT)",
-    "category": "TIME",
+    "category": "WORKTIME",
     "status": "DEPRECATED",
     "risk_weight": 2,
     "approval_level": 1,
@@ -697,7 +705,7 @@ export const CATALOG_ITEMS = Object.freeze([
   {
     "code": "FACILITY_MAINTENANCE",
     "name": "Sửa chữa cơ sở vật chất",
-    "category": "ADMIN",
+    "category": "SUPPORT",
     "status": "DEPRECATED",
     "risk_weight": 2,
     "approval_level": 1,

@@ -52,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
           const SizedBox(height: 12),
           const Text('Enterprise Approval System', textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 32),
-          TextField(controller: username, decoration: const InputDecoration(labelText: 'Tên đăng nhập', border: OutlineInputBorder()),
+          TextField(controller: username, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
             autofillHints: const [AutofillHints.username]),
           const SizedBox(height: 12),
           TextField(controller: password, obscureText: obscure, onSubmitted: (_) => submit(),

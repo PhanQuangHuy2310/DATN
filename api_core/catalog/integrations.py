@@ -10,28 +10,35 @@ from __future__ import annotations
 from django.core.cache import cache
 from django.db import connection
 
-# domain_key -> catalogue v2 groups and extra type codes that need that system.
+# domain_key -> request types whose workflow calls that external system
+# (docs/TICH_HOP_HE_THONG_NGOAI.md §4). Grouping categories are presentation
+# only, so the mapping lists type codes explicitly.
+BUDGET_TYPES = [
+    "ADVANCE_SMALL",
+    "ADVANCE_MEDIUM",
+    "ADVANCE_LARGE",
+    "EXPENSE_CLAIM",
+    "PURCHASE_REQUEST",
+    "EQUIPMENT",
+    "VENDOR_PAYMENT",
+    "MARKETING_CAMPAIGN",
+    "BUSINESS_TRIP",
+]
 DOMAIN_MAPPING = {
-    "hr": {"categories": ["HR", "TIME"], "extra_codes": []},
-    "finance": {"categories": ["FINANCE"], "extra_codes": []},
-    "it": {"categories": ["IT"], "extra_codes": []},
+    "hr": {"categories": [], "extra_codes": ["LEAVE", "LEAVE_SPECIAL"]},
+    "finance": {"categories": [], "extra_codes": BUDGET_TYPES},
+    "it": {"categories": [], "extra_codes": ["ACCESS"]},
     "procurement": {
         "categories": [],
-        "extra_codes": [
-            "PURCHASE_REQUEST",
-            "SUPPLIER_ONBOARDING",
-            "VENDOR_PAYMENT",
-            "SAAS_LICENSE_BUY",
-            "EQUIPMENT",
-        ],
+        "extra_codes": ["PURCHASE_REQUEST", "SUPPLIER_ONBOARDING", "SAAS_LICENSE_BUY"],
     },
-    "assets": {
-        "categories": ["RESOURCE"],
-        "extra_codes": ["ASSET_DISPOSAL", "WAREHOUSE_TRANSFER", "EQUIPMENT_BORROW"],
+    "assets": {"categories": [], "extra_codes": ["EQUIPMENT_BORROW"]},
+    "facilities": {
+        "categories": [],
+        "extra_codes": ["ROOM_BOOKING", "VEHICLE_BOOKING"],
     },
-    "facilities": {"categories": ["FACILITY"], "extra_codes": ["FACILITY_REPAIR"]},
     "travel": {"categories": [], "extra_codes": ["BUSINESS_TRIP"]},
-    "crm": {"categories": ["SALES"], "extra_codes": []},
+    "crm": {"categories": [], "extra_codes": ["SPECIAL_DISCOUNT"]},
 }
 CACHE_KEY = "eas:integrations:disabled"
 CACHE_SECONDS = 5
@@ -66,9 +73,7 @@ def invalidate() -> None:
 
 
 def blocks(domain_key: str, type_code: str, category: str | None) -> bool:
-    mapping = DOMAIN_MAPPING.get(
-        domain_key, {"categories": [domain_key.upper()], "extra_codes": []}
-    )
+    mapping = DOMAIN_MAPPING.get(domain_key, {"categories": [], "extra_codes": []})
     return (category or "").upper() in mapping["categories"] or type_code in mapping[
         "extra_codes"
     ]

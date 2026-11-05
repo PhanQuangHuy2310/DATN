@@ -14,18 +14,17 @@ being silently ignored.
 
 from __future__ import annotations
 
-import json
 import logging
 from uuid import UUID, uuid4
 
-from django.db import IntegrityError, connection
+from django.db import IntegrityError, connection, transaction
 from django.http import JsonResponse
 
 from api_core.authn.module_access import can
 from api_core.authn.service import require_actor
 from api_core.catalog.plan_catalog import catalog_v2
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
-from api_core.workflow.service import CommandError
+from api_core.workflow.service import CommandError, record_system_change
 
 from .service import mutate, read_record
 
@@ -52,6 +51,17 @@ RESOLVER_LABELS = {
     "DIRECTOR": "Ban giám đốc",
     "FINANCE": "Tài chính",
     "REQUESTER": "Người yêu cầu",
+    "HR_MANAGER": "Trưởng phòng Nhân sự",
+    "IT_MANAGER": "Trưởng phòng CNTT",
+    "CTO": "Giám đốc Công nghệ",
+    "CISO": "Giám đốc An ninh thông tin",
+    "SECURITY": "Bộ phận An ninh",
+    "LEGAL": "Pháp chế",
+    "MARKETING_MANAGER": "Trưởng phòng Marketing",
+    "OPERATIONS_MANAGER": "Trưởng phòng Vận hành",
+    "PROCUREMENT_MANAGER": "Trưởng bộ phận Mua sắm",
+    "PROJECT_MANAGER": "Quản lý dự án",
+    "WAREHOUSE_MANAGER": "Quản lý kho",
 }
 TYPE_SQL = """
     SELECT rt.id::text, rt.code, rt.name, rt.category, rt.lifecycle, rt.is_active,
@@ -221,12 +231,20 @@ def _errors(view):
     return wrapper
 
 
-def _require_writer(request) -> None:
-    """Configuring request types needs update/delete on `requests_workflows`.
+CONFIG_WRITER_ROLE = "POLICY_ADMIN"
 
+
+def _require_writer(request) -> None:
+    """Configuring request types is a policy-administration duty.
+
+    Lifecycle, activation and automation weight are internal controls, so a
+    module right alone (which the employee portal grants to approvers) is not
+    enough: the caller must also hold POLICY_ADMIN (separation of duties).
     `can_create` on this module means "create business requests", so adding a
     request type also requires `can_update`.
     """
+    if CONFIG_WRITER_ROLE not in request.actor.roles:
+        raise CommandError("FORBIDDEN", status=403)
     action = "delete" if request.method == "DELETE" else "update"
     if not can(request, "requests_workflows", action):
         raise CommandError("FORBIDDEN", status=403)
@@ -384,32 +402,28 @@ def request_template_detail(request, template_id):
         and new_cat.upper() in ("A", "B", "C")
         and new_cat.upper() != current["category_code"]
     ):
-        with connection.cursor() as cur:
+        with transaction.atomic(), connection.cursor() as cur:
             cur.execute(
                 "UPDATE eas.request_type SET lifecycle = %s WHERE id = %s::uuid",
                 [new_cat.upper(), tid],
             )
+            record_system_change(
+                cur,
+                actor_id=str(request.actor.id),
+                change_type="WORKFLOW",
+                system_version="v2.0",
+                title=f"Chuyển phân loại mẫu yêu cầu: {current['name']} sang Nhóm {new_cat}",
+                description=(
+                    f"Quản trị viên đã chuyển mẫu yêu cầu {current['name']} ({current['code']}) "
+                    f"từ Nhóm {current['category_code']} sang Nhóm {new_cat}."
+                ),
+                old_value={"category_code": current["category_code"]},
+                new_value={"category_code": new_cat},
+                target_type="request_type",
+                target_id=tid,
+                correlation_id=correlation_id(request),
+            )
         category_changed = True
-        try:
-            with connection.cursor() as cl_cur:
-                cl_cur.execute(
-                    """
-                    INSERT INTO eas.system_versions_changelog (
-                        id, system_version, change_type, change_scope, title,
-                        description, old_value, new_value, changed_by, created_at
-                    ) VALUES (%s, 'v2.0', 'WORKFLOW', 'PATCH', %s, %s, %s::jsonb, %s::jsonb, %s, now())
-                    """,
-                    [
-                        str(uuid4()),
-                        f"Chuyển phân loại mẫu yêu cầu: {current['name']} sang Nhóm {new_cat}",
-                        f"Quản trị viên đã chuyển mẫu yêu cầu {current['name']} ({current['code']}) từ Nhóm {current['category_code']} sang Nhóm {new_cat}.",
-                        json.dumps({"category_code": current["category_code"]}),
-                        json.dumps({"category_code": new_cat}),
-                        str(request.actor.id),
-                    ],
-                )
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Failed to record workflow changelog: %s", e)
 
     changes = {}
     if payload.get("name"):
@@ -426,28 +440,23 @@ def request_template_detail(request, template_id):
         changes["category"] = group
     if payload.get("automation_weight") is not None:
         changes["risk_weight"] = _risk_from_automation(payload["automation_weight"])
-        try:
-            with connection.cursor() as cl_cur:
-                cl_cur.execute(
-                    """
-                    INSERT INTO eas.system_versions_changelog (
-                        id, system_version, change_type, change_scope, title,
-                        description, old_value, new_value, changed_by, created_at
-                    ) VALUES (%s, 'v2.0', 'TEMPLATE', 'PATCH', %s, %s, %s::jsonb, %s::jsonb, %s, now())
-                    """,
-                    [
-                        str(uuid4()),
-                        f"Điều chỉnh trọng số tự động hóa: {current['name']}",
-                        f"Quản trị viên đã cập nhật trọng số tự động hóa cho {current['name']} thành {payload['automation_weight']}%.",
-                        json.dumps(
-                            {"automation_weight": current.get("automation_weight")}
-                        ),
-                        json.dumps({"automation_weight": payload["automation_weight"]}),
-                        str(request.actor.id),
-                    ],
-                )
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Failed to record workflow changelog: %s", e)
+        with transaction.atomic(), connection.cursor() as cur:
+            record_system_change(
+                cur,
+                actor_id=str(request.actor.id),
+                change_type="TEMPLATE",
+                system_version="v2.0",
+                title=f"Điều chỉnh trọng số tự động hóa: {current['name']}",
+                description=(
+                    f"Quản trị viên đã cập nhật trọng số tự động hóa cho {current['name']} "
+                    f"thành {payload['automation_weight']}%."
+                ),
+                old_value={"automation_weight": current.get("automation_weight")},
+                new_value={"automation_weight": payload["automation_weight"]},
+                target_type="request_type",
+                target_id=tid,
+                correlation_id=correlation_id(request),
+            )
 
     if changes:
         mutate(

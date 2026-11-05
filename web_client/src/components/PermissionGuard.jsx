@@ -50,3 +50,8 @@ export function PermissionGuard({
 
 export default PermissionGuard;
 
+
+/** Employee-portal name used by the spec: <ClientPermissionGuard moduleCode="users" action="update">. */
+export function ClientPermissionGuard({ moduleCode, action = "view", ...rest }) {
+  return <PermissionGuard module={moduleCode} action={action} {...rest} />;
+}

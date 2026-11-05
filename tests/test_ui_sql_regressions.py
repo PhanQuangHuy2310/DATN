@@ -77,7 +77,7 @@ class EASRegressionTests(unittest.TestCase):
         self.assertIn('type={showPassword ? "text" : "password"}', app)
         self.assertIn("aria-pressed={showPassword}", app)
         for path in [
-            "web_client/src/components/Admin.jsx",
+            "web_client/src/components/ProfilePage.jsx",
             "web_client/src/components/IdentityAdmin.jsx",
         ]:
             self.assertIn("PasswordField", (ROOT / path).read_text(encoding="utf-8"))
@@ -139,9 +139,7 @@ class EASRegressionTests(unittest.TestCase):
         app_user_ddl = schema_src.split("CREATE TABLE eas.app_user (", 1)[1].split(
             "\n);", 1
         )[0]
-        self.assertRegex(
-            app_user_ddl, r"(?m)^email varchar\(254\) NOT NULL UNIQUE"
-        )
+        self.assertRegex(app_user_ddl, r"(?m)^email varchar\(254\) NOT NULL UNIQUE")
 
     def test_service_and_worker_nullable_uuid_parameters_are_typed(self):
         service_src = (ROOT / "api_core/workflow/service.py").read_text(

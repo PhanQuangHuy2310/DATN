@@ -297,36 +297,56 @@ def get_request_audit_events(actor: Actor, request_id: str) -> dict[str, Any]:
 
         cursor.execute(
             """
-            SELECT id::text, request_id::text, seq, actor_id::text, actor_kind,
-                   action, target_type, target_id::text, details, correlation_id::text,
-                   occurred_at, hash_version, prev_hash, hash
-            FROM eas.audit_event
-            WHERE request_id = %s
-            ORDER BY seq ASC
+            SELECT e.id::text, e.request_id::text, e.seq, e.actor_id::text, e.actor_kind,
+                   e.action, e.target_type, e.target_id::text, e.details, e.correlation_id::text,
+                   e.occurred_at, e.hash_version, e.prev_hash, e.hash,
+                   au.display_name
+            FROM eas.audit_event e
+            LEFT JOIN eas.app_user au ON au.id = e.actor_id
+            WHERE e.request_id = %s
+            ORDER BY e.seq ASC
             """,
             [norm_id],
         )
         rows = cursor.fetchall()
 
-    items = [
-        {
+    is_auditor = "AUDITOR" in actor.roles
+    items = []
+    for row in rows:
+        raw_details = row[8] if isinstance(row[8], dict) else {}
+        safe_details = (
+            raw_details
+            if is_auditor
+            else {
+                k: v
+                for k, v in raw_details.items()
+                if k not in {"client_ip", "ip", "user_agent", "session_id"}
+            }
+        )
+        actor_name = (
+            row[14]
+            if len(row) > 14 and row[14]
+            else ("Hệ thống tự động" if row[4] != "USER" else None)
+        )
+        item: dict[str, Any] = {
             "id": row[0],
             "request_id": row[1],
             "seq": row[2],
-            "actor_id": row[3],
+            "actor_id": row[3] if is_auditor else None,
             "actor_kind": row[4],
+            "actor_name": actor_name,
             "action": row[5],
             "target_type": row[6],
-            "target_id": row[7],
-            "details": row[8],
-            "correlation_id": row[9],
+            "target_id": row[7] if is_auditor else None,
+            "details": safe_details,
             "occurred_at": row[10].isoformat(),
-            "hash_version": row[11],
-            "prev_hash": row[12],
-            "hash": row[13],
         }
-        for row in rows
-    ]
+        if is_auditor:
+            item["correlation_id"] = row[9]
+            item["hash_version"] = row[11]
+            item["prev_hash"] = row[12]
+            item["hash"] = row[13]
+        items.append(item)
     return {"items": items}
 
 

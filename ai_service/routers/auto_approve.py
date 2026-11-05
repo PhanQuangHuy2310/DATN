@@ -46,6 +46,10 @@ class AutoApproveInput(BaseModel):
     )
     requester_name: str
     requester_dept: str
+    requester_email: str | None = Field(
+        None, description="Email để tra quỹ phép trong hệ thống HRM"
+    )
+    room_code: str | None = Field(None, description="Mã phòng họp (ROOM_BOOKING)")
 
 
 class AutoApproveDecision(BaseModel):
@@ -80,8 +84,8 @@ class AutoApproveChecker:
             ok = False
 
         effective_balance = inp.leave_balance_remaining
-        if effective_balance <= 0 and inp.requester_name:
-            looked_up = lookup_leave_balance(inp.requester_name)
+        if effective_balance <= 0 and (inp.requester_email or inp.requester_name):
+            looked_up = lookup_leave_balance(inp.requester_email or inp.requester_name)
             if looked_up is not None:
                 effective_balance = looked_up
                 reasons.append(
@@ -112,12 +116,12 @@ class AutoApproveChecker:
         ok = True
 
         room_available = inp.room_available
-        if room_available is None:
-            # Tra cứu thử từ mock facilities snapshot
-            room_available = lookup_facility_available("PH-01")
+        if room_available is None and inp.room_code:
+            # Hệ thống quản lý toà nhà (qua API), đúng phòng của đơn.
+            room_available = lookup_facility_available(inp.room_code)
             if room_available is not None:
                 reasons.append(
-                    f"ℹ️ Đã tự động đối chiếu lịch phòng từ mock Facilities (khả dụng: {room_available})"
+                    f"ℹ️ Đã đối chiếu tình trạng phòng {inp.room_code} với hệ thống toà nhà"
                 )
 
         if room_available is None:

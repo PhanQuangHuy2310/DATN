@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useApiBase } from "../apiBase.js";
+import { usePermission } from "../hooks/usePermission.jsx";
 import { api } from "../api.js";
+import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
 
 const CATEGORIES = [
@@ -14,6 +16,8 @@ const CATEGORIES = [
 
 export function RegulationsManagementPage() {
   const apiBase = useApiBase();
+  // Buttons follow the rights the admin granted on module "regulations".
+  const { canCreate, canUpdate, canDelete } = usePermission("regulations");
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
@@ -45,7 +49,7 @@ export function RegulationsManagementPage() {
       setRegulations(res.regulations || []);
       setAiState(res.ai_state || null);
     } catch (err) {
-      if (!silent) showToast("Không thể tải danh sách quy định: " + (err.message || ""), "error");
+      if (!silent) showToast("Không thể tải danh sách quy định: " + errorText(err), "error");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -102,7 +106,7 @@ export function RegulationsManagementPage() {
       setShowCreateModal(false);
       loadData();
     } catch (err) {
-      showToast("Lỗi khi thêm quy định: " + (err.message || ""), "error");
+      showToast("Lỗi khi thêm quy định: " + errorText(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -129,7 +133,7 @@ export function RegulationsManagementPage() {
       setEditingRegulation(null);
       loadData();
     } catch (err) {
-      showToast("Lỗi khi cập nhật quy định: " + (err.message || ""), "error");
+      showToast("Lỗi khi cập nhật quy định: " + errorText(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -146,7 +150,7 @@ export function RegulationsManagementPage() {
       setDeletingRegulation(null);
       loadData();
     } catch (err) {
-      showToast("Lỗi khi xóa quy định: " + (err.message || ""), "error");
+      showToast("Lỗi khi xóa quy định: " + errorText(err), "error");
     } finally {
       setSubmitting(false);
     }
@@ -276,9 +280,11 @@ export function RegulationsManagementPage() {
           </div>
         </div>
 
-        <button type="button" className="btn-primary btn-add-regulation" onClick={openCreateModal}>
-          <span>+</span> Thêm quy định mới
-        </button>
+        {canCreate && (
+          <button type="button" className="btn-primary btn-add-regulation" onClick={openCreateModal}>
+            <span>+</span> Thêm quy định mới
+          </button>
+        )}
       </div>
 
       {/* Regulations Table / Grid */}
@@ -312,22 +318,26 @@ export function RegulationsManagementPage() {
                     >
                       👁 Xem
                     </button>
-                    <button
-                      type="button"
-                      className="btn-action btn-edit"
-                      title="Chỉnh sửa (Tăng Minor Version)"
-                      onClick={() => openEditModal(reg)}
-                    >
-                      ✎ Sửa
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-action btn-delete"
-                      title="Xóa quy định (Tăng Major Version)"
-                      onClick={() => setDeletingRegulation(reg)}
-                    >
-                      ✕ Xóa
-                    </button>
+                    {canUpdate && (
+                      <button
+                        type="button"
+                        className="btn-action btn-edit"
+                        title="Chỉnh sửa (Tăng Minor Version)"
+                        onClick={() => openEditModal(reg)}
+                      >
+                        ✎ Sửa
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        className="btn-action btn-delete"
+                        title="Xóa quy định (Tăng Major Version)"
+                        onClick={() => setDeletingRegulation(reg)}
+                      >
+                        ✕ Xóa
+                      </button>
+                    )}
                   </div>
                 </div>
 

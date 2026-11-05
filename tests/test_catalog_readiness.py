@@ -14,11 +14,16 @@ P0 = [("LEAVE", "A", True), ("ACCESS", "B", True), ("EQUIPMENT", "C", True)]
 
 class CatalogReadinessTests(unittest.TestCase):
     def test_32_tables_satisfy_30_mandatory(self):
-        self.assertTrue(has_required_eas_tables(
-            REQUIRED_EAS_TABLES | {"role", "lifecycle"}))
+        self.assertTrue(
+            has_required_eas_tables(REQUIRED_EAS_TABLES | {"role", "lifecycle"})
+        )
 
     def test_missing_required_table_is_not_hidden_by_count(self):
-        missing_one = (REQUIRED_EAS_TABLES - {"audit_event"}) | {"role", "lifecycle", "new_table"}
+        missing_one = (REQUIRED_EAS_TABLES - {"audit_event"}) | {
+            "role",
+            "lifecycle",
+            "new_table",
+        }
         self.assertFalse(has_required_eas_tables(missing_one))
 
     def test_exact_user_diagnostic_scenario(self):
@@ -52,6 +57,7 @@ class CatalogReadinessTests(unittest.TestCase):
     def test_no_active_types_never_fully_configured(self):
         result = catalog_readiness_summary([])
         self.assertFalse(result["all_active_types_configured"])
+
 
 if __name__ == "__main__":
     unittest.main()

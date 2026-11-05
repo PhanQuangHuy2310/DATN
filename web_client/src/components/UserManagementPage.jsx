@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
+import { errorText } from "../domain.js";
 import { useResource, ResourceState } from "./ui.jsx";
 import { usePermission } from "../hooks/usePermission.jsx";
 
@@ -60,7 +61,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       const res = await api(`${apiBase}/users-management/${user.id}/requests-detail`);
       setDetailData(res);
     } catch (err) {
-      showToast("Không thể tải chi tiết hồ sơ: " + (err.message || err), "error");
+      showToast("Không thể tải chi tiết hồ sơ: " + errorText(err), "error");
     } finally {
       setLoadingDetail(false);
     }
@@ -92,7 +93,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       setLeaveModalUser(null);
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      showToast("Lỗi cập nhật trạng thái: " + (err.message || err), "error");
+      showToast("Lỗi cập nhật trạng thái: " + errorText(err), "error");
     } finally {
       setLeaveSubmitting(false);
     }
@@ -111,7 +112,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       showToast(`Đã ${user.is_active ? "khóa" : "mở khóa"} người dùng thành công!`, "success");
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      showToast("Lỗi thay đổi trạng thái tài khoản: " + (err.message || err), "error");
+      showToast("Lỗi thay đổi trạng thái tài khoản: " + errorText(err), "error");
     }
   };
 
@@ -136,7 +137,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       setEditUserModal(null);
       setRefreshKey((k) => k + 1);
     } catch (err) {
-      showToast("Lỗi lưu người dùng: " + (err.message || err), "error");
+      showToast("Lỗi lưu người dùng: " + errorText(err), "error");
     } finally {
       setUserSubmitting(false);
     }
@@ -170,14 +171,15 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
   // Overall status counts
   const summaryCounts = useMemo(() => {
     const items = usersRes.data?.items || [];
-    let working = 0, leave = 0, trip = 0, locked = 0;
+    let working = 0, leave = 0, trip = 0, offHours = 0, locked = 0;
     items.forEach((u) => {
       if (!u.is_active) locked++;
       else if (u.working_status_code === "CONG_TAC") trip++;
       else if (u.working_status_code === "NGHI_LAM") leave++;
+      else if (u.working_status_code === "NGOAI_GIO") offHours++;
       else working++;
     });
-    return { total: items.length, working, leave, trip, locked };
+    return { total: items.length, working, leave, trip, offHours, locked };
   }, [usersRes.data]);
 
   return (
@@ -251,7 +253,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
         <div className="kpi-card" role="button" tabIndex={0} onClick={() => setStatusFilter("DANG_LAM")} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setStatusFilter("DANG_LAM")} style={{ cursor: "pointer" }}>
           <div className="kpi-title">Đang làm việc</div>
           <div className="kpi-value text-green">{summaryCounts.working}</div>
-          <div className="kpi-subtitle">Tại văn phòng (08:00 - 17:30)</div>
+          <div className="kpi-subtitle">08:00–12:00, 13:30–17:30 (T2–T6)</div>
         </div>
         <div className="kpi-card" role="button" tabIndex={0} onClick={() => setStatusFilter("NGHI_LAM")} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setStatusFilter("NGHI_LAM")} style={{ cursor: "pointer" }}>
           <div className="kpi-title">Nghỉ làm / Vắng</div>
@@ -302,6 +304,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
           <option value="DANG_LAM">🟢 Đang làm việc</option>
           <option value="NGHI_LAM">🟡 Nghỉ phép / Vắng</option>
           <option value="CONG_TAC">🔵 Đi công tác</option>
+          <option value="NGOAI_GIO">⚪ Nghỉ trưa / Ngoài giờ</option>
           <option value="INACTIVE">🔴 Bị khóa</option>
         </select>
 
@@ -347,6 +350,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                   const isWorking = u.working_status_code === "DANG_LAM";
                   const isLeave = u.working_status_code === "NGHI_LAM";
                   const isTrip = u.working_status_code === "CONG_TAC";
+                  const isOffHours = u.working_status_code === "NGOAI_GIO";
 
                   return (
                     <tr key={u.id} className={isLocked ? "row-locked" : ""}>
@@ -395,6 +399,10 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                           ) : isLeave ? (
                             <span className="status-badge status-leave" title={u.working_status_detail}>
                               <span className="dot dot-amber"></span> Nghỉ làm
+                            </span>
+                          ) : isOffHours ? (
+                            <span className="status-badge status-off-hours" title={u.working_status_detail}>
+                              <span className="dot dot-gray"></span> {u.working_status_label || "Ngoài giờ làm việc"}
                             </span>
                           ) : (
                             <span className="status-badge status-trip" title={u.working_status_detail}>

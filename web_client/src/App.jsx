@@ -14,12 +14,14 @@ import {
   useResource,
 } from "./components/ui.jsx";
 import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
-import ClientDashboard from "./components/ClientDashboard.jsx";
 import ClientRequests from "./components/ClientRequests.jsx";
-import AssignedWorkDashboard from "./components/AssignedWorkDashboard.jsx";
-import { Notifications, Profile } from "./components/Admin.jsx";
+import Notifications from "./components/NotificationsPage.jsx";
+import Profile from "./components/ProfilePage.jsx";
 import { SystemUpdateDialog, SystemUpdateHistory } from "./components/SystemUpdates.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
+import { ApiBaseContext, WORKSPACE_API } from "./apiBase.js";
+import ClientRequestsHub from "./components/ClientRequestsHub.jsx";
+import { formatVnd } from "./formatters.js";
 
 function AdminDashboard(props) {
   return <AdminScreen name="AdminDashboard" {...props} />;
@@ -33,7 +35,7 @@ const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
 const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
 import TeamDashboard from "./components/TeamDashboard.jsx";
 import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
-import { PageHeader } from "./components/design.jsx";
+import { PageHeader, ShellSkeleton, TableSkeleton } from "./components/design.jsx";
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
@@ -88,11 +90,29 @@ function Login({ onLogin, portal = "client", aiStatus }) {
     const values = Object.fromEntries(new FormData(e.currentTarget));
     const email = String(values.email || "").trim().toLowerCase();
 
+<<<<<<< HEAD
     // The server validates portal access from current role memberships;
     // email addresses are not authorization policies.
     if (portal === "client" && aiStatus?.client_maintenance_lock) {
       setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được sau khi quá trình cập nhật hoàn tất.`);
       return;
+=======
+    // Strict portal separation check
+    if (portal === "admin") {
+      if (email !== "admin@eas.com") {
+        setError("Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).");
+        return;
+      }
+    } else if (portal === "client") {
+      if (email === "admin@eas.com") {
+        setError(`Từ chối truy cập: Tài khoản Quản trị viên hệ thống không được phép đăng nhập vào Cổng Nhân viên. Vui lòng đăng nhập tại Cổng Quản trị (${ADMIN_PORTAL_URL}).`);
+        return;
+      }
+      if (aiStatus?.client_maintenance_lock) {
+        setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật hoàn tất.`);
+        return;
+      }
+>>>>>>> origin/main
     }
 
     setBusy(true);
@@ -236,6 +256,14 @@ function Login({ onLogin, portal = "client", aiStatus }) {
                 </div>
               </div>
 
+              {portal === "client" && aiStatus?.client_maintenance_lock && (
+                <div className="login-maintenance-box" role="status">
+                  <strong>AI đang học quy định mới {aiStatus.target_regulation_version ? `(${aiStatus.target_regulation_version})` : ""}</strong>
+                  <span>{aiStatus.current_step_label || "Đang đồng bộ quy định…"}</span>
+                  <div className="m-progress-track"><div className="m-progress-fill" style={{ width: `${aiStatus.progress_percent ?? 0}%` }} /></div>
+                  <small>Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật tự động hoàn tất.</small>
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={busy || (portal === "client" && aiStatus?.client_maintenance_lock)}
@@ -322,6 +350,9 @@ function Login({ onLogin, portal = "client", aiStatus }) {
 
 const menu = [
   ["home", "Tổng quan", "◫"],
+  ["requests", "Yêu cầu & Quy trình", "▤"],
+  ["people", "Người dùng", "♙"],
+  ["regulations-view", "Quy định", "⚙"],
   ["mine", "Yêu cầu của tôi", "▤"],
   ["approval", "Chờ phê duyệt", "✓"],
   ["execution", "Công việc thực hiện", "▣"],
@@ -360,6 +391,12 @@ export function pageToModuleCode(key, portal = "admin") {
     case "home":
     case "dashboard":
       return "dashboard";
+    case "requests":
+      return "requests_workflows";
+    case "people":
+      return "users";
+    case "regulations-view":
+      return "regulations";
     case "mine":
     case "requests_workflows":
     case "request-catalog":
@@ -429,12 +466,15 @@ const ADMIN_LABELS = {
   audit: "Nhật ký kiểm toán",
   team: "Báo cáo phòng ban",
 };
+// Same 5 business modules as the admin portal; each item shows only when the
+// admin granted "Xem" on its module (system modules never appear here).
 const CLIENT_NAV = [
-  ["Không gian cá nhân", ["home", "mine"]],
-  ["Công việc được giao", ["approval", "execution", "acceptance"]],
-  ["Quản lý phòng ban", ["team", "team-employees"]],
-  ["Tổ chức & công cụ", ["org-client", "flow-diagrams", "ai-process"]],
-  ["Tài khoản", ["profile"]],
+  ["GIÁM SÁT", ["home"]],
+  ["LUỒNG CÔNG VIỆC", ["requests"]],
+  ["TỔ CHỨC & NHÂN SỰ", ["org-client", "people"]],
+  ["TRI THỨC", ["regulations-view"]],
+  ["QUẢN LÝ PHÒNG BAN", ["team", "team-employees"]],
+  ["TÀI KHOẢN", ["profile"]],
 ];
 const ADMIN_NAV = [
   ["GIÁM SÁT", ["home"]],
@@ -623,6 +663,7 @@ function renderNavIcon(key, fallback) {
 function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) {
   const [status, setStatus] = useState(""),
     [type, setType] = useState(""),
+    [departmentId, setDepartmentId] = useState(""),
     [offset, setOffset] = useState(0),
     [limit, setLimit] = useState(20),
     [query, setQuery] = useState(""),
@@ -639,9 +680,12 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
     params.set("tab", page);
   if (status) params.set("status", status);
   if (type) params.set("type_code", type);
+  if (departmentId) params.set("department_id", departmentId);
   if (from) params.set("created_from", from + "T00:00:00+07:00");
   if (to) params.set("created_to", to + "T23:59:59.999999+07:00");
   const availableTypes = useResource("/api/v1/request-types");
+  const orgMeta = useResource(page === "ops" ? "" : "/api/v1/meta/org-chart");
+  const departments = orgMeta.data?.departments || [];
   const r = useResource(
     `/api/v1/${page === "ops" ? "ops/requests" : "requests"}?${params}&_revision=${revision}`,
   );
@@ -654,14 +698,14 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
           <p className="eyebrow">CỔNG DỊCH VỤ EAS / QUẢN LÝ HỒ SƠ</p>
           <h1>{menu.find((m) => m[0] === page)?.[1]}</h1>
           <p className="muted">
-            Theo dõi tiến độ, xử lý công việc và tra cứu lịch sử.
+            Theo dõi tiến độ, người gửi, phòng ban, người đang phụ trách và hạn xử lý SLA của từng hồ sơ.
           </p>
         </div>
         {canCreate && user.roles.includes("REQUESTER") && (
           <button type="button" onClick={onNew}>+ Tạo yêu cầu mới</button>
         )}
       </div>
-      <section className="request-summary-strip" aria-label="Thống kê hồ sơ trên trang">
+      <section className="request-summary-strip" aria-label="Thống kê hồ sơ hiển thị">
         {[
           ["Tất cả", "", "◫"],
           ["Cần bổ sung", "NEEDS_INFO", "!"],
@@ -677,7 +721,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
             <span className="mini-stat-icon" aria-hidden="true">{icon}</span>
             <span className="mini-stat-label">{label}</span>
             <strong>{code ? items.filter((item) => item.status === code).length : items.length}</strong>
-            <small>trên trang đang tải</small>
+            <small>hồ sơ hiển thị</small>
           </button>
         ))}
       </section>
@@ -688,7 +732,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ví dụ: REQ-2026-001"
+              placeholder="Mã REQ, tiêu đề hoặc tên người gửi…"
             />
           </label>
           <label>
@@ -708,6 +752,25 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
               ))}
             </select>
           </label>
+          {departments.length > 1 && (
+            <label>
+              Phòng ban
+              <select
+                value={departmentId}
+                onChange={(e) => {
+                  setDepartmentId(e.target.value);
+                  setOffset(0);
+                }}
+              >
+                <option value="">Tất cả phòng ban</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             Trạng thái
             <select
@@ -755,7 +818,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
         </div>
         <div className="section-head">
           <small className="muted">
-            Dữ liệu hiển thị theo phạm vi được cấp quyền
+            Dữ liệu hiển thị theo phạm vi được cấp quyền · Đang hiển thị <strong>{filtered.length}</strong> hồ sơ
           </small>
           <div className="actions">
             <button
@@ -763,6 +826,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
               onClick={() => {
                 setStatus("");
                 setType("");
+                setDepartmentId("");
                 setOffset(0);
                 setQuery("");
                 setFrom("");
@@ -777,7 +841,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
           </div>
         </div>
       </section>
-      <ResourceState resource={r}>
+      <ResourceState resource={r} skeleton={<TableSkeleton rows={5} cols={6} />}>
         {page === "ops" ? (
           <AdminScreen name="Operations" items={filtered} onRefresh={r.reload} />
         ) : (
@@ -787,38 +851,64 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
                 <thead>
                   <tr>
                     <th>Mã yêu cầu</th>
-                    <th>Nghiệp vụ</th>
+                    <th>Tiêu đề &amp; Nghiệp vụ</th>
+                    <th>Người gửi / Phòng ban</th>
                     <th>Trạng thái</th>
-                    <th>Cập nhật</th>
+                    <th>Người đang xử lý</th>
+                    <th>Hạn / Cập nhật</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((i) => (
-                    <tr key={i.id}>
-                      <td data-label="Mã yêu cầu" className="request-code">{i.code}</td>
-                      <td data-label="Nghiệp vụ">
-                        <span className="type-icon">
-                          {i.type_code === "LEAVE"
-                            ? "◷"
-                            : i.type_code === "ACCESS"
-                              ? "◇"
-                              : "▣"}
-                        </span>
-                        {availableTypes.data?.items?.find(t => t.code === i.type_code)?.name || types[i.type_code] || "Loại yêu cầu"}
-                        <small className="muted" style={{display: "block"}}>Mức rủi ro {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · {i.approval_level || typeLevels[i.type_code]?.approval_level || 1} cấp duyệt</small>
-                      </td>
-                      <td data-label="Trạng thái">
-                        <Badge value={i.status} />
-                      </td>
-                      <td data-label="Cập nhật">{date(i.updated_at)}</td>
-                      <td data-label="Thao tác">
-                        <button type="button" className="link" onClick={() => onOpen(i.id)}>
-                          Xem chi tiết →
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map((i) => {
+                    const typeName = availableTypes.data?.items?.find((t) => t.code === i.type_code)?.name || i.type_name || types[i.type_code] || "Loại yêu cầu";
+                    return (
+                      <tr key={i.id} className={i.overdue ? "is-overdue" : ""}>
+                        <td data-label="Mã yêu cầu" className="request-code">{i.code}</td>
+                        <td data-label="Tiêu đề & Nghiệp vụ">
+                          {i.title ? (
+                            <>
+                              <strong>{i.title}</strong>
+                              <span className="ds-cell-sub">
+                                {typeName}
+                                {i.amount_vnd > 0 ? ` · ${formatVnd(i.amount_vnd)}` : ""}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="type-icon">
+                                {i.type_code === "LEAVE"
+                                  ? "◷"
+                                  : i.type_code === "ACCESS"
+                                    ? "◇"
+                                    : "▣"}
+                              </span>
+                              {typeName}
+                              <small className="muted" style={{display: "block"}}>
+                                Mức rủi ro {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · {i.approval_level || typeLevels[i.type_code]?.approval_level || 1} cấp duyệt
+                              </small>
+                            </>
+                          )}
+                        </td>
+                        <td data-label="Người gửi / Phòng ban">
+                          {i.requester_name || "—"}
+                          {i.department_name && <span className="ds-cell-sub">{i.department_name}</span>}
+                        </td>
+                        <td data-label="Trạng thái">
+                          <Badge value={i.status} />
+                        </td>
+                        <td data-label="Người đang xử lý">{i.current_assignee_name || "—"}</td>
+                        <td data-label="Hạn / Cập nhật" className={i.overdue ? "overdue" : ""}>
+                          {i.due_at ? `${date(i.due_at)}${i.overdue ? " · Quá hạn" : ""}` : date(i.updated_at)}
+                        </td>
+                        <td data-label="Thao tác">
+                          <button type="button" className="link" onClick={() => onOpen(i.id)}>
+                            Xem chi tiết →
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -927,9 +1017,19 @@ function renderWorkspaceContent({
   switch (page) {
     case "home":
       if (portal === "admin") return <AdminDashboard navigate={navigate} />;
-      return portal === "client" ? (user.roles.includes("REQUESTER") ? <ClientDashboard navigate={navigate} onOpen={setSelected} user={user} /> : <AssignedWorkDashboard navigate={navigate} onOpen={setSelected} user={user}/>) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+      return portal === "client" ? (
+        <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceDashboard navigate={navigate} workspace /></ApiBaseContext.Provider>
+      ) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+    case "requests":
+      return <ClientRequestsHub user={user} revision={revision} onOpen={setSelected} onNew={(init) => { setSelected(null); setEditor(init || {}); }} />;
+    case "people":
+      return <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceUsers onNavigateOrgChart={() => navigate("org-client")} /></ApiBaseContext.Provider>;
+    case "regulations-view":
+      return <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceRegulations /></ApiBaseContext.Provider>;
     case "org-client":
-      return <ClientOrgChart user={user} />;
+      return portal === "client" ? (
+        <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceOrgChart navigate={navigate} portal="client" user={user} /></ApiBaseContext.Provider>
+      ) : <ClientOrgChart user={user} />;
     case "team":
       return <TeamDashboard onOpen={portal === "admin" && !canOpenAsAdmin ? undefined : setSelected} />;
     case "team-employees":
@@ -1051,6 +1151,14 @@ export function AdminOverview({ navigate, user }) {
 }
 
 function readFlag(key) { try { return window.localStorage.getItem(key) === "1"; } catch { return false; } }
+// Screens shared with the admin portal, opened in the employee portal through
+// /api/v1/workspace (module rights granted by the admin). Loaded on demand.
+const WorkspaceDashboard = lazy(() => import("./components/AdminPages.jsx").then((m) => ({ default: m.AdminDashboard })));
+const WorkspaceUsers = lazy(() => import("./components/UserManagementPage.jsx"));
+const WorkspaceRegulations = lazy(() => import("./components/RegulationsManagementPage.jsx"));
+const WorkspaceOrgChart = lazy(() => import("./components/OrgChart.jsx"));
+const ADMIN_PORTAL_URL = import.meta.env.VITE_ADMIN_PORTAL_URL || "http://localhost:8081";
+
 function writeFlag(key, value) { try { window.localStorage.setItem(key, value ? "1" : "0"); } catch { /* storage unavailable */ } }
 
 function Workspace({ user, onLogout, portal = "client", theme = "light", toggleTheme = () => {} }) {
@@ -1077,6 +1185,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
     if (!canNavigate(user.roles, next, user.capabilities)) return;
     if (!allowedPages.has(next)) return;
     const mod = pageToModuleCode(next, portal);
+    if (mod && portal === "client" && !user?.permissions?.by_module?.[mod]?.can_view) return;
     if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
       if (!user.permissions.by_module[mod].can_view) return;
     }
@@ -1159,6 +1268,8 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
               if (!allowedPages.has(m[0])) return false;
               if (!canNavigate(user.roles, m[0], user.capabilities)) return false;
               const mod = pageToModuleCode(m[0], portal);
+              // Employee portal: a module page appears only after the admin grants "Xem".
+              if (mod && portal === "client") return Boolean(user?.permissions?.by_module?.[mod]?.can_view);
               if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
                 return Boolean(user.permissions.by_module[mod].can_view);
               }
@@ -1232,12 +1343,18 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
                 </svg>
               )}
             </button>
+            {portal !== "admin" && user.working_status && (
+              <span className={`working-status-badge ws-${String(user.working_status.code).toLowerCase()}`} title={user.working_status.detail}>
+                {user.working_status.label}
+              </span>
+            )}
             <NotificationBell onOpen={portal === "admin" && !user.roles.includes("AUDITOR") ? () => navigate("notifications") : openRequest} onViewAll={() => navigate("notifications")} />
             <button type="button" className="client-account-link" disabled={portal === "admin"} onClick={() => navigate("profile")} aria-label={`Tài khoản ${user.display_name || "người dùng"}`}>
               <span className="client-avatar">{user.display_name?.slice(0, 1) || "U"}</span>
               <div className="topbar-user-pill">
                 <strong className="topbar-display-name">{user.display_name || "Người dùng"}</strong>
-                <span className={`topbar-role-badge ${primaryRole.tone}`}>{primaryRole.name}</span>
+                <span className={`topbar-role-badge ${primaryRole.tone}`}>{user.job_title || primaryRole.name}</span>
+                {user.department_name && <small className="topbar-department">{user.department_name}</small>}
               </div>
             </button>
             <button type="button" className="secondary ds-icon-button" aria-label="Đăng xuất" title="Đăng xuất" onClick={onLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
@@ -1376,7 +1493,7 @@ function useAiMaintenanceState() {
 }
 
 function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(3);
   const targetV = aiStatus?.target_regulation_version || "mới";
   const progress = aiStatus?.progress_percent ?? 0;
   const currentStep = aiStatus?.current_step_index || 1;
@@ -1489,7 +1606,10 @@ function PortalApp({ portal, theme, toggleTheme }) {
     window.addEventListener("focus", refresher.trigger);
     window.addEventListener(PERMISSIONS_CHANGED, refresher.trigger);
     document.addEventListener("visibilitychange", onVisible);
+    // Rights granted or revoked by the admin show up within ~15 s on an open tab.
+    const poll = setInterval(() => document.visibilityState === "visible" && refresher.trigger(), 15000);
     return () => {
+      clearInterval(poll);
       refresher.dispose();
       window.removeEventListener("focus", refresher.trigger);
       window.removeEventListener(PERMISSIONS_CHANGED, refresher.trigger);
@@ -1506,7 +1626,9 @@ function PortalApp({ portal, theme, toggleTheme }) {
         if (active) {
           if (e.message === "PASSWORD_CHANGE_REQUIRED")
             setUser({ roles: [], must_change_password: true });
-          else if (e.status === 401 || e.status === 403) setUser(null);
+          // During an AI learning lock the login page shows the progress bar,
+          // so a reload must land there instead of a generic connection error.
+          else if (e.status === 401 || e.status === 403 || e.message === "SYSTEM_UNDER_MAINTENANCE") setUser(null);
           else setError(errorText(e));
         }
       });
@@ -1546,8 +1668,8 @@ function PortalApp({ portal, theme, toggleTheme }) {
     );
   if (user === undefined)
     return (
-      <main id="main" className="empty" aria-live="polite">
-        Đang khởi tạo EAS Portal…
+      <main id="main" aria-live="polite">
+        <ShellSkeleton />
       </main>
     );
   if (user?.must_change_password)

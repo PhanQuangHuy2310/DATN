@@ -9,10 +9,8 @@ Handles:
 
 from __future__ import annotations
 
-import json
 import logging
 from datetime import datetime, timezone
-from uuid import uuid4
 
 from django.db import DatabaseError, connection, transaction
 from django.http import HttpRequest, JsonResponse
@@ -20,7 +18,7 @@ from django.http import HttpRequest, JsonResponse
 from api_core.authn.service import require_actor
 from api_core.catalog import integrations
 from api_core.http import api_error, correlation_id
-from api_core.workflow.service import _append_admin_audit
+from api_core.workflow.service import record_system_change
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +110,7 @@ def mock_api_toggle_circuit_breaker(request: HttpRequest, api_id: str) -> JsonRe
     """
     PATCH /api/v1/admin/mock-apis/<id>/toggle
     Toggles the Circuit Breaker for an API (ON -> OFF or OFF -> ON),
-    and records the action into eas.system_versions_changelog.
+    and records the action into the hash-chained eas.admin_event.
     """
     if request.method not in ("PATCH", "POST"):
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
@@ -157,48 +155,22 @@ def mock_api_toggle_circuit_breaker(request: HttpRequest, api_id: str) -> JsonRe
             [new_enabled, actor_id, now, api_id],
         )
 
-        # Log into system_versions_changelog
         action_verb = "BẬT" if new_enabled else "TẮT (Ngắt)"
-        changelog_title = f"{action_verb} kết nối API: {api_name}"
-        changelog_desc = (
-            f"Quản trị viên đã {action_verb.lower()} kết nối đến {source_system} ({api_code}). "
-            f"Các mẫu yêu cầu liên quan {'hoạt động bình thường' if new_enabled else 'tự động tạm ngưng và khóa nút gửi'}."
-        )
-
-        cur.execute(
-            """
-            INSERT INTO eas.system_versions_changelog (
-                id, system_version, change_type, change_scope, title,
-                description, old_value, new_value, changed_by, created_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
-            """,
-            [
-                str(uuid4()),
-                current_version,
-                "API_STATUS",
-                "PATCH",
-                changelog_title,
-                changelog_desc,
-                json.dumps(
-                    {"is_enabled": old_enabled, "api_code": api_code},
-                    ensure_ascii=False,
-                ),
-                json.dumps(
-                    {"is_enabled": new_enabled, "api_code": api_code},
-                    ensure_ascii=False,
-                ),
-                actor_id,
-                now,
-            ],
-        )
-        _append_admin_audit(
+        record_system_change(
             cur,
             actor_id=actor.id,
+            change_type="API_STATUS",
+            system_version=current_version,
+            title=f"{action_verb} kết nối API: {api_name}",
+            description=(
+                f"Quản trị viên đã {action_verb.lower()} kết nối đến {source_system} ({api_code}). "
+                f"Các mẫu yêu cầu liên quan {'hoạt động bình thường' if new_enabled else 'tự động tạm ngưng và khóa nút gửi'}."
+            ),
+            old_value={"is_enabled": old_enabled, "api_code": api_code},
+            new_value={"is_enabled": new_enabled, "api_code": api_code},
             action="ADMIN_INTEGRATION_" + ("ENABLE" if new_enabled else "DISABLE"),
             target_type="mock_api",
             target_id=str(api_id),
-            details={"api_code": api_code, "is_enabled": new_enabled},
-            reason=changelog_title,
             correlation_id=correlation_id(request),
         )
         transaction.on_commit(integrations.invalidate)
@@ -327,23 +299,34 @@ def system_versions_changelog_view(request: HttpRequest) -> JsonResponse:
         )
         total_regs = cur.fetchone()[0] or 0
 
-        # 4. Fetch Changelog entries with optional filter
+        # 4. Changelog = admin_event rows carrying details.change_type (schema v2).
         query = """
-            SELECT id, system_version, change_type, change_scope, title,
-                   description, old_value, new_value, changed_by, created_at
-            FROM eas.system_versions_changelog
-            WHERE 1=1
+            SELECT e.id::text AS id,
+                   e.details->>'system_version' AS system_version,
+                   e.details->>'change_type' AS change_type,
+                   e.details->>'change_scope' AS change_scope,
+                   e.details->>'title' AS title,
+                   e.details->>'description' AS description,
+                   e.details->'old_value' AS old_value,
+                   e.details->'new_value' AS new_value,
+                   COALESCE(e.details->>'changed_by', u.email, e.actor_kind) AS changed_by,
+                   COALESCE((e.details->>'original_created_at')::timestamptz, e.occurred_at)
+                     AS created_at
+            FROM eas.admin_event e
+            LEFT JOIN eas.app_user u ON u.id = e.actor_id
+            WHERE e.details ? 'change_type'
         """
         params = []
         if change_type_filter and change_type_filter != "ALL":
-            query += " AND change_type = %s"
+            query += " AND e.details->>'change_type' = %s"
             params.append(change_type_filter)
         if search_q:
             query += (
-                " AND (title ILIKE %s OR description ILIKE %s OR changed_by ILIKE %s)"
+                " AND (STRPOS(LOWER(COALESCE(e.details->>'title', '')), LOWER(%s)) > 0"
+                " OR STRPOS(LOWER(COALESCE(e.details->>'description', '')), LOWER(%s)) > 0"
+                " OR STRPOS(LOWER(COALESCE(u.email, '')), LOWER(%s)) > 0)"
             )
-            q_like = f"%{search_q}%"
-            params.extend([q_like, q_like, q_like])
+            params.extend([search_q, search_q, search_q])
 
         query += " ORDER BY created_at DESC LIMIT 100"
         cur.execute(query, params)
@@ -351,7 +334,6 @@ def system_versions_changelog_view(request: HttpRequest) -> JsonResponse:
         changelog = []
         for r in cur.fetchall():
             item = dict(zip(cols, r))
-            item["id"] = str(item["id"])
             item["created_at"] = (
                 item["created_at"].isoformat() if item["created_at"] else None
             )

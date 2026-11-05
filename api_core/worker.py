@@ -33,6 +33,14 @@ def retry_delay(attempts: int) -> timedelta:
 
 
 SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
+RESOURCE_LABELS = {
+    "RESOURCE_PREEMPTED": (
+        "Yêu cầu mượn của bạn đã bị thu hồi vì Ban Giám đốc cần sử dụng trong cùng thời gian"
+    ),
+    "RESOURCE_UNAVAILABLE": (
+        "Yêu cầu mượn của bạn bị từ chối tự động: tài nguyên đã được cấp cho người duyệt trước"
+    ),
+}
 
 
 def safe_error_code(value: object) -> str:
@@ -142,7 +150,9 @@ def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
             "SELECT requester_id::text FROM eas.request WHERE id=%s",
             [item.request_id],
         )
-        label = "Yêu cầu của bạn vừa được cập nhật"
+        label = RESOURCE_LABELS.get(
+            item.event_type, "Yêu cầu của bạn vừa được cập nhật"
+        )
     row = cursor.fetchone()
     return [(row[0], label)] if row and row[0] else []
 
@@ -345,3 +355,53 @@ def process_sla_batch(*, batch_size: int = 100) -> int:
             created += 1
 
     return created
+
+
+def process_resource_batch() -> int:
+    """Borrowing periods that ended go back to stock; orphan bookings are cancelled.
+
+    Talks to the external asset / facility systems over their API only.
+    """
+    from api_core.workflow.errors import CommandError
+    from api_core.workflow.resource_allocation import release_expired
+
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute(SQL_LOCK_SECURITY)
+            return len(release_expired(cursor, now=timezone.now()))
+    except CommandError:
+        # External systems down or switched off: try again next round.
+        logger.warning("resource_release_skipped_integration_unavailable")
+        return 0
+
+
+def process_idempotency_cleanup(*, batch_size: int = 500) -> int:
+    """Housekeeping of eas.idempotency_record (audit S8f), following guard_idempotency:
+    the stored response is cleared once expired, the row is deleted after its
+    tombstone period. Returns the number of rows touched.
+    """
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE eas.idempotency_record SET response_body = NULL
+            WHERE id IN (
+              SELECT id FROM eas.idempotency_record
+              WHERE response_body IS NOT NULL AND expires_at < clock_timestamp()
+              LIMIT %s
+            )
+            """,
+            [batch_size],
+        )
+        cleared = cursor.rowcount
+        cursor.execute(
+            """
+            DELETE FROM eas.idempotency_record
+            WHERE id IN (
+              SELECT id FROM eas.idempotency_record
+              WHERE tombstone_until < clock_timestamp()
+              LIMIT %s
+            )
+            """,
+            [batch_size],
+        )
+        return cleared + cursor.rowcount

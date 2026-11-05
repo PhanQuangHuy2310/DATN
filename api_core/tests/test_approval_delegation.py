@@ -1,5 +1,6 @@
-"""Items 4.4-4.5: approval delegation, absent-approver escalation and the
-HRM attendance match (employee code first, email as fallback)."""
+"""Items 4.4-4.5: approval delegation and absent-approver escalation.
+
+Absence is derived from approved leave in eas.user_leave_and_trips (no HRM feed)."""
 
 from datetime import datetime, timedelta, timezone
 from typing import ClassVar
@@ -15,7 +16,6 @@ from api_core.management.commands.sync_employee_codes import (
 )
 from api_core.workflow.delegation import create_delegation, validate_delegation
 from api_core.workflow.service import (
-    SQL_ATTENDANCE_MATCH,
     CommandError,
     _apply_acceptance_decision,
     _substitute_approver,
@@ -88,17 +88,25 @@ class SubstituteApproverTests(SimpleTestCase):
                 (self.instance, self.assignee),
                 (True,),
                 None,  # no active delegation
-                (True,),  # attendance feed installed
-                ("ABSENT",),
+                (True,),  # user_leave_and_trips readable
+                ("PAID_LEAVE",),
                 (manager,),
                 None,
                 (True,),
             ]
         )
         self.assertEqual(change["assignee_id"], manager)
-        self.assertEqual(change["reason"], "APPROVER_ABSENT_ESCALATED")
+        self.assertEqual(change["reason"], "APPROVER_LEAVE_ESCALATED")
 
-    def test_delegate_already_in_route_falls_back_to_attendance_rule(self):
+    def test_approver_on_business_trip_keeps_step(self):
+        """Decision D2: approvers keep deciding on the road."""
+        change, _, audit = self.substitute(
+            [(self.instance, self.assignee), (True,), None, (True,), ("BUSINESS_TRIP",)]
+        )
+        self.assertIsNone(change)
+        audit.assert_not_called()
+
+    def test_delegate_already_in_route_falls_back_to_leave_rule(self):
         change, cursor, _ = self.substitute(
             [
                 (self.instance, self.assignee),
@@ -106,7 +114,7 @@ class SubstituteApproverTests(SimpleTestCase):
                 (str(uuid4()),),
                 (1,),  # delegate already holds a step: SoD
                 (True,),
-                ("PRESENT",),
+                None,  # not on leave
             ]
         )
         self.assertIsNone(change)
@@ -121,9 +129,31 @@ class SubstituteApproverTests(SimpleTestCase):
 
     def test_features_not_installed_change_nothing(self):
         change, _, _ = self.substitute(
-            [(self.instance, self.assignee), (False,), (False,)]
+            [
+                (self.instance, self.assignee),
+                (False,),  # no delegation table
+                (False,),  # no approved-leave table
+            ]
         )
         self.assertIsNone(change)
+
+    def test_approved_leave_escalates(self):
+        """Decision D2: absence comes from an approved leave request."""
+        manager = str(uuid4())
+        change, cursor, _ = self.substitute(
+            [
+                (self.instance, self.assignee),
+                (False,),  # no delegation table
+                (True,),  # user_leave_and_trips readable
+                ("UNPAID_LEAVE",),  # approver is on approved leave now
+                (manager,),  # approver's manager
+                None,  # manager holds no other step in the route
+                (True,),  # manager is an approver in scope
+            ]
+        )
+        self.assertEqual(change["assignee_id"], manager)
+        self.assertEqual(change["reason"], "APPROVER_LEAVE_ESCALATED")
+        self.assertIn("eas.user_leave_and_trips", _sql(cursor))
 
 
 class ReworkSubstitutionTests(SimpleTestCase):
@@ -133,8 +163,8 @@ class ReworkSubstitutionTests(SimpleTestCase):
         cursor = MagicMock()
         cursor.fetchone.side_effect = [
             (str(uuid4()), None),  # requester, acceptor
-            (True,),  # attendance feed
-            ("LEAVE",),
+            (True,),  # leave table readable
+            ("PAID_LEAVE",),
             (substitute,),
         ]
         status, _, _ = _apply_acceptance_decision(
@@ -271,12 +301,3 @@ class EmployeeCodeMatchingTests(SimpleTestCase):
 
     def test_vietnamese_names_normalize(self):
         self.assertEqual(normalize_name("  Đặng   Quốc Tuấn "), "dang quoc tuan")
-
-
-class AttendanceMatchSqlTests(SimpleTestCase):
-    def test_code_wins_and_email_is_fallback(self):
-        sql = " ".join(SQL_ATTENDANCE_MATCH.split())
-        self.assertIn(
-            "THEN to_jsonb(a)->>'employee_code' = to_jsonb(u)->>'employee_code'", sql
-        )
-        self.assertIn("ELSE a.employee_email = u.email", sql)

@@ -106,7 +106,7 @@ class EasApi {
   Future<Map<String, dynamic>> login(String user, String password) async {
     await initialize();
     final result = await call('/api/v1/auth/login',
-        method: 'POST', data: {'username': user, 'password': password});
+        method: 'POST', data: {'email': user, 'password': password});
     final loginUser = result['user'] as Map<String, dynamic>;
     // SRS UC01: /auth/me is forbidden until a temporary password changes.
     // The login response has the flag needed to render the change form.

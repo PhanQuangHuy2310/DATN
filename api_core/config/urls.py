@@ -29,7 +29,7 @@ urlpatterns = [
     ),
     path("api/v1/", include("api_core.workflow.urls")),
     path("api/v1/meta/", include("api_core.catalog.urls")),
-    path("api/v1/mock/", include("api_core.mock_sources.urls")),
+    path("api/v1/integrations/", include("api_core.integrations.urls")),
 ]
 
 

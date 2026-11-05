@@ -88,76 +88,61 @@ class TestAIModelArtifacts(unittest.TestCase):
             self.assertIn("features_file", registry[domain])
 
 
-class TestMockDataSnapshots(unittest.TestCase):
-    """Kiểm tra 8 snapshot mock data trong data/mock/."""
+class TestExternalSystemContext(unittest.TestCase):
+    """AI reads the external systems through their API, never from snapshots."""
 
-    def setUp(self):
-        self.mock_dir = os.path.join(AI_SERVICE_DIR, "data", "mock")
-
-    def test_manifest_and_all_8_schemas_exist(self):
-        manifest_path = os.path.join(self.mock_dir, "_manifest.json")
-        self.assertTrue(os.path.exists(manifest_path), "Thiếu _manifest.json")
-
-        with open(manifest_path, "r", encoding="utf-8") as f:
-            manifest = json.load(f)
-
-        expected_schemas = [
-            "mock_hr",
-            "mock_assets",
-            "mock_facilities",
-            "mock_crm",
-            "mock_procurement",
-            "mock_it",
-            "mock_finance",
-            "mock_travel",
-        ]
-        total_records = 0
-        for schema in expected_schemas:
-            self.assertIn(schema, manifest.get("schemas", {}))
-            schema_file = os.path.join(self.mock_dir, f"{schema}.json")
-            self.assertTrue(os.path.exists(schema_file), f"Thiếu file {schema}.json")
-
-            with open(schema_file, "r", encoding="utf-8") as sf:
-                data = json.load(sf)
-                self.assertEqual(data.get("schema"), schema)
-                total_records += data.get("meta", {}).get("total_records", 0)
-
-        self.assertGreater(total_records, 100, "Tổng số bản ghi mock phải > 100")
+    def test_no_snapshot_copies_remain(self):
+        self.assertFalse(
+            os.path.exists(os.path.join(AI_SERVICE_DIR, "data", "mock")),
+            "Bản chụp JSON của hệ thống ngoài phải được xoá (docs/TICH_HOP_HE_THONG_NGOAI.md)",
+        )
 
     @unittest.skipUnless(
         HAS_ROUTER_DEPS,
         "Router dependencies (fastapi, pydantic, loguru) are required for mock_context lookup test",
     )
-    def test_mock_context_lookups(self):
+    def test_lookups_call_the_mock_systems_api(self):
+        from unittest.mock import MagicMock, patch
+
         try:
-            from routers.mock_context import (
-                lookup_department_budget,
-                lookup_facility_available,
-                lookup_leave_balance,
-            )
+            from routers import mock_context
         except ImportError:
-            from ai_service.routers.mock_context import (
-                lookup_department_budget,
-                lookup_facility_available,
-                lookup_leave_balance,
+            from ai_service.routers import mock_context
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            self.assertIn("X-Integration-Secret", headers)
+            body = {
+                "hr/employees": {
+                    "items": [
+                        {
+                            "employee_code": "E0001",
+                            "display_name": "An",
+                            "work_email": "an@eas.com",
+                        }
+                    ]
+                },
+                "hr/leave-balances": {
+                    "items": [{"leave_type": "ANNUAL", "remaining_days": 9}]
+                },
+                "facilities/resources": {
+                    "items": [{"code": "MR-HCM-01", "status": "AVAILABLE"}]
+                },
+                "finance/budgets": {
+                    "fiscal_year": 2026,
+                    "approved_minor": 100,
+                    "committed_minor": 10,
+                    "available_minor": 50,
+                },
+            }[url.split("/mock-api/v1/")[1]]
+            return MagicMock(status_code=200, json=lambda: body)
+
+        mock_context._cache.clear()
+        with patch.object(mock_context.httpx, "get", side_effect=fake_get):
+            self.assertEqual(mock_context.lookup_leave_balance("E0001"), 9)
+            self.assertTrue(mock_context.lookup_facility_available("MR-HCM-01"))
+            self.assertEqual(
+                mock_context.lookup_department_budget("TECH")["remaining_amount"], 50
             )
-
-        balance = lookup_leave_balance("E0001", "ANNUAL")
-        self.assertIsNotNone(balance)
-        self.assertGreater(balance, 0)
-
-        facility = lookup_facility_available("MR-HCM-01")
-        self.assertIsNotNone(facility)
-        self.assertTrue(facility)
-
-        budget_dept = lookup_department_budget("IT")
-        self.assertIsNotNone(budget_dept)
-        self.assertIn("allocated_amount", budget_dept)
-        self.assertEqual(budget_dept["allocated_amount"], 1_000_000_000)
-
-        budget_cc = lookup_department_budget("CC-210")
-        self.assertIsNotNone(budget_cc)
-        self.assertEqual(budget_cc["allocated_amount"], 1_000_000_000)
 
     @unittest.skipUnless(
         HAS_ROUTER_DEPS,

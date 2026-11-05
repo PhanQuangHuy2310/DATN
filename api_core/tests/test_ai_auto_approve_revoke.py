@@ -100,7 +100,7 @@ class RevokeAiAutoApprovalTests(SimpleTestCase):
                 (True,),  # actor is an approver in scope
                 (str(uuid4()), self.human_approver),  # re-created first step
                 (False,),  # delegation table not installed
-                (False,),  # attendance feed not installed
+                (False,),  # approved-leave table not installed
             ]
         )
         self.assertEqual(result[0]["request"]["status"], "PENDING_APPROVAL")

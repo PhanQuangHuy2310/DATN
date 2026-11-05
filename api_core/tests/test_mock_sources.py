@@ -1,12 +1,15 @@
-from dataclasses import replace
+import json
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-from django.db import OperationalError
+import httpx
+from django.conf import settings
 from django.test import SimpleTestCase
 
-from api_core.authn.models import Actor
+from api_core.integrations import client
+from api_core.mock_sources import api
 from api_core.mock_sources.service import QueryValidationError, list_resource
+from api_core.workflow.errors import CommandError
 
 
 class MockSourceServiceTests(SimpleTestCase):
@@ -99,97 +102,91 @@ class MockSourceServiceTests(SimpleTestCase):
                 list_resource(resource, {}, roles=frozenset({"REQUESTER"}))
 
 
-class MockSourceApiTests(SimpleTestCase):
-    def setUp(self):
-        self.actor = Actor(
-            id=str(uuid4()),
-            email="requester@eas.com",
-            display_name="Requester",
-            department_id=str(uuid4()),
-            auth_version=1,
-            roles=frozenset({"REQUESTER"}),
-            must_change_password=False,
-        )
+class EasDoesNotServeMockDataTests(SimpleTestCase):
+    def test_old_eas_mock_routes_are_gone(self):
+        # External systems are reached through their own API, never via EAS.
+        self.assertEqual(self.client.get("/api/v1/mock/assets/items").status_code, 404)
 
-    def test_unauthenticated_access_fails_closed(self):
-        response = self.client.get("/api/v1/mock/assets/items")
+
+class MockSystemsApiTests(SimpleTestCase):
+    """The simulated external systems (EAS_SERVICE=mock)."""
+
+    def setUp(self):
+        from django.test import RequestFactory
+
+        self.rf = RequestFactory()
+
+    def _get(self, view, path="/x", secret=True, **kwargs):
+        headers = (
+            {"HTTP_X_INTEGRATION_SECRET": settings.EAS_MOCK_API_SECRET}
+            if secret
+            else {}
+        )
+        return view(self.rf.get(path, **headers), **kwargs)
+
+    def test_secret_is_required(self):
+        response = self._get(api.catalogue, secret=False, resource="assets")
         self.assertEqual(response.status_code, 401)
 
-    @patch("api_core.mock_sources.views.list_resource")
-    @patch("api_core.authn.service.load_actor_from_session")
-    def test_authenticated_response_has_envelope_and_correlation(self, auth, service):
-        auth.return_value = self.actor
-        service.return_value = {"items": [], "page": {"has_more": False}}
-        response = self.client.get("/api/v1/mock/assets/items")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("correlation_id", response.json())
-        self.assertIn("X-Correlation-ID", response.headers)
+    def test_wrong_method_is_rejected(self):
+        request = self.rf.post(
+            "/x", HTTP_X_INTEGRATION_SECRET=settings.EAS_MOCK_API_SECRET
+        )
+        self.assertEqual(api.catalogue(request, resource="assets").status_code, 405)
 
-    @patch("api_core.authn.service.load_actor_from_session")
-    def test_bad_limit_has_stable_error(self, auth):
-        auth.return_value = self.actor
-        response = self.client.get("/api/v1/mock/assets/items?limit=1000")
+    @patch("api_core.mock_sources.api.list_resource")
+    def test_catalogue_serves_allowlisted_resources_only(self, service):
+        service.return_value = {"items": [], "page": {"has_more": False}}
+        self.assertEqual(self._get(api.catalogue, resource="assets").status_code, 200)
+        self.assertEqual(
+            self._get(api.catalogue, resource="pg_shadow").status_code, 404
+        )
+
+    def test_write_requires_valid_source_request_id(self):
+        request = self.rf.post(
+            "/x",
+            data=json.dumps({"source_request_id": "not-a-uuid", "days": 1}),
+            content_type="application/json",
+            HTTP_X_INTEGRATION_SECRET=settings.EAS_MOCK_API_SECRET,
+        )
+        response = api.hr_leave_usages(request)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()["error"]["code"], "INVALID_LIMIT")
         self.assertEqual(
-            response.json()["correlation_id"], response.headers["X-Correlation-ID"]
+            json.loads(response.content)["error"]["code"], "INVALID_SOURCE_REQUEST_ID"
         )
 
-    @patch("api_core.authn.service.load_actor_from_session")
-    def test_requester_is_forbidden_from_company_wide_leave_balances(self, auth):
-        auth.return_value = self.actor
-        response = self.client.get("/api/v1/mock/hr/leave-balances")
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()["error"]["code"], "RESOURCE_FORBIDDEN")
 
-    @patch("api_core.mock_sources.views.list_resource")
-    @patch("api_core.authn.service.load_actor_from_session")
-    def test_sensitive_resource_is_never_cached(self, auth, service):
-        auth.return_value = replace(self.actor, roles=frozenset({"OPS_ADMIN"}))
-        service.return_value = {"items": [], "page": {"has_more": False}}
-        response = self.client.get("/api/v1/mock/finance/budgets")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers["Cache-Control"], "no-store")
-
-    @patch("api_core.mock_sources.views.list_resource")
-    @patch("api_core.authn.service.load_actor_from_session")
-    def test_database_failure_is_redacted_as_stable_503(self, auth, service):
-        auth.return_value = self.actor
-        service.side_effect = OperationalError("credential text must not escape")
-        response = self.client.get("/api/v1/mock/assets/items")
-        self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.json()["error"]["code"], "SOURCE_UNAVAILABLE")
-        self.assertNotContains(response, "credential text", status_code=503)
-        self.assertEqual(
-            response.json()["correlation_id"], response.headers["X-Correlation-ID"]
+class IntegrationClientTests(SimpleTestCase):
+    @patch("api_core.integrations.client.disabled_apis", return_value=[])
+    @patch("api_core.integrations.client.httpx.request")
+    def test_business_error_keeps_code_and_status(self, request, _disabled):
+        request.return_value = MagicMock(
+            status_code=409, json=lambda: {"error": {"code": "RESOURCE_UNAVAILABLE"}}
         )
+        with self.assertRaises(client.IntegrationError) as raised:
+            client.post("assets", "assets/loans", {})
+        self.assertEqual(
+            (raised.exception.code, raised.exception.status),
+            ("RESOURCE_UNAVAILABLE", 409),
+        )
+        headers = request.call_args.kwargs["headers"]
+        self.assertEqual(headers["X-Integration-Secret"], settings.EAS_MOCK_API_SECRET)
 
-    @patch("api_core.mock_sources.views.list_resource")
-    @patch("api_core.authn.service.load_actor_from_session")
-    def test_all_contract_routes_map_to_allowlisted_resources(self, auth, service):
-        auth.return_value = replace(self.actor, roles=frozenset({"OPS_ADMIN"}))
-        service.return_value = {"items": [], "page": {"has_more": False}}
-        routes = {
-            "hr/departments": "departments",
-            "hr/employees": "employees",
-            "hr/leave-balances": "leave-balances",
-            "assets/items": "assets",
-            "assets/loans": "asset-loans",
-            "facilities/resources": "facilities",
-            "crm/customers": "customers",
-            "crm/contracts": "contracts",
-            "procurement/suppliers": "suppliers",
-            "procurement/catalog-items": "catalog-items",
-            "it/applications": "applications",
-            "it/access-roles": "access-roles",
-            "it/services": "it-services",
-            "finance/budgets": "budgets",
-            "finance/expense-categories": "expense-categories",
-            "travel/policies": "travel-policies",
-            "travel/options": "travel-options",
-        }
-        for route, resource in routes.items():
-            with self.subTest(route=route):
-                response = self.client.get(f"/api/v1/mock/{route}")
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(service.call_args.args[0], resource)
+    @patch("api_core.integrations.client.disabled_apis", return_value=[])
+    @patch("api_core.integrations.client.httpx.request")
+    def test_network_failure_is_integration_unavailable(self, request, _disabled):
+        request.side_effect = httpx.ConnectError("down")
+        with self.assertRaises(CommandError) as raised:
+            client.get("hr", "hr/employees")
+        self.assertEqual(raised.exception.code, "INTEGRATION_UNAVAILABLE")
+
+    @patch(
+        "api_core.integrations.client.disabled_apis",
+        return_value=[("API_HR", "hr", "HRM")],
+    )
+    @patch("api_core.integrations.client.httpx.request")
+    def test_admin_switch_blocks_calls(self, request, _disabled):
+        with self.assertRaises(CommandError) as raised:
+            client.get("hr", "hr/employees")
+        self.assertEqual(raised.exception.code, "INTEGRATION_DISABLED")
+        request.assert_not_called()
