@@ -1,5 +1,4 @@
 import FullHistory from "./FullHistory.jsx";
-import AttachmentOcr, { canOcr } from "./AttachmentOcr.jsx";
 import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { AiSummary } from "./AiAssist.jsx";
 import { AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
@@ -26,12 +25,6 @@ const ACTION_LABELS = {
   ACCEPTANCE_ACCEPT: "Nghiệm thu đạt", ACCEPTANCE_REWORK: "Yêu cầu làm lại",
   REQUEST_CANCELLED: "Hủy yêu cầu", ACTOR_REASSIGNED: "Điều chuyển người xử lý",
   SLA_REMINDER: "Nhắc hạn xử lý", SLA_BREACH: "Quá hạn xử lý", AI_ASSESSMENT_RECORDED: "Đánh giá AI",
-  APPROVER_ESCALATED_SOD: "Chuyển cấp duyệt lên cấp trên (R07 – không tự duyệt)",
-  APPROVER_DELEGATED: "Giao cho người được ủy quyền phê duyệt tạm thời",
-  AI_OCR_RECORDED: "Đọc hóa đơn bằng OCR",
-  REPAIR_APPROVAL_STEP_ACTIVATED: "Khắc phục dữ liệu: kích hoạt bước duyệt",
-  REPAIR_TERMINAL_WORK_CLOSED: "Khắc phục dữ liệu: đóng bước còn mở",
-  SLA_ESCALATE: "Báo động quá hạn nghiêm trọng (SLA L2)",
   NOTIFICATION_SKIPPED_INACTIVE_OR_REVOKED: "Bỏ qua thông báo cho tài khoản ngừng hoạt động",
 };
 const STEP_STATES = { WAITING: "Chờ đến lượt", ACTIVE: "Đang xử lý", APPROVED: "Đã phê duyệt", REJECTED: "Đã từ chối", NEEDS_INFO: "Yêu cầu bổ sung", SKIPPED: "Bỏ qua" };
@@ -56,7 +49,6 @@ function Attachments({ id, typeCode }) {
       {v.attachments?.length ? <ul className="ds-health-list">{v.attachments.map((a) => <li key={a.id}>
         <span>{a.original_name}</span>
         <span><Badge value={a.scan_state} /> {a.scan_state === "CLEAN" && <a href={`${API_BASE}/api/v1/attachments/${a.id}/download`} target="_blank" rel="noreferrer">Tải xuống</a>}</span>
-        {canOcr(a) && <AttachmentOcr attachment={a} />}
       </li>)}</ul> : <p className="muted">Không có tệp đính kèm.</p>}
       <details><summary>Nội dung đã gửi</summary><PayloadList typeCode={typeCode} payload={v.payload} /></details>
     </details>) : <EmptyState title="Chưa có tệp đính kèm" description="Tệp được lưu theo từng lần gửi yêu cầu." />}

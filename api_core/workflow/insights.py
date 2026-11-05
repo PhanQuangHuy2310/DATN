@@ -17,22 +17,13 @@ from django.db import connection, transaction
 
 from api_core.authn.models import Actor
 from api_core.domain import resolve_route
-from api_core.domain.delegation import apply_delegations
-from api_core.domain.routing import (
-    RoutingError,
-    SodEscalationError,
-    extract_amount_vnd,
-)
+from api_core.domain.routing import RoutingError, extract_amount_vnd
 from api_core.workflow.constants import ERR_REQUEST_NOT_FOUND
 from api_core.workflow.service import (
     SQL_LOCK_SECURITY,
     CommandError,
-    _active_delegations,
     _append_request_audit,
-    _approver_eligibility,
-    _manager_chain,
-    approval_delegation_enabled,
-    check_resources,
+    _resolve_route_with_sod,
 )
 
 # Aliases required by READ_SCOPE_SQL: r=request, v=current revision, u=requester.
@@ -288,46 +279,25 @@ def preview_route(actor: Actor, body: dict[str, Any]) -> dict[str, Any]:
             raise CommandError("REQUEST_TYPE_NOT_CONFIGURED", status=409)
         type_id, lifecycle, release_id, rules, bindings, sla, manager_id = config
         try:
-            decision = resolve_route(
-                route_rules=rules,
-                actor_bindings=bindings,
-                department_id=actor.department_id,
-                requester_id=actor.id,
-                manager_id=manager_id,
-                amount_vnd=amount,
-                payload=payload,
-                manager_chain=_manager_chain(cursor, actor.id),
-                is_eligible=_approver_eligibility(
-                    cursor, department_id=actor.department_id, type_id=type_id
-                ),
+            decision = _resolve_route_with_sod(
+                cursor, rules=rules, bindings=bindings, actor=actor,
+                manager_id=manager_id, type_id=type_id,
+                normalized=payload, amount=amount,
             )
         except RoutingError as exc:
-            # Same outcome submit would report; nothing is persisted.
             return {
                 "type_code": type_code,
                 "release_id": release_id,
                 "lifecycle": lifecycle,
                 "resolvable": False,
-                "problem": "ROUTE_SOD_ESCALATION_UNRESOLVED"
-                if isinstance(exc, SodEscalationError)
-                else "ROUTE_CONFIGURATION_INVALID",
+                "problem": (
+                    "ROUTE_SOD_ESCALATION_UNRESOLVED"
+                    if str(exc) == "ROUTE_SOD_ESCALATION_UNRESOLVED"
+                    else "ROUTE_CONFIGURATION_INVALID"
+                ),
                 "steps": [],
             }
 
-        if approval_delegation_enabled():
-            decision = apply_delegations(
-                decision,
-                requester_id=actor.id,
-                delegations=_active_delegations(
-                    cursor,
-                    decision.approver_ids,
-                    department_id=actor.department_id,
-                    type_id=type_id,
-                ),
-                is_eligible=_approver_eligibility(
-                    cursor, department_id=actor.department_id, type_id=type_id
-                ),
-            )
         ids = {*decision.approver_ids}
         ids.update(i for i in (decision.executor_id, decision.acceptor_id) if i)
         # Same grant predicate as submit's _authorize, batched in one round trip.
@@ -381,16 +351,13 @@ def preview_route(actor: Actor, body: dict[str, Any]) -> dict[str, Any]:
                 "assignee_id": user_id,
                 "assignee_name": name,
                 "authorized": authorized,
+                "sod_escalated": bool(level and any(
+                    item[0] == level for item in decision.sod_escalations
+                )),
             }
 
-        escalated = {e["step_no"] for e in decision.escalations}
-        delegated = {d["step_no"] for d in decision.delegations}
         steps = [
-            {
-                **entry(user_id, "APPROVER", slot, index),
-                "sod_escalated": index in escalated,
-                "delegated": index in delegated,
-            }
+            entry(user_id, "APPROVER", slot, index)
             for index, (user_id, slot) in enumerate(
                 zip(decision.approver_ids, decision.approver_slots, strict=True), 1
             )
@@ -404,18 +371,6 @@ def preview_route(actor: Actor, body: dict[str, Any]) -> dict[str, Any]:
                 entry(decision.acceptor_id, "ACCEPTOR", rules.get("acceptor"), None)
             )
 
-        resource_checks = [
-            c.as_dict()
-            for c in check_resources(
-                cursor,
-                actor_id=actor.id,
-                department_id=actor.department_id,
-                type_code=type_code.strip(),
-                payload=payload,
-                amount=amount,
-            )
-        ]
-
     problem = None if all(s["authorized"] for s in steps) else "ROUTE_ACTOR_INACTIVE"
     return {
         "type_code": type_code,
@@ -425,7 +380,6 @@ def preview_route(actor: Actor, body: dict[str, Any]) -> dict[str, Any]:
         "resolvable": problem is None,
         "problem": problem,
         "steps": steps,
-        "resource_checks": resource_checks,
         "sla_hours": {
             "approval": sla.get("approval_hours"),
             "execution": sla.get("execution_hours"),

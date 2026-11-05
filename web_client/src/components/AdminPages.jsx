@@ -44,7 +44,7 @@ function HealthList({ diagnostics, ready }) {
   const checks = ready.data?.checks || {};
   const rows = [
     ["Máy chủ ứng dụng (API)", ready.error ? "bad" : ready.data?.status === "ready" ? "ok" : "warn", ready.error ? "Không kết nối được" : ready.data?.status === "ready" ? "Sẵn sàng" : "Cần kiểm tra"],
-    ["Cơ sở dữ liệu", checks.database ? "ok" : "bad", checks.database ? "Kết nối bình thường" : "Không sẵn sàng"],
+    ["Cơ sở dữ liệu", ready.loading || ready.error || typeof checks.database !== "boolean" ? "warn" : checks.database ? "ok" : "bad", ready.loading ? "Đang kiểm tra…" : ready.error || typeof checks.database !== "boolean" ? "Chưa xác minh được" : checks.database ? "Kết nối bình thường" : "Mất kết nối"],
     ["Bộ nhớ đệm bảo mật", checks.shared_security_cache ? "ok" : "warn", checks.shared_security_cache ? "Bình thường" : "Không khả dụng"],
     ["Dịch vụ AI", diagnostics.data ? (diagnostics.data.ai_service.healthy ? "ok" : "warn") : "", diagnostics.data ? (diagnostics.data.ai_service.healthy ? "Đang phản hồi" : "Không phản hồi — AI dùng chế độ dự phòng") : "Đang kiểm tra…"],
     ["Hàng đợi thông báo (worker)", diagnostics.data ? (diagnostics.data.worker.backlog_ok ? "ok" : "bad") : "", diagnostics.data ? (diagnostics.data.worker.backlog_ok ? "Không có tồn đọng quá hạn" : `Tồn đọng ${Math.round(diagnostics.data.outbox.oldest_pending_seconds / 60)} phút — kiểm tra worker`) : "Đang kiểm tra…"],

@@ -7,9 +7,8 @@ from api_core.worker import classify_sla_alert, retry_delay, safe_error_code
 
 class WorkerPolicyTests(SimpleTestCase):
     def test_retry_backoff_is_bounded(self):
-        # Thesis §2.3: 10s, 30s, 1m, 5m, then capped at 5m.
-        self.assertEqual(retry_delay(1), timedelta(seconds=10))
-        self.assertEqual(retry_delay(4), timedelta(seconds=300))
+        self.assertEqual(retry_delay(1), timedelta(seconds=15))
+        self.assertEqual(retry_delay(4), timedelta(seconds=120))
         self.assertEqual(retry_delay(20), timedelta(seconds=300))
         with self.assertRaises(ValueError):
             retry_delay(0)

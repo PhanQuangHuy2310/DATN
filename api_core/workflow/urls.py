@@ -1,14 +1,6 @@
 from django.urls import path
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-from . import delegation_views, history_views, views
-=======
-from . import history_views, policy_views, views
->>>>>>> 86172e9d9f550e4183a6abfffd2cfe3d13177dd5
-=======
 from . import announcement_views, history_views, policy_views, views
->>>>>>> origin/main
 
 urlpatterns = [
     path("requests/<uuid:request_id>/history", history_views.history),
@@ -175,31 +167,6 @@ urlpatterns = [
         "ops/outbox/<uuid:event_id>/replay",
         views.outbox_replay_view,
         name="ops-outbox-replay",
-    ),
-    path(
-        "attachments/<uuid:attachment_id>/ocr",
-        delegation_views.attachment_ocr_view,
-        name="attachment-ocr",
-    ),
-    # Approval delegation (C3)
-    path("delegations", delegation_views.delegations_view, name="delegations"),
-    path(
-        "delegations/candidates",
-        delegation_views.delegation_candidates_view,
-        name="delegation-candidates",
-    ),
-    path(
-        "delegations/<uuid:delegation_id>/revoke",
-        delegation_views.delegation_revoke_view,
-        name="delegation-revoke",
-    ),
-    path(
-        "ops/delegations", delegation_views.ops_delegations_view, name="ops-delegations"
-    ),
-    path(
-        "ops/delegations/<uuid:delegation_id>/revoke",
-        delegation_views.ops_delegation_revoke_view,
-        name="ops-delegation-revoke",
     ),
     # Policy & Config Release
     path(

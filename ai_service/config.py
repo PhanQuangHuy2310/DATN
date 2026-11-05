@@ -39,13 +39,6 @@ class Settings(BaseSettings):
 
     # --- Gemini ---
     gemini_api_key: str = ""
-    # Pinned stable model IDs (ai.google.dev/gemini-api/docs/models, checked
-    # 2026-11-02: gemini-1.5-* is no longer listed). Override per environment.
-    gemini_model: str = "gemini-3.8-flash"
-    gemini_vision_model: str = "gemini-3.8-flash"
-    # Privacy gate: request text and documents are sent to an external
-    # provider only when the owner has explicitly authorized it.
-    external_ai_enabled: bool = False
 
     # --- Supabase ---
     supabase_url: str = ""
@@ -78,9 +71,6 @@ class Settings(BaseSettings):
     # --- Auto-Approve ---
     auto_approve_max_risk: int = 2
     auto_approve_only_template_a: bool = True
-
-    def external_ai_allowed(self) -> bool:
-        return self.external_ai_enabled and bool(self.gemini_api_key)
 
     model_config = SettingsConfigDict(
         env_file=_AI_ENV_PATH,

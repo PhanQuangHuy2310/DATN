@@ -276,8 +276,13 @@ EAS_AI_TIMEOUT_SECONDS = float(os.getenv("EAS_AI_TIMEOUT_SECONDS", "5.0"))
 EAS_AI_SYSTEM_USER_ID = os.getenv(
     "EAS_AI_SYSTEM_USER_ID", "00000002-0000-4000-8000-0000000000a1"
 )
+# Human approval is mandatory by default. Two separate operator-controlled
+# opt-ins are needed before any AI decision may finalize a business request.
 EAS_AI_AUTO_APPROVE_ENABLED = (
-    os.getenv("EAS_AI_AUTO_APPROVE_ENABLED", "true").lower() == "true"
+    os.getenv("EAS_AI_AUTO_APPROVE_ENABLED", "false").lower() == "true"
+)
+EAS_AI_AUTO_APPROVAL_POLICY_APPROVED = (
+    os.getenv("EAS_AI_AUTO_APPROVAL_POLICY_APPROVED", "false").lower() == "true"
 )
 EAS_AI_AUTO_APPROVE_MAX_WEIGHT = int(os.getenv("EAS_AI_AUTO_APPROVE_MAX_WEIGHT", "2"))
 # The least-privilege worker cannot write approvals; it asks the API to run

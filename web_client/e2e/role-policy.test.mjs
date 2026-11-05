@@ -74,7 +74,7 @@ test("AI process guide is available to every recognized role", () => {
   for (const role of ROLES) assert.equal(canNavigate([role],"ai-process"),true);
 });
 
-test("portal access: pure admins stay in the admin portal, admins with duties use both", async () => {
+test("portal access: all admin memberships are restricted to the admin portal", async () => {
   const { canUsePortal } = await import("../src/rolePolicy.js");
   const pureAdmin = ["OPS_ADMIN", "POLICY_ADMIN", "REQUESTER", "ACCEPTOR"];
   const auditorApprover = ["AUDITOR", "APPROVER", "REQUESTER", "ACCEPTOR"];
@@ -84,7 +84,7 @@ test("portal access: pure admins stay in the admin portal, admins with duties us
   assert.equal(canUsePortal(pureAdmin, "client"), false);
   for (const roles of [auditorApprover, opsExecutor]) {
     assert.equal(canUsePortal(roles, "admin"), true);
-    assert.equal(canUsePortal(roles, "client"), true);
+    assert.equal(canUsePortal(roles, "client"), false);
   }
   assert.equal(canUsePortal(employee, "client"), true);
   assert.equal(canUsePortal(employee, "admin"), false);

@@ -47,10 +47,6 @@ AI_SERVICE_URL = _URL or os.getenv(
 TIMEOUT = float(_TIMEOUT or os.getenv("EAS_AI_TIMEOUT_SECONDS", "30.0"))
 
 
-class OcrUnavailableError(RuntimeError):
-    """OCR could not run; callers must not invent a result."""
-
-
 def _resolve_internal_secret() -> str:
     secret = None
     try:
@@ -433,38 +429,6 @@ class AIServiceClient:
                 "engine": "error",
             }
 
-    async def extract_ocr_from_bytes(
-        self,
-        data: bytes,
-        filename: str,
-        mime: str,
-        correlation_id: str | None = None,
-    ) -> dict:
-        """POST the stored file to the internal AI /ocr/extract endpoint.
-
-        Unlike the URL variant this never substitutes an empty result: any
-        transport, engine or HTTP failure raises OcrUnavailableError.
-        """
-        if httpx is None:
-            raise OcrUnavailableError("HTTPX_MISSING")
-        try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                resp = await client.post(
-                    f"{self.base_url}/ai/ocr/extract",
-                    files={"file": (filename, data, mime)},
-                    # httpx sets the multipart Content-Type with its boundary.
-                    headers={
-                        k: v
-                        for k, v in self._get_headers(correlation_id).items()
-                        if k != "Content-Type"
-                    },
-                )
-        except Exception as exc:
-            raise OcrUnavailableError("AI_SERVICE_UNREACHABLE") from exc
-        if resp.status_code != 200:
-            raise OcrUnavailableError(f"AI_OCR_HTTP_{resp.status_code}")
-        return resp.json()
-
     async def classify_request(
         self,
         title: str,
@@ -571,9 +535,6 @@ class SyncAIServiceClient:
 
     def summarize_request(self, **kwargs) -> dict:
         return self._run(self._async_client.summarize_request(**kwargs))
-
-    def extract_ocr_from_bytes(self, *args, **kwargs) -> dict:
-        return self._run(self._async_client.extract_ocr_from_bytes(*args, **kwargs))
 
     def extract_ocr_from_url(
         self,

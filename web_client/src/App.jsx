@@ -3,7 +3,7 @@ import { PermissionProvider } from "./hooks/usePermission.jsx";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
-import { ADMIN_ROLES, canNavigate, canUsePortal } from "./rolePolicy.js";
+import { canNavigate, canUsePortal } from "./rolePolicy.js";
 import { PERMISSIONS_CHANGED, createRefresher } from "./sessionRefresh.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
@@ -32,22 +32,6 @@ const AiProcessGuide = lazy(() => import("./components/AiProcessGuide.jsx"));
 const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
 const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
 import TeamDashboard from "./components/TeamDashboard.jsx";
-<<<<<<< HEAD
-// Administration screens are code-split: employees never download them.
-const adminPage = (name) => lazy(() => import("./components/AdminPages.jsx").then((m) => ({ default: m[name] })));
-const AdminDashboard = adminPage("AdminDashboard");
-const AuditLogPage = adminPage("AuditLogPage");
-const OperationsPage = adminPage("OperationsPage");
-const PolicyWorkspace = adminPage("PolicyWorkspace");
-const SlaNotificationsPage = adminPage("SlaNotificationsPage");
-const SystemConfigPage = adminPage("SystemConfigPage");
-const IdentityAdmin = lazy(() => import("./components/IdentityAdmin.jsx"));
-const OrgChart = lazy(() => import("./components/OrgChart.jsx"));
-const ApiAdministration = lazy(() => import("./components/ApiAdministration.jsx"));
-const PlanCatalog = lazy(() => import("./components/PlanCatalog.jsx"));
-const DelegationsPage = lazy(() => import("./components/DelegationsPage.jsx"));
-=======
->>>>>>> 86172e9d9f550e4183a6abfffd2cfe3d13177dd5
 import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
 import { PageHeader } from "./components/design.jsx";
 function getRealtimeGreeting() {
@@ -104,21 +88,11 @@ function Login({ onLogin, portal = "client", aiStatus }) {
     const values = Object.fromEntries(new FormData(e.currentTarget));
     const email = String(values.email || "").trim().toLowerCase();
 
-    // Strict portal separation check
-    if (portal === "admin") {
-      if (email !== "admin@eas.com") {
-        setError("Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).");
-        return;
-      }
-    } else if (portal === "client") {
-      if (email === "admin@eas.com") {
-        setError("Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).");
-        return;
-      }
-      if (aiStatus?.client_maintenance_lock) {
-        setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật hoàn tất.`);
-        return;
-      }
+    // The server validates portal access from current role memberships;
+    // email addresses are not authorization policies.
+    if (portal === "client" && aiStatus?.client_maintenance_lock) {
+      setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được sau khi quá trình cập nhật hoàn tất.`);
+      return;
     }
 
     setBusy(true);
@@ -352,7 +326,6 @@ const menu = [
   ["approval", "Chờ phê duyệt", "✓"],
   ["execution", "Công việc thực hiện", "▣"],
   ["acceptance", "Chờ nghiệm thu", "◇"],
-  ["delegations", "Ủy quyền phê duyệt", "⇆"],
   ["team", "Tổng quan phòng ban", "▥"],
   ["team-employees", "Nhân viên phòng ban", "♙"],
   ["org-client", "Sơ đồ tổ chức", "⌂"],
@@ -458,25 +431,17 @@ const ADMIN_LABELS = {
 };
 const CLIENT_NAV = [
   ["Không gian cá nhân", ["home", "mine"]],
-  ["Công việc được giao", ["approval", "execution", "acceptance", "delegations"]],
+  ["Công việc được giao", ["approval", "execution", "acceptance"]],
   ["Quản lý phòng ban", ["team", "team-employees"]],
   ["Tổ chức & công cụ", ["org-client", "flow-diagrams", "ai-process"]],
   ["Tài khoản", ["profile"]],
 ];
 const ADMIN_NAV = [
-<<<<<<< HEAD
-  ["Tổng quan", ["home", "ops"]],
-  ["Người dùng & tổ chức", ["users", "departments", "permissions", "delegations", "org-chart"]],
-  ["Cấu hình nghiệp vụ", ["request-catalog", "policy", "sla"]],
-  ["Giám sát & kiểm toán", ["ai-process", "audit", "team"]],
-  ["Hệ thống", ["system"]],
-=======
   ["GIÁM SÁT", ["home"]],
   ["LUỒNG CÔNG VIỆC", ["request-catalog"]],
   ["TỔ CHỨC & NHÂN SỰ", ["org-chart", "users", "permissions"]],
   ["TRI THỨC & AI", ["policy", "ai-policy"]],
   ["HỆ THỐNG", ["api-admin", "system"]],
->>>>>>> origin/main
 ];
 function pageLabel(key, portal) {
   return (portal === "admin" && ADMIN_LABELS[key]) || menu.find((m) => m[0] === key)?.[1] || "";
@@ -1008,13 +973,7 @@ function renderWorkspaceContent({
     case "ops":
       return <AdminScreen name="OperationsPage" key={searchText} initialQuery={searchText} onOpen={canOpenAsAdmin ? setSelected : undefined} />;
     case "sla":
-<<<<<<< HEAD
-      return <SlaNotificationsPage navigate={navigate} />;
-    case "delegations":
-      return <DelegationsPage ops={portal === "admin"} user={user} />;
-=======
       return <AdminScreen name="SlaNotificationsPage" navigate={navigate} />;
->>>>>>> 86172e9d9f550e4183a6abfffd2cfe3d13177dd5
     case "system":
     case "system_versions":
     case "versions":
@@ -1362,20 +1321,54 @@ function useAiMaintenanceState() {
 
   useEffect(() => {
     let active = true;
+    let pending = null;
+    let inFlight = false;
+    let failureStreak = 0;
+    let lastAttempt = 0;
+    let controller = null;
     const fetchStatus = async () => {
+      if (!active || inFlight) return;
+      inFlight = true;
+      lastAttempt = Date.now();
+      let maintenance = false;
+      controller = new AbortController();
       try {
-        const res = await fetch("/api/v1/system/ai-status");
-        if (res.ok) {
-          const data = await res.json();
-          if (active) setAiStatus(data);
+        const res = await fetch("/api/v1/system/ai-status", {
+          cache: "no-store", signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`AI_STATUS_HTTP_${res.status}`);
+        const data = await res.json();
+        maintenance = Boolean(data.client_maintenance_lock);
+        failureStreak = 0;
+        if (active) setAiStatus(data);
+      } catch {
+        // Preserve the last known state; 503 is an outage, not a new AI step.
+        failureStreak = Math.min(6, failureStreak + 1);
+      } finally {
+        inFlight = false;
+        controller = null;
+        if (active) {
+          const interval = document.visibilityState === "hidden" ? 120000
+            : failureStreak ? Math.min(300000, 15000 * 2 ** failureStreak)
+              : maintenance ? 3000 : 45000;
+          pending = window.setTimeout(fetchStatus, interval);
         }
-      } catch {}
+      }
     };
-    fetchStatus();
-    const timer = setInterval(fetchStatus, 2000);
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      // Do not bypass the outage backoff on every tab focus.
+      if (failureStreak && Date.now() - lastAttempt < 30000) return;
+      window.clearTimeout(pending);
+      if (!inFlight) void fetchStatus();
+    };
+    void fetchStatus();
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       active = false;
-      clearInterval(timer);
+      window.clearTimeout(pending);
+      controller?.abort();
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 
@@ -1540,8 +1533,11 @@ function PortalApp({ portal, theme, toggleTheme }) {
           <button type="button" onClick={async () => {
             setError("");
             try {
-              await initializeCsrf();
-              const result = await api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } });
+              // Explicit user action is allowed to probe immediately after an outage.
+              await initializeCsrf({ forceProbe: true });
+              const result = await api("/api/v1/auth/me", {
+                forceProbe: true, headers: { "X-Auth-Optional": "1" },
+              });
               setUser(result?.user || null);
             } catch (e) { setError(errorText(e)); }
           }}>Kết nối lại</button>
@@ -1563,7 +1559,7 @@ function PortalApp({ portal, theme, toggleTheme }) {
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );
-  if (user && portal === "admin" && (user.email !== "admin@eas.com" || !canUsePortal(user.roles, "admin"))) {
+  if (user && portal === "admin" && (!canUsePortal(user.roles, "admin"))) {
     return (
       <main className="auth-shell">
         <section className="panel">
@@ -1583,14 +1579,14 @@ function PortalApp({ portal, theme, toggleTheme }) {
       </main>
     );
   }
-  // Administrative identities are system-only (enforced again by the API);
-  // an admin who also approves or executes keeps the employee portal.
-  if (user && ((portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role)) && !canUsePortal(user.roles, "client")) || (portal === "client" && user.email === "admin@eas.com"))) {
+  // Administrative identities use only the Admin portal even when historic
+  // workflow grants remain; enforced independently on every backend API.
+  if (user && portal === "client" && !canUsePortal(user.roles, "client")) {
     return (
       <main className="auth-shell">
         <section className="panel">
           <h1>Tài khoản quản trị</h1>
-          <p>Tài khoản Quản trị viên (admin@eas.com) không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).</p>
+          <p>Tài khoản có quyền quản trị chỉ được sử dụng Cổng Quản trị. Vui lòng chuyển sang cổng phù hợp.</p>
           <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
             <a
               href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:8081`}

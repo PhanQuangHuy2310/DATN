@@ -92,35 +92,6 @@ Giữ hướng dẫn chi tiết cạnh các phân hệ phức tạp:
 - Tệp ảnh được tối ưu tại `web_client/public/flow-diagrams/`. `web_admin/vite.config.js` dùng `web_client/public` làm nguồn public chung để hai app dùng một bộ ảnh. Mọi sơ đồ chỉ là **hình minh họa tổng quan**, không thay thế chính sách đã công bố hoặc trạng thái xử lý hiện thời từ Supabase.
 - Kiểm tra sau khi giải nén: `cd web_client && npm ci && npm run build && npm test`, sau đó `cd ..\web_admin && npm ci && npm run build`; mở một hồ sơ, chuyển sang **Sơ đồ luồng**, thử phóng to và tải ảnh.
 
-## 02/11/2026 — Đối chiếu yêu cầu với báo cáo đồ án (Report_DATN_CNTT_Nhom07_v1.0)
-
-Áp dụng quyết định của chủ dự án. Không thay đổi dữ liệu hay schema trên Supabase; mọi thay đổi chính sách mới đều **tắt mặc định** cho tới khi được duyệt.
-
-**Đã thực hiện**
-
-- **R07 – không tự duyệt (Bảng 2.6):** khi một cấp duyệt rơi vào chính người lập, hệ thống chuyển lên cấp trên gần nhất **đủ điều kiện** trong chuỗi quản lý của người lập (đang hoạt động, có quyền APPROVER đúng phòng/loại, không phải tài khoản quản trị, chưa có trong tuyến, không phải người thực hiện). Không tìm được → từ chối gửi với `ROUTE_SOD_ESCALATION_UNRESOLVED` (409), không bao giờ gán người tùy ý. Mỗi lần chuyển cấp ghi sự kiện kiểm toán `APPROVER_ESCALATED_SOD` (bước, slot, người được chọn, các ứng viên bị bỏ qua và lý do); `resolved_route` đánh dấu `escalation`. Xem trước tuyến duyệt dùng đúng cùng logic và hiển thị "chuyển lên cấp trên (R07)". Người lập không được tự thực hiện (executor) vẫn bị từ chối như cũ.
-- **A6 – cổng quản trị chỉ quản trị hệ thống:** đã được chặn tại API (`ADMIN_PORTAL_ONLY`), bổ sung kiểm thử hồi quy cho tạo nháp, gửi và xem trước tuyến với OPS_ADMIN/POLICY_ADMIN/AUDITOR có quyền REQUESTER cũ.
-- **B1/B2 – giữ mã trạng thái, ánh xạ sang thuật ngữ đồ án:** `api_core/domain/thesis_mapping.py`; kiểm thử đối chiếu đủ mọi giá trị CHECK trong schema.
-
-| Mã lưu trữ | Đồ án (ST-01 / Bảng 2.5) |
-|---|---|
-| DRAFT, NEEDS_INFO | DRAFT (NEEDS_INFO giữ mã riêng, sửa được như nháp) |
-| — (gửi nguyên tử, không lưu) | SUBMITTED |
-| PENDING_APPROVAL | IN_REVIEW |
-| READY_FOR_EXECUTION | READY |
-| IN_PROGRESS | IN_PROGRESS |
-| WAITING_FOR_ACCEPTANCE | SUBMITTED_ACCEPT |
-| COMPLETED / REJECTED / CANCELLED | như nhau |
-| Nghiệm thu ACCEPT / REWORK | PASS / FAIL |
-
-  Khác biệt hành vi đã ghi nhận: REWORK mở lượt thực hiện mới ở READY_FOR_EXECUTION (đồ án quay thẳng về IN_PROGRESS).
-- **B3 – SLA theo Bảng 2.9 (chuẩn bị, chưa bật):** worker đọc `reminder_fraction` từ phiên bản quy chế của hồ sơ (hiện tất cả là 0.5 nên hành vi không đổi). L1 (100%: thêm cấp trên trực tiếp của người xử lý) và L2 (>150%: Giám đốc theo binding + Ops Admin, loại cảnh báo `ESCALATE`, chống trùng theo stage) chỉ chạy khi `EAS_SLA_ESCALATION_LEVELS=1` **sau khi** áp dụng `database/report_migrations/07_sla_thesis_policy_DBA_REVIEW_ONLY.sql` (có bước sao lưu, kiểm tra lệch schema, rollback).
-- **C3 – ủy quyền phê duyệt có thời hạn (chuẩn bị, chưa bật):** `role_membership` không đủ vì không biết ủy quyền thay ai, ai tạo, ai thu hồi. Thêm migration bổ sung `08_approval_delegation_DBA_REVIEW_ONLY.sql` (bảng `approval_delegation`, bắt buộc `valid_to`, thu hồi có người thu hồi) và logic áp dụng khi gửi: người được ủy quyền phải qua cùng kiểm tra quyền/SoD, không bắc cầu; không hợp lệ thì giữ người duyệt gốc; ghi kiểm toán `APPROVER_DELEGATED`. Bật bằng `EAS_APPROVAL_DELEGATION=1` sau khi migration được duyệt. Chưa có màn hình tạo/thu hồi ủy quyền.
-
-**Đang chờ quyết định:** ngưỡng tiền theo từng loại (A3), chặn hay bổ sung cấp duyệt khi vượt ngân sách (C2), số lần thử outbox (B4), người nhận cảnh báo SLA có được quyền xem hồ sơ hay không, sửa dữ liệu live (Director gán cho AUDITOR, Ops Admin giữ bước duyệt, 3 hồ sơ mồ côi, REQ-2026-0011), phạm vi mobile/OCR/LLM (C4).
-
-**Kiểm tra:** `manage.py test` 309 bài đạt (5 bỏ qua; 25 bài mới trong `api_core/tests/test_requirements_alignment.py`); `tests/run_tests.py` 98 đạt; `web_client` lint, 51 bài test, build đạt; ruff đạt. Chưa chạy E2E ghi dữ liệu trên Supabase.
-
 ## 02/11/2026 — Hệ thống thiết kế thống nhất cho hai cổng web
 
 **Hệ thống thiết kế**
@@ -226,7 +197,7 @@ Cổng quản trị không có chức năng tạo yêu cầu. Theo UC05, quản 
 
 Đã cập nhật trực tiếp giao diện `web_client/`, không thay mẫu biểu hay tác vụ nghiệp vụ đã công bố:
 
-- **Sidebar:** bỏ "Hồ sơ liên quan" và mọi mục quản trị hệ thống khỏi cổng nhân viên; giữ Tổng quan, Yêu cầu của tôi, các hàng đợi theo quyền, Sơ đồ tổ chức theo phòng ban, Sơ đồ luồng, Quy trình AI và tài khoản. Web Admin vẫn tách riêng tại cổng 5174.
+- **Sidebar:** bỏ "Hồ sơ liên quan" và mọi mục quản trị hệ thống khỏi cổng nhân viên; giữ Tổng quan, Yêu cầu của tôi, các hàng đợi theo quyền, Sơ đồ tổ chức theo phòng ban, Sơ đồ luồng, Quy trình AI và tài khoản. Web Admin vẫn tách riêng tại cổng 8081 khi chạy local.
 - **Header:** thanh tìm nhanh **mã yêu cầu**, chuông hiển thị số thông báo chưa đọc từ API, tên + biểu tượng người dùng, biểu tượng đăng xuất, header cố định khi cuộn. Cỡ màn hình nhỏ tự bố trí lại, mọi thao tác có nhãn accessibility.
 - **Tổng quan nhân viên:** báo cáo có lọc thời gian, thẻ KPI, biểu đồ phân bố trạng thái và loại yêu cầu thường gặp, hồ sơ gần đây. `GET /api/v1/reports/requests?scope=mine` mới chỉ tổng hợp hồ sơ *do chính người đăng nhập tạo*, không lẫn hồ sơ họ được mời xem. Thống kê không đếm nháp; tần suất là ước tính theo 30 ngày. Khi chưa có dữ liệu đo thời gian hoàn thành trung bình, hiển thị dấu gạch ngang thay vì số giả.
 - **Tổng quan theo vai trò:** tài khoản chỉ có quyền APPROVER/EXECUTOR/ACCEPTOR nhận dashboard công việc được phân công từ API, không tự động được xem các hồ sơ khác trong phòng ban.
@@ -255,3 +226,47 @@ Cổng quản trị không có chức năng tạo yêu cầu. Theo UC05, quản 
 - **Sơ đồ phòng ban** hiển thị quan hệ `manager_id` và thành viên từ API `/api/v1/meta/colleagues`. API giữ nguyên `items` theo hợp đồng cũ (chỉ đồng nghiệp và `{id, display_name}` dùng cho form), bổ sung `organization` với các quan hệ trưởng nhóm/nhân viên **chỉ trong phòng ban hiện tại**. Dữ liệu không cấu hình trưởng phòng sẽ hiển thị rõ là chưa gán. Sơ đồ chỉ xem, không tạo thêm quyền phê duyệt.
 - Không thay đổi logic gửi/phê duyệt, không sửa schema Supabase. Với dữ liệu tổ chức, Backend cần chạy phiên bản mới để frontend nhận thêm `organization`.
 - Kiểm tra bằng `cd web_client && npm test && npm run build`, sau đó thử giao diện thực tế với tài khoản REQUESTER/APPROVER và Supabase của dự án. Việc build cần cài dependencies (`npm ci`).
+
+
+## 03/11/2026 — An toàn phân tuyến R07, xác thực cổng và giảm polling
+
+- **Đăng nhập theo quyền, không theo email cố định:** Cổng quản trị chấp nhận tài khoản có grant `OPS_ADMIN`, `POLICY_ADMIN` hoặc `AUDITOR` còn hiệu lực (kiểm tra phía Django **sau khi xác nhận mật khẩu**). Tài khoản có bất kỳ vai trò quản trị đang hoạt động không được đăng nhập cổng nhân viên, ngay cả khi vẫn có grant Requester cũ. Portal khai báo ở header và body phải khớp nhau; mọi API nghiệp vụ vẫn kiểm tra quyền và phạm vi độc lập. Không đặt mật khẩu hoặc email quản trị cố định trong code.
+- **Tối ưu Supabase khi gửi đơn:** xác thực grant APPROVER/EXECUTOR/ACCEPTOR theo phạm vi dùng một truy vấn gộp (thay vì 1 truy vấn cho mỗi cấp duyệt), sau bước kiểm tra tài khoản còn hoạt động và không phải Admin; có regression test đảm bảo vẫn từ chối thiếu quyền. Đây là tối ưu số round-trip, **chưa đo độ trễ trên Supabase thật**.
+- **R07 — chống tự phê duyệt:** Khi quy tắc quy định người tạo đơn là người duyệt, Backend truy ngược chuỗi `manager_id` tới tối đa 20 cấp, chỉ chọn cấp trên có grant `APPROVER` hợp lệ theo phòng ban/loại đơn, còn hoạt động, không có vai trò quản trị và không giữ bước khác trong cùng tuyến hoặc vai trò thực thi. Nếu không có người hợp lệ, trả `ROUTE_SOD_ESCALATION_UNRESOLVED` (409), không lưu đơn sai hoặc tự chọn đại. Cả xem trước tuyến và gửi đơn dùng chung bộ giải quyết này; sự kiện chuyển cấp được ghi vào audit chain với ứng viên bị bỏ qua và lý do.
+- **AI human-in-the-loop:** `EAS_AI_AUTO_APPROVE_ENABLED=false` mặc định và cờ phê duyệt độc lập `EAS_AI_AUTO_APPROVAL_POLICY_APPROVED=false` (cả hai phải bật mới cho phép auto-approve). Cấu hình cũ có `EAS_AI_AUTO_APPROVE_ENABLED=true` **không đủ** để AI ký đơn. Hai cờ này chỉ là điều kiện kỹ thuật, không thay thế phiên bản quy chế đã được ban hành và nghiệm thu. Đã bổ sung kiểm thử hành vi chặn AI ký khi thiếu một cờ.
+- **Giảm polling:** Giao diện kiểm tra trạng thái bảo trì AI mỗi 15 giây khi hệ thống bình thường, 2 giây khi đang khóa bảo trì, 30 giây khi tab bị ẩn; chỉ giữ một request đang chạy và hủy lịch khi rời trang. Đây là giảm lưu lượng **không phải** chứng nhận Supabase hết timeout.
+- **Cổng local hiện tại:** `start_frontend_local.cmd` → `http://127.0.0.1:5173`; `start_admin_local.cmd` → `http://127.0.0.1:8081`; Docker dùng cổng khác theo Compose. `.env.example` được đồng bộ với hai cổng local; không thay đổi `.env` thực.
+- **Kiểm tra an toàn:** `python tests/run_tests.py`, `cd web_client && npm test`; bổ sung test cho role/portal và R07. Mã Python đã được biên dịch cú pháp, nhưng không chạy được Django tests hoặc build Vite trên môi trường thiếu dependencies. Không có migration SQL, seed, reset mật khẩu hoặc thao tác ghi Supabase nào được thực hiện.
+
+**Các vấn đề cần tiếp tục xác minh:** ma trận hạn mức A3, nguồn số dư chính thức C2, migration và vận hành SLA/ủy quyền trên staging, xử lý các hồ sơ bị kẹt của live database, bản build Vite và E2E qua Supabase/AI. Các thay đổi quy chế và sửa dữ liệu production phải được phê duyệt riêng.
+
+### Trạng thái CSDL trên dashboard
+
+`GET /health/ready` trả `checks.database=true` khi các truy vấn kiểm tra PostgreSQL/Supabase thực thi thành công, ngay cả khi một điều kiện readiness khác chưa đạt (Redis, quyền runtime, bản quy chế, nguồn mock hoặc Storage). Khi mất kết nối database, endpoint trả HTTP 503 với `checks.database=false`; frontend vẫn đọc phần JSON chẩn đoán và hiển thị đúng lý do thay vì đồng nhất tất cả lỗi 503 với mất Backend.
+
+Kiểm tra bằng trình duyệt hoặc PowerShell: `http://127.0.0.1:8000/health/live` để xác định API sống, và `http://127.0.0.1:8000/health/ready` để xem trường `checks`. Nếu trạng thái tổng thể là `not_ready` nhưng `checks.database=true`, kiểm tra các trường `false` khác, không đổi password Supabase hay tăng timeout tùy tiện. Sau khi cập nhật code hãy khởi động lại Backend và frontend.
+
+
+## 03/11/2026 — Xử lý nhiều lỗi HTTP 503 trên Web Admin (Docker :8081)
+
+- Admin Docker ở `http://127.0.0.1:8081` dùng Nginx chuyển tiếp `/api/` tới container `api:8000`. Nếu **nhiều API cùng báo 503**, kiểm tra Backend/Supabase trước; đừng nhầm đây là lỗi của từng trang.
+- `/health/live`: tiến trình Django còn phục vụ HTTP (không truy vấn DB).
+- **Mới:** `/health/db`: một truy vấn `SELECT 1` tới PostgreSQL, chỉ báo kết nối và nhóm lỗi đã loại bỏ thông tin nhạy cảm; không kiểm tra quyền hay migration.
+- `/health/ready`: kiểm tra nghiệp vụ/role/catalog/Redis/storage, có thể là 503 **ngay cả khi** `database=true`. Đọc `checks` để biết điều kiện không đạt. Không tắt các kiểm tra này để làm UI chuyển xanh.
+- Docker healthcheck dùng `/health/db` với thời gian chờ rộng hơn; không dùng `/health/ready` nhiều truy vấn để đánh giá liệu container có sống hay không.
+- Web Client/Admin dùng chung API helper: tối đa 5 GET đồng thời; giảm số request khi kết nối Backend/Supabase thất bại, chỉ áp dụng circuit-backoff đối với lỗi kết nối chung, không ảnh hưởng lỗi quyền hay AI cụ thể. Không tự gửi lại các lệnh POST/PATCH/DELETE.
+- Polling `ai-status` giảm tần suất, tăng khoảng cách gọi lại theo số lần lỗi, tạm dừng hợp lý khi ẩn tab và hủy request khi unmount. Đây không phải tính năng chạy AI tự động.
+
+**Kiểm tra trên Windows / PowerShell (không chia sẻ file `.env` hoặc mật khẩu):**
+
+```powershell
+# Từ thư mục gốc, nếu chạy Docker
+ docker compose --env-file .env ps
+ docker compose --env-file .env logs --tail 120 api
+# Bỏ -i nếu chỉ muốn JSON; mã 503 là trạng thái đúng khi phụ thuộc không đạt
+ curl.exe -i http://127.0.0.1:8000/health/live
+ curl.exe -i http://127.0.0.1:8000/health/db
+ curl.exe -i http://127.0.0.1:8000/health/ready
+```
+
+Nếu `/health/live` lỗi: kiểm tra container API và log. Nếu `live=200, db=503`: xác minh `EAS_API_DATABASE_URL`/SSL/mạng Supabase/pooler và xem SQLSTATE trong log đã được che thông tin nhạy cảm. Nếu `db=200, ready=503`: sửa **đúng check false**, không đổi password hoặc database bừa. Nếu cả ba trả 200 nhưng API Admin còn 503: lấy mã lỗi + correlation ID của response và log API để tìm endpoint cụ thể. Thực hiện restart/rebuild container sau khi cập nhật code; frontend cũ vẫn có thể tiếp tục polling cho đến khi thay bản build mới.
