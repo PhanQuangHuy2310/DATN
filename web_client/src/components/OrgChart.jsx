@@ -1,23 +1,24 @@
 import { useState } from "react";
+import Icon from "./Icon.jsx";
 import { useApiBase } from "../apiBase.js";
 import { CardGridSkeleton } from "./design.jsx";
 import { useResource, ResourceState } from "./ui.jsx";
 
 const DEPT_COLORS = {
-  BOD: { bg: "#eff6ff", border: "#3b82f6", text: "#1e40af", badge: "#2563eb", icon: "🏛️" },
-  TECH: { bg: "#f0fdf4", border: "#22c55e", text: "#166534", badge: "#16a34a", icon: "💻" },
-  HR: { bg: "#fdf4ff", border: "#d946ef", text: "#86198f", badge: "#c026d3", icon: "👥" },
-  FIN: { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#d97706", icon: "💰" },
-  BIZ: { bg: "#fef2f2", border: "#ef4444", text: "#991b1b", badge: "#dc2626", icon: "💼" },
-  MKT: { bg: "#fff1f2", border: "#f43f5e", text: "#be123c", badge: "#e11d48", icon: "📢" },
-  OPS: { bg: "#ecfeff", border: "#06b6d4", text: "#155e75", badge: "#0891b2", icon: "⚙️" },
-  LEGAL: { bg: "#f5f3ff", border: "#8b5cf6", text: "#5b21b6", badge: "#7c3aed", icon: "⚖️" },
+  BOD: { bg: "var(--eas-signal-soft)", border: "var(--eas-signal)", text: "var(--eas-signal)", badge: "var(--eas-signal)", icon: "building" },
+  TECH: { bg: "var(--eas-ok-soft)", border: "var(--eas-ok)", text: "var(--eas-ok)", badge: "var(--eas-ok)", icon: "server" },
+  HR: { bg: "var(--eas-hover)", border: "var(--eas-ink-600)", text: "var(--eas-ink-600)", badge: "var(--eas-ink-600)", icon: "people" },
+  FIN: { bg: "var(--eas-warn-soft)", border: "var(--eas-warn)", text: "var(--eas-warn)", badge: "var(--eas-warn)", icon: "card" },
+  BIZ: { bg: "var(--eas-danger-soft)", border: "var(--eas-danger)", text: "var(--eas-danger)", badge: "var(--eas-danger)", icon: "briefcase" },
+  MKT: { bg: "var(--eas-danger-soft)", border: "var(--eas-danger)", text: "var(--eas-danger)", badge: "var(--eas-danger)", icon: "megaphone" },
+  OPS: { bg: "var(--eas-hover)", border: "var(--eas-ink-600)", text: "var(--eas-ink-600)", badge: "var(--eas-ink-600)", icon: "settings" },
+  LEGAL: { bg: "var(--eas-hover)", border: "var(--eas-ink-600)", text: "var(--eas-ink-600)", badge: "var(--eas-ink-600)", icon: "scale" },
   // Compatibility fallbacks
-  DEPT_IT: { bg: "#f0fdf4", border: "#22c55e", text: "#166534", badge: "#16a34a", icon: "💻" },
-  DEPT_HR: { bg: "#fdf4ff", border: "#d946ef", text: "#86198f", badge: "#c026d3", icon: "👥" },
-  DEPT_FIN: { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#d97706", icon: "💰" },
-  DEPT_SALES: { bg: "#fef2f2", border: "#ef4444", text: "#991b1b", badge: "#dc2626", icon: "📈" },
-  DEPT_OPS: { bg: "#ecfeff", border: "#06b6d4", text: "#155e75", badge: "#0891b2", icon: "⚙️" },
+  DEPT_IT: { bg: "var(--eas-ok-soft)", border: "var(--eas-ok)", text: "var(--eas-ok)", badge: "var(--eas-ok)", icon: "server" },
+  DEPT_HR: { bg: "var(--eas-hover)", border: "var(--eas-ink-600)", text: "var(--eas-ink-600)", badge: "var(--eas-ink-600)", icon: "people" },
+  DEPT_FIN: { bg: "var(--eas-warn-soft)", border: "var(--eas-warn)", text: "var(--eas-warn)", badge: "var(--eas-warn)", icon: "card" },
+  DEPT_SALES: { bg: "var(--eas-danger-soft)", border: "var(--eas-danger)", text: "var(--eas-danger)", badge: "var(--eas-danger)", icon: "trend" },
+  DEPT_OPS: { bg: "var(--eas-hover)", border: "var(--eas-ink-600)", text: "var(--eas-ink-600)", badge: "var(--eas-ink-600)", icon: "settings" },
 };
 
 export default function OrgChart({ navigate, portal = "client", user }) {
@@ -65,7 +66,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
       <div className="page-heading org-chart-header">
         <div>
           <p className="eyebrow">{portal === "admin" ? "QUẢN TRỊ TỔ CHỨC" : "CƠ CẤU DOANH NGHIỆP"}</p>
-          <h1>SƠ ĐỒ TỔ CHỨC CÔNG TY</h1>
+          <h1>Sơ đồ tổ chức công ty</h1>
           <p className="muted">
             Cơ cấu hình cây trực quan từ Ban Giám Đốc xuống các phòng ban chức năng. Dữ liệu thời gian thực đồng bộ trực tiếp từ CSDL.
           </p>
@@ -85,9 +86,9 @@ export default function OrgChart({ navigate, portal = "client", user }) {
             className="secondary"
             onClick={() => treeRes.reload?.()}
             disabled={treeRes.refreshing}
-            title="Tải lại dữ liệu mới nhất từ CSDL"
+            title="Tải lại dữ liệu mới nhất"
           >
-            {treeRes.refreshing ? "Đang đồng bộ…" : "🔄 Làm mới sơ đồ"}
+            {treeRes.refreshing ? "Đang đồng bộ…" : "Làm mới sơ đồ"}
           </button>
         </div>
       </div>
@@ -105,25 +106,25 @@ export default function OrgChart({ navigate, portal = "client", user }) {
             className="stat-pill stat-working"
             style={{ background: "var(--ds-success-soft)", color: "var(--ds-success)", borderColor: "var(--ds-success)" }}
           >
-            🟢 Đang làm: <strong>{summary.working_count}</strong>
+            <span className="status-dot is-green" aria-hidden="true" />Đang làm: <strong>{summary.working_count}</strong>
           </span>
           <span
             className="stat-pill stat-leave"
             style={{ background: "var(--ds-warning-soft)", color: "var(--ds-warning)", borderColor: "var(--ds-warning)" }}
           >
-            🟡 Nghỉ làm: <strong>{summary.leave_count}</strong>
+            <span className="status-dot is-amber" aria-hidden="true" />Nghỉ làm: <strong>{summary.leave_count}</strong>
           </span>
           <span
             className="stat-pill stat-trip"
             style={{ background: "var(--ds-primary-soft)", color: "var(--ds-primary)", borderColor: "var(--ds-primary)" }}
           >
-            🔵 Công tác: <strong>{summary.trip_count}</strong>
+            <span className="status-dot is-blue" aria-hidden="true" />Công tác: <strong>{summary.trip_count}</strong>
           </span>
         </div>
 
         <div className="org-chart-tools">
           <div className="org-search-wrap">
-            <span className="org-search-icon" aria-hidden="true">🔍</span>
+            <span className="org-search-icon" aria-hidden="true"><Icon name="search" size={14} /></span>
             <input
               type="search"
               placeholder="Tìm kiếm phòng ban, nhân sự, chức danh..."
@@ -161,8 +162,8 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                 <div
                   className={`org-node-box org-box-director ${isMatch(bodDept) ? "org-highlight" : ""}`}
                   style={{
-                    background: "#eff6ff",
-                    borderColor: "#3b82f6",
+                    background: "var(--eas-signal-soft)",
+                    borderColor: "var(--eas-signal)",
                     minWidth: "320px",
                     padding: "16px 20px",
                     cursor: "pointer",
@@ -173,21 +174,21 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                   tabIndex={0}
                   onClick={() => handleOpenRoster(bodDept)}
                   onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleOpenRoster(bodDept)}
-                  title="Bấm để xem danh sách nhân sự Ban Giám Đốc"
+                  title="Xem danh sách nhân sự Ban Giám đốc"
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "1.2rem" }}>🏛️</span>
-                    <span className="badge" style={{ background: "#2563eb", color: "#ffffff", fontWeight: 700 }}>
+                    <span style={{ fontSize: "1.2rem" }}><Icon name="building" size={14} /></span>
+                    <span className="badge" style={{ background: "var(--eas-signal)", color: "var(--eas-surface)", fontWeight: 700 }}>
                       {bodDept.employee_count} nhân sự
                     </span>
                   </div>
-                  <div className="org-node-title" style={{ color: "#1e3a8a", fontSize: "16px", fontWeight: 800 }}>
+                  <div className="org-node-title" style={{ color: "var(--eas-signal)", fontSize: "16px", fontWeight: 800 }}>
                     {bodDept.name}
                   </div>
-                  <div style={{ fontSize: "12px", color: "#475569", marginTop: "4px" }}>
+                  <div style={{ fontSize: "12px", color: "var(--eas-ink-600)", marginTop: "4px" }}>
                     Tổng Giám Đốc: <strong>{bodDept.manager_name || "Chưa bổ nhiệm"}</strong>
                   </div>
-                  <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+                  <div style={{ fontSize: "11px", color: "var(--eas-ink-500)", marginTop: "4px" }}>
                     Bấm để xem danh sách Ban Lãnh Đạo →
                   </div>
                 </div>
@@ -197,7 +198,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                   style={{
                     width: "3px",
                     height: "36px",
-                    background: "#94a3b8",
+                    background: "var(--eas-ink-500)",
                     margin: "0 auto",
                   }}
                 />
@@ -210,7 +211,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
               <div
                 style={{
                   height: "3px",
-                  background: "#94a3b8",
+                  background: "var(--eas-ink-500)",
                   width: "calc(100% - 140px)",
                   margin: "0 auto 0 auto",
                 }}
@@ -227,11 +228,11 @@ export default function OrgChart({ navigate, portal = "client", user }) {
               >
                 {childDepts.map((dept) => {
                   const colors = DEPT_COLORS[dept.code] || {
-                    bg: "#f8fafc",
-                    border: "#94a3b8",
-                    text: "#1e293b",
-                    badge: "#475569",
-                    icon: "📁",
+                    bg: "var(--eas-surface-sunken)",
+                    border: "var(--eas-ink-500)",
+                    text: "var(--eas-ink-900)",
+                    badge: "var(--eas-ink-600)",
+                    icon: "folder",
                   };
                   const matched = isMatch(dept);
 
@@ -246,7 +247,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                         style={{
                           width: "3px",
                           height: "28px",
-                          background: "#94a3b8",
+                          background: "var(--eas-ink-500)",
                         }}
                       />
 
@@ -272,12 +273,12 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                         title={`Bấm để xem toàn bộ ${dept.employee_count} nhân viên phòng ${dept.name}`}
                       >
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                          <span style={{ fontSize: "1.2rem" }}>{colors.icon}</span>
+                          <Icon name={colors.icon} size={18} />
                           <span
                             className="badge"
                             style={{
                               backgroundColor: colors.badge,
-                              color: "#ffffff",
+                              color: "var(--eas-surface)",
                               fontSize: "12px",
                               fontWeight: 700,
                               padding: "2px 8px",
@@ -301,14 +302,14 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                           {dept.name}
                         </div>
 
-                        <div style={{ fontSize: "12px", color: "#475569" }}>
+                        <div style={{ fontSize: "12px", color: "var(--eas-ink-600)" }}>
                           Trưởng phòng:{" "}
                           <strong style={{ color: colors.text }}>
                             {dept.manager_name || "Chưa phân công"}
                           </strong>
                         </div>
 
-                        <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "#64748b" }}>
+                        <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "var(--eas-ink-500)" }}>
                           <span>Xem danh sách</span>
                           <span>→</span>
                         </div>
@@ -347,7 +348,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                 onClick={() => setSelectedNode(null)}
                 aria-label="Đóng"
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 
@@ -417,7 +418,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                                 fontWeight: 600,
                               }}
                             >
-                              🔵 Công tác
+                              <span className="status-dot is-blue" aria-hidden="true" />Công tác
                             </span>
                           ) : isLeave ? (
                             <span
@@ -431,7 +432,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                                 fontWeight: 600,
                               }}
                             >
-                              🟡 Nghỉ làm
+                              <span className="status-dot is-amber" aria-hidden="true" />Nghỉ làm
                             </span>
                           ) : isOffHours ? (
                             <span
@@ -445,7 +446,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                                 fontWeight: 600,
                               }}
                             >
-                              ⚪ {u.working_status_label || "Ngoài giờ"}
+                              <span className="status-dot is-gray" aria-hidden="true" />{u.working_status_label || "Ngoài giờ"}
                             </span>
                           ) : (
                             <span
@@ -459,7 +460,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                                 fontWeight: 600,
                               }}
                             >
-                              🟢 Đang làm
+                              <span className="status-dot is-green" aria-hidden="true" />Đang làm
                             </span>
                           )}
                         </div>

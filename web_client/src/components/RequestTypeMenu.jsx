@@ -1,36 +1,37 @@
 import { useId, useMemo, useState } from "react";
 import { riskLevels, approvalLevels, typeLevels } from "../domain";
+import Icon from "./Icon.jsx";
 
 const GROUP_ICONS = {
-  "Nghỉ phép & Chấm công": "🗓️",
-  "Nhân sự & Đào tạo": "👥",
-  "Tạm ứng & Thanh toán": "💳",
-  "Ngân sách & Thuế": "📊",
-  "Mua sắm & Tài sản": "📦",
-  "Phòng họp & Xe công vụ": "🏢",
-  "Cơ sở vật chất & An ninh": "🛡️",
-  "Tài khoản & Phân quyền CNTT": "🔐",
-  "Hạ tầng & Vận hành kỹ thuật": "⚙️",
-  "Hợp đồng & Pháp chế": "⚖️",
-  "Kinh doanh & Marketing": "📈",
-  "Khác / Linh hoạt": "✨",
+  "Nghỉ phép & Chấm công": "calendar",
+  "Nhân sự & Đào tạo": "people",
+  "Tạm ứng & Thanh toán": "card",
+  "Ngân sách & Thuế": "chart",
+  "Mua sắm & Tài sản": "box",
+  "Phòng họp & Xe công vụ": "building",
+  "Cơ sở vật chất & An ninh": "shield",
+  "Tài khoản & Phân quyền CNTT": "lock",
+  "Hạ tầng & Vận hành kỹ thuật": "server",
+  "Hợp đồng & Pháp chế": "scale",
+  "Kinh doanh & Marketing": "trend",
+  "Khác / Linh hoạt": "layers",
 };
 
 function resolveGroupIcon(name = "") {
   if (GROUP_ICONS[name]) return GROUP_ICONS[name];
   const lower = name.toLocaleLowerCase("vi-VN");
-  if (lower.includes("nghỉ") || lower.includes("chấm công")) return "🗓️";
-  if (lower.includes("nhân sự") || lower.includes("tuyển")) return "👥";
-  if (lower.includes("tài chính") || lower.includes("thanh toán") || lower.includes("tạm ứng")) return "💳";
-  if (lower.includes("ngân sách") || lower.includes("thuế")) return "📊";
-  if (lower.includes("mua sắm") || lower.includes("tài sản") || lower.includes("thiết bị")) return "📦";
-  if (lower.includes("phòng") || lower.includes("xe")) return "🏢";
-  if (lower.includes("vật chất") || lower.includes("an ninh")) return "🛡️";
-  if (lower.includes("truy cập") || lower.includes("phân quyền") || lower.includes("cntt") || lower.includes("it")) return "🔐";
-  if (lower.includes("hạ tầng") || lower.includes("máy chủ") || lower.includes("vận hành")) return "⚙️";
-  if (lower.includes("hợp đồng") || lower.includes("pháp")) return "⚖️";
-  if (lower.includes("kinh doanh") || lower.includes("marketing")) return "📈";
-  return "📋";
+  if (lower.includes("nghỉ") || lower.includes("chấm công")) return "calendar";
+  if (lower.includes("nhân sự") || lower.includes("tuyển")) return "people";
+  if (lower.includes("tài chính") || lower.includes("thanh toán") || lower.includes("tạm ứng")) return "card";
+  if (lower.includes("ngân sách") || lower.includes("thuế")) return "chart";
+  if (lower.includes("mua sắm") || lower.includes("tài sản") || lower.includes("thiết bị")) return "box";
+  if (lower.includes("phòng") || lower.includes("xe")) return "building";
+  if (lower.includes("vật chất") || lower.includes("an ninh")) return "shield";
+  if (lower.includes("truy cập") || lower.includes("phân quyền") || lower.includes("cntt") || lower.includes("it")) return "lock";
+  if (lower.includes("hạ tầng") || lower.includes("máy chủ") || lower.includes("vận hành")) return "server";
+  if (lower.includes("hợp đồng") || lower.includes("pháp")) return "scale";
+  if (lower.includes("kinh doanh") || lower.includes("marketing")) return "trend";
+  return "file";
 }
 
 /**
@@ -193,7 +194,7 @@ export default function RequestTypeMenu({
               >
                 <div className="request-group-card-head">
                   <span className="request-group-icon" aria-hidden="true">
-                    {resolveGroupIcon(name)}
+                    <Icon name={resolveGroupIcon(name)} size={20} />
                   </span>
                   <small>{count} biểu mẫu</small>
                 </div>
@@ -249,7 +250,7 @@ export default function RequestTypeMenu({
               className={`request-menu-chevron ${expanded ? "is-open" : ""}`}
               aria-hidden="true"
             >
-              ⌄
+              <Icon name="chevron" size={16} />
             </span>
           </button>
           {expanded && (
@@ -268,7 +269,7 @@ export default function RequestTypeMenu({
                         <strong>{item.label}</strong>
                         {item.isBlocked ? (
                           <span className="request-menu-state is-blocked">
-                            ⚠ Tạm ngưng (API tắt)
+                            <Icon name="alert" size={14} /> Tạm ngưng
                           </span>
                         ) : (
                           <span

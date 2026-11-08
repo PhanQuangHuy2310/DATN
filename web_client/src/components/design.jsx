@@ -1,5 +1,6 @@
 /** Shared design-system primitives for both portals (see design-system.css). */
 import { useEffect, useRef, useState } from "react";
+import Icon from "./Icon.jsx";
 import { date } from "../domain.js";
 import { ActionForm, Badge } from "./ui.jsx";
 
@@ -216,7 +217,7 @@ export function WorkflowTimeline({ items }) {
         <li key={item.key} className={`ds-timeline-item is-${item.state || "upcoming"}`}>
           <span className="ds-timeline-dot" aria-hidden="true">
             {item.state === "done"
-              ? "✓"
+              ? ""
               : item.state === "failed"
                 ? "!"
                 : item.state === "skipped"
@@ -238,7 +239,7 @@ export function SearchInput({ value, onChange, placeholder, label = "Tìm kiếm
   return (
     <label className="ds-search">
       <span className="sr-only">{label}</span>
-      <span aria-hidden="true">⌕</span>
+      <span aria-hidden="true"><Icon name="search" size={16} /></span>
       <input
         type="search"
         value={value}

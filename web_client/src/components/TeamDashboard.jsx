@@ -52,6 +52,7 @@ export default function TeamDashboard({ onOpen, mode = "departments" }) {
   const report = useResource(valid ? `/api/v1/reports/team?${params}` : "");
   const data = report.data?.report;
   const totals = data?.totals || {};
+  const departments = data?.departments || [];
   const employees = (data?.employees || []).filter((row) => !department || row.department_id === department.department_id);
 
   return <div className="client-dashboard team-dashboard">
@@ -79,7 +80,7 @@ export default function TeamDashboard({ onOpen, mode = "departments" }) {
       {!department && !employeeMode && <section className="panel table-panel">
         <h2>Phòng ban</h2>
         <div className="table-wrap"><table className="responsive-records"><thead><tr><th>Phòng ban</th><th>Nhân viên</th><th>Tổng</th><th>Chờ duyệt</th><th>Đang thực hiện</th><th>Quá hạn</th><th>Hoàn thành</th><th></th></tr></thead>
-          <tbody>{data.departments.map((row) => <tr key={row.department_id}>
+          <tbody>{departments.map((row) => <tr key={row.department_id}>
             <td data-label="Phòng ban"><strong>{row.department_name}</strong></td>
             <td data-label="Nhân viên">{row.employees}</td><td data-label="Tổng">{row.total}</td>
             <td data-label="Chờ duyệt">{row.pending}</td><td data-label="Đang thực hiện">{row.in_progress}</td>
@@ -87,7 +88,7 @@ export default function TeamDashboard({ onOpen, mode = "departments" }) {
             <td data-label="Hoàn thành">{row.completed} ({rate(row.completed, row.total)})</td>
             <td data-label="Thao tác"><button type="button" className="link" onClick={() => setDepartment(row)}>Xem nhân viên →</button></td>
           </tr>)}</tbody></table></div>
-        {!data.departments.length && <p className="muted">Chưa có hồ sơ nào trong phạm vi của bạn trong khoảng thời gian này.</p>}
+        {!departments.length && <p className="muted">Chưa có hồ sơ nào trong phạm vi của bạn trong khoảng thời gian này.</p>}
       </section>}
 
       {(department || employeeMode) && !employee && <section className="panel table-panel">

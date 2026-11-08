@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Icon from "./Icon.jsx";
 import { api } from "../api.js";
 import { useResource } from "./ui.jsx";
 import { notifyPermissionsChanged } from "../sessionRefresh.js";
@@ -202,9 +203,9 @@ export default function RolePermissionMatrixPage() {
       <div className="page-heading">
         <div>
           <p className="eyebrow">TỔ CHỨC & NHÂN SỰ</p>
-          <h1>Ma trận Phân quyền (RBAC Matrix)</h1>
+          <h1>Ma trận phân quyền</h1>
           <p className="muted">
-            Quản trị quyền Xem (can_view), Thêm (can_create), Sửa (can_update) và Xóa (can_delete) cho 9 chức năng hệ thống theo Chức vụ hoặc cấp quyền riêng cho từng nhân viên.
+            Cấp quyền Xem, Thêm, Sửa và Xóa cho từng chức năng hệ thống theo chức vụ, hoặc cấp quyền riêng cho từng nhân viên.
           </p>
         </div>
         <div className="page-heading-actions">
@@ -261,16 +262,16 @@ export default function RolePermissionMatrixPage() {
             <div>
               <strong>Quy tắc áp dụng phân quyền trực tiếp:</strong>
               <p>
-                - Nếu <strong>Xem (can_view) = TẮT</strong>: Chức năng sẽ bị <strong>ẨN HOÀN TOÀN</strong> khỏi thanh điều hướng Sidebar và chặn truy cập URL.
+                - Nếu <strong>Xem</strong> tắt: chức năng bị ẩn khỏi thanh điều hướng và không truy cập được.
                 <br />
-                - Nếu <strong>Xem = BẬT</strong> nhưng <strong>Thêm / Sửa / Xóa = TẮT</strong>: Người dùng xem được dữ liệu nhưng các nút Thêm mới, Sửa hoặc Khóa/Xóa sẽ tự động ẩn khỏi giao diện.
+                - Nếu <strong>Xem</strong> bật nhưng <strong>Thêm / Sửa / Xóa</strong> tắt: người dùng chỉ xem dữ liệu; các nút thao tác tương ứng được ẩn.
               </p>
             </div>
           </div>
 
           {/* Matrix Table */}
           {loadingMatrix ? (
-            <div style={{ textAlign: "center", padding: "4rem", color: "#64748b" }}>
+            <div style={{ textAlign: "center", padding: "4rem", color: "var(--eas-ink-500)" }}>
               Đang tải dữ liệu ma trận phân quyền...
             </div>
           ) : (
@@ -278,29 +279,25 @@ export default function RolePermissionMatrixPage() {
               <table className="rbac-matrix-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "35%" }}>Chức năng hệ thống (Module)</th>
+                    <th style={{ width: "35%" }}>Chức năng hệ thống</th>
                     <th style={{ width: "16%", textAlign: "center" }}>
                       <div className="th-toggle-header">
-                        <span>XEM</span>
-                        <small className="muted">can_view</small>
+                        <span>Xem</span>
                       </div>
                     </th>
                     <th style={{ width: "16%", textAlign: "center" }}>
                       <div className="th-toggle-header">
-                        <span>THÊM</span>
-                        <small className="muted">can_create</small>
+                        <span>Thêm</span>
                       </div>
                     </th>
                     <th style={{ width: "16%", textAlign: "center" }}>
                       <div className="th-toggle-header">
-                        <span>SỬA</span>
-                        <small className="muted">can_update</small>
+                        <span>Sửa</span>
                       </div>
                     </th>
                     <th style={{ width: "16%", textAlign: "center" }}>
                       <div className="th-toggle-header">
-                        <span>XÓA / KHÓA</span>
-                        <small className="muted">can_delete</small>
+                        <span>Xóa / Khóa</span>
                       </div>
                     </th>
                   </tr>
@@ -330,8 +327,8 @@ export default function RolePermissionMatrixPage() {
                                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                   <strong className="module-display-name">{m.name}</strong>
                                   {isLocked && (
-                                    <span className="badge badge-locked" style={{ backgroundColor: "#fee2e2", color: "#991b1b", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "4px" }} title="4 chức năng hệ thống bị khóa cứng, chỉ Super Admin mới có quyền truy cập">
-                                      🔒 Khóa cứng hệ thống
+                                    <span className="badge badge-locked" style={{ backgroundColor: "var(--eas-danger-soft)", color: "var(--eas-danger)", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "4px" }} title="Chức năng hệ thống được khóa cố định; chỉ quản trị viên cấp cao được truy cập">
+                                      <Icon name="lock" size={12} /> Khóa cứng hệ thống
                                     </span>
                                   )}
                                 </div>
@@ -450,7 +447,7 @@ export default function RolePermissionMatrixPage() {
 
           {!selectedUserId ? (
             <div className="empty-user-select-box">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--eas-ink-500)" strokeWidth="1.5">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
@@ -460,7 +457,7 @@ export default function RolePermissionMatrixPage() {
               </p>
             </div>
           ) : loadingUserMatrix ? (
-            <div style={{ textAlign: "center", padding: "4rem", color: "#64748b" }}>
+            <div style={{ textAlign: "center", padding: "4rem", color: "var(--eas-ink-500)" }}>
               Đang tải quyền riêng của nhân viên...
             </div>
           ) : (
@@ -474,29 +471,25 @@ export default function RolePermissionMatrixPage() {
               <table className="rbac-matrix-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "35%" }}>Chức năng hệ thống (Module)</th>
+                    <th style={{ width: "35%" }}>Chức năng hệ thống</th>
                     <th style={{ width: "16%", textAlign: "center" }}>
                       <div className="th-toggle-header">
-                        <span>XEM</span>
-                        <small className="muted">can_view</small>
+                        <span>Xem</span>
                       </div>
                     </th>
                     <th style={{ width: "16%", textAlign: "center" }}>
                       <div className="th-toggle-header">
-                        <span>THÊM</span>
-                        <small className="muted">can_create</small>
+                        <span>Thêm</span>
                       </div>
                     </th>
                     <th style={{ width: "16%", textAlign: "center" }}>
                       <div className="th-toggle-header">
-                        <span>SỬA</span>
-                        <small className="muted">can_update</small>
+                        <span>Sửa</span>
                       </div>
                     </th>
                     <th style={{ width: "16%", textAlign: "center" }}>
                       <div className="th-toggle-header">
-                        <span>XÓA / KHÓA</span>
-                        <small className="muted">can_delete</small>
+                        <span>Xóa / Khóa</span>
                       </div>
                     </th>
                   </tr>
@@ -519,8 +512,8 @@ export default function RolePermissionMatrixPage() {
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <strong className="module-display-name">{m.name}</strong>
                                 {isLocked ? (
-                                  <span className="badge badge-locked" style={{ backgroundColor: "#fee2e2", color: "#991b1b", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "4px" }} title="4 chức năng hệ thống bị khóa cứng, chỉ Super Admin mới có quyền truy cập">
-                                    🔒 Khóa cứng hệ thống
+                                  <span className="badge badge-locked" style={{ backgroundColor: "var(--eas-danger-soft)", color: "var(--eas-danger)", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "4px" }} title="Chức năng hệ thống được khóa cố định; chỉ quản trị viên cấp cao được truy cập">
+                                    <Icon name="lock" size={12} /> Khóa cứng hệ thống
                                   </span>
                                 ) : isOverride ? (
                                   <span className="badge badge-override" title="Quyền này được ghi đè riêng cho nhân viên">

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Icon from "./Icon.jsx";
 import { api, idempotencyKey, notify } from "../api.js";
 import {
   fields,
@@ -738,7 +739,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       )}
       {isTypeBlocked && (
         <div className="eas-circuit-breaker-alert" role="alert">
-          <div className="eas-cb-alert-icon">⚠️</div>
+          <div className="eas-cb-alert-icon"><Icon name="alert" size={14} /></div>
           <div className="eas-cb-alert-body">
             <h4 className="eas-cb-alert-title">TẠM NGƯNG TIẾP NHẬN YÊU CẦU NÀY</h4>
             <p className="eas-cb-alert-msg">{typeBlockedNotice}</p>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Icon from "./Icon.jsx";
 import {
   api,
   getResource,
@@ -213,11 +214,11 @@ export function useResource(url) {
         const data = await getResource(url);
         failed = false;
         retryCount = 0;
-        if (active) setState({ url, data, error: "", loading: false, refreshing: false });
+        if (active) setState({ url, data, error: "", errorStatus: null, loading: false, refreshing: false });
       } catch (e) {
         failed = true;
         if (active) {
-          setState((old) => ({ ...old, loading: false, refreshing: false, error: errorText(e) }));
+          setState((old) => ({ ...old, loading: false, refreshing: false, error: errorText(e), errorStatus: e?.status ?? null }));
           // Only safe GETs are retried here; write actions are never repeated.
           // Back off and stop after a few attempts rather than filling Console.
           if (retryable(e) && retryCount < 4 && document.visibilityState !== "hidden") {
@@ -277,6 +278,15 @@ export function ResourceState({ resource, skeleton = null, children }) {
           </span>
         )}
       </output>
+    );
+  }
+  if (resource.error && !resource.data && resource.errorStatus === 403) {
+    // Permission is decided by the server; retrying cannot help.
+    return (
+      <div role="status" className="ds-permission-denied">
+        <strong>Bạn không có quyền xem nội dung này</strong>
+        <p className="muted">Quyền truy cập do quản trị viên cấp theo vai trò và phạm vi phòng ban. Liên hệ quản trị viên nếu bạn cần sử dụng chức năng này.</p>
+      </div>
     );
   }
   if (resource.error && !resource.data) {
@@ -375,7 +385,7 @@ export function ActionForm({
       <fieldset disabled={busy}>
         {danger && warningNote && (
           <div className="ds-danger-callout" role="note">
-            <strong aria-hidden="true">⚠</strong>
+            <strong aria-hidden="true"><Icon name="alert" size={14} /></strong>
             <span>{warningNote}</span>
           </div>
         )}

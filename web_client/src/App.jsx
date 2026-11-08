@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
+import Icon from "./components/Icon.jsx";
 import { PermissionProvider } from "./hooks/usePermission.jsx";
 import { api, initializeCsrf } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
@@ -285,7 +286,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
           <div className="auth-modal-card">
             <div className="auth-modal-header">
               <h3 id="info-modal-title">{portal === "admin" ? "Enterprise Admin Portal" : "Enterprise Approval System"}</h3>
-              <button type="button" className="auth-modal-close" onClick={() => setShowInfoModal(false)} aria-label="Đóng">✕</button>
+              <button type="button" className="auth-modal-close" onClick={() => setShowInfoModal(false)} aria-label="Đóng"><Icon name="x" size={16} /></button>
             </div>
             <div className="auth-modal-body">
               <p>Nền tảng giúp bạn tạo yêu cầu, theo dõi tiến độ và nhận thông báo khi có quyết định xử lý.</p>
@@ -303,7 +304,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
           <div className="auth-modal-card">
             <div className="auth-modal-header">
               <h3 id="forgot-modal-title">Cấp lại mật khẩu</h3>
-              <button type="button" className="auth-modal-close" onClick={closeForgotModal} aria-label="Đóng">✕</button>
+              <button type="button" className="auth-modal-close" onClick={closeForgotModal} aria-label="Đóng"><Icon name="x" size={16} /></button>
             </div>
             {resetSubmitted ? (
               <>
@@ -476,8 +477,8 @@ function pageLabel(key, portal) {
   return (portal === "admin" && ADMIN_LABELS[key]) || menu.find((m) => m[0] === key)?.[1] || "";
 }
 
-function renderNavIcon(key, fallback) {
-  const p = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
+function renderNavIcon(key, _fallback) {
+  const p = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
   switch (key) {
     case "home":
       return (
@@ -645,10 +646,60 @@ function renderNavIcon(key, fallback) {
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
       );
+    case "requests":
+      return (
+        <svg {...p}>
+          <rect x="5" y="3" width="14" height="18" rx="2" />
+          <path d="M9 3v2h6V3" />
+          <path d="M9 11h6M9 15h4" />
+        </svg>
+      );
+    case "people":
+    case "identity":
+      return (
+        <svg {...p}>
+          <circle cx="9" cy="8" r="3.5" />
+          <path d="M2.5 20v-1a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v1" />
+          <path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20v-1a5 5 0 0 0-3.5-4.8" />
+        </svg>
+      );
+    case "regulations-view":
+      return (
+        <svg {...p}>
+          <path d="M12 3v18M7 21h10" />
+          <path d="M5 7h14" />
+          <path d="m5 7-3 7a3 3 0 0 0 6 0Z" />
+          <path d="m19 7-3 7a3 3 0 0 0 6 0Z" />
+        </svg>
+      );
+    case "ai-rules":
+      return (
+        <svg {...p}>
+          <path d="M9 4h6M12 4v3" />
+          <rect x="4" y="7" width="16" height="12" rx="3" />
+          <path d="M9 12v1M15 12v1M9.5 16h5" />
+        </svg>
+      );
+    case "release-workspace":
+      return (
+        <svg {...p}>
+          <circle cx="6" cy="5" r="2" />
+          <circle cx="6" cy="19" r="2" />
+          <circle cx="18" cy="8" r="2" />
+          <path d="M6 7v10M18 10a6 6 0 0 1-6 6H8" />
+        </svg>
+      );
     default:
-      return fallback;
+      // Never fall back to text glyphs: a neutral bullet keeps the icon column aligned.
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      );
   }
 }
+
+const shellIcon = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
 function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) {
   const [status, setStatus] = useState(""),
     [type, setType] = useState(""),
@@ -696,18 +747,18 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
       </div>
       <section className="request-summary-strip" aria-label="Thống kê hồ sơ hiển thị">
         {[
-          ["Tất cả", "", "◫"],
-          ["Cần bổ sung", "NEEDS_INFO", "!"],
-          ["Chờ duyệt", "PENDING_APPROVAL", "⌛"],
-          ["Đang thực hiện", "IN_PROGRESS", "⇄"],
-          ["Hoàn thành", "COMPLETED", "✓"],
-          ["Bản nháp", "DRAFT", "▤"],
+          ["Tất cả", "", "layers"],
+          ["Cần bổ sung", "NEEDS_INFO", "alert"],
+          ["Chờ duyệt", "PENDING_APPROVAL", "clock"],
+          ["Đang thực hiện", "IN_PROGRESS", "reset"],
+          ["Hoàn thành", "COMPLETED", "check"],
+          ["Bản nháp", "DRAFT", "edit"],
         ].map(([label, code, icon]) => (
           <button key={label} type="button"
             className={`request-mini-stat ${status === code ? "current" : ""}`}
             onClick={() => {setStatus(code);setOffset(0);}}
             aria-pressed={status === code}>
-            <span className="mini-stat-icon" aria-hidden="true">{icon}</span>
+            <span className="mini-stat-icon" aria-hidden="true"><Icon name={icon} size={16} /></span>
             <span className="mini-stat-label">{label}</span>
             <strong>{code ? items.filter((item) => item.status === code).length : items.length}</strong>
             <small>hồ sơ hiển thị</small>
@@ -964,7 +1015,7 @@ function renderWorkspaceContent({
     if (!user.permissions.by_module[mod].can_view) {
       return (
         <div className="access-denied-view panel" style={{ textAlign: "center", padding: "4rem 2rem", margin: "2rem auto", maxWidth: "600px" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🚫</div>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}><Icon name="block" size={14} /></div>
           <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Không có quyền truy cập</h2>
           <p className="muted" style={{ marginBottom: "1.5rem" }}>
             Tài khoản của bạn chưa được cấp quyền Xem cho chức năng <strong>{pageLabel(page, portal)}</strong>. Vui lòng liên hệ Quản trị viên để được cấp quyền.
@@ -1131,7 +1182,7 @@ export function AdminOverview({ navigate, user }) {
     <PageHeader eyebrow="TRUNG TÂM QUẢN TRỊ" title="Tổng quan quản trị" description="Chọn khu vực chức năng theo vai trò quản trị được cấp." />
     <div className="admin-tiles-grid">{tiles.map(([key, label, detail, icon]) => (
       <button key={key} type="button" className="admin-feature-card" onClick={() => navigate(key)}>
-        <div className="admin-feature-icon" aria-hidden="true">{icon}</div>
+        <div className="admin-feature-icon" aria-hidden="true">{renderNavIcon(key, icon)}</div>
         <div className="admin-feature-body"><strong>{label}</strong><p>{detail}</p></div>
         <span className="admin-feature-arrow" aria-hidden="true">→</span>
       </button>))}
@@ -1146,7 +1197,6 @@ const WorkspaceDashboard = lazy(() => import("./components/AdminPages.jsx").then
 const WorkspaceUsers = lazy(() => import("./components/UserManagementPage.jsx"));
 const WorkspaceRegulations = lazy(() => import("./components/RegulationsManagementPage.jsx"));
 const WorkspaceOrgChart = lazy(() => import("./components/OrgChart.jsx"));
-const ADMIN_PORTAL_URL = import.meta.env.VITE_ADMIN_PORTAL_URL || "http://localhost:8081";
 
 function writeFlag(key, value) { try { window.localStorage.setItem(key, value ? "1" : "0"); } catch { /* storage unavailable */ } }
 
@@ -1214,7 +1264,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
       <div className={"app-shell" + (collapsed ? " sidebar-collapsed" : "")}>
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")} aria-label="Thanh điều hướng">
-        <button type="button" className="secondary ds-icon-button sidebar-close" aria-label="Đóng điều hướng" onClick={() => setMenuOpen(false)}>×</button>
+        <button type="button" className="secondary ds-icon-button sidebar-close" aria-label="Đóng điều hướng" onClick={() => setMenuOpen(false)}><svg {...shellIcon}><path d="M6 6l12 12M18 6 6 18" /></svg></button>
         <button
           type="button"
           className="sidebar-edge-toggle"
@@ -1269,7 +1319,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
             return (
               <div key={group} className={"nav-group" + (isClosed ? " is-collapsed" : "")}>
                 <button type="button" className="nav-caption" aria-expanded={!isClosed} onClick={() => toggleGroup(group)}>
-                  <span>{group}</span><span className="nav-caption-chevron" aria-hidden="true">▾</span>
+                  <span>{group}</span><span className="nav-caption-chevron" aria-hidden="true"><svg {...shellIcon} width="14" height="14"><path d="m6 9 6 6 6-6" /></svg></span>
                 </button>
                 {(!isClosed || collapsed) && visible.map(([key, , icon]) => {
                   const active = page === key && !selected && !editor;
@@ -1287,12 +1337,15 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
           })}
         </nav>
         <button type="button" className="secondary sidebar-collapse" onClick={toggleCollapsed} aria-pressed={collapsed}
-          aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}>{collapsed ? "»" : "« Thu gọn"}</button>
+          aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}>
+          <svg {...shellIcon} width="16" height="16">{collapsed ? <path d="m13 17 5-5-5-5M6 17l5-5-5-5" /> : <path d="m11 17-5-5 5-5M18 17l-5-5 5-5" />}</svg>
+          {!collapsed && <span>Thu gọn</span>}
+        </button>
       </aside>
       <div className="workspace">
         <header className="topbar">
           <div className="topbar-left">
-            <button type="button" className="secondary menu-toggle" aria-label="Mở điều hướng" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
+            <button type="button" className="secondary menu-toggle" aria-label="Mở điều hướng" onClick={() => setMenuOpen(!menuOpen)}><svg {...shellIcon}><path d="M4 6h16M4 12h16M4 18h16" /></svg></button>
             <div className="topbar-page-identity">
               <span className="topbar-page-title">{activeTitle}</span>
               <nav className="ds-breadcrumb" aria-label="Vị trí hiện tại"><ol>
@@ -1510,7 +1563,7 @@ function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
       <div className="client-maintenance-card">
         <div className="maintenance-icon-badge">
           <div className="maintenance-radar-pulse"></div>
-          <span className="maintenance-robot-icon">🤖</span>
+          <span className="maintenance-robot-icon"><Icon name="spark" size={14} /></span>
         </div>
 
         <h2 className="client-maintenance-title">
@@ -1524,22 +1577,22 @@ function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
 
         <div className="client-maintenance-steps">
           <div className={`m-step-item ${currentStep >= 1 ? (currentStep > 1 ? "done" : "active") : ""}`}>
-            <div className="m-step-dot">{currentStep > 1 ? "✓" : "1"}</div>
+            <div className="m-step-dot">{currentStep > 1 ? "" : "1"}</div>
             <span>Đồng bộ</span>
           </div>
           <div className="m-step-line"></div>
           <div className={`m-step-item ${currentStep >= 2 ? (currentStep > 2 ? "done" : "active") : ""}`}>
-            <div className="m-step-dot">{currentStep > 2 ? "✓" : "2"}</div>
+            <div className="m-step-dot">{currentStep > 2 ? "" : "2"}</div>
             <span>Học quy định</span>
           </div>
           <div className="m-step-line"></div>
           <div className={`m-step-item ${currentStep >= 3 ? (currentStep > 3 ? "done" : "active") : ""}`}>
-            <div className="m-step-dot">{currentStep > 3 ? "✓" : "3"}</div>
+            <div className="m-step-dot">{currentStep > 3 ? "" : "3"}</div>
             <span>Áp dụng</span>
           </div>
           <div className="m-step-line"></div>
           <div className={`m-step-item ${currentStep >= 4 ? "done" : ""}`}>
-            <div className="m-step-dot">{currentStep >= 4 ? "✓" : "4"}</div>
+            <div className="m-step-dot">{currentStep >= 4 ? "" : "4"}</div>
             <span>Hoàn tất</span>
           </div>
         </div>

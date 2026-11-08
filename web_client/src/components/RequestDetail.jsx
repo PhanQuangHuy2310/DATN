@@ -1,4 +1,5 @@
 import FullHistory from "./FullHistory.jsx";
+import Icon from "./Icon.jsx";
 import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { AiSummary } from "./AiAssist.jsx";
 import { AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
@@ -181,7 +182,7 @@ function ActivityLog({ id, userId }) {
             return (
               <li key={event.id} className="ds-timeline-item is-done">
                 <span className="ds-timeline-dot" aria-hidden="true">
-                  ✓
+                  <Icon name="check" size={14} />
                 </span>
                 <div className="ds-timeline-body">
                   <strong>{ACTION_LABELS[event.action] || "Cập nhật trạng thái hồ sơ"}</strong>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Icon from "./Icon.jsx";
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -99,8 +100,8 @@ export function AiEngineManagementPage() {
     <div className="page-container ai-engine-page">
       <PageHeader
         eyebrow="TRI THỨC & AI"
-        title="Quản trị AI Engine & Giám sát Huấn luyện"
-        description="Giám sát mô hình AI, theo dõi tiến trình 4 bước huấn luyện lại theo thời gian thực và quản lý khóa bảo trì Web Client."
+        title="Quản trị AI và huấn luyện"
+        description="Theo dõi mô hình AI, tiến trình huấn luyện lại và chế độ tạm khóa cổng nhân viên trong lúc cập nhật."
       />
 
       {/* Top 3 Metric Cards */}
@@ -130,7 +131,7 @@ export function AiEngineManagementPage() {
               <span className="version-col-title">Đang hoạt động:</span>
               <span className="version-val active">{activeVersion}</span>
             </div>
-            <span className="version-arrow">➔</span>
+            <span className="version-arrow"><Icon name="arrow" size={14} /></span>
             <div className="version-col">
               <span className="version-col-title">Mục tiêu huấn luyện:</span>
               <span className="version-val target">{targetVersion}</span>
@@ -141,7 +142,7 @@ export function AiEngineManagementPage() {
         {/* Web Client Gatekeeper Status */}
         <div className={`eas-meta-stat-card ${isLocked ? "danger-border" : "success-border"}`}>
           <div className="eas-meta-stat-header">
-            <span className="eas-meta-stat-label">Cổng Web Client (Gatekeeper)</span>
+            <span className="eas-meta-stat-label">Cổng kiểm soát Web Client</span>
             {isLocked ? (
               <span className="eas-badge-danger pulse">ĐÃ KHÓA CLIENT (BẢO TRÌ)</span>
             ) : (
@@ -181,7 +182,7 @@ export function AiEngineManagementPage() {
                 </>
               ) : (
                 <>
-                  <span>🔄</span> Huấn luyện lại AI (Re-train thủ công)
+                  <span><Icon name="reset" size={14} /></span> Huấn luyện lại AI (Re-train thủ công)
                 </>
               )}
             </button>
@@ -221,7 +222,7 @@ export function AiEngineManagementPage() {
               <div key={st.code || stepNum} className={`ai-step-card ${cardStatusClass}`}>
                 <div className="ai-step-card-top">
                   <div className="ai-step-badge">
-                    {isCompleted ? "✓" : stepNum}
+                    {isCompleted ? "" : stepNum}
                   </div>
                   <span className="ai-step-status-tag">
                     {isCompleted ? "ĐÃ HOÀN TẤT" : isRunning ? "ĐANG THỰC HIỆN" : "CHỜ"}
@@ -254,7 +255,7 @@ export function AiEngineManagementPage() {
       <div className="ai-simulator-panel">
         <div className="ai-simulator-header">
           <div>
-            <h3>Công cụ Kiểm thử Quyết định AI (Quick Policy Simulator)</h3>
+            <h3>Kiểm thử nhanh quyết định AI</h3>
             <p>
               Nhập nội dung yêu cầu mẫu để xem AI diễn giải, phân loại rủi ro và áp dụng quy định <strong>{activeVersion}</strong>.
             </p>
@@ -292,7 +293,7 @@ export function AiEngineManagementPage() {
               <div className="simulator-result-card">
                 <div className="result-header">
                   <span className={`result-tag ${testResult.decision === "auto_approve" ? "tag-auto" : "tag-review"}`}>
-                    {testResult.decision === "auto_approve" ? "✓ ĐỦ ĐIỀU KIỆN TỰ DUYỆT" : "⚠ CHUYỂN NGƯỜI DUYỆT"}
+                    {testResult.decision === "auto_approve" ? "ĐỦ ĐIỀU KIỆN TỰ DUYỆT" : "CHUYỂN NGƯỜI DUYỆT"}
                   </span>
                   <span className="result-time">{testResult.testedAt}</span>
                 </div>

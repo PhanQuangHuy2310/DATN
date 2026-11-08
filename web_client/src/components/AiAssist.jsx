@@ -93,7 +93,7 @@ export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSugg
         <div className="ai-progress" aria-live="polite">
           {[["classify", "Phân loại nội dung"], ["risk", "Đánh giá rủi ro"]].map(([key, title]) => (
             <div className={`ai-progress-step ${steps[key]}`} key={key}>
-              <span aria-hidden="true">{steps[key] === "done" ? "✓" : ["error", "fallback"].includes(steps[key]) ? "!" : "◌"}</span>
+              <span aria-hidden="true">{steps[key] === "done" ? "" : ["error", "fallback"].includes(steps[key]) ? "!" : "◌"}</span>
               <span>{title}</span><small>{steps[key] === "done" ? "Hoàn thành" : steps[key] === "error" ? "Không thành công" : steps[key] === "fallback" ? "Dữ liệu dự phòng" : "Đang xử lý…"}</small>
             </div>
           ))}
@@ -185,7 +185,7 @@ export function AiSummary({ request }) {
           {error}
         </p>
       )}
-      {phase !== "idle" && <div className={`ai-progress-step ${phase}`} role="status"><span aria-hidden="true">{phase === "done" ? "✓" : ["error", "fallback"].includes(phase) ? "!" : "◌"}</span> {phase === "running" ? "Dịch vụ AI đang phân tích và tạo tóm tắt…" : phase === "done" ? "Đã hoàn thành tóm tắt" : phase === "fallback" ? "Dịch vụ AI không sẵn sàng — bản dự phòng" : "Tóm tắt chưa thành công"}</div>}
+      {phase !== "idle" && <div className={`ai-progress-step ${phase}`} role="status"><span aria-hidden="true">{phase === "done" ? "" : ["error", "fallback"].includes(phase) ? "!" : "◌"}</span> {phase === "running" ? "Dịch vụ AI đang phân tích và tạo tóm tắt…" : phase === "done" ? "Đã hoàn thành tóm tắt" : phase === "fallback" ? "Dịch vụ AI không sẵn sàng — bản dự phòng" : "Tóm tắt chưa thành công"}</div>}
       {summary && (
         <>
           <p>

@@ -373,7 +373,7 @@ class SlaThesisPolicyTests(SimpleTestCase):
         cursor.fetchone.side_effect = [(assignee,)]
         with patch.dict(os.environ, {"EAS_SLA_ESCALATION_LEVELS": ""}):
             self.assertEqual([r[0] for r in _recipients(cursor, item)], [assignee])
-        cursor.fetchone.side_effect = [(assignee,), (head,)]
+        cursor.fetchone.side_effect = [(assignee,), (head,), ("REQ-1",)]
         with patch.dict(os.environ, {"EAS_SLA_ESCALATION_LEVELS": "1"}):
             self.assertEqual(
                 [r[0] for r in _recipients(cursor, item)], [assignee, head]

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Icon from "./Icon.jsx";
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
 import { PermissionGuard } from "./PermissionGuard.jsx";
@@ -16,21 +17,21 @@ const STAGE_LABELS = {
 const CATEGORY_META = {
   A: {
     badge: "badge-success",
-    color: "#16a34a",
+    color: "var(--eas-ok)",
     sla: "4 giờ",
     summary: "Tự động hóa hoàn toàn / Rủi ro thấp",
     condition: "Trọng số >= 80%, AI đối chiếu quy định tự động, không cần phê duyệt thủ công.",
   },
   B: {
     badge: "badge-primary",
-    color: "#2563eb",
+    color: "var(--eas-signal)",
     sla: "24 giờ",
     summary: "Phê duyệt cấp Phòng ban / Rủi ro trung bình",
     condition: "Trọng số 50 - 79%, Trưởng phòng trực tiếp duyệt, có phân công thực hiện và nghiệm thu.",
   },
   C: {
     badge: "badge-warning",
-    color: "#ea580c",
+    color: "var(--eas-warn)",
     sla: "48 giờ",
     summary: "Phê duyệt Đa cấp & Ban Giám Đốc / Trọng yếu",
     condition: "Trọng số < 50%, Ban Giám Đốc & Hội đồng thẩm định duyệt, quản lý ngân sách / rủi ro cao.",
@@ -250,7 +251,7 @@ export default function RequestWorkflowsPage() {
       <section className="rw-section">
         <div className="rw-section-header">
           <div>
-            <h2 className="rw-section-title">Khu vực 1: Quy trình chuẩn 3 Phân loại lớn (A, B, C)</h2>
+            <h2 className="rw-section-title">Quy trình chuẩn theo 3 phân loại (A, B, C)</h2>
             <p className="rw-section-desc">
               Mỗi phân loại đại diện cho một cấp độ rủi ro và phương thức phê duyệt. Thay đổi tại đây sẽ tự động lan truyền đến tất cả các mẫu yêu cầu thuộc phân loại đó.
             </p>
@@ -325,7 +326,7 @@ export default function RequestWorkflowsPage() {
       <section className="rw-section" style={{ marginTop: 32 }}>
         <div className="rw-section-header">
           <div>
-            <h2 className="rw-section-title">Khu vực 2: Danh sách các Mẫu Yêu cầu (Form Templates)</h2>
+            <h2 className="rw-section-title">Danh sách mẫu yêu cầu</h2>
             <p className="rw-section-desc">
               Quản lý các biểu mẫu yêu cầu, gán phân loại A/B/C, điều chỉnh thanh trượt trọng số tự động hóa và liên kết API tích hợp.
             </p>
@@ -388,7 +389,7 @@ export default function RequestWorkflowsPage() {
                   <th>Tên mẫu yêu cầu</th>
                   <th>Loại nghiệp vụ</th>
                   <th style={{ minWidth: 170 }}>Thuộc phân loại</th>
-                  <th style={{ minWidth: 200 }}>Trọng số (Weight)</th>
+                  <th style={{ minWidth: 200 }}>Trọng số</th>
                   <th>API tích hợp</th>
                   <th>Quy trình hiện tại</th>
                   <th style={{ textAlign: "right" }}>Thao tác</th>
@@ -434,7 +435,7 @@ export default function RequestWorkflowsPage() {
                               <option value="B">Phân loại B (Phòng ban - 24h)</option>
                               <option value="C">Phân loại C (Đa cấp - 48h)</option>
                             </select>
-                            <span className="rw-auto-sync-hint">⚡ Tự động đổi quy trình</span>
+                            <span className="rw-auto-sync-hint"><Icon name="bolt" size={14} /> Tự động đổi quy trình</span>
                           </div>
                         </td>
 
@@ -473,15 +474,15 @@ export default function RequestWorkflowsPage() {
                             <div>
                               <div
                                 className={`rw-api-badge ${tpl.is_api_enabled === false ? "rw-api-badge-disabled" : ""}`}
-                                style={tpl.is_api_enabled === false ? { background: "#FEF2F2", color: "#DC2626", borderColor: "#FECACA" } : {}}
-                                title={tpl.unavailable_notice || `Hệ thống nguồn: ${tpl.api_source_system || "Mock"}`}
+                                style={tpl.is_api_enabled === false ? { background: "var(--eas-danger-soft)", color: "var(--eas-danger)", borderColor: "var(--eas-danger-soft)" } : {}}
+                                title={tpl.unavailable_notice || `Hệ thống nguồn: ${tpl.api_source_system || "Dữ liệu mô phỏng"}`}
                               >
-                                <span className={`rw-api-dot ${tpl.is_api_enabled === false ? "dot-disabled" : ""}`} style={tpl.is_api_enabled === false ? { background: "#DC2626" } : {}} />
+                                <span className={`rw-api-dot ${tpl.is_api_enabled === false ? "dot-disabled" : ""}`} style={tpl.is_api_enabled === false ? { background: "var(--eas-danger)" } : {}} />
                                 <span className="rw-api-text">{tpl.api_name} {tpl.is_api_enabled === false ? "(Đã ngắt kết nối)" : ""}</span>
                               </div>
                               {tpl.is_api_enabled === false && (
-                                <div className="rw-api-disabled-warning" style={{ fontSize: 11, color: "#DC2626", marginTop: 4, fontWeight: 600 }}>
-                                  ⚠️ Yêu cầu này hiện không thể sử dụng do kết nối API [{tpl.api_source_system || tpl.api_name}] đang bị tắt
+                                <div className="rw-api-disabled-warning" style={{ fontSize: 11, color: "var(--eas-danger)", marginTop: 4, fontWeight: 600 }}>
+                                  <Icon name="alert" size={14} /> Yêu cầu này hiện không thể sử dụng do kết nối API [{tpl.api_source_system || tpl.api_name}] đang bị tắt
                                 </div>
                               )}
                             </div>
@@ -1063,12 +1064,12 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
                       onChange={(e) => updateField(idx, "type", e.target.value)}
                       className="rw-input rw-flex-1"
                     >
-                      <option value="text">Văn bản (Text)</option>
-                      <option value="number">Số (Number)</option>
-                      <option value="date">Ngày tháng (Date)</option>
-                      <option value="textarea">Văn bản dài (Textarea)</option>
-                      <option value="select">Lựa chọn (Select)</option>
-                      <option value="file">Đính kèm file (File)</option>
+                      <option value="text">Văn bản ngắn</option>
+                      <option value="number">Số</option>
+                      <option value="date">Ngày tháng</option>
+                      <option value="textarea">Văn bản dài</option>
+                      <option value="select">Danh sách lựa chọn</option>
+                      <option value="file">Tệp đính kèm</option>
                     </select>
                     <label className="rw-checkbox-label">
                       <input

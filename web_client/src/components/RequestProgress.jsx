@@ -66,7 +66,7 @@ function Assessment({ item }) {
     <ol className="ai-stage-list">{(item.stages || []).map((stage) => {
       const [label, tone] = AI_STATUS[stage.status] || [stage.status, "skipped"];
       return <li key={stage.key} className={`ai-progress-step ${tone}`}>
-        <span aria-hidden="true">{tone === "done" ? "✓" : tone === "fallback" ? "!" : "◌"}</span>
+        <span aria-hidden="true">{tone === "done" ? "" : tone === "fallback" ? "!" : "◌"}</span>
         <span>{AI_STAGES[stage.key] || stage.key}</span><small>{label}</small>
         {stageDetail(stage) && <p className="muted ai-stage-detail">{stageDetail(stage)}</p>}
       </li>;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Icon from "./Icon.jsx";
 import { api } from "../api.js";
 import { date, statuses, types } from "../domain.js";
 import { ActionForm, Badge, Modal, Reason, ResourceState, command, useResource } from "./ui.jsx";
@@ -16,6 +17,24 @@ const localDay = (value) => new Date(value).toLocaleDateString("en-CA", { timeZo
 const STAGE = { APPROVAL: "Phê duyệt", EXECUTION: "Thực hiện", ACCEPTANCE: "Nghiệm thu" };
 const EVENT_TYPES = { APPROVAL_REQUESTED: "Yêu cầu phê duyệt", EXECUTION_READY: "Sẵn sàng thực hiện", SLA_REMINDER: "Nhắc hạn xử lý", SLA_BREACH: "Quá hạn xử lý", REQUEST_UPDATED: "Cập nhật hồ sơ" };
 const OUTBOX_STATES = { PENDING: "Đang chờ gửi", PROCESSING: "Đang gửi", SENT: "Đã gửi", DEAD: "Gửi thất bại" };
+
+// Health rows: a missing field means "no data yet", never a failure or a NaN.
+function aiRow(diagnostics) {
+  const ai = diagnostics.data?.ai_service;
+  if (!diagnostics.data) return ["Dịch vụ AI", "", "Đang kiểm tra…"];
+  if (typeof ai?.healthy !== "boolean") return ["Dịch vụ AI", "", "Chưa có dữ liệu"];
+  return ["Dịch vụ AI", ai.healthy ? "ok" : "warn", ai.healthy ? "Đang phản hồi" : "Không phản hồi — AI dùng chế độ dự phòng"];
+}
+function workerRow(diagnostics) {
+  const name = "Hàng đợi thông báo (worker)";
+  if (!diagnostics.data) return [name, "", "Đang kiểm tra…"];
+  const ok = diagnostics.data.worker?.backlog_ok;
+  if (typeof ok !== "boolean") return [name, "", "Chưa có dữ liệu"];
+  if (ok) return [name, "ok", "Không có tồn đọng quá hạn"];
+  const seconds = diagnostics.data.outbox?.oldest_pending_seconds;
+  const wait = Number.isFinite(seconds) ? ` ${Math.round(seconds / 60)} phút` : "";
+  return [name, "bad", `Có thông báo tồn đọng${wait} — kiểm tra worker`];
+}
 
 const shortDate = (value) => new Date(value).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh" });
 
@@ -47,8 +66,8 @@ function HealthList({ diagnostics, ready }) {
     ["Máy chủ ứng dụng (API)", ready.error ? "bad" : ready.data?.status === "ready" ? "ok" : "warn", ready.error ? "Không kết nối được" : ready.data?.status === "ready" ? "Sẵn sàng" : "Cần kiểm tra"],
     ["Cơ sở dữ liệu", ready.loading || ready.error || typeof checks.database !== "boolean" ? "warn" : checks.database ? "ok" : "bad", ready.loading ? "Đang kiểm tra…" : ready.error || typeof checks.database !== "boolean" ? "Chưa xác minh được" : checks.database ? "Kết nối bình thường" : "Mất kết nối"],
     ["Bộ nhớ đệm bảo mật", checks.shared_security_cache ? "ok" : "warn", checks.shared_security_cache ? "Bình thường" : "Không khả dụng"],
-    ["Dịch vụ AI", diagnostics.data ? (diagnostics.data.ai_service.healthy ? "ok" : "warn") : "", diagnostics.data ? (diagnostics.data.ai_service.healthy ? "Đang phản hồi" : "Không phản hồi — AI dùng chế độ dự phòng") : "Đang kiểm tra…"],
-    ["Hàng đợi thông báo (worker)", diagnostics.data ? (diagnostics.data.worker.backlog_ok ? "ok" : "bad") : "", diagnostics.data ? (diagnostics.data.worker.backlog_ok ? "Không có tồn đọng quá hạn" : `Tồn đọng ${Math.round(diagnostics.data.outbox.oldest_pending_seconds / 60)} phút — kiểm tra worker`) : "Đang kiểm tra…"],
+    aiRow(diagnostics),
+    workerRow(diagnostics),
   ];
   return <ul className="ds-health-list">{rows.map(([name, tone, text]) => <li key={name}><span>{name}</span><span><i className={`ds-dot ${tone}`} aria-hidden="true" />{text}</span></li>)}</ul>;
 }
@@ -196,7 +215,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
         <div className="admin-kpi-card card-total">
           <div className="kpi-top">
             <span className="kpi-title">Tổng yêu cầu phát sinh</span>
-            <div className="kpi-icon-wrap icon-blue">📋</div>
+            <div className="kpi-icon-wrap icon-blue"><Icon name="file" size={14} /></div>
           </div>
           <div className="kpi-value">{kpis.total_requests}</div>
           <div className="kpi-detail">
@@ -207,7 +226,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
         <div className="admin-kpi-card card-success">
           <div className="kpi-top">
             <span className="kpi-title">Thành công (Đã duyệt / Xong)</span>
-            <div className="kpi-icon-wrap icon-green">✅</div>
+            <div className="kpi-icon-wrap icon-green"><Icon name="check" size={16} /></div>
           </div>
           <div className="kpi-value text-success">{kpis.success_count}</div>
           <div className="kpi-detail">
@@ -220,8 +239,8 @@ export function AdminDashboard({ navigate, workspace = false }) {
 
         <div className="admin-kpi-card card-danger">
           <div className="kpi-top">
-            <span className="kpi-title">Bị từ chối (Rejected)</span>
-            <div className="kpi-icon-wrap icon-red">❌</div>
+            <span className="kpi-title">Bị từ chối</span>
+            <div className="kpi-icon-wrap icon-red"><Icon name="x" size={16} /></div>
           </div>
           <div className="kpi-value text-danger">{kpis.rejected_count}</div>
           <div className="kpi-detail">
@@ -235,7 +254,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
         <div className="admin-kpi-card card-warning">
           <div className="kpi-top">
             <span className="kpi-title">Đang xử lý</span>
-            <div className="kpi-icon-wrap icon-amber">⏳</div>
+            <div className="kpi-icon-wrap icon-amber"><Icon name="hourglass" size={16} /></div>
           </div>
           <div className="kpi-value text-amber">{kpis.processing_count}</div>
           <div className="kpi-detail">
@@ -437,7 +456,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
                         <strong>{d.department_name}</strong>
                       </td>
                       <td style={{ textAlign: "right" }}>{d.total}</td>
-                      <td style={{ textAlign: "right", color: "#16a34a" }}>{d.success}</td>
+                      <td style={{ textAlign: "right", color: "var(--eas-ok)" }}>{d.success}</td>
                       <td style={{ textAlign: "right" }}>
                         <span className="badge-pct">{d.percentage}%</span>
                       </td>
@@ -493,7 +512,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
                       <td style={{ textAlign: "right" }}>
                         <strong>{u.total}</strong>
                       </td>
-                      <td style={{ textAlign: "right", color: "#16a34a" }}>
+                      <td style={{ textAlign: "right", color: "var(--eas-ok)" }}>
                         <strong>{u.success}</strong>
                       </td>
                     </tr>
@@ -616,15 +635,15 @@ export function SlaNotificationsPage({ navigate }) {
       action={<button type="button" className="secondary" onClick={diag.reload}>Làm mới</button>} />
     <ResourceState resource={diag}>{d && <>
       <div className="ds-stat-grid" style={{ marginBottom: 16 }}>
-        <StatCard title="Bước đang tính hạn" value={d.sla.open_stages} detail="Phê duyệt, thực hiện, nghiệm thu" />
-        <StatCard title="Đã quá hạn" value={d.sla.overdue_stages} tone={d.sla.overdue_stages ? "danger" : undefined} detail="Cần xử lý hoặc điều chuyển" />
-        <StatCard title="Nhắc hạn 24 giờ qua" value={d.sla.alerts_24h.REMINDER || 0} detail={`Báo quá hạn: ${d.sla.alerts_24h.BREACH || 0}`} />
+        <StatCard title="Bước đang tính hạn" value={d.sla?.open_stages} detail="Phê duyệt, thực hiện, nghiệm thu" />
+        <StatCard title="Đã quá hạn" value={d.sla?.overdue_stages} tone={d.sla?.overdue_stages ? "danger" : undefined} detail="Cần xử lý hoặc điều chuyển" />
+        <StatCard title="Nhắc hạn 24 giờ qua" value={d.sla?.alerts_24h?.REMINDER || 0} detail={`Báo quá hạn: ${d.sla?.alerts_24h?.BREACH || 0}`} />
         <StatCard title="Thông báo gửi lỗi" value={counts.DEAD || 0} tone={counts.DEAD ? "danger" : undefined} detail="Cần gửi lại thủ công" />
       </div>
       <div className="ds-grid-2">
         <section className="panel"><h2>Hàng đợi thông báo</h2>
           <ul className="ds-health-list">{Object.entries(OUTBOX_STATES).map(([k, v]) => <li key={k}><span>{v}</span><strong>{counts[k] || 0}</strong></li>)}</ul>
-          <p className="muted">Lần gửi gần nhất: {d.outbox.last_sent_at ? date(d.outbox.last_sent_at) : "chưa có"}. {d.worker.backlog_ok ? "Không có thông báo tồn đọng quá 5 phút." : `Có thông báo chờ quá ${Math.round(d.outbox.oldest_pending_seconds / 60)} phút — kiểm tra worker (start_worker_local.cmd).`}</p>
+          <p className="muted">Lần gửi gần nhất: {d.outbox?.last_sent_at ? date(d.outbox?.last_sent_at) : "chưa có"}. {workerRow({ data: d })[2]}.</p>
         </section>
         <section className="panel"><h2>Quá hạn cần xử lý</h2>
           <p className="muted">Danh sách chi tiết người đang xử lý và hạn nằm ở trang vận hành.</p>
@@ -632,8 +651,8 @@ export function SlaNotificationsPage({ navigate }) {
         </section>
       </div>
       <section className="panel" style={{ marginTop: 16 }}><h2>Thông báo gửi thất bại</h2>
-        {d.outbox.dead_events.length ? <div className="table-wrap"><table><thead><tr><th>Loại thông báo</th><th>Hồ sơ</th><th>Số lần thử</th><th>Mã lỗi</th><th>Thời điểm</th><th></th></tr></thead>
-          <tbody>{d.outbox.dead_events.map((e) => <tr key={e.id}><td>{EVENT_TYPES[e.event_type] || "Thông báo hệ thống"}</td><td>{e.request_code || "—"}</td><td>{e.attempts}{e.replay_count ? ` (đã gửi lại ${e.replay_count})` : ""}</td><td>{e.last_error_code || "—"}</td><td>{date(e.created_at)}</td>
+        {d.outbox?.dead_events?.length ? <div className="table-wrap"><table><thead><tr><th>Loại thông báo</th><th>Hồ sơ</th><th>Số lần thử</th><th>Mã lỗi</th><th>Thời điểm</th><th></th></tr></thead>
+          <tbody>{(d.outbox?.dead_events || []).map((e) => <tr key={e.id}><td>{EVENT_TYPES[e.event_type] || "Thông báo hệ thống"}</td><td>{e.request_code || "—"}</td><td>{e.attempts}{e.replay_count ? ` (đã gửi lại ${e.replay_count})` : ""}</td><td>{e.last_error_code || "—"}</td><td>{date(e.created_at)}</td>
             <td><button type="button" className="secondary" onClick={() => setReplay(e)}>Gửi lại</button></td></tr>)}</tbody></table></div>
           : <EmptyState title="Không có thông báo gửi lỗi" description="Mọi thông báo đã được worker xử lý." />}
       </section>
