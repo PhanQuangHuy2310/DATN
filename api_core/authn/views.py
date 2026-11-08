@@ -656,6 +656,12 @@ def _is_valid_uuid(val: Any) -> bool:
 JOB_TITLES = (
     ("OPS_ADMIN", "Quản trị hệ thống"),
     ("POLICY_ADMIN", "Quản trị chính sách"),
+    ("DIRECTOR", "Giám đốc"),
+    ("VICE_DIRECTOR", "Phó giám đốc"),
+    ("MANAGER", "Trưởng phòng"),
+    ("TEAM_LEAD", "Trưởng nhóm"),
+    ("STAFF", "Nhân viên"),
+    ("AUDITOR", "Kiểm toán viên"),
     ("APPROVER", "Người phê duyệt"),
     ("EXECUTOR", "Người thực hiện"),
 )
@@ -723,7 +729,11 @@ def _get_actor_permissions(actor: Any) -> dict[str, Any]:
     actor_roles = getattr(actor, "roles", frozenset())
     is_admin = bool({"OPS_ADMIN", "POLICY_ADMIN", "ADMIN"}.intersection(actor_roles))
     is_auditor = "AUDITOR" in actor_roles
-    is_manager = bool({"APPROVER", "MANAGER"}.intersection(actor_roles))
+    is_manager = bool(
+        {"APPROVER", "TEAM_LEAD", "MANAGER", "VICE_DIRECTOR", "DIRECTOR"}.intersection(
+            actor_roles
+        )
+    )
 
     STANDARD_MODULES = [
         (

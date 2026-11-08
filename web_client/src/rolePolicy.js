@@ -2,6 +2,11 @@
  * Authorization always remains enforced on the Django API with role + scope + SoD.
  */
 export const ROLE_NAVIGATION = Object.freeze({
+  STAFF: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "execution", "acceptance", "notifications", "profile"],
+  TEAM_LEAD: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  MANAGER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  VICE_DIRECTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  DIRECTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
   REQUESTER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "notifications", "profile"],
   APPROVER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "approval", "team", "team-employees", "notifications", "profile"],
   EXECUTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],

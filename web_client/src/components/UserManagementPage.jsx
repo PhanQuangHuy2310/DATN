@@ -15,6 +15,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
   // Search & filters
   const [searchTerm, setSearchTerm] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -158,6 +159,9 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       if (deptFilter && u.department_id !== deptFilter) {
         return false;
       }
+      if (roleFilter && u.role_code !== roleFilter && !(u.roles || []).includes(roleFilter)) {
+        return false;
+      }
       if (statusFilter) {
         if (statusFilter === "INACTIVE" && u.is_active) return false;
         if (statusFilter !== "INACTIVE") {
@@ -167,7 +171,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       }
       return true;
     });
-  }, [usersRes.data, searchTerm, deptFilter, statusFilter]);
+  }, [usersRes.data, searchTerm, deptFilter, roleFilter, statusFilter]);
 
   // Overall status counts
   const summaryCounts = useMemo(() => {
@@ -227,11 +231,11 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                 setUserFormData({
                   full_name: "",
                   email: "",
-                  job_title: "Chuyên viên",
-                  role_id: "REQUESTER",
+                  job_title: "Nhân viên",
+                  role_id: "STAFF",
                   department_id: deptsRes.data?.items?.[0]?.id || "",
                   manager_id: "",
-                  password: "User@123456",
+                  password: "Password@123456",
                 });
                 setEditUserModal({});
               }}
@@ -285,6 +289,19 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
         </div>
 
         <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="filter-select"
+        >
+          <option value="">— Tất cả chức vụ (5 cấp) —</option>
+          {(rolesRes.data?.items || []).map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name} ({r.code})
+            </option>
+          ))}
+        </select>
+
+        <select
           value={deptFilter}
           onChange={(e) => setDeptFilter(e.target.value)}
           className="filter-select"
@@ -310,12 +327,13 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
           <option value="INACTIVE">🔴 Bị khóa</option>
         </select>
 
-        {(searchTerm || deptFilter || statusFilter) && (
+        {(searchTerm || roleFilter || deptFilter || statusFilter) && (
           <button
             type="button"
             className="secondary text-btn"
             onClick={() => {
               setSearchTerm("");
+              setRoleFilter("");
               setDeptFilter("");
               setStatusFilter("");
             }}
@@ -327,12 +345,20 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
 
       {/* Main Table */}
       <ResourceState resource={usersRes}>
-        <div className="table-wrap">
+        <div className="um-table-card">
           <table className="user-management-table">
+            <colgroup>
+              <col style={{ width: "27%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "12%" }} />
+            </colgroup>
             <thead>
               <tr>
                 <th>Nhân viên</th>
-                <th>Chức danh / Vai trò</th>
+                <th>Chức vụ</th>
                 <th>Phòng ban</th>
                 <th>Trạng thái làm việc</th>
                 <th style={{ textAlign: "center" }}>Hồ sơ tham gia</th>
@@ -374,11 +400,13 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                         </div>
                       </td>
 
-                      {/* Job Title / Role */}
+                      {/* Position / Chức vụ */}
                       <td>
                         <div className="role-badge-cell">
-                          <span className="badge badge-role">{u.role_name || u.role_code}</span>
-                          <div className="job-title-sub">{u.job_title || "Nhân viên"}</div>
+                          <span className={`badge badge-role role-pos-${(u.role_code || "staff").toLowerCase()}`}>
+                            {u.role_name || u.job_title || "Nhân viên"}
+                          </span>
+                          <code className="role-code-sub">{u.role_code || "STAFF"}</code>
                         </div>
                       </td>
 
@@ -780,14 +808,14 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="usermanagementpage-field-770">Chức vụ (Vai trò RBAC) *</label>
+                  <label htmlFor="usermanagementpage-field-770">Chức vụ *</label>
                   <select id="usermanagementpage-field-770"
                     required
                     value={userFormData.role_id}
                     onChange={(e) => setUserFormData({ ...userFormData, role_id: e.target.value })}
                     className="input-select"
                   >
-                    <option value="">— Chọn vai trò —</option>
+                    <option value="">— Chọn chức vụ —</option>
                     {(rolesRes.data?.items || []).filter((r) => r.assignable).map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name} ({r.code})

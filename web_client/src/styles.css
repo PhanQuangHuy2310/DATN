@@ -410,11 +410,12 @@ a {
   overflow: hidden;
 }
 .table-wrap {
-  overflow: auto;
+  width: 100%;
+  overflow-x: visible;
 }
 table {
   border-collapse: collapse;
-  white-space: nowrap;
+  white-space: normal;
   text-align: left;
   width: 100%;
 }

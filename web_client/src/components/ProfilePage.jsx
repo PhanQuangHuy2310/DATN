@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api.js";
-import { getPrimaryRoleBadge, roles } from "../domain.js";
+import { getPrimaryRoleBadge, POSITION_CODES, roles } from "../domain.js";
 import { PageHeader } from "./design.jsx";
 import { ActionForm } from "./ui.jsx";
 import { PasswordField } from "./ux.jsx";
@@ -56,16 +56,21 @@ export function Profile({ user, onChanged }) {
             </div>
             <div className="ds-profile-hero-text">
               <h2>{user.display_name || "Nhân sự hệ thống"}</h2>
-              <p className="muted">{user.job_title || roleBadge.name}</p>
+              <p className="muted">Chức vụ: <strong>{user.job_title || roleBadge.name}</strong></p>
               <div className="ds-profile-badges">
                 <span className={`working-status-badge ws-${wsCode}`}>
                   {wsLabel}
                 </span>
-                {(user.roles || []).map((r) => (
-                  <span key={r} className="ds-role-chip">
-                    {roles[r] || r}
-                  </span>
-                ))}
+                <span className="ds-role-chip ds-position-chip">
+                  {user.job_title || roleBadge.name}
+                </span>
+                {(user.roles || [])
+                  .filter((r) => !POSITION_CODES.includes(r))
+                  .map((r) => (
+                    <span key={r} className="ds-role-chip">
+                      {roles[r] || r}
+                    </span>
+                  ))}
               </div>
             </div>
           </div>

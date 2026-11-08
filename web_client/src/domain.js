@@ -169,6 +169,11 @@ Object.assign(types, catalogTypeNames);
 Object.assign(typeLevels, catalogTypeLevels);
 
 export const roles = {
+  STAFF: "Nhân viên",
+  TEAM_LEAD: "Trưởng nhóm",
+  MANAGER: "Trưởng phòng",
+  VICE_DIRECTOR: "Phó giám đốc",
+  DIRECTOR: "Giám đốc",
   REQUESTER: "Người gửi yêu cầu",
   APPROVER: "Người phê duyệt",
   EXECUTOR: "Người thực hiện",
@@ -178,16 +183,29 @@ export const roles = {
   AUDITOR: "Kiểm toán viên",
 };
 
+export const POSITION_CODES = [
+  "DIRECTOR",
+  "VICE_DIRECTOR",
+  "MANAGER",
+  "TEAM_LEAD",
+  "STAFF",
+];
+
 export function getPrimaryRoleBadge(userRoles = []) {
-  if (!userRoles || !userRoles.length) return { name: "Thành viên", tone: "badge-default" };
+  if (!userRoles || !userRoles.length) return { name: "Nhân viên", tone: "badge-default" };
   if (userRoles.includes("OPS_ADMIN")) return { name: "Quản trị vận hành", tone: "badge-admin" };
   if (userRoles.includes("POLICY_ADMIN")) return { name: "Quản trị chính sách", tone: "badge-policy" };
+  if (userRoles.includes("DIRECTOR")) return { name: "Giám đốc", tone: "badge-approver" };
+  if (userRoles.includes("VICE_DIRECTOR")) return { name: "Phó giám đốc", tone: "badge-approver" };
+  if (userRoles.includes("MANAGER")) return { name: "Trưởng phòng", tone: "badge-approver" };
+  if (userRoles.includes("TEAM_LEAD")) return { name: "Trưởng nhóm", tone: "badge-approver" };
+  if (userRoles.includes("STAFF")) return { name: "Nhân viên", tone: "badge-requester" };
   if (userRoles.includes("AUDITOR")) return { name: "Kiểm toán viên", tone: "badge-audit" };
   if (userRoles.includes("APPROVER")) return { name: "Người phê duyệt", tone: "badge-approver" };
   if (userRoles.includes("EXECUTOR")) return { name: "Người thực hiện", tone: "badge-executor" };
   if (userRoles.includes("ACCEPTOR")) return { name: "Người nghiệm thu", tone: "badge-acceptor" };
-  if (userRoles.includes("REQUESTER")) return { name: "Người gửi yêu cầu", tone: "badge-requester" };
-  return { name: "Thành viên", tone: "badge-default" };
+  if (userRoles.includes("REQUESTER")) return { name: "Nhân viên", tone: "badge-requester" };
+  return { name: "Nhân viên", tone: "badge-default" };
 }
 
 export const fields = {

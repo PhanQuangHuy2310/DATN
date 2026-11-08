@@ -37,7 +37,11 @@ test("role union works for multi-role users without duplicates", () => {
 
 test("unknown role cannot gain privileged navigation", () => {
   assert.deepEqual(visiblePages(["SOME_UNKNOWN_ROLE"]), ["home", "notifications", "profile"]);
-  assert.ok(Object.keys(ROLE_NAVIGATION).length === 7);
+  // 7 SRS operational/admin roles + 5 enterprise positions (STAFF, TEAM_LEAD, MANAGER, VICE_DIRECTOR, DIRECTOR)
+  assert.ok(Object.keys(ROLE_NAVIGATION).length === 12);
+  for (const pos of ["STAFF", "TEAM_LEAD", "MANAGER", "VICE_DIRECTOR", "DIRECTOR"]) {
+    assert.ok(canNavigate([pos], "mine"), pos);
+  }
 });
 
 test("UC17 identity console requires an explicit GLOBAL+ALL capability", () => {

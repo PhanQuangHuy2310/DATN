@@ -231,11 +231,11 @@ export default function RolePermissionMatrixPage() {
       {/* TAB 1: ROLE RBAC MATRIX */}
       {activeTab === "role" && (
         <div className="rbac-role-section">
-          {/* Role Selector Tabs */}
+          {/* Position Selector Bar (5 Enterprise Positions) */}
           <div className="role-selector-bar">
-            <span className="role-selector-label">Chọn Chức vụ / Vai trò:</span>
+            <span className="role-selector-label">Chọn Chức vụ doanh nghiệp (5 cấp):</span>
             <div className="role-pill-list">
-              {(rolesRes.data?.items || []).map((r) => {
+              {(rolesRes.data?.items || []).map((r, index) => {
                 const isActive = r.id === roleId;
                 return (
                   <button
@@ -244,13 +244,37 @@ export default function RolePermissionMatrixPage() {
                     className={`role-pill-btn ${isActive ? "active" : ""}`}
                     onClick={() => setSelectedRoleId(r.id)}
                   >
+                    <span className="role-level-index">Cấp {index + 1}</span>
                     <strong>{r.name}</strong>
                     <span className="role-code-tag">{r.code}</span>
+                    {typeof r.member_count === "number" && (
+                      <span className="role-count-tag">{r.member_count} nhân sự</span>
+                    )}
                   </button>
                 );
               })}
             </div>
           </div>
+
+          {/* Selected Position Framed Summary */}
+          {(() => {
+            const activeRoleObj = (rolesRes.data?.items || []).find((r) => r.id === roleId);
+            if (!activeRoleObj) return null;
+            return (
+              <div className="rbac-position-summary-box">
+                <div className="rbac-position-summary-head">
+                  <strong>Chức vụ đang cấu hình: {activeRoleObj.name}</strong>
+                  <code className="rbac-code-chip">{activeRoleObj.code}</code>
+                  {typeof activeRoleObj.member_count === "number" && (
+                    <span className="rbac-member-chip">
+                      Đang áp dụng cho {activeRoleObj.member_count} nhân sự
+                    </span>
+                  )}
+                </div>
+                <p className="rbac-position-summary-desc">{activeRoleObj.description}</p>
+              </div>
+            );
+          })()}
 
           {/* RBAC Info Notice */}
           <div className="rbac-info-box">
@@ -260,11 +284,11 @@ export default function RolePermissionMatrixPage() {
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             <div>
-              <strong>Quy tắc áp dụng phân quyền trực tiếp:</strong>
+              <strong>Quy tắc áp dụng phân quyền trực tiếp theo Chức vụ:</strong>
               <p>
-                - Nếu <strong>Xem (can_view) = TẮT</strong>: Chức năng sẽ bị <strong>ẨN HOÀN TOÀN</strong> khỏi thanh điều hướng Sidebar và chặn truy cập URL.
+                - Nếu <strong>Xem (can_view) = TẮT</strong>: Chức năng sẽ bị <strong>ẨN HOÀN TOÀN</strong> khỏi thanh điều hướng Sidebar và chặn truy cập URL đối với chức vụ này.
                 <br />
-                - Nếu <strong>Xem = BẬT</strong> nhưng <strong>Thêm / Sửa / Xóa = TẮT</strong>: Người dùng xem được dữ liệu nhưng các nút Thêm mới, Sửa hoặc Khóa/Xóa sẽ tự động ẩn khỏi giao diện.
+                - Nếu <strong>Xem = BẬT</strong> nhưng <strong>Thêm / Sửa / Xóa = TẮT</strong>: Người dùng thuộc chức vụ này xem được dữ liệu nhưng các nút Thêm mới, Sửa hoặc Khóa/Xóa sẽ tự động ẩn khỏi giao diện.
               </p>
             </div>
           </div>
@@ -275,30 +299,37 @@ export default function RolePermissionMatrixPage() {
               Đang tải dữ liệu ma trận phân quyền...
             </div>
           ) : (
-            <div className="table-wrap" style={{ marginTop: "1rem" }}>
+            <div className="rbac-table-card">
               <table className="rbac-matrix-table">
+                <colgroup>
+                  <col style={{ width: "36%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ width: "35%" }}>Chức năng hệ thống (Module)</th>
-                    <th style={{ width: "16%", textAlign: "center" }}>
+                    <th>Chức năng hệ thống (Module)</th>
+                    <th style={{ textAlign: "center" }}>
                       <div className="th-toggle-header">
                         <span>XEM</span>
                         <small className="muted">can_view</small>
                       </div>
                     </th>
-                    <th style={{ width: "16%", textAlign: "center" }}>
+                    <th style={{ textAlign: "center" }}>
                       <div className="th-toggle-header">
                         <span>THÊM</span>
                         <small className="muted">can_create</small>
                       </div>
                     </th>
-                    <th style={{ width: "16%", textAlign: "center" }}>
+                    <th style={{ textAlign: "center" }}>
                       <div className="th-toggle-header">
                         <span>SỬA</span>
                         <small className="muted">can_update</small>
                       </div>
                     </th>
-                    <th style={{ width: "16%", textAlign: "center" }}>
+                    <th style={{ textAlign: "center" }}>
                       <div className="th-toggle-header">
                         <span>XÓA / KHÓA</span>
                         <small className="muted">can_delete</small>
@@ -310,7 +341,7 @@ export default function RolePermissionMatrixPage() {
                   {(!matrixData?.modules || matrixData.modules.length === 0) ? (
                     <tr>
                       <td colSpan={5} style={{ textAlign: "center", padding: "3rem" }}>
-                        Chưa có dữ liệu phân quyền cho vai trò này.
+                        Chưa có dữ liệu phân quyền cho chức vụ này.
                       </td>
                     </tr>
                   ) : (
@@ -328,7 +359,7 @@ export default function RolePermissionMatrixPage() {
                             <div className="module-title-cell">
                               <span className="module-order-num">{idx + 1}</span>
                               <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                                   <strong className="module-display-name">{m.name}</strong>
                                   {isLocked && (
                                     <span className="badge badge-locked" style={{ backgroundColor: "#fee2e2", color: "#991b1b", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "4px" }} title="4 chức năng hệ thống bị khóa cứng, chỉ Super Admin mới có quyền truy cập">
@@ -337,7 +368,7 @@ export default function RolePermissionMatrixPage() {
                                   )}
                                 </div>
                                 <div className="module-code-hint">
-                                  <code>{m.code}</code> • {m.description || "Chức năng hệ thống"}
+                                  <code>{m.code}</code> • <span>{m.group_name || m.description || "Chức năng hệ thống"}</span>
                                 </div>
                               </div>
                             </div>
@@ -465,7 +496,7 @@ export default function RolePermissionMatrixPage() {
               Đang tải quyền riêng của nhân viên...
             </div>
           ) : (
-            <div className="table-wrap" style={{ marginTop: "1.5rem" }}>
+            <div className="rbac-table-card" style={{ marginTop: "1.25rem" }}>
               <div className="user-override-summary-badge">
                 <span>Nhân viên: <strong>{userMatrixData?.user?.full_name}</strong></span>
                 <span>Chức vụ gốc: <strong>{userMatrixData?.user?.role_name}</strong></span>
@@ -473,6 +504,13 @@ export default function RolePermissionMatrixPage() {
               </div>
 
               <table className="rbac-matrix-table">
+                <colgroup>
+                  <col style={{ width: "36%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th style={{ width: "35%" }}>Chức năng hệ thống (Module)</th>

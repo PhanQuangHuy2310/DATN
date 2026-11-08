@@ -382,16 +382,25 @@ export default function RequestWorkflowsPage() {
 
         {/* Templates Data Table */}
         <div className="rw-table-card">
-          <div className="table-wrap">
+          <div className="rw-table-wrap">
             <table className="rw-table">
+              <colgroup>
+                <col style={{ width: "21%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "11%" }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Tên mẫu yêu cầu</th>
-                  <th>Loại nghiệp vụ</th>
-                  <th style={{ minWidth: 170 }}>Thuộc phân loại</th>
-                  <th style={{ minWidth: 200 }}>Trọng số (Weight)</th>
+                  <th>Nghiệp vụ</th>
+                  <th>Thuộc phân loại</th>
+                  <th>Trọng số tự động</th>
                   <th>API tích hợp</th>
-                  <th>Quy trình hiện tại</th>
+                  <th>Quy trình</th>
                   <th style={{ textAlign: "right" }}>Thao tác</th>
                 </tr>
               </thead>
@@ -431,9 +440,9 @@ export default function RequestWorkflowsPage() {
                               className={`rw-cat-select rw-cat-select-${tpl.category_code.toLowerCase()}`}
                               title="Thay đổi phân loại sẽ tự động cập nhật lại các bước quy trình"
                             >
-                              <option value="A">Phân loại A (Tự động - 4h)</option>
-                              <option value="B">Phân loại B (Phòng ban - 24h)</option>
-                              <option value="C">Phân loại C (Đa cấp - 48h)</option>
+                              <option value="A">Loại A · Tự động</option>
+                              <option value="B">Loại B · Phòng ban</option>
+                              <option value="C">Loại C · Đa cấp</option>
                             </select>
                             <span className="rw-auto-sync-hint">⚡ Tự động đổi quy trình</span>
                           </div>
@@ -499,10 +508,10 @@ export default function RequestWorkflowsPage() {
                             onClick={() => setViewingWorkflow(tpl)}
                             title="Xem chi tiết các bước quy trình"
                           >
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2">
                               <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
-                            <span>{stepsCount} bước (Nhóm {tpl.category_code})</span>
+                            <span>{stepsCount} bước · {tpl.category_code}</span>
                           </button>
                         </td>
 

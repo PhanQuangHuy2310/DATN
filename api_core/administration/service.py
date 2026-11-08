@@ -27,6 +27,11 @@ from api_core.workflow.service import (
 REQUEST_TYPE_CATEGORIES = set(CATALOG_V2_GROUPS)
 
 ROLES = {
+    "STAFF",
+    "TEAM_LEAD",
+    "MANAGER",
+    "VICE_DIRECTOR",
+    "DIRECTOR",
     "REQUESTER",
     "APPROVER",
     "EXECUTOR",
