@@ -206,6 +206,7 @@ EAS_CLAMAV_PORT = int(os.getenv("EAS_CLAMAV_PORT", "3310"))
 EAS_REQUIRE_STORAGE = os.getenv("EAS_REQUIRE_STORAGE", "true").lower() == "true"
 SESSION_COOKIE_SECURE = ENVIRONMENT == "production"
 CSRF_COOKIE_SECURE = ENVIRONMENT == "production"
+CSRF_FAILURE_VIEW = "api_core.http.csrf_failure"
 SECURE_SSL_REDIRECT = (
     ENVIRONMENT == "production"
     and os.getenv("EAS_SSL_REDIRECT", "true").lower() == "true"
@@ -233,13 +234,18 @@ if ENVIRONMENT in {"development", "test"}:
         "http://127.0.0.1:8000",
         "http://localhost:8080",
         "http://127.0.0.1:8080",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
         "http://localhost:8088",
         "http://127.0.0.1:8088",
     ]
     for origin in local_origins:
         if origin not in CSRF_TRUSTED_ORIGINS:
             CSRF_TRUSTED_ORIGINS.append(origin)
-if os.getenv("EAS_TRUST_PROXY_HEADERS", "false").lower() == "true":
+if (
+    ENVIRONMENT != "test"
+    and os.getenv("EAS_TRUST_PROXY_HEADERS", "false").lower() == "true"
+):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 EAS_RELEASE = os.getenv("EAS_RELEASE", "dev")

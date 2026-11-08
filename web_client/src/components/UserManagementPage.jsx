@@ -43,6 +43,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
     job_title: "",
     role_id: "",
     department_id: "",
+    manager_id: "",
     password: "",
   });
   const [userSubmitting, setUserSubmitting] = useState(false);
@@ -227,8 +228,9 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                   full_name: "",
                   email: "",
                   job_title: "Chuyên viên",
-                  role_id: rolesRes.data?.items?.[2]?.id || "",
+                  role_id: "REQUESTER",
                   department_id: deptsRes.data?.items?.[0]?.id || "",
+                  manager_id: "",
                   password: "User@123456",
                 });
                 setEditUserModal({});
@@ -466,6 +468,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                                   job_title: u.job_title || "",
                                   role_id: u.role_id || "",
                                   department_id: u.department_id || "",
+                                  manager_id: u.manager_id || "",
                                   password: "",
                                 });
                                 setEditUserModal(u);
@@ -785,7 +788,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                     className="input-select"
                   >
                     <option value="">— Chọn vai trò —</option>
-                    {(rolesRes.data?.items || []).map((r) => (
+                    {(rolesRes.data?.items || []).filter((r) => r.assignable).map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name} ({r.code})
                       </option>
@@ -808,6 +811,27 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                       {d.name} ({d.code})
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginTop: "0.75rem" }}>
+                <label htmlFor="usermanagementpage-field-manager">Người quản lý trực tiếp</label>
+                <select id="usermanagementpage-field-manager"
+                  value={userFormData.manager_id}
+                  onChange={(e) => setUserFormData({ ...userFormData, manager_id: e.target.value })}
+                  className="input-select"
+                >
+                  <option value="">
+                    {isNewUser ? "— Tự động: trưởng phòng ban —" : "— Không có (cấp cao nhất) —"}
+                  </option>
+                  {(usersRes.data?.items || [])
+                    .filter((m) => m.is_active && m.id !== editUserModal?.id)
+                    .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || "", "vi"))
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} — {m.department_name}
+                      </option>
+                    ))}
                 </select>
               </div>
 

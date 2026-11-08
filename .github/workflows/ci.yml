@@ -74,6 +74,8 @@ jobs:
       - working-directory: web_client
         run: npm run lint
       - working-directory: web_client
+        run: npm test
+      - working-directory: web_client
         run: npm run build
       - working-directory: web_admin
         run: npm ci --ignore-scripts
@@ -83,6 +85,10 @@ jobs:
         run: npm run build
       - name: Employee bundle excludes admin screens
         run: python3 scripts/check_client_bundle.py
+      - working-directory: web_client
+        run: npx playwright install --with-deps chromium
+      - working-directory: web_client
+        run: npx playwright test
 
   ocr-smoke:
     # Real PaddleOCR on synthetic Vietnamese invoices (tests/ocr_smoke):
@@ -134,3 +140,17 @@ jobs:
         with:
           python-version: "3.12"
       - run: python scripts/validate_docs.py
+
+  mobile:
+    # Static analysis of the Flutter app (same SDK as local development).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: stable
+      - working-directory: mobile_app
+        run: flutter pub get
+      - working-directory: mobile_app
+        run: flutter analyze

@@ -143,13 +143,37 @@ def _establish_user_session(request: HttpRequest, user) -> None:
     )
 
 
+def _resolve_request_portal(
+    request: HttpRequest, body_portal: str | None = None
+) -> str | None:
+    """Resolve portal ('admin' or 'client') from explicit header/body or Origin/Referer/Host."""
+    explicit = (
+        (request.headers.get("X-EAS-Portal") or body_portal or "").strip().lower()
+    )
+    if explicit in {"admin", "client"}:
+        return explicit
+    candidates = (
+        request.headers.get("Origin") or "",
+        request.headers.get("Referer") or "",
+        request.headers.get("Host") or "",
+        request.META.get("HTTP_HOST") or "",
+    )
+    for raw in candidates:
+        lowered = raw.lower()
+        if ":8081" in lowered or ":5174" in lowered:
+            return "admin"
+        if ":8080" in lowered or ":5173" in lowered:
+            return "client"
+    return None
+
+
 @require_POST
 def login(request: HttpRequest) -> JsonResponse:
     parsed = _parse_credentials(request)
     if isinstance(parsed, JsonResponse):
         return parsed
     email, password, portal_body = parsed
-    portal = request.headers.get("X-EAS-Portal") or portal_body
+    portal = _resolve_request_portal(request, portal_body)
     if portal == "admin" and email != "admin@eas.com":
         return api_error(
             request,
@@ -157,7 +181,7 @@ def login(request: HttpRequest) -> JsonResponse:
             status=403,
             fields={
                 "portal": [
-                    "Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị (8081). Vui lòng đăng nhập tại Cổng Nhân viên (8080)."
+                    "Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị. Vui lòng đăng nhập tại Cổng Nhân viên."
                 ]
             },
         )
@@ -168,7 +192,7 @@ def login(request: HttpRequest) -> JsonResponse:
             status=403,
             fields={
                 "portal": [
-                    "Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081)."
+                    "Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên. Vui lòng sử dụng Cổng Quản trị."
                 ]
             },
         )
@@ -278,7 +302,10 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
     email = _normalized_login_email(body.get("email"))
     if email is None:
         return api_error(request, "INVALID_EMAIL", status=400)
-    if not settings.EMAIL_HOST or not settings.DEFAULT_FROM_EMAIL:
+    smtp_configured = bool(settings.EMAIL_HOST and settings.DEFAULT_FROM_EMAIL)
+    if not smtp_configured and getattr(
+        settings, "EAS_REQUIRE_EMAIL_DELIVERY", settings.ENVIRONMENT == "test"
+    ):
         return api_error(request, "EMAIL_DELIVERY_UNAVAILABLE", status=503)
 
     throttle_key = _password_reset_request_key(email)
@@ -380,6 +407,26 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
                     },
                     status=202,
                 )
+        if not smtp_configured:
+            logger.info(
+                "password_reset_queued_without_smtp",
+                extra={
+                    "correlation_id": correlation_id(request),
+                    "request_id": request_id,
+                },
+            )
+            return JsonResponse(
+                {
+                    "status": "accepted",
+                    "delivery": "admin_queue",
+                    "message": (
+                        "Yêu cầu đặt lại mật khẩu đã được ghi nhận vào hàng đợi quản trị. "
+                        "Do hệ thống chưa cấu hình máy chủ gửi thư (SMTP), vui lòng liên hệ "
+                        "Quản trị viên hệ thống để được xác minh và cấp mật khẩu tạm thời."
+                    ),
+                },
+                status=202,
+            )
         try:
             send_mail(
                 subject="Yêu cầu xác nhận đặt lại mật khẩu EAS",
@@ -849,6 +896,21 @@ def me(request: HttpRequest) -> JsonResponse:
     actor = request.actor
     m_info = get_maintenance_info()
     is_admin = is_admin_actor(actor)
+    portal = _resolve_request_portal(request)
+    if portal == "admin" and actor.email != "admin@eas.com" and not is_admin:
+        return api_error(
+            request,
+            "ACCESS_DENIED",
+            status=403,
+            message="Tài khoản nhân viên không được phép truy cập Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).",
+        )
+    if portal == "client" and actor.email == "admin@eas.com":
+        return api_error(
+            request,
+            "ACCESS_DENIED",
+            status=403,
+            message="Tài khoản Quản trị viên không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).",
+        )
 
     # UC17 can only be operated by GLOBAL / ALL OPS membership; mere
     # OPS_ADMIN membership is not enough. Backend administration APIs still

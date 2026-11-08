@@ -33,6 +33,7 @@ coverage/
 *.sqlite3
 staticfiles/
 media/
+.local_storage/
 
 # IDE and OS
 .idea/

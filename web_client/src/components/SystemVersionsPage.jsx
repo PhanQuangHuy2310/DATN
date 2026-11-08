@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { errorText } from "../domain.js";
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -45,7 +46,7 @@ export function SystemVersionsPage() {
       const res = await api(url);
       setData(res);
     } catch (err) {
-      if (!silent) showToast("Không thể tải nhật ký phiên bản: " + (err.message || ""), "error");
+      if (!silent) showToast("Không thể tải nhật ký phiên bản: " + errorText(err), "error");
     } finally {
       if (!silent) setLoading(false);
     }

@@ -71,7 +71,7 @@ test('each portal renders in its own mode, never the unrestricted "unified" fall
 });
 test('administrative accounts stay system-only on the client portal', () => {
  const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
- assert.match(app,/portal === "client" && user\.roles\?\.some\(\(role\) => ADMIN_ROLES\.includes\(role\)\)/);
+ assert.match(app,/portal === "client" && \(user\.email === "admin@eas\.com" \|\| !canUsePortal\(user\.roles, "client"\)\)/);
 });
 test('admin overview shows API data, not hardcoded head counts', () => {
  const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
@@ -99,4 +99,17 @@ test('AI assist suggests another form but never switches it on its own', () => {
  assert.doesNotMatch(classifyHandler,/onSuggestType/);
  assert.match(ai,/Chuyển sang biểu mẫu này/);
  assert.doesNotMatch(ai,/type === "EQUIPMENT" \? 3 : 2/);
+});
+test('user form lets admins set the direct manager, excluding the edited user', () => {
+ const page=readFileSync(new URL('../src/components/UserManagementPage.jsx',import.meta.url),'utf8');
+ assert.match(page,/Người quản lý trực tiếp/);
+ assert.match(page,/manager_id: u\.manager_id \|\| ""/);
+ assert.match(page,/m\.id !== editUserModal\?\.id/);
+});
+test('an incomplete draft can be saved; sending still enforces required fields', () => {
+ const editor=readFileSync(new URL('../src/components/RequestEditor.jsx',import.meta.url),'utf8');
+ const draftBtn=editor.slice(editor.indexOf('value="draft"')-200, editor.indexOf('Lưu bản nháp'));
+ assert.match(draftBtn,/formNoValidate/);
+ const sendBtn=editor.slice(editor.indexOf('value="send"')-120, editor.indexOf('value="send"')+200);
+ assert.doesNotMatch(sendBtn,/formNoValidate/);
 });

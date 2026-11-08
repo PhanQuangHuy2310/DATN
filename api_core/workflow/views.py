@@ -445,7 +445,7 @@ def assignable_executors_view(request: HttpRequest, request_id: str) -> JsonResp
 @require_actor()
 def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
     try:
-        req_uuid = str(UUID(request_id))
+        req_uuid = str(UUID(str(request_id)))
     except (ValueError, TypeError, AttributeError):
         return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
@@ -859,7 +859,7 @@ def report_issue_view(request: HttpRequest, request_id: str) -> JsonResponse:
 @require_actor()
 def revisions_list(request: HttpRequest, request_id: str) -> JsonResponse:
     try:
-        req_uuid = str(UUID(request_id))
+        req_uuid = str(UUID(str(request_id)))
     except (ValueError, TypeError, AttributeError):
         return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
@@ -959,8 +959,8 @@ def revision_detail(
     request: HttpRequest, request_id: str, revision_id: str
 ) -> JsonResponse:
     try:
-        req_uuid = str(UUID(request_id))
-        rev_uuid = str(UUID(revision_id))
+        req_uuid = str(UUID(str(request_id)))
+        rev_uuid = str(UUID(str(revision_id)))
     except (ValueError, TypeError, AttributeError):
         return api_error(request, "NOT_FOUND", status=404)
 

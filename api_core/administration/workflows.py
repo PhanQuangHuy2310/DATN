@@ -328,6 +328,17 @@ def request_templates_list(request):
 
     _require_writer(request)
     payload = parse_json_object(request)
+    raw_cat = str(payload.get("category_code") or "").strip().upper()
+    if raw_cat not in ("A", "B", "C"):
+        raise CommandError(
+            "INVALID_CATEGORY_CODE",
+            status=422,
+            fields={
+                "category_code": [
+                    "Phân loại quy trình bắt buộc phải thuộc ('A', 'B', 'C')."
+                ]
+            },
+        )
     group = payload.get("group_code") or next(
         (k for k, v in _group_labels().items() if v == payload.get("request_type")),
         None,
@@ -343,7 +354,7 @@ def request_templates_list(request):
                 payload.get("description") or payload.get("name") or ""
             ).strip(),
             "category": group,
-            "lifecycle": payload.get("category_code"),
+            "lifecycle": raw_cat,
             "risk_weight": _risk_from_automation(payload.get("automation_weight", 50)),
             "is_active": False,
             "reason": _reason(payload, "Tạo loại yêu cầu mới từ trang Quy trình"),
@@ -397,11 +408,23 @@ def request_template_detail(request, template_id):
 
     category_changed = False
     new_cat = payload.get("category_code")
-    if (
-        new_cat
-        and new_cat.upper() in ("A", "B", "C")
-        and new_cat.upper() != current["category_code"]
-    ):
+    if "category_code" in payload and new_cat is not None:
+        if not isinstance(new_cat, str) or new_cat.strip().upper() not in (
+            "A",
+            "B",
+            "C",
+        ):
+            raise CommandError(
+                "INVALID_CATEGORY_CODE",
+                status=422,
+                fields={
+                    "category_code": [
+                        "Phân loại quy trình bắt buộc phải thuộc ('A', 'B', 'C')."
+                    ]
+                },
+            )
+        new_cat = new_cat.strip().upper()
+    if new_cat and new_cat in ("A", "B", "C") and new_cat != current["category_code"]:
         with transaction.atomic(), connection.cursor() as cur:
             cur.execute(
                 "UPDATE eas.request_type SET lifecycle = %s WHERE id = %s::uuid",

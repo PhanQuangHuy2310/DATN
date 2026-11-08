@@ -101,6 +101,7 @@ class RateLimitTests(SimpleTestCase):
         ]
         self.assertEqual(statuses[3:], [429, 429, 429])
 
+    @override_settings(SECURE_PROXY_SSL_HEADER=None)
     def test_forwarded_header_ignored_without_trusted_proxy(self):
         middleware = ApiRateLimitMiddleware(_ok)
         statuses = [

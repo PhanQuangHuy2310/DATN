@@ -31,6 +31,10 @@ PERMISSION_FIELDS = ("can_view", "can_create", "can_update", "can_delete")
 LEAVE_TYPES = {"PAID_LEAVE", "UNPAID_LEAVE", "LATE_IN", "EARLY_OUT", "BUSINESS_TRIP"}
 # Business roles an employee account may hold (admin roles live on admin accounts).
 EMPLOYEE_ROLES = ("APPROVER", "EXECUTOR", "ACCEPTOR", "REQUESTER")
+# Roles the user screen may grant. AUDITOR (global read-only audit) is an
+# employee duty too (M3), but like APPROVER only an administrator grants it.
+ASSIGNABLE_ROLES = (*EMPLOYEE_ROLES, "AUDITOR")
+ADMIN_GRANTED_ROLES = frozenset({"APPROVER", "AUDITOR"})
 DEPARTMENT_SCOPED_ROLES = {"APPROVER", "EXECUTOR"}
 # The most senior role is shown as the user's role/job title.
 ROLE_PRIORITY = (
@@ -238,11 +242,35 @@ def org_chart_tree_view(request):
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
 
     with connection.cursor() as cur:
-        users = _fetch_users(cur, " AND u.is_active")
+        raw_users = _fetch_users(cur, " AND u.is_active")
         cur.execute(
             "SELECT id::text, code, name, parent_id::text FROM eas.department WHERE is_active ORDER BY code"
         )
         departments = cur.fetchall()
+
+    is_privileged = bool(
+        request.actor.roles & {"OPS_ADMIN", "POLICY_ADMIN", "AUDITOR", "APPROVER"}
+    ) or can(request, "users", "view")
+
+    if is_privileged:
+        users = raw_users
+    else:
+        users = [
+            {
+                "id": u["id"],
+                "employee_code": u["employee_code"],
+                "full_name": u["full_name"],
+                "email": u["email"],
+                "department_id": u["department_id"],
+                "department_name": u["department_name"],
+                "is_active": u["is_active"],
+                "job_title": u["job_title"],
+                "working_status_code": u["working_status_code"],
+                "working_status_label": u["working_status_label"],
+                "manager_id": u["manager_id"],
+            }
+            for u in raw_users
+        ]
 
     by_id = {u["id"]: u for u in users}
     by_dept: dict[str, list[dict]] = {}
@@ -353,15 +381,15 @@ def _grant_role(
 def _validated_role(value, request=None) -> str | None:
     if value in (None, ""):
         return None
-    if value not in EMPLOYEE_ROLES:
+    if value not in ASSIGNABLE_ROLES:
         raise CommandError("INVALID_ROLE", status=422)
-    # Approval authority is granted by the administrator only.
+    # Approval and audit authority are granted by the administrator only.
     if (
-        value == "APPROVER"
+        value in ADMIN_GRANTED_ROLES
         and request is not None
         and not request.actor.roles & ADMIN_ROLES
     ):
-        raise CommandError("APPROVER_ROLE_ADMIN_ONLY", status=403)
+        raise CommandError(f"{value}_ROLE_ADMIN_ONLY", status=403)
     return value
 
 
@@ -512,6 +540,10 @@ def user_management_detail(request, user_id):
         changes["display_name"] = payload["full_name"]
     if payload.get("department_id"):
         changes["department_id"] = payload["department_id"]
+    if "manager_id" in payload:
+        # Empty value removes the manager; service.mutate validates the UUID,
+        # that the manager is an active user, and rejects self/cyclic chains.
+        changes["manager_id"] = payload["manager_id"] or None
     if "is_active" in payload:
         changes["is_active"] = payload["is_active"]
     if payload.get("password"):
@@ -628,7 +660,10 @@ def user_leave_trip_manage(request, user_id):
 
     u_str = str(user_id)
     payload = parse_json_object(request)
-    action = str(payload.get("action") or "create").upper()
+    raw_action = payload.get("action")
+    action = str(raw_action if raw_action is not None else "create").strip().upper()
+    if action not in {"CREATE", "ADD", "SET", "CANCEL_TODAY", "RESET_TODAY"}:
+        raise CommandError("INVALID_LEAVE_ACTION", status=422)
     with transaction.atomic(), connection.cursor() as cur:
         _assert_employee(cur, u_str)
         if action in ("CANCEL_TODAY", "RESET_TODAY"):
@@ -642,7 +677,10 @@ def user_leave_trip_manage(request, user_id):
                 "Đã hủy đơn nghỉ/công tác hôm nay. Trạng thái trở về Đang làm việc."
             )
         else:
-            leave_type = str(payload.get("type") or "PAID_LEAVE").upper()
+            raw_type = payload.get("type")
+            leave_type = (
+                str(raw_type if raw_type is not None else "PAID_LEAVE").strip().upper()
+            )
             if leave_type not in LEAVE_TYPES:
                 raise CommandError("INVALID_LEAVE_TYPE", status=422)
             title = str(
@@ -730,7 +768,7 @@ def rbac_roles_list(request):
                     "name": rows[code][1],
                     "description": rows[code][2] or "",
                     "is_system": rows[code][3],
-                    "assignable": code in EMPLOYEE_ROLES,
+                    "assignable": code in ASSIGNABLE_ROLES,
                 }
                 for code in order
             ]

@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { api } from "../api.js";
 import { date, statuses, types } from "../domain.js";
 import { ActionForm, Badge, Modal, Reason, ResourceState, command, useResource } from "./ui.jsx";
 import { PageControls } from "./ux.jsx";
 import { useApiBase } from "../apiBase.js";
 import { PeriodChooser } from "./DashboardOverview.jsx";
-import { EmptyState, PageHeader, PageTabs, StatCard, useDebounced } from "./design.jsx";
+import { CardGridSkeleton, EmptyState, PageHeader, PageTabs, StatCard, useDebounced } from "./design.jsx";
 import { Policy, AdminEvents } from "./Admin.jsx";
 import PlanCatalog from "./PlanCatalog.jsx";
-import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import AuditorWorkspace from "./AuditorWorkspace.jsx";
 import ApiAdministration from "./ApiAdministration.jsx";
+
+const WorkflowDiagrams = lazy(() => import("./WorkflowDiagrams.jsx"));
 
 const localDay = (value) => new Date(value).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
 const STAGE = { APPROVAL: "Phê duyệt", EXECUTION: "Thực hiện", ACCEPTANCE: "Nghiệm thu" };
@@ -437,7 +438,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
                         <strong>{d.department_name}</strong>
                       </td>
                       <td style={{ textAlign: "right" }}>{d.total}</td>
-                      <td style={{ textAlign: "right", color: "#16a34a" }}>{d.success}</td>
+                      <td style={{ textAlign: "right", color: "var(--ds-success)" }}>{d.success}</td>
                       <td style={{ textAlign: "right" }}>
                         <span className="badge-pct">{d.percentage}%</span>
                       </td>
@@ -493,7 +494,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
                       <td style={{ textAlign: "right" }}>
                         <strong>{u.total}</strong>
                       </td>
-                      <td style={{ textAlign: "right", color: "#16a34a" }}>
+                      <td style={{ textAlign: "right", color: "var(--ds-success)" }}>
                         <strong>{u.success}</strong>
                       </td>
                     </tr>
@@ -685,7 +686,7 @@ export function PolicyWorkspace({ canManageAccess, onManageAccess }) {
     <PageTabs label="Quy chế & quy trình" value={tab} onChange={setTab} tabs={[["releases", "Phiên bản quy chế"], ["catalog", "Danh mục 18 mẫu"], ["diagrams", "Sơ đồ luồng"]]} />
     {tab === "releases" && <Policy canManageAccess={canManageAccess} onManageAccess={onManageAccess} />}
     {tab === "catalog" && <PlanCatalog />}
-    {tab === "diagrams" && <WorkflowDiagrams />}
+    {tab === "diagrams" && <Suspense fallback={<CardGridSkeleton count={4} />}><WorkflowDiagrams /></Suspense>}
   </>;
 }
 

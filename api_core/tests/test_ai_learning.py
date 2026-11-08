@@ -192,3 +192,66 @@ class ApplyToAiTests(SimpleTestCase):
             self.assertRaises(TransientLearningError),
         ):
             ai_learning.apply_to_ai(self.policy)
+
+
+class AiDownLearningJobTests(SimpleTestCase):
+    """H3: AI service down -> retry, then FAILED; never APPLIED, old rules kept."""
+
+    def _run(self, attempts):
+        from unittest.mock import MagicMock
+
+        job = {
+            "id": "job-1",
+            "target_version": "v9.0",
+            "attempts": attempts,
+            "max_attempts": 3,
+        }
+        previous = {"snapshot": [], "policy": {"version": "v8.0", "rules": []}}
+        cursor = MagicMock()
+        cursor.fetchone.return_value = (3,)
+        cursor.__enter__.return_value = cursor
+        with (
+            patch.object(ai_learning, "_progress"),
+            patch.object(ai_learning.time, "sleep"),
+            patch.object(
+                ai_learning,
+                "_load_inputs",
+                return_value=([{**REG_002, "version": "9.0"}], TYPES, previous),
+            ),
+            patch.object(ai_learning, "_manual_rules", return_value=[]),
+            patch.object(
+                ai_learning,
+                "connection",
+                MagicMock(cursor=MagicMock(return_value=cursor)),
+            ),
+            patch.object(ai_learning, "transaction"),
+            patch.object(ai_learning, "invalidate_lock_cache"),
+            patch.object(
+                ai_learning,
+                "apply_to_ai",
+                side_effect=TransientLearningError(
+                    "AI service unreachable: ConnectError"
+                ),
+            ),
+            patch.object(ai_learning, "_finish_applied") as finish,
+        ):
+            outcome = ai_learning.process_job(job, "owner-1")
+        sql = " ".join(str(c.args[0]) for c in cursor.execute.call_args_list)
+        return outcome, finish, sql
+
+    def test_first_failure_is_retried_not_applied(self):
+        outcome, finish, sql = self._run(attempts=1)
+        self.assertEqual(outcome, "RETRY")
+        finish.assert_not_called()
+        self.assertIn("status = 'QUEUED'", sql)
+        self.assertNotIn("APPLIED", sql)
+
+    def test_last_attempt_fails_and_keeps_old_rules(self):
+        outcome, finish, sql = self._run(attempts=3)
+        self.assertEqual(outcome, "RETRY")  # process_job reports the retry path...
+        finish.assert_not_called()
+        self.assertIn("status = 'FAILED'", sql)  # ...but _fail marks the job FAILED
+        self.assertIn("sync_status = 'ERROR'", sql)
+        self.assertIn("REGULATION_UPDATE_FAILED", sql)
+        # The active policy/version is never touched on failure.
+        self.assertNotIn("active_regulation_version", sql)

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { errorText } from "../domain.js";
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
 import { PermissionGuard } from "./PermissionGuard.jsx";
@@ -71,7 +72,7 @@ export default function RequestWorkflowsPage() {
       setTemplates(tplRes.items || []);
       setMockApis(apiRes.items || []);
     } catch (err) {
-      showToast("Lỗi tải dữ liệu: " + (err.message || "Không thể kết nối"), "error");
+      showToast("Lỗi tải dữ liệu: " + errorText(err), "error");
     }
   };
 
@@ -100,7 +101,7 @@ export default function RequestWorkflowsPage() {
         );
       }
     } catch (err) {
-      showToast("Lỗi khi chuyển phân loại: " + (err.message || "Không thể cập nhật"), "error");
+      showToast("Lỗi khi chuyển phân loại: " + errorText(err), "error");
     }
   };
 
@@ -119,7 +120,7 @@ export default function RequestWorkflowsPage() {
         showToast(`Đã lưu trọng số tự động hóa ${val}% cho mẫu "${template.name}".`, "success");
       }
     } catch (err) {
-      showToast("Lỗi lưu trọng số: " + err.message, "error");
+      showToast("Lỗi lưu trọng số: " + errorText(err), "error");
     }
   };
 
@@ -139,7 +140,7 @@ export default function RequestWorkflowsPage() {
         loadData();
       }
     } catch (err) {
-      showToast("Lỗi lưu quy trình: " + err.message, "error");
+      showToast("Lỗi lưu quy trình: " + errorText(err), "error");
     }
   };
 
@@ -169,7 +170,7 @@ export default function RequestWorkflowsPage() {
         loadData();
       }
     } catch (err) {
-      showToast("Lỗi lưu mẫu: " + err.message, "error");
+      showToast("Lỗi lưu mẫu: " + errorText(err), "error");
     }
   };
 
@@ -190,7 +191,7 @@ export default function RequestWorkflowsPage() {
         loadData();
       }
     } catch (err) {
-      showToast("Lỗi xóa mẫu: " + err.message, "error");
+      showToast("Lỗi xóa mẫu: " + errorText(err), "error");
     }
   };
 

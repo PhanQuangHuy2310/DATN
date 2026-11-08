@@ -8,11 +8,39 @@ const ME = "22222222-2222-4222-8222-222222222222";
 const STEP = "33333333-3333-4333-8333-333333333333";
 const OTHER = "44444444-4444-4444-8444-444444444444";
 
+const CLIENT_PERMS = {
+  by_module: {
+    dashboard: { can_view: true, can_create: false, can_update: false, can_delete: false },
+    requests_workflows: { can_view: true, can_create: true, can_update: false, can_delete: false },
+    org_chart: { can_view: true, can_create: false, can_update: false, can_delete: false },
+    users: { can_view: false, can_create: false, can_update: false, can_delete: false },
+    regulations: { can_view: true, can_create: false, can_update: false, can_delete: false },
+    permissions: { can_view: false, can_create: false, can_update: false, can_delete: false },
+    ai_engine: { can_view: false, can_create: false, can_update: false, can_delete: false },
+    api_management: { can_view: false, can_create: false, can_update: false, can_delete: false },
+    system_versions: { can_view: false, can_create: false, can_update: false, can_delete: false },
+  },
+};
+
+const ADMIN_PERMS = {
+  by_module: {
+    dashboard: { can_view: true, can_create: true, can_update: true, can_delete: true },
+    requests_workflows: { can_view: true, can_create: true, can_update: true, can_delete: true },
+    org_chart: { can_view: true, can_create: true, can_update: true, can_delete: true },
+    users: { can_view: true, can_create: true, can_update: true, can_delete: true },
+    regulations: { can_view: true, can_create: true, can_update: true, can_delete: true },
+    permissions: { can_view: true, can_create: true, can_update: true, can_delete: true },
+    ai_engine: { can_view: true, can_create: true, can_update: true, can_delete: true },
+    api_management: { can_view: true, can_create: true, can_update: true, can_delete: true },
+    system_versions: { can_view: true, can_create: true, can_update: true, can_delete: true },
+  },
+};
+
 const USERS = {
-  requester: { roles: ["REQUESTER", "ACCEPTOR"], capabilities: {} },
-  approver: { roles: ["APPROVER", "REQUESTER", "ACCEPTOR"], capabilities: {} },
+  requester: { roles: ["REQUESTER", "ACCEPTOR"], capabilities: {}, permissions: CLIENT_PERMS },
+  approver: { roles: ["APPROVER", "REQUESTER", "ACCEPTOR"], capabilities: {}, permissions: CLIENT_PERMS },
   // The admin portal accepts only the single system administrator account.
-  ops: { email: "admin@eas.com", roles: ["OPS_ADMIN", "POLICY_ADMIN"], capabilities: { identity_manage: true } },
+  ops: { email: "admin@eas.com", roles: ["OPS_ADMIN", "POLICY_ADMIN"], capabilities: { identity_manage: true }, permissions: ADMIN_PERMS },
 };
 
 function listItem(overrides = {}) {
@@ -56,8 +84,15 @@ async function mock(page, kind) {
     calls.push({ path, method: req.method(), body, url });
     const send = (value, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(value) });
     if (url.pathname === "/health/ready") return send({ status: "ready", checks: { database: true, shared_security_cache: true } });
+    if (path === "system/ai-status") return send({ client_maintenance_lock: false, sync_status: "COMPLETED", progress_percent: 100, current_step_index: 4, active_regulation_version: "v1.0", target_regulation_version: "v1.0", steps_detail: [] });
+    if (path.startsWith("system/announcements")) return send({ items: [] });
     if (path === "auth/csrf") return send({});
     if (path === "auth/me") return send({ user });
+    if (path === "permissions/me") return send({ permissions: user.permissions });
+    if (path.startsWith("workspace/analytics") || path.startsWith("admin/analytics")) return send({ scope: { label: "Phòng Kế toán" }, kpis: { total_requests: 37, success_count: 13, success_rate: 35, rejected_count: 2, rejected_rate: 5, processing_count: 6, processing_rate: 16 }, trends: [], top_types: [{ code: "LEAVE", name: "Nghỉ phép thường niên", count: 12 }], top_departments: [], top_users: [], category_performance: [] });
+    if (path.startsWith("workspace/departments")) return send({ items: [{ id: "d1", name: "Phòng Kế toán", code: "FIN", is_active: true }], next_offset: null });
+    if (path.startsWith("workspace/request-catalog")) return send({ items: [{ code: "LEAVE", name: "Nghỉ phép thường niên", request_type: "Vắng mặt", category_code: "A", sla_hours: 24, is_api_enabled: true, workflow_steps: [{ step: 1, name: "Quản lý trực tiếp", actor: "APPROVER" }], linked_apis: [] }] });
+    if (path.startsWith("workspace/my-requests")) return send({ summary: { total_requests: 1, stage_1_yeu_cau: 0, stage_2_phe_duyet: 1, stage_3_thuc_hien: 0, stage_4_nghiem_thu: 0, stage_5_hoan_thanh: 0 }, items: [] });
     if (path === "notifications") return send({ items: [{ id: "n1", label: "Bạn có một yêu cầu cần phê duyệt", request_id: REQ, created_at: "2026-10-07T07:00:00Z", read_at: null }], unread_count: 1, next_offset: null });
     if (path === "notifications/n1/read") return send({ notification: { id: "n1", read_at: "2026-10-07T08:00:00Z" } });
     if (path === "reports/requests") return send({ report: { submitted: 4, approved: 3, completed: 2, completed_rate: 0.5, approved_rate: 0.75, avg_completion_hours: 26, avg_approval_hours: 6, by_status: { PENDING_APPROVAL: 1, COMPLETED: 2, REJECTED: 1 }, top_types: [{ code: "LEAVE", name: "Nghỉ phép thường niên", count: 3 }] } });
@@ -97,7 +132,7 @@ for (const width of [1440, 1024, 768, 375]) {
     await page.setViewportSize({ width, height: 900 });
     await mock(page, "approver");
     await page.goto(CLIENT);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("Xin chào");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Tổng quan");
     await expectNoHorizontalOverflow(page);
     await expectHeaderClearsHeading(page);
     await expect(page.getByRole("button", { name: /^Thông báo/ })).toBeVisible();
@@ -133,7 +168,7 @@ test("client navigation follows the workspace groups and hides admin modules", a
   await mock(page, "requester");
   await page.goto(CLIENT);
   const nav = page.getByRole("navigation", { name: "Điều hướng chính" });
-  for (const label of ["Tổng quan", "Yêu cầu của tôi", "Sơ đồ tổ chức", "Sơ đồ luồng", "Quy trình AI", "Tài khoản cá nhân"]) {
+  for (const label of ["Tổng quan", "Yêu cầu & Quy trình", "Sơ đồ tổ chức", "Quy định", "Tài khoản cá nhân"]) {
     await expect(nav.getByRole("button", { name: label, exact: true })).toBeVisible();
   }
   for (const label of ["Theo dõi vận hành", "Quản lý người dùng", "Tổng quan phòng ban", "Chờ phê duyệt"]) {

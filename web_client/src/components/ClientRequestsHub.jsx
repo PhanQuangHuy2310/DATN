@@ -11,8 +11,8 @@ import {
   TableSkeleton,
 } from "./design.jsx";
 import { Badge, ResourceState, useResource } from "./ui.jsx";
-import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 
+const WorkflowDiagrams = lazy(() => import("./WorkflowDiagrams.jsx"));
 const RequestWorkflowsPage = lazy(() => import("./RequestWorkflowsPage.jsx"));
 const AiProcessGuide = lazy(() => import("./AiProcessGuide.jsx"));
 
@@ -331,8 +331,8 @@ export default function ClientRequestsHub({
           {tab === "ai" && (
             <AiProcessGuide user={user} onOpen={onOpen} portal="client" />
           )}
+          {tab === "diagrams" && <WorkflowDiagrams />}
         </Suspense>
-        {tab === "diagrams" && <WorkflowDiagrams />}
       </div>
     </>
   );

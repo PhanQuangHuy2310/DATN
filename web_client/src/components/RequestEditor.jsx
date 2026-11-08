@@ -30,6 +30,29 @@ const isEvidenceField = (name) =>
     name,
   );
 
+// L7: form_schema is stored as jsonb, which re-sorts object keys (shortest
+// first), so "end_time" came before "start_time". Render in business order:
+// title, subject, dates/times (start before end), amounts, free text last.
+// Unknown fields keep their relative order (Array.prototype.sort is stable).
+const FIELD_ORDER = [
+  "title", "leave_kind", "change_type", "special_leave_type",
+  "room_code", "room_name", "vehicle_code", "asset_category", "asset_code", "app_code",
+  "requested_role", "destination", "transportation", "target_department",
+  "booking_date", "date", "work_date", "start_date", "start_time", "end_date", "end_time",
+  "effective_date", "due_date", "duration_days", "hours",
+  "quantity", "attendees_count", "passengers", "amount", "amount_vnd",
+];
+const TRAILING_FIELDS = ["purpose", "reason", "description", "task_list", "notes"];
+function fieldRank(name) {
+  const at = FIELD_ORDER.indexOf(name);
+  if (at >= 0) return at;
+  const tail = TRAILING_FIELDS.indexOf(name);
+  return tail >= 0 ? 1000 + tail : 500;
+}
+export function orderFormFields(entries) {
+  return [...entries].sort(([a], [b]) => fieldRank(a) - fieldRank(b));
+}
+
 function CurrencyInput({ name, initialValue, isRequired, min, max }) {
   const [digits, setDigits] = useState(() => parseDigits(initialValue));
   const words = vndToVietnameseWords(digits);
@@ -357,7 +380,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   const current = catalog.find((entry) => entry.code === type);
   const schema = current?.form_schema;
   const formFields = schema?.properties
-    ? Object.entries(schema.properties)
+    ? orderFormFields(Object.entries(schema.properties))
         .filter(([name]) => name !== "department_id")
         .map(([name, spec]) => {
           const legacy = fields[type]?.find(([field]) => field === name);
@@ -479,11 +502,14 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       let r = record;
       if (!r) {
         r = (
+          // L4: creating the draft row is an internal step; the PATCH below
+          // reports "Đã lưu bản nháp" once.
           await command(
             "request-drafts",
             { type_code: type },
             "POST",
             createKey.current,
+            { silent: true },
           )
         ).request;
         setRecord(r);
@@ -551,7 +577,10 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       ) {
         body.amount_vnd = payload.amount_vnd || monetaryAmount;
       }
-      const saved = await command(`request-drafts/${r.id}`, body, "PATCH");
+      // When sending, the submit toast is the only one the user needs.
+      const saved = await command(`request-drafts/${r.id}`, body, "PATCH", undefined, {
+        silent: send,
+      });
       r = {
         ...r,
         lock_version: saved.request?.lock_version ?? saved.lock_version ?? r.lock_version,
@@ -774,8 +803,10 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                 />
               </label>
               <p className="muted">
-                Đề nghị mua sắm hoặc thanh toán chi phí cần đính kèm báo giá / hóa đơn hợp
-                lệ. Tệp đã gửi được lưu trữ theo từng phiên bản hồ sơ.
+                {/* L6: the quote/invoice hint only concerns money requests. */}
+                {["PAYMENT", "PROCUREMENT"].includes(current?.category) &&
+                  "Đề nghị mua sắm hoặc thanh toán chi phí cần đính kèm báo giá / hóa đơn hợp lệ. "}
+                Tệp đã gửi được lưu trữ theo từng phiên bản hồ sơ.
               </p>
               {files.map((f) => (
                 <p key={f.id}>
@@ -821,11 +852,14 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
             )}
             {notice && <output className="success">{notice}</output>}
             <div className="form-actions">
+              {/* A draft may be incomplete: skip the browser's required checks
+                  (the server validates drafts without required fields). */}
               <button
                 type="submit"
                 name="action"
                 value="draft"
                 className="secondary"
+                formNoValidate
               >
                 Lưu bản nháp
               </button>

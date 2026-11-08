@@ -65,6 +65,8 @@ def _v(value) -> str | None:
 
 def ai_engine_state() -> dict[str, Any]:
     """AI state for admin screens; the lock comes from the open learning job."""
+    import os
+
     with connection.cursor() as cur:
         cur.execute(
             """
@@ -80,9 +82,20 @@ def ai_engine_state() -> dict[str, Any]:
         return {"sync_status": "NOT_CONFIGURED", "client_maintenance_lock": False}
     lock = get_ai_maintenance_state()
     step = int(row[7] or 4)
+    has_gemini_key = bool(os.getenv("GEMINI_API_KEY", "").strip())
+    raw_provider = str(row[0] or "").strip()
+    if not has_gemini_key and (not raw_provider or "gemini" in raw_provider.lower()):
+        provider_name = (
+            "Scikit-Learn Local Pipeline (Gemini Fallback: Chưa cấu hình Key)"
+        )
+        model_name = "nlp_risk_pipeline_v2 (Local Scikit-Learn / XGBoost)"
+    else:
+        provider_name = raw_provider or "Google Gemini + Scikit-Learn Hybrid"
+        model_name = row[1] or "gemini-2.5-flash & nlp_risk_pipeline_v2"
     return {
-        "provider_name": row[0] or "EAS Rule Compiler + scikit-learn/XGBoost",
-        "model_name": row[1] or "risk_model + nlp_classifier",
+        "provider_name": provider_name,
+        "model_name": model_name,
+        "gemini_configured": has_gemini_key,
         "active_regulation_version": _v(row[2]) or "v1.0",
         "target_regulation_version": _v(row[3]) or _v(row[2]) or "v1.0",
         "global_major_version": row[4] or 1,

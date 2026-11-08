@@ -1,9 +1,9 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { PermissionProvider } from "./hooks/usePermission.jsx";
-import { api, initializeCsrf } from "./api.js";
+import { api, initializeCsrf, invalidateResources, notify, SESSION_EXPIRED_EVENT } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
-import { ADMIN_ROLES, canNavigate, canUsePortal } from "./rolePolicy.js";
+import { canNavigate, canUsePortal } from "./rolePolicy.js";
 import { PERMISSIONS_CHANGED, createRefresher } from "./sessionRefresh.js";
 import RoleTasks from "./components/RoleTasks.jsx";
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
@@ -466,6 +466,8 @@ const CLIENT_NAV = [
   ["TỔ CHỨC & NHÂN SỰ", ["org-client", "people"]],
   ["TRI THỨC", ["regulations-view"]],
   ["QUẢN LÝ PHÒNG BAN", ["team", "team-employees"]],
+  // M3: employees holding AUDITOR use the read-only audit lookup here.
+  ["KIỂM TOÁN", ["audit"]],
   ["TÀI KHOẢN", ["profile"]],
 ];
 const ADMIN_NAV = [
@@ -1032,7 +1034,7 @@ function renderWorkspaceContent({
     case "acceptance":
       return portal === "client" ? <ClientRequests key={page} initialStage={page === "mine" ? "mine" : page} initialQuery={searchText} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} /> : <RequestList key={page} page={page} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} />;
     case "audit":
-      return portal === "admin" ? <AdminScreen name="AuditLogPage" onOpen={setSelected} /> : <AdminScreen name="AuditorWorkspace" onOpen={(id) => setSelected(id)} />;
+      return portal === "admin" ? <AdminScreen name="AuditLogPage" onOpen={setSelected} /> : <ClientAuditorWorkspace onOpen={(id) => setSelected(id)} />;
     case "events":
       return <AdminScreen name="AdminEvents" />;
     case "users":
@@ -1118,7 +1120,7 @@ function renderWorkspaceContent({
 }
 
 const navKeys = (groups) => groups.flatMap(([, keys]) => keys);
-const ADMIN_PAGES = new Set([...navKeys(ADMIN_NAV), "ops", "sla", "audit", "identity", "departments", "notifications"]);
+const ADMIN_PAGES = new Set([...navKeys(ADMIN_NAV), "ops", "sla", "audit", "identity", "departments", "notifications", "release-workspace"]);
 const CLIENT_PAGES = new Set([...navKeys(CLIENT_NAV), "notifications"]);
 const UNIFIED_NAV = [...CLIENT_NAV, ...ADMIN_NAV.map(([group, keys]) => [group, keys.filter((key) => !navKeys(CLIENT_NAV).includes(key))])];
 
@@ -1149,13 +1151,35 @@ const WorkspaceDashboard = lazy(() => import("./components/AdminPages.jsx").then
 const WorkspaceUsers = lazy(() => import("./components/UserManagementPage.jsx"));
 const WorkspaceRegulations = lazy(() => import("./components/RegulationsManagementPage.jsx"));
 const WorkspaceOrgChart = lazy(() => import("./components/OrgChart.jsx"));
+// Read-only audit lookup (employee APIs only), loaded on demand in the employee portal.
+const ClientAuditorWorkspace = lazy(() => import("./components/AuditorWorkspace.jsx"));
 const ADMIN_PORTAL_URL = import.meta.env.VITE_ADMIN_PORTAL_URL || "http://localhost:8081";
 
 function writeFlag(key, value) { try { window.localStorage.setItem(key, value ? "1" : "0"); } catch { /* storage unavailable */ } }
 
+// Same checks as navigate(): role navigation, portal page set, module rights.
+function pageAllowed(next, user, portal) {
+  const allowed = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
+  if (!canNavigate(user.roles, next, user.capabilities) || !allowed.has(next)) return false;
+  const mod = pageToModuleCode(next, portal);
+  if (mod && portal === "client" && !user?.permissions?.by_module?.[mod]?.can_view) return false;
+  if (mod && user?.permissions?.by_module?.[mod] && !user.permissions.by_module[mod].can_view) return false;
+  return true;
+}
+
+function readHashLocation() {
+  const [rawPage = "", rawRequest = ""] = window.location.hash.replace(/^#\/?/, "").split("/");
+  let hashPage = "";
+  try { hashPage = decodeURIComponent(rawPage); } catch { hashPage = ""; }
+  return { hashPage, hashRequest: /^[0-9a-f-]{36}$/i.test(rawRequest) ? rawRequest : null };
+}
+
 function Workspace({ user, onLogout, portal = "client", theme = "light", toggleTheme = () => {} }) {
-  const [page, setPage] = useState("home"),
-    [selected, setSelected] = useState(null),
+  const [page, setPage] = useState(() => {
+      const { hashPage } = readHashLocation();
+      return hashPage && pageAllowed(hashPage, user, portal) ? hashPage : "home";
+    }),
+    [selected, setSelected] = useState(() => readHashLocation().hashRequest),
     [editor, setEditor] = useState(null),
     [revision, setRevision] = useState(0),
     [menuOpen, setMenuOpen] = useState(false),
@@ -1174,13 +1198,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
   const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
   const groups = portal === "admin" ? ADMIN_NAV : portal === "client" ? CLIENT_NAV : UNIFIED_NAV;
   function navigate(next, query = "") {
-    if (!canNavigate(user.roles, next, user.capabilities)) return;
-    if (!allowedPages.has(next)) return;
-    const mod = pageToModuleCode(next, portal);
-    if (mod && portal === "client" && !user?.permissions?.by_module?.[mod]?.can_view) return;
-    if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
-      if (!user.permissions.by_module[mod].can_view) return;
-    }
+    if (!pageAllowed(next, user, portal)) return;
     setPage(next);
     setSelected(null);
     setEditor(null);
@@ -1192,6 +1210,11 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
     setSelected(id);
     setMenuOpen(false);
   }
+  // L10: keep the open page (and request) in the URL so F5 returns to it.
+  useEffect(() => {
+    const hash = `#/${encodeURIComponent(page)}${selected ? `/${selected}` : ""}`;
+    if (window.location.hash !== hash) window.history.replaceState(null, "", hash);
+  }, [page, selected]);
   useEffect(() => {
     if (!menuOpen) return undefined;
     const onKey = (event) => { if (event.key === "Escape") setMenuOpen(false); };
@@ -1430,9 +1453,16 @@ function useAiMaintenanceState() {
 
   useEffect(() => {
     let active = true;
+    const isMaintenance = Boolean(aiStatus?.client_maintenance_lock);
+    const intervalMs = isMaintenance ? 4000 : 20000;
     const fetchStatus = async () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return;
+      }
       try {
-        const res = await fetch("/api/v1/system/ai-status");
+        const res = await fetch("/api/v1/system/ai-status", {
+          signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined,
+        });
         if (res.ok) {
           const data = await res.json();
           if (active) setAiStatus(data);
@@ -1440,12 +1470,17 @@ function useAiMaintenanceState() {
       } catch {}
     };
     fetchStatus();
-    const timer = setInterval(fetchStatus, 2000);
+    const timer = setInterval(fetchStatus, intervalMs);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") fetchStatus();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       active = false;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, []);
+  }, [aiStatus?.client_maintenance_lock]);
 
   return aiStatus;
 }
@@ -1536,6 +1571,23 @@ function PortalApp({ portal, theme, toggleTheme }) {
   const aiStatus = useAiMaintenanceState();
   // Only the open learning job locks users; a failed run (ERROR) keeps the old rules and stays unlocked.
   const aiMaintenanceActive = Boolean(aiStatus?.client_maintenance_lock);
+  // L11: any 401 from a business endpoint means the session is gone.
+  // Parallel requests can all return 401: notify once per signed-in session.
+  const sessionActive = useRef(false);
+  useEffect(() => {
+    sessionActive.current = Boolean(user);
+  }, [user]);
+  useEffect(() => {
+    const onExpired = () => {
+      if (!sessionActive.current) return;
+      sessionActive.current = false;
+      notify("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", "error");
+      invalidateResources();
+      setUser(null);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
   async function load(loginUser) {
     if (loginUser?.must_change_password) {
       setUser({ ...loginUser, roles: [] });
@@ -1658,12 +1710,16 @@ function PortalApp({ portal, theme, toggleTheme }) {
   }
   // Administrative identities are system-only (enforced again by the API);
   // an admin who also approves or executes keeps the employee portal.
-  if (user && ((portal === "client" && user.roles?.some((role) => ADMIN_ROLES.includes(role)) && !canUsePortal(user.roles, "client")) || (portal === "client" && user.email === "admin@eas.com"))) {
+  if (user && portal === "client" && (user.email === "admin@eas.com" || !canUsePortal(user.roles, "client"))) {
     return (
       <main className="auth-shell">
         <section className="panel">
           <h1>Tài khoản quản trị</h1>
-          <p>Tài khoản Quản trị viên (admin@eas.com) không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).</p>
+          <p>
+            {user.email === "admin@eas.com"
+              ? "Tài khoản Quản trị viên (admin@eas.com) không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081)."
+              : "Tài khoản quản trị hệ thống không có nghiệp vụ trên Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081)."}
+          </p>
           <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
             <a
               href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:8081`}

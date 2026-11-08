@@ -89,6 +89,10 @@ test("portal access: pure admins stay in the admin portal, admins with duties us
   assert.equal(canUsePortal(employee, "client"), true);
   assert.equal(canUsePortal(employee, "admin"), false);
   assert.equal(canUsePortal(undefined, "client"), true);
+  // M3: an auditor without approve/execute duties still uses the employee portal.
+  const auditorOnly = ["AUDITOR", "REQUESTER", "ACCEPTOR"];
+  assert.equal(canUsePortal(auditorOnly, "client"), true);
+  assert.equal(canUsePortal(auditorOnly, "admin"), true);
 });
 
 test("only POLICY_ADMIN reaches the AI policy page", () => {

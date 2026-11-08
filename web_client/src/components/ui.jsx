@@ -296,9 +296,11 @@ export async function command(
   body = {},
   method = "POST",
   key = idempotencyKey(),
+  { silent = false } = {},
 ) {
   return api("/api/v1/" + path, {
     method,
+    silent,
     headers: { "Idempotency-Key": key },
     body: JSON.stringify(body),
   });

@@ -26,7 +26,7 @@ def rows(cursor):
 def history(request, request_id):
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
-        response = request_detail(request, request_id)
+        response = request_detail(request, str(request_id))
         if response.status_code != 200:
             return response
         # Authorization is checked by the same detail endpoint, under the security lock.

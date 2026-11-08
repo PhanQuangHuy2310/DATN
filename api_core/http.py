@@ -45,12 +45,18 @@ def api_error(
     code: str,
     *,
     status: int,
+    message: str | None = None,
     fields: dict[str, list[str]] | None = None,
     headers: dict[str, str] | None = None,
 ) -> JsonResponse:
+    error_body: dict[str, Any] = {"code": code}
+    if message:
+        error_body["message"] = message
+    if fields:
+        error_body["fields"] = fields
     response = JsonResponse(
         {
-            "error": {"code": code, **({"fields": fields} if fields else {})},
+            "error": error_body,
             "correlation_id": correlation_id(request),
         },
         status=status,
@@ -59,3 +65,13 @@ def api_error(
     for key, value in (headers or {}).items():
         response[key] = value
     return response
+
+
+def csrf_failure(request: HttpRequest, reason: str = "") -> JsonResponse:
+    """Return JSON instead of Django's default HTML 403 page on CSRF failure."""
+    return api_error(
+        request,
+        "CSRF_FAILED",
+        status=403,
+        message="Phiên bảo mật CSRF không hợp lệ hoặc đã hết hạn. Vui lòng tải lại trang và thử lại.",
+    )

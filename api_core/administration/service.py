@@ -493,13 +493,25 @@ def active_reference(c, table, id):
         raise CommandError("REFERENCE_INACTIVE_OR_MISSING", status=422)
 
 
+# Hierarchies that check_cycle may walk. Fixed identifiers only: never built
+# from request data.
+_HIERARCHIES = {
+    ("department", "parent_id"): ("eas.department", "parent_id"),
+    ("app_user", "manager_id"): ("eas.app_user", "manager_id"),
+}
+
+
 def check_cycle(c, table, parent_field, id, parent):
+    """Reject a parent that is the row itself or one of its descendants."""
     if not parent:
         return
-    c.execute(
-        """WITH RECURSIVE chain AS (
-       SELECT id,parent_id FROM eas.department WHERE id=%s
-       UNION SELECT t.id,t.parent_id FROM eas.department t JOIN chain p ON t.id=p.parent_id
+    if str(parent) == str(id):
+        raise CommandError("HIERARCHY_CYCLE", status=422)
+    relation, column = _HIERARCHIES[(table, parent_field)]
+    c.execute(  # NOSONAR python:S2077 - identifiers come from _HIERARCHIES
+        f"""WITH RECURSIVE chain AS (
+       SELECT id,{column} AS parent FROM {relation} WHERE id=%s
+       UNION SELECT t.id,t.{column} FROM {relation} t JOIN chain p ON t.id=p.parent
     ) SELECT 1 FROM chain WHERE id=%s LIMIT 1""",
         [parent, id],
     )

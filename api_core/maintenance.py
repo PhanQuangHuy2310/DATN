@@ -39,8 +39,12 @@ def _legacy_lock_state() -> dict[str, Any] | None:
                 """
             )
             row = cursor.fetchone()
-    except DatabaseError:
-        log.warning("ai_system_state_unavailable", exc_info=True)
+    except DatabaseError as exc:
+        err_text = str(exc).lower()
+        if "no such table" in err_text or "does not exist" in err_text:
+            log.debug("ai_system_state_unavailable_in_test_db")
+        else:
+            log.warning("ai_system_state_unavailable", exc_info=True)
         row = None
     if row and row[0] is True:
         state = {

@@ -32,8 +32,9 @@
 .client-filter-footer {display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
 .client-filter-footer .actions {display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
 .client-view-toggle {display:flex;gap:3px;padding:3px;background:#eef3fb;border-radius:8px;}
-.client-view-toggle button {border:0;border-radius:6px;background:transparent;color:#566984;padding:6px 12px;min-height:34px;}
-.client-view-toggle button.is-active {background:#fff;color:var(--client-accent);box-shadow:0 1px 3px #cfd9e9;}
+.client-view-toggle button {border:0;border-radius:6px;background:transparent;color:#3f526d;padding:6px 12px;min-height:34px;}
+.client-view-toggle button:hover:not(.is-active) {background:#e2ebf9;color:var(--client-ink);}
+.client-view-toggle button.is-active,.client-view-toggle button.is-active:hover:not(:disabled) {background:#fff;color:var(--client-accent);box-shadow:0 1px 3px #cfd9e9;}
 .client-kanban {display:flex;gap:12px;overflow-x:auto;overscroll-behavior-x:contain;padding:2px 0 14px;scrollbar-width:thin;align-items:stretch;}
 .client-kanban-column {flex:1 0 225px;max-width:320px;background:#f2f5fa;border:1px solid var(--client-border);border-radius:12px;padding:10px;min-height:215px;}
 .client-kanban-column h2 {font-size:.9rem;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 5px 13px;}

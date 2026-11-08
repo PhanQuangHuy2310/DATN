@@ -7,7 +7,7 @@ const DEPT_COLORS = {
   BOD: { bg: "#eff6ff", border: "#3b82f6", text: "#1e40af", badge: "#2563eb", icon: "🏛️" },
   TECH: { bg: "#f0fdf4", border: "#22c55e", text: "#166534", badge: "#16a34a", icon: "💻" },
   HR: { bg: "#fdf4ff", border: "#d946ef", text: "#86198f", badge: "#c026d3", icon: "👥" },
-  FIN: { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#d97706", icon: "💰" },
+  FIN: { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#b45309", icon: "💰" },
   BIZ: { bg: "#fef2f2", border: "#ef4444", text: "#991b1b", badge: "#dc2626", icon: "💼" },
   MKT: { bg: "#fff1f2", border: "#f43f5e", text: "#be123c", badge: "#e11d48", icon: "📢" },
   OPS: { bg: "#ecfeff", border: "#06b6d4", text: "#155e75", badge: "#0891b2", icon: "⚙️" },
@@ -15,7 +15,7 @@ const DEPT_COLORS = {
   // Compatibility fallbacks
   DEPT_IT: { bg: "#f0fdf4", border: "#22c55e", text: "#166534", badge: "#16a34a", icon: "💻" },
   DEPT_HR: { bg: "#fdf4ff", border: "#d946ef", text: "#86198f", badge: "#c026d3", icon: "👥" },
-  DEPT_FIN: { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#d97706", icon: "💰" },
+  DEPT_FIN: { bg: "#fffbeb", border: "#f59e0b", text: "#92400e", badge: "#b45309", icon: "💰" },
   DEPT_SALES: { bg: "#fef2f2", border: "#ef4444", text: "#991b1b", badge: "#dc2626", icon: "📈" },
   DEPT_OPS: { bg: "#ecfeff", border: "#06b6d4", text: "#155e75", badge: "#0891b2", icon: "⚙️" },
 };
@@ -103,19 +103,19 @@ export default function OrgChart({ navigate, portal = "client", user }) {
           </span>
           <span
             className="stat-pill stat-working"
-            style={{ background: "var(--ds-success-soft)", color: "var(--ds-success)", borderColor: "var(--ds-success)" }}
+            style={{ background: "var(--ds-success-soft)", color: "var(--ds-ink)", borderColor: "var(--ds-success)" }}
           >
             🟢 Đang làm: <strong>{summary.working_count}</strong>
           </span>
           <span
             className="stat-pill stat-leave"
-            style={{ background: "var(--ds-warning-soft)", color: "var(--ds-warning)", borderColor: "var(--ds-warning)" }}
+            style={{ background: "var(--ds-warning-soft)", color: "var(--ds-ink)", borderColor: "var(--ds-warning)" }}
           >
             🟡 Nghỉ làm: <strong>{summary.leave_count}</strong>
           </span>
           <span
             className="stat-pill stat-trip"
-            style={{ background: "var(--ds-primary-soft)", color: "var(--ds-primary)", borderColor: "var(--ds-primary)" }}
+            style={{ background: "var(--ds-primary-soft)", color: "var(--ds-ink)", borderColor: "var(--ds-primary)" }}
           >
             🔵 Công tác: <strong>{summary.trip_count}</strong>
           </span>
@@ -187,7 +187,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                   <div style={{ fontSize: "12px", color: "#475569", marginTop: "4px" }}>
                     Tổng Giám Đốc: <strong>{bodDept.manager_name || "Chưa bổ nhiệm"}</strong>
                   </div>
-                  <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+                  <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
                     Bấm để xem danh sách Ban Lãnh Đạo →
                   </div>
                 </div>
@@ -220,7 +220,8 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                 className="org-depts-grid"
                 style={{
                   display: "grid",
-                  gridTemplateColumns: `repeat(${childDepts.length || 5}, 1fr)`,
+                  // M11: wrap instead of squeezing 7-8 departments into one row.
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                   gap: "16px",
                   paddingTop: "0",
                 }}
@@ -308,7 +309,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                           </strong>
                         </div>
 
-                        <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "#64748b" }}>
+                        <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "#475569" }}>
                           <span>Xem danh sách</span>
                           <span>→</span>
                         </div>

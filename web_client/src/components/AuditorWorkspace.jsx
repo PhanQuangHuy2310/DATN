@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api.js";
-import { date, types } from "../domain.js";
+import { errorText, date, types } from "../domain.js";
 import { Badge, Data, ResourceState, useResource } from "./ui.jsx";
 import { PageControls } from "./ux.jsx";
 
@@ -24,7 +24,7 @@ export default function AuditorWorkspace({ onOpen }) {
       const result = await api(`/api/v1/requests/${id}/audit/verify`);
       setChecked({ id, result });
     } catch (err) {
-      setError(err.message || "Không thể kiểm tra chuỗi audit.");
+      setError(errorText(err));
     }
   }
   return (

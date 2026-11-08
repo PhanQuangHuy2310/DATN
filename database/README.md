@@ -2,6 +2,18 @@
 
 Thư mục database có các gói riêng cho schema phê duyệt EAS và các schema nguồn doanh nghiệp giả lập. Giữ installer, migration, seed và script kiểm tra tách biệt vì mục đích và độ an toàn khi triển khai khác nhau.
 
+## Khởi tạo Database mới từ đầu (Fresh DB Installation)
+
+Để dựng một database PostgreSQL/Supabase hoàn toàn mới từ đầu lên đúng phiên bản Schema v2 hiện hành trên **Supabase Dashboard → SQL Editor** (hoặc `psql`) mà không gặp lỗi thiếu role hay thứ tự phụ thuộc giữa các bản nâng cấp, chạy lần lượt **đúng thứ tự 8 bước** sau (file [`database/install_fresh_db.sql`](./install_fresh_db.sql) là SQL thuần 100%, dán trực tiếp vào Supabase SQL Editor không bị lỗi cú pháp `\`):
+1. **Tạo Roles (`install_fresh_db.sql`)**: Dán và chạy [`database/install_fresh_db.sql`](./install_fresh_db.sql) trên Supabase SQL Editor để tạo các role `eas_migration`, `eas_api`, `eas_worker`, `eas_privacy`, `eas_backup`, `eas_mock` và gán `GRANT eas_migration TO postgres;`.
+2. **Baseline Schema**: Chạy [`database/EAS_Supabase_SQL/00_eas_supabase_schema.sql`](./EAS_Supabase_SQL/00_eas_supabase_schema.sql).
+3. **Nâng cấp nền tảng**: Chạy lần lượt `migrations/04_current_schema_upgrade.sql` -> `migrations/05_email_login_and_password_reset.sql` -> `migrations/08_ai_auto_approval.sql`.
+4. **Bảng cấu hình Admin**: Chạy `supabase/migrations/20261103_admin_full_upgrade.sql` (cần thiết trước khi chạy migration 11).
+5. **Seed tài khoản quản trị gốc (`admin@eas.com`)**: Chạy lại [`database/install_fresh_db.sql`](./install_fresh_db.sql) (hoặc chạy `EAS_Supabase_SQL/01_demo_seed_DEV_ONLY.sql` cho môi trường dev) để đảm bảo tài khoản `admin@eas.com` tồn tại trước khi chạy migration 11.
+6. **Chuỗi Migration Schema v2 (09 -> 16)**: Chạy lần lượt `09_request_catalog_v2.sql`, `10_approval_delegation_and_employee_code.sql`, `11_cleanup_duplicates_and_admin_split.sql`, `12_ai_learning_jobs_and_announcements.sql`, `13_lock_client_roles_and_batch1_objects.sql`, `14_security_hardening_and_schema_v2_expand.sql`, `15_schema_v2_consolidate.sql`, `16_worker_delegation_and_working_hours.sql`.
+7. **Khởi tạo 8 Schema Hệ thống ngoài (`mock_*`)**: Chạy `mock_enterprise_sql/00_mock_enterprise_schemas.sql`, `01_mock_seed_DEV_ONLY.sql`, và các bản đồng bộ `mock_enterprise_sql/migrations/001_align_with_eas.sql` đến `005_align_with_eas.sql`.
+8. **Cô lập quyền truy cập, phân quyền RBAC & sửa hồ sơ kẹt (17 -> 18 -> repair)**: Chạy `migrations/17_external_systems_via_api.sql`, `migrations/18_role_module_permission_write_grant.sql`, và `migrations/repair_stuck_requests.sql`. Sau khi hoàn tất, đặt mật khẩu tạm cho admin bằng `python set_temporary_admin_password.py`.
+
 ## Schema EAS
 
 Xem [gói SQL EAS Supabase](./EAS_Supabase_SQL/README_VI.md) để biết installer baseline, kiểm tra chỉ đọc, seed/regression development, database role và cách chạy SQL validation local.

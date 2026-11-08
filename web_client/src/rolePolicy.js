@@ -18,10 +18,19 @@ const WORKFLOW_DUTY_ROLES = ["APPROVER", "EXECUTOR"];
 
 /** Admin portal: any admin role. Employee portal: everyone except pure admins;
  * an admin who also approves or executes keeps access to process requests. */
+// Pure system administration roles. AUDITOR is an employee duty (audit
+// lookup, admin event log) and works in the employee portal (M3).
+const SYSTEM_ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN"];
+
 export function canUsePortal(roles = [], portal = "client") {
   const isAdmin = roles.some((role) => ADMIN_ROLES.includes(role));
   if (portal === "admin") return isAdmin;
-  return !isAdmin || roles.some((role) => WORKFLOW_DUTY_ROLES.includes(role));
+  const isSystemAdmin = roles.some((role) => SYSTEM_ADMIN_ROLES.includes(role));
+  return (
+    !isSystemAdmin ||
+    roles.includes("AUDITOR") ||
+    roles.some((role) => WORKFLOW_DUTY_ROLES.includes(role))
+  );
 }
 
 export function visiblePages(roles = [], capabilities = {}) {

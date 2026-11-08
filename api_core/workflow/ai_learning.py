@@ -746,21 +746,22 @@ def _finish_applied(job: dict[str, Any], owner: str, result: dict[str, Any]) -> 
             ],
         )
         announcement = result["announcement"]
-        cursor.execute(
-            """
-            INSERT INTO eas.system_announcement (job_id, version, title, summary, changes, guidance)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT (job_id) DO NOTHING
-            """,
-            [
-                job["id"],
-                version,
-                announcement["title"],
-                announcement["summary"],
-                Jsonb(announcement["changes"]),
-                Jsonb(announcement["guidance"]),
-            ],
-        )
+        if announcement.get("changes"):
+            cursor.execute(
+                """
+                INSERT INTO eas.system_announcement (job_id, version, title, summary, changes, guidance)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (job_id) DO NOTHING
+                """,
+                [
+                    job["id"],
+                    version,
+                    announcement["title"],
+                    announcement["summary"],
+                    Jsonb(announcement["changes"]),
+                    Jsonb(announcement["guidance"]),
+                ],
+            )
         from api_core.workflow.service import record_system_change
 
         record_system_change(
@@ -892,16 +893,9 @@ def process_job(job: dict[str, Any], owner: str) -> str:
         ]
         _progress(job["id"], owner, 3, STEP_LABELS[3])
         time.sleep(2.5)
-        try:
-            verification = apply_to_ai(policy)
-        except Exception as e:  # noqa: BLE001
-            logger.warning(
-                "apply_to_ai error: %s, falling back to local verification", e
-            )
-            verification = {
-                "rules_loaded": len(policy["rules"]),
-                "enforcement_checks": 1,
-            }
+        # No local fallback: if the engine did not load and enforce the rules,
+        # the job must retry/FAIL (old rules stay), never report APPLIED.
+        verification = apply_to_ai(policy)
         time.sleep(2.5)
         announcement = build_announcement(
             version=version,

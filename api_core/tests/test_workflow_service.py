@@ -90,3 +90,35 @@ class WorkflowCommandBoundaryTests(SimpleTestCase):
             request_id=self.request_id,
             body={"expected_version": 1, "reason": "short"},
         )
+
+
+class LifecycleBCompletionTests(SimpleTestCase):
+    """H2: a lifecycle B request that completes must not leave an SLA stage open."""
+
+    def test_b_completion_closes_the_open_sla_stage(self):
+        from datetime import datetime, timezone
+        from unittest.mock import MagicMock
+
+        from api_core.workflow.service import (
+            SQL_CLOSE_SLA_STAGE,
+            _apply_execution_submission,
+        )
+
+        cursor = MagicMock()
+        request_id, now = str(uuid4()), datetime.now(timezone.utc)
+        status, completed_at = _apply_execution_submission(
+            cursor,
+            "B",
+            str(uuid4()),
+            str(uuid4()),
+            request_id,
+            "Đã hoàn tất cấp quyền",
+            "ITSM-1",
+            {"execution_hours": 48},
+            now,
+        )
+        self.assertEqual((status, completed_at), ("COMPLETED", now))
+        calls = [(c.args[0], c.args[1]) for c in cursor.execute.call_args_list]
+        self.assertIn((SQL_CLOSE_SLA_STAGE, [now, request_id]), calls)
+        # No new stage is opened after completion.
+        self.assertFalse(any("INSERT INTO eas.sla_stage" in sql for sql, _ in calls))

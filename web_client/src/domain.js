@@ -521,6 +521,8 @@ const ERROR_MESSAGES = {
   DELEGATION_NOT_INSTALLED: "Chức năng ủy quyền phê duyệt hiện đang tạm ngưng.",
   AI_APPROVAL_NOT_REVOCABLE: "Đã quá thời hạn 24 giờ hoặc hồ sơ không phải do AI tự động duyệt nên không thể thu hồi.",
   AI_SERVICE_UNAVAILABLE: "Trợ lý AI hiện đang bận hoặc bảo trì. Bạn vẫn có thể gửi và xử lý hồ sơ bình thường.",
+  APPROVER_ROLE_ADMIN_ONLY: "Chỉ Quản trị viên được cấp vai trò Người phê duyệt.",
+  AUDITOR_ROLE_ADMIN_ONLY: "Chỉ Quản trị viên được cấp vai trò Kiểm toán viên.",
   CACHE_UNAVAILABLE: "Hệ thống bảo mật tạm thời gián đoạn. Vui lòng thử lại sau vài giây.",
   AI_SERVICE_ERROR: "Trợ lý AI tạm thời chưa phản hồi được yêu cầu phân tích. Vui lòng thử lại sau.",
   INTEGRATION_UNAVAILABLE: "Kết nối đến hệ thống nghiệp vụ liên quan (Nhân sự / Tài chính / CNTT / Hành chính) đang tạm ngắt hoặc bảo trì. Vui lòng thử lại sau.",

@@ -11,10 +11,12 @@ import json
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "docs" / "REPORT_V1_SOURCE_MATRIX.json"
+FALLBACK_SOURCE = ROOT / "tests" / "fixtures" / "report_v1_source_matrix.json"
 
 
 def check() -> dict:
-    matrix = json.loads(SOURCE.read_text(encoding="utf-8"))
+    source_path = SOURCE if SOURCE.exists() else FALLBACK_SOURCE
+    matrix = json.loads(source_path.read_text(encoding="utf-8"))
     def present(relative):
         return (ROOT / relative).is_file()
     def contains(relative, literal):

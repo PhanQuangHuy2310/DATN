@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { errorText } from "../domain.js";
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -25,7 +26,7 @@ export function ApiAdministration() {
       const res = await api("/api/v1/admin/mock-apis");
       setApis(res.apis || []);
     } catch (err) {
-      if (!silent) showToast("Không thể tải danh sách API: " + (err.message || ""), "error");
+      if (!silent) showToast("Không thể tải danh sách API: " + errorText(err), "error");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -57,7 +58,7 @@ export function ApiAdministration() {
       setConfirmToggleApi(null);
       loadApis(true);
     } catch (err) {
-      showToast("Lỗi khi điều khiển Circuit Breaker: " + (err.message || ""), "error");
+      showToast("Lỗi khi điều khiển Circuit Breaker: " + errorText(err), "error");
     } finally {
       setToggling(false);
     }

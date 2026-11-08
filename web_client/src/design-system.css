@@ -291,13 +291,13 @@ button.nav-caption:hover:not(:disabled) { background: none; color: #ffffff; }
 }
 .nav-item.active, .nav-item.active:hover:not(:disabled) {
   background: #ffffff !important;
-  color: #ea580c !important;
+  color: #c2410c !important;
   font-weight: 650 !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
 }
 .nav-item.active .nav-icon,
 .nav-item.active .nav-text {
-  color: #ea580c !important;
+  color: #c2410c !important;
 }
 .sidebar-collapse { display: none; }
 .app-shell .sidebar .sidebar-close { display: none; }
@@ -1388,3 +1388,131 @@ input.ds-preset-field {
   .eas-modal-card, .eas-modal { padding: 16px; }
   .eas-modal-actions, .eas-modal-footer { flex-direction: column-reverse; }
 }
+
+/* H6 — phones (≤480px): the hamburger and page title must stay visible and
+   clickable. The right-hand actions used to overflow onto them because
+   .topbar-left shrank to 0 while the search kept min-width: 160px. */
+@media (max-width: 480px) {
+  .app-shell .workspace > .topbar { flex-wrap: wrap; row-gap: 8px; padding: 8px 12px; }
+  .app-shell .topbar-left { flex: 1 1 0; min-width: 0; gap: 8px; overflow: hidden; }
+  .app-shell .topbar .menu-toggle { flex: 0 0 auto; position: relative; z-index: 3; }
+  .app-shell .topbar-page-identity { min-width: 0; }
+  .app-shell .topbar-page-title { overflow: hidden; text-overflow: ellipsis; }
+  .app-shell .topbar .ds-breadcrumb { display: none; }
+  .app-shell .topbar-right { flex: 0 0 auto; gap: 6px; }
+  .app-shell .topbar .working-status-badge { display: none; }
+  .app-shell .topbar .ds-global-search { order: 3; flex: 1 1 100%; min-width: 0; }
+}
+
+/* M10 — summary cards at the top of "Quy định" and "Quản trị AI". These
+   classes had no rules, so the cards fell back to plain stacked text. */
+.eas-meta-cards-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.eas-meta-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow);
+}
+.eas-meta-stat-card.primary-border { border-top: 3px solid var(--ds-primary); }
+.eas-meta-stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.eas-meta-stat-label {
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--ds-muted);
+}
+.eas-meta-stat-value {
+  font-family: var(--ds-font-heading);
+  font-size: 24px;
+  font-weight: 750;
+  line-height: 1.2;
+  color: var(--ds-ink);
+  overflow-wrap: anywhere;
+}
+.eas-meta-stat-sub { font-size: 13px; line-height: 1.45; color: var(--ds-muted); }
+
+/* M11 — department cards wrap in a grid of ≥220px cells; the old flex
+   column cap (max-width: 155px) made wider cards spill out and get clipped. */
+.org-depts-grid > .org-dept-column { max-width: none; width: 100%; min-width: 0; }
+.org-depts-grid { box-sizing: border-box; padding-inline: 16px; }
+
+/* M12 — legacy variable names used across eas-enhancements.css (71 places)
+   were never defined, so their light fallbacks applied in dark mode too
+   (dark text on dark cards). Alias them to the theme tokens; data-theme is
+   set on <html>, the same element as :root, so dark values resolve here. */
+:root {
+  --text-color: var(--ds-ink);
+  --text-heading: var(--ds-ink);
+  --ink: var(--ds-ink);
+  --text-muted: var(--ds-muted);
+  --muted: var(--ds-muted);
+  --border: var(--ds-line);
+  --surface: var(--ds-surface);
+  --bg-surface: var(--ds-surface);
+  --bg-subtle: var(--ds-canvas);
+  --bg-input: var(--ds-canvas);
+  --bg-hover: var(--ds-neutral-soft);
+}
+
+/* M12 — dark-mode contrast (WCAG AA). Light-theme colours hard-coded in
+   styles.css / eas-enhancements.css were reused on dark surfaces. */
+[data-theme="dark"] .muted,
+[data-theme="dark"] small.muted,
+[data-theme="dark"] .version-col-title,
+[data-theme="dark"] .ai-step-percent-tag { color: var(--ds-muted); }
+/* White on #3b82f6 is 3.7:1; #2563eb gives 5.2:1. */
+[data-theme="dark"] button.primary,
+[data-theme="dark"] .btn-primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+[data-theme="dark"] button.primary:hover,
+[data-theme="dark"] .btn-primary:hover { background: #1d4ed8; }
+[data-theme="dark"] .type-row-rank,
+[data-theme="dark"] .badge-pct,
+[data-theme="dark"] .admin-period-desc strong,
+[data-theme="dark"] .ai-progress-percentage,
+[data-theme="dark"] .kpi-icon-wrap.icon-blue { color: #93c5fd; }
+[data-theme="dark"] .kpi-rate-badge.badge-green { color: #6ee7b7; }
+[data-theme="dark"] .kpi-rate-badge.badge-red,
+[data-theme="dark"] .kpi-icon-wrap.icon-red { color: #fca5a5; }
+[data-theme="dark"] .kpi-rate-badge.badge-amber { color: #fcd34d; }
+[data-theme="dark"] .ai-step-badge { background: #047857; }
+[data-theme="dark"] .stat-pill strong { color: inherit; }
+[data-theme="dark"] small,
+[data-theme="dark"] th,
+[data-theme="dark"] .eyebrow { color: var(--ds-muted); }
+[data-theme="dark"] button.link { color: #93c5fd; }
+[data-theme="dark"] .kpi-value.text-green { color: #86efac; }
+[data-theme="dark"] .cat-badge-code { color: var(--ds-ink); }
+
+/* L8 — request group cards are <button>s: the global button:hover turns them
+   deep blue while their text stayed dark. Same deep blue in both themes,
+   with white text (title ≈ 8.7:1, description ≈ 7:1). */
+.request-group-grid button.request-group-card.request-group-card:hover,
+.request-group-grid button.request-group-card.request-group-card:focus-visible {
+  background: #1e40af;
+  border-color: #1e40af;
+  color: #ffffff;
+}
+.request-group-grid button.request-group-card:hover strong,
+.request-group-grid button.request-group-card:focus-visible strong,
+.request-group-grid button.request-group-card:hover small,
+.request-group-grid button.request-group-card:focus-visible small { color: #ffffff; }
+.request-group-grid button.request-group-card:hover span,
+.request-group-grid button.request-group-card:focus-visible span { color: rgba(255, 255, 255, 0.9); }

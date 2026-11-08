@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { errorText } from "../domain.js";
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -50,7 +51,7 @@ export function AiEngineManagementPage() {
       showToast(res.message || "Đã kích hoạt chu trình huấn luyện lại AI!", "info");
       fetchAiStatus();
     } catch (err) {
-      showToast("Lỗi khi kích hoạt huấn luyện AI: " + (err.message || ""), "error");
+      showToast("Lỗi khi kích hoạt huấn luyện AI: " + errorText(err), "error");
     } finally {
       setRetraining(false);
     }
@@ -81,7 +82,7 @@ export function AiEngineManagementPage() {
       });
       setTestResult({ ...res, testedAt: new Date().toLocaleTimeString("vi-VN") });
     } catch (err) {
-      showToast("AI chưa trả lời: " + (err.message || ""), "error");
+      showToast("AI chưa trả lời: " + errorText(err), "error");
     } finally {
       setTesting(false);
     }
@@ -112,10 +113,10 @@ export function AiEngineManagementPage() {
             <span className="eas-badge-neutral">Hybrid Architecture</span>
           </div>
           <div className="ai-model-provider-title">
-            {aiState?.provider_name || "Google Gemini + Scikit-Learn Hybrid"}
+            {aiState?.provider_name || "Scikit-Learn Local Pipeline (Gemini Fallback: Chưa cấu hình Key)"}
           </div>
           <div className="ai-model-name-sub">
-            <code>{aiState?.model_name || "gemini-2.5-flash & nlp_risk_pipeline_v2"}</code>
+            <code>{aiState?.model_name || "nlp_risk_pipeline_v2 (Local Scikit-Learn / XGBoost)"}</code>
           </div>
         </div>
 

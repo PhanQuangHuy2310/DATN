@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { errorText } from "../domain.js";
 import { api } from "../api.js";
 import { useResource } from "./ui.jsx";
 import { notifyPermissionsChanged } from "../sessionRefresh.js";
@@ -42,7 +43,7 @@ export default function RolePermissionMatrixPage() {
     api(`/api/v1/admin/rbac/matrix?role_id=${roleId}`)
       .then(setMatrixData)
       .catch((err) => {
-        showToast("Không thể tải ma trận phân quyền: " + (err.message || err), "error");
+        showToast("Không thể tải ma trận phân quyền: " + errorText(err), "error");
       });
   }, [roleId]);
 
@@ -52,7 +53,7 @@ export default function RolePermissionMatrixPage() {
     api(`/api/v1/admin/rbac/user-permissions/${selectedUserId}`)
       .then(setUserMatrixData)
       .catch((err) => {
-        showToast("Không thể tải quyền riêng người dùng: " + (err.message || err), "error");
+        showToast("Không thể tải quyền riêng người dùng: " + errorText(err), "error");
       });
   }, [selectedUserId]);
 
@@ -93,7 +94,7 @@ export default function RolePermissionMatrixPage() {
       showToast(`Đã lưu quyền "${moduleCode} - ${action}" cho chức vụ!`, "success");
       notifyPermissionsChanged();
     } catch (err) {
-      showToast("Lỗi cập nhật quyền: " + (err.message || err), "error");
+      showToast("Lỗi cập nhật quyền: " + errorText(err), "error");
       // Revert optimistic update
       setMatrixData((prev) => {
         if (!prev) return prev;
@@ -149,7 +150,7 @@ export default function RolePermissionMatrixPage() {
       showToast(`Đã cập nhật quyền riêng "${moduleCode} - ${action}" cho nhân viên!`, "success");
       notifyPermissionsChanged();
     } catch (err) {
-      showToast("Lỗi cập nhật quyền riêng: " + (err.message || err), "error");
+      showToast("Lỗi cập nhật quyền riêng: " + errorText(err), "error");
       // Revert
       setUserMatrixData((prev) => {
         if (!prev) return prev;
@@ -183,7 +184,7 @@ export default function RolePermissionMatrixPage() {
       setUserMatrixData(res);
       notifyPermissionsChanged();
     } catch (err) {
-      showToast("Lỗi khôi phục quyền: " + (err.message || err), "error");
+      showToast("Lỗi khôi phục quyền: " + errorText(err), "error");
     }
   };
 

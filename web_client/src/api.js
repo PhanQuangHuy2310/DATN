@@ -2,6 +2,10 @@ export const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/,
 
 const DATA_EVENT = "eas:data-changed";
 const TOAST_EVENT = "eas:toast";
+// L11: an expired session (401 on a business endpoint) sends the user to login.
+export const SESSION_EXPIRED_EVENT = "eas:session-expired";
+// Auth endpoints report errors inline on their own forms (L5).
+const isAuthPath = (path) => path.includes("/api/v1/auth/");
 const inFlight = new Map();
 const cached = new Map();
 const CACHE_TTL_MS = 20000;
@@ -58,15 +62,20 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
   // Only replay safe, idempotent reads. Never retry a non-idempotent command.
   const attempts = isRead ? 2 : 1;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const waitMs = timeoutMs || (isRead ? 15000 : 30000);
+    const timeoutSignal = typeof AbortSignal !== "undefined" && AbortSignal.timeout
+      ? AbortSignal.timeout(waitMs)
+      : null;
     const controller = new AbortController();
     // Writes may still be committing to Supabase: wait longer and never retry them.
-    const timeout = setTimeout(() => controller.abort(), timeoutMs || (isRead ? 15000 : 30000));
+    const timeout = timeoutSignal ? null : setTimeout(() => controller.abort(), waitMs);
     const onAbort = () => controller.abort();
+    timeoutSignal?.addEventListener("abort", onAbort, { once: true });
     options.signal?.addEventListener("abort", onAbort, { once: true });
-    if (options.signal?.aborted) controller.abort();
+    if (options.signal?.aborted || timeoutSignal?.aborted) controller.abort();
     try {
       const response = await fetch(`${API_BASE}${path}`, {
-        ...options, method, headers, credentials: "include", signal: controller.signal,
+        ...options, method, headers, credentials: "include", signal: timeoutSignal && !options.signal ? timeoutSignal : controller.signal,
       });
       const isJson = (response.headers.get("content-type") || "").includes("application/json");
       const body = isJson ? await response.json().catch(() => null) : null;
@@ -77,6 +86,9 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
         error.fields = body?.error?.fields;
         error.serverMessage = body?.error?.message || body?.message || "";
         error.correlationId = body?.correlation_id || response.headers.get("X-Correlation-ID") || "";
+        if (response.status === 401 && !isAuthPath(path)) {
+          window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+        }
         if (isRead && [502, 503, 504].includes(response.status) && attempt < attempts - 1) {
           await pause(300 * (2 ** attempt));
           continue;
@@ -95,18 +107,20 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
       return body;
     } catch (error) {
       if (options.signal?.aborted) throw error;
-      if (isRead && attempt < attempts - 1 && (error.name === "AbortError" || error instanceof TypeError)) {
+      const isTimeoutAbort = error.name === "AbortError" || error.name === "TimeoutError";
+      if (isRead && attempt < attempts - 1 && (isTimeoutAbort || error instanceof TypeError)) {
         await pause(300 * (2 ** attempt));
         continue;
       }
-      if (!isRead && !silent) notify(error.name === "AbortError" ? "Yêu cầu quá thời gian phản hồi. Kiểm tra trạng thái trước khi thử lại." : "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại.", "error");
-      if (!isRead && error.name === "AbortError") {
+      if (!isRead && !silent && !isAuthPath(path)) notify(isTimeoutAbort ? "Yêu cầu quá thời gian phản hồi. Kiểm tra trạng thái trước khi thử lại." : "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại.", "error");
+      if (!isRead && isTimeoutAbort) {
         // The server may have committed despite a client timeout. Do not retry.
         throw new Error("REQUEST_TIMEOUT_UNKNOWN");
       }
       throw error;
     } finally {
-      clearTimeout(timeout);
+      if (timeout) clearTimeout(timeout);
+      timeoutSignal?.removeEventListener("abort", onAbort);
       options.signal?.removeEventListener("abort", onAbort);
     }
   }
