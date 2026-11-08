@@ -2,10 +2,10 @@
  * Authorization always remains enforced on the Django API with role + scope + SoD.
  */
 export const ROLE_NAVIGATION = Object.freeze({
-  REQUESTER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "notifications", "profile"],
-  APPROVER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "approval", "team", "team-employees", "notifications", "profile"],
-  EXECUTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
-  ACCEPTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
+  REQUESTER: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "notifications", "profile"],
+  APPROVER: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "org-client", "approval", "team", "team-employees", "notifications", "profile"],
+  EXECUTOR: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
+  ACCEPTOR: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
   POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "ai-policy", "ai-rules", "release-workspace", "plan-catalog", "notifications", "profile"],
   OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
   AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "team", "team-employees", "notifications", "profile"],
@@ -53,4 +53,21 @@ export const ROLE_TASKS = Object.freeze([
 export function roleTasks(roles = [], capabilities = {}) {
   const granted = new Set(roles);
   return ROLE_TASKS.filter((task) => granted.has(task.role) && (!["identity", "org-chart", "api-admin"].includes(task.page) || capabilities.identity_manage));
+}
+
+/** A colleague-directory UI is available only to the user's direct manager
+ * in the same department. APPROVER by itself is NOT a manager grant.
+ * Database APIs must independently enforce the same scope for security.
+ */
+export function canBrowseDepartmentRoster(user, departments = []) {
+  if (!user?.id || !user?.department_id || !Array.isArray(departments)) return false;
+  return departments.some((department) =>
+    String(department.id) === String(user.department_id) &&
+    Array.isArray(department.employees) &&
+    department.employees.some((employee) =>
+      String(employee.manager_id || "") === String(user.id) &&
+      String(employee.id) !== String(user.id) &&
+      String(employee.department_id || department.id) === String(user.department_id)
+    )
+  );
 }

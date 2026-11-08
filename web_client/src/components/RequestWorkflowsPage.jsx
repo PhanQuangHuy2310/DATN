@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
@@ -47,6 +47,15 @@ export default function RequestWorkflowsPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [toast, setToast] = useState(null);
+  const pendingMutations = useRef(new Set());
+  const [pendingKey, setPendingKey] = useState("");
+  async function guardedMutation(key, work) {
+    if (pendingMutations.current.size) return false;
+    pendingMutations.current.add(key);
+    setPendingKey(key);
+    try { return await work(); }
+    finally { pendingMutations.current.delete(key); setPendingKey(""); }
+  }
 
   // Modals state
   const [editingCategory, setEditingCategory] = useState(null);
@@ -85,10 +94,12 @@ export default function RequestWorkflowsPage() {
 
   // Switch category of a template directly in the table
   const handleCategoryChange = async (template, newCategory) => {
+    return guardedMutation("category-change", async () => {
     if (template.category_code === newCategory) return;
     try {
       const res = await api(`${apiBase}/request-templates/${template.id}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify({ category_code: newCategory }),
       });
       if (res.success && res.item) {
@@ -103,14 +114,17 @@ export default function RequestWorkflowsPage() {
     } catch (err) {
       showToast("Lỗi khi chuyển phân loại: " + (err.message || "Không thể cập nhật"), "error");
     }
+    });
   };
 
   // Update weight directly in the table
   const handleWeightChange = async (template, newWeight) => {
+    return guardedMutation("weight-change", async () => {
     const val = Math.max(0, Math.min(100, parseInt(newWeight, 10) || 0));
     try {
       const res = await api(`${apiBase}/request-templates/${template.id}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify({ automation_weight: val }),
       });
       if (res.success && res.item) {
@@ -122,13 +136,16 @@ export default function RequestWorkflowsPage() {
     } catch (err) {
       showToast("Lỗi lưu trọng số: " + err.message, "error");
     }
+    });
   };
 
   // Save standard category workflow steps
   const handleSaveCategory = async (catData) => {
+    return guardedMutation("category-save", async () => {
     try {
       const res = await api(`${apiBase}/workflow-categories/${catData.category_code}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify(catData),
       });
       if (res.success) {
@@ -137,15 +154,19 @@ export default function RequestWorkflowsPage() {
           `Đã cập nhật quy trình chuẩn Nhóm ${catData.category_code}. Các mẫu liên quan đã được đồng bộ!`,
           "success"
         );
-        loadData();
+        void loadData();
+        return true;
       }
+      throw new Error("Máy chủ chưa xác nhận lưu quy trình.");
     } catch (err) {
       showToast("Lỗi lưu quy trình: " + err.message, "error");
     }
+    });
   };
 
   // Save template edit
   const handleSaveTemplate = async (tplData) => {
+    return guardedMutation("template-save", async () => {
     try {
       const isNew = !tplData.id;
       const url = isNew
@@ -155,6 +176,7 @@ export default function RequestWorkflowsPage() {
 
       const res = await api(url, {
         method,
+        toast: false,
         body: JSON.stringify(tplData),
       });
 
@@ -167,18 +189,24 @@ export default function RequestWorkflowsPage() {
             : `Đã cập nhật mẫu yêu cầu "${tplData.name}"!`,
           "success"
         );
-        loadData();
+        void loadData();
+        return true;
       }
+      throw new Error("Máy chủ chưa xác nhận lưu mẫu yêu cầu.");
     } catch (err) {
       showToast("Lỗi lưu mẫu: " + err.message, "error");
+      throw err;
     }
+    });
   };
 
   // Delete template
   const handleDeleteTemplate = async (template) => {
+    return guardedMutation("template-delete", async () => {
     try {
       const res = await api(`${apiBase}/request-templates/${template.id}`, {
         method: "DELETE",
+      toast: false,
       });
       if (res.success) {
         setDeletingTemplate(null);
@@ -188,11 +216,14 @@ export default function RequestWorkflowsPage() {
             : `Đã xóa hoàn toàn mẫu "${template.name}".`,
           "success"
         );
-        loadData();
+        void loadData();
+        return true;
       }
+      throw new Error("Máy chủ chưa xác nhận xóa mẫu yêu cầu.");
     } catch (err) {
       showToast("Lỗi xóa mẫu: " + err.message, "error");
     }
+    });
   };
 
   // Filtered templates list
@@ -720,8 +751,9 @@ export default function RequestWorkflowsPage() {
                 type="button"
                 className="rw-btn-primary"
                 onClick={() => handleSaveCategory(editingCategory)}
+                disabled={Boolean(pendingKey)}
               >
-                Lưu quy trình chuẩn & Lan truyền
+                {pendingKey === "category-save" ? "Đang lưu…" : "Lưu quy trình chuẩn & Lan truyền"}
               </button>
             </div>
           </div>
@@ -818,6 +850,7 @@ export default function RequestWorkflowsPage() {
                 type="button"
                 className="danger"
                 onClick={() => handleDeleteTemplate(deletingTemplate)}
+                disabled={Boolean(pendingKey)}
               >
                 Xác nhận xóa
               </button>
@@ -844,6 +877,9 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
   });
 
   const [activeTab, setActiveTab] = useState("general");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [formError, setFormError] = useState("");
 
   // When category changes in form, populate recommended weight
   const handleCatSelect = (cat) => {
@@ -896,13 +932,31 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      alert("Vui lòng nhập tên mẫu yêu cầu");
+    if (savingRef.current) return;
+    if (!formData.name.trim() || !formData.code.trim()) {
+      setFormError("Nhập tên và mã mẫu yêu cầu trước khi lưu.");
+      setActiveTab("general");
       return;
     }
-    onSave(formData);
+    if (fields.some((field) => !String(field.label || "").trim())) {
+      setFormError("Mỗi trường biểu mẫu cần có nhãn hiển thị.");
+      setActiveTab("fields");
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
+    setFormError("");
+    try {
+      const result = await onSave({ ...formData, name: formData.name.trim(), code: formData.code.trim() });
+      if (result === false) throw new Error("Thao tác đang xử lý hoặc chưa được xác nhận.");
+    } catch (error) {
+      setFormError(error?.message || "Lưu mẫu thất bại. Vui lòng thử lại.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   };
 
   const fields = formData.form_schema?.fields || [];
@@ -910,9 +964,9 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
   return (
     <Modal
       title={isNew ? "Tạo Mẫu Yêu Cầu Mới" : `Chỉnh sửa Mẫu: ${template.name}`}
-      onClose={onClose}
+      onClose={saving ? () => {} : onClose}
     >
-      <form onSubmit={handleSubmit} className="rw-modal-form">
+      <form onSubmit={handleSubmit} className="rw-modal-form" aria-busy={saving}>
         {/* Modal Tabs */}
         <div className="rw-modal-tabs">
           <button
@@ -1094,12 +1148,13 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
           </div>
         )}
 
+        {formError && <p className="error" role="alert">{formError}</p>}
         <div className="rw-modal-footer">
-          <button type="button" className="secondary" onClick={onClose}>
+          <button type="button" className="secondary" disabled={saving} onClick={onClose}>
             Hủy bỏ
           </button>
-          <button type="submit" className="rw-btn-primary">
-            {isNew ? "Tạo mẫu yêu cầu" : "Lưu thay đổi"}
+          <button type="submit" className="rw-btn-primary" disabled={saving}>
+            {saving ? "Đang lưu…" : isNew ? "Tạo mẫu yêu cầu" : "Lưu thay đổi"}
           </button>
         </div>
       </form>

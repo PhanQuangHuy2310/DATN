@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Icon from "./Icon.jsx";
 import { api } from "../api.js";
 import { useResource } from "./ui.jsx";
@@ -16,6 +16,7 @@ export default function RolePermissionMatrixPage() {
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [matrixData, setMatrixData] = useState(null);
   const [savingKey, setSavingKey] = useState(null); // module_code + action
+  const pendingPermissionRef = useRef(new Set());
 
   // User override state
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -65,11 +66,14 @@ export default function RolePermissionMatrixPage() {
     }
     const newValue = !currentValue;
     const saveKey = `${moduleCode}_${action}`;
+    const pendingId = `${roleId}:${saveKey}`;
+    if (pendingPermissionRef.current.has(pendingId)) return;
+    pendingPermissionRef.current.add(pendingId);
     setSavingKey(saveKey);
 
     // Optimistic UI update
     setMatrixData((prev) => {
-      if (!prev) return prev;
+      if (!prev || prev.role_id !== roleId) return prev;
       return {
         ...prev,
         modules: prev.modules.map((m) => {
@@ -84,6 +88,7 @@ export default function RolePermissionMatrixPage() {
     try {
       await api("/api/v1/admin/rbac/role-permission", {
         method: "POST",
+        toast: false,
         body: JSON.stringify({
           role_id: roleId,
           module_code: moduleCode,
@@ -109,6 +114,7 @@ export default function RolePermissionMatrixPage() {
         };
       });
     } finally {
+      pendingPermissionRef.current.delete(pendingId);
       setSavingKey(null);
     }
   };
@@ -121,11 +127,14 @@ export default function RolePermissionMatrixPage() {
     }
     const newValue = !currentValue;
     const saveKey = `user_${moduleCode}_${action}`;
+    const pendingId = `${selectedUserId}:${saveKey}`;
+    if (pendingPermissionRef.current.has(pendingId)) return;
+    pendingPermissionRef.current.add(pendingId);
     setSavingKey(saveKey);
 
     // Optimistic UI update
     setUserMatrixData((prev) => {
-      if (!prev) return prev;
+      if (!prev || prev.role_id !== roleId) return prev;
       return {
         ...prev,
         modules: prev.modules.map((m) => {
@@ -140,6 +149,7 @@ export default function RolePermissionMatrixPage() {
     try {
       await api("/api/v1/admin/rbac/user-permission", {
         method: "POST",
+        toast: false,
         body: JSON.stringify({
           user_id: selectedUserId,
           module_code: moduleCode,
@@ -165,18 +175,23 @@ export default function RolePermissionMatrixPage() {
         };
       });
     } finally {
+      pendingPermissionRef.current.delete(pendingId);
       setSavingKey(null);
     }
   };
 
   // Reset user permissions to role defaults
   const handleResetUserPermissions = async () => {
+    const pendingId = `reset:${selectedUserId}`;
+    if (pendingPermissionRef.current.has(pendingId)) return;
     if (!window.confirm("Bạn có chắc chắn muốn khôi phục quyền mặc định theo chức vụ cho nhân viên này?")) {
       return;
     }
+    pendingPermissionRef.current.add(pendingId);
     try {
       await api(`/api/v1/admin/rbac/user-permission/${selectedUserId}/reset`, {
         method: "POST",
+      toast: false,
       });
       showToast("Đã khôi phục quyền mặc định thành công!", "success");
       // Refetch user matrix
@@ -185,6 +200,8 @@ export default function RolePermissionMatrixPage() {
       notifyPermissionsChanged();
     } catch (err) {
       showToast("Lỗi khôi phục quyền: " + (err.message || err), "error");
+    } finally {
+      pendingPermissionRef.current.delete(pendingId);
     }
   };
 
@@ -243,6 +260,7 @@ export default function RolePermissionMatrixPage() {
                     type="button"
                     className={`role-pill-btn ${isActive ? "active" : ""}`}
                     onClick={() => setSelectedRoleId(r.id)}
+                    disabled={Boolean(savingKey)}
                   >
                     <strong>{r.name}</strong>
                     <span className="role-code-tag">{r.code}</span>
@@ -313,10 +331,6 @@ export default function RolePermissionMatrixPage() {
                     matrixData.modules.map((m, idx) => {
                       // Admin-only modules can never be granted to employee roles (server enforces it too).
                       const isLocked = SYSTEM_LOCKED_MODULES.has(m.code);
-                      const isSavingView = savingKey === `${m.code}_can_view`;
-                      const isSavingCreate = savingKey === `${m.code}_can_create`;
-                      const isSavingUpdate = savingKey === `${m.code}_can_update`;
-                      const isSavingDelete = savingKey === `${m.code}_can_delete`;
 
                       return (
                         <tr key={m.code} className={isLocked ? "row-locked-module" : !m.can_view ? "row-view-disabled" : ""}>
@@ -345,7 +359,7 @@ export default function RolePermissionMatrixPage() {
                               <input
                                 type="checkbox"
                                 checked={isLocked ? false : Boolean(m.can_view)}
-                                disabled={isLocked || isSavingView}
+                                disabled={isLocked || Boolean(savingKey)}
                                 onChange={() => handleToggleRolePermission(m.code, "can_view", m.can_view)}
                               />
                               <span className="slider round"></span>
@@ -358,7 +372,7 @@ export default function RolePermissionMatrixPage() {
                               <input
                                 type="checkbox"
                                 checked={isLocked ? false : Boolean(m.can_create)}
-                                disabled={isLocked || !m.can_view || isSavingCreate}
+                                disabled={isLocked || !m.can_view || Boolean(savingKey)}
                                 onChange={() => handleToggleRolePermission(m.code, "can_create", m.can_create)}
                               />
                               <span className="slider round"></span>
@@ -371,7 +385,7 @@ export default function RolePermissionMatrixPage() {
                               <input
                                 type="checkbox"
                                 checked={isLocked ? false : Boolean(m.can_update)}
-                                disabled={isLocked || !m.can_view || isSavingUpdate}
+                                disabled={isLocked || !m.can_view || Boolean(savingKey)}
                                 onChange={() => handleToggleRolePermission(m.code, "can_update", m.can_update)}
                               />
                               <span className="slider round"></span>
@@ -384,7 +398,7 @@ export default function RolePermissionMatrixPage() {
                               <input
                                 type="checkbox"
                                 checked={isLocked ? false : Boolean(m.can_delete)}
-                                disabled={isLocked || !m.can_view || isSavingDelete}
+                                disabled={isLocked || !m.can_view || Boolean(savingKey)}
                                 onChange={() => handleToggleRolePermission(m.code, "can_delete", m.can_delete)}
                               />
                               <span className="slider round"></span>
@@ -498,10 +512,6 @@ export default function RolePermissionMatrixPage() {
                   {(userMatrixData?.modules || []).map((m, idx) => {
                     const isLocked = SYSTEM_LOCKED_MODULES.has(m.code);
                     const isOverride = m.is_user_override;
-                    const isSavingView = savingKey === `user_${m.code}_can_view`;
-                    const isSavingCreate = savingKey === `user_${m.code}_can_create`;
-                    const isSavingUpdate = savingKey === `user_${m.code}_can_update`;
-                    const isSavingDelete = savingKey === `user_${m.code}_can_delete`;
 
                     return (
                       <tr key={m.code} className={isLocked ? "row-locked-module" : !m.can_view ? "row-view-disabled" : ""}>
@@ -534,7 +544,7 @@ export default function RolePermissionMatrixPage() {
                             <input
                               type="checkbox"
                               checked={isLocked ? false : Boolean(m.can_view)}
-                              disabled={isLocked || isSavingView}
+                              disabled={isLocked || Boolean(savingKey)}
                               onChange={() => handleToggleUserPermission(m.code, "can_view", m.can_view)}
                             />
                             <span className="slider round"></span>
@@ -547,7 +557,7 @@ export default function RolePermissionMatrixPage() {
                             <input
                               type="checkbox"
                               checked={isLocked ? false : Boolean(m.can_create)}
-                              disabled={isLocked || !m.can_view || isSavingCreate}
+                              disabled={isLocked || !m.can_view || Boolean(savingKey)}
                               onChange={() => handleToggleUserPermission(m.code, "can_create", m.can_create)}
                             />
                             <span className="slider round"></span>
@@ -560,7 +570,7 @@ export default function RolePermissionMatrixPage() {
                             <input
                               type="checkbox"
                               checked={isLocked ? false : Boolean(m.can_update)}
-                              disabled={isLocked || !m.can_view || isSavingUpdate}
+                              disabled={isLocked || !m.can_view || Boolean(savingKey)}
                               onChange={() => handleToggleUserPermission(m.code, "can_update", m.can_update)}
                             />
                             <span className="slider round"></span>
@@ -573,7 +583,7 @@ export default function RolePermissionMatrixPage() {
                             <input
                               type="checkbox"
                               checked={isLocked ? false : Boolean(m.can_delete)}
-                              disabled={isLocked || !m.can_view || isSavingDelete}
+                              disabled={isLocked || !m.can_view || Boolean(savingKey)}
                               onChange={() => handleToggleUserPermission(m.code, "can_delete", m.can_delete)}
                             />
                             <span className="slider round"></span>

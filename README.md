@@ -275,3 +275,38 @@ Nếu `/health/live` lỗi: kiểm tra container API và log. Nếu `live=200, d
 - Theo phân hệ: [API](./api_core/README.md) · [AI](./ai_service/README.md) · [Web](./web_client/README.md) · [Mobile](./mobile_app/README.md) · [Kiểm thử](./tests/README.md) · [Triển khai](./deploy/README.md)
 - Lịch sử thay đổi: thư mục [changelogs/](./changelogs/)
 >>>>>>> origin/main
+
+
+## Cập nhật UI/UX và kịch bản duyệt hồ sơ — 08/11/2026
+
+### Phạm vi sửa
+
+- Chỉ thay đổi frontend `web_client` và ghi thông tin vào README gốc; không sửa Django, PostgreSQL, AI Service, Docker hoặc các quy tắc phê duyệt.
+- Ở cổng Client, không còn điều hướng chung tới trang quản lý người dùng của Admin. Sơ đồ tổ chức chỉ mở tra cứu nhân viên khi tài khoản có nhân viên **báo cáo trực tiếp** trong cùng phòng ban; không coi mọi APPROVER mặc nhiên là trưởng phòng. Trưởng phòng chỉ mở được danh sách phòng ban của mình, Admin vẫn giữ chức năng hiện tại. Nhân viên thông thường chỉ xem cấu trúc phòng ban.
+- Popup **Nộp kết quả thực hiện**: bắt buộc chọn minh chứng PDF/JPG/PNG tối đa 10 MB; chờ API tải lên xác nhận tệp `CLEAN` trước khi submit. Giữ thông tin biểu mẫu và biên nhận tải lên nếu lệnh submit thất bại; không tải lại cùng tệp khi thử lại. Thành công mới đóng popup, cập nhật chi tiết hồ sơ.
+- **Giới hạn bảo mật:** Ẩn chức năng bằng frontend không ngăn truy vấn API trực tiếp. Hiện `workspace/org-chart-tree` do backend kiểm soát quyền theo module, chưa cấp quyền đọc theo quan hệ quản lý từng phòng ban. Trước khi triển khai production bắt buộc cập nhật phân quyền và lọc dữ liệu tại API, và kiểm thử không rò rỉ email/nhân viên ngoài phạm vi.
+- **Giới hạn gửi minh chứng:** endpoint tải lên minh chứng hiện chưa có cơ chế idempotency thực thi trong backend (header không đủ để chống tạo tệp trùng). UI chỉ tránh gửi lại khi đã nhận biên nhận upload thành công; nếu kết nối đứt trước khi nhận biên nhận, phải kiểm tra lịch sử tệp/attempt trước khi gửi lại để tránh tải trùng.
+- **Lỗi minh chứng từ ảnh:** mã nghiệp vụ như `EXECUTION_EVIDENCE_REQUIRED` có nghĩa là backend chưa xác nhận tệp cho lần thực hiện. Nếu đã tải thành công nhưng submit vẫn trả 409, cần đối chiếu `X-Correlation-ID`, bản ghi `eas.execution_attachment` theo execution attempt, kết nối Storage và ClamAV; không bỏ qua kiểm tra minh chứng.
+
+### Kịch bản E2E kiểm thử phê duyệt trên môi trường thử nghiệm
+
+Chuẩn bị: Redis `PONG`, Django `/health/ready` phản hồi đúng, AI/mock/worker nếu loại hồ sơ phụ thuộc tích hợp; tài khoản test REQUESTER, APPROVER khác requester, EXECUTOR, ACCEPTOR, AUDITOR; tài khoản quản lý phòng ban có nhân viên cùng phòng báo cáo trực tiếp. Dùng các hồ sơ **thử nghiệm**, không dùng dữ liệu thực. Trong tab Network bật Preserve log và ghi `X-Correlation-ID` + status của API lỗi.
+
+| Mã | Luồng thao tác | Kết quả cần xác nhận |
+| --- | --- | --- |
+| E2E-01 | REQUESTER đăng nhập → tạo nháp → nhập dữ liệu → lưu → gửi duyệt | Hiển thị mã hồ sơ, lưu không F5, có tuyến duyệt và lịch sử |
+| E2E-02 | APPROVER đăng nhập → mở hàng chờ → phê duyệt từng cấp | Chỉ đúng hồ sơ có lượt duyệt, mỗi cấp chỉ 1 quyết định, trạng thái/notification cập nhật |
+| E2E-03 | EXECUTOR nhận việc → nhập kết quả và mã bàn giao → chọn PDF/JPG/PNG → xác nhận | 1 lượt upload minh chứng `CLEAN`, 1 lượt submit, đóng popup chỉ khi thành công; vòng đời B có thể hoàn tất, C chuyển nghiệm thu |
+| E2E-04 | ACCEPTOR mở hồ sơ đang chờ → xác nhận nghiệm thu | Chỉ người có quyền thực hiện, trạng thái COMPLETED, timeline và requester cập nhật |
+| E2E-05 | APPROVER từ chối kèm lý do ≥10 ký tự | Chuyển trạng thái REJECTED, requester đọc được lý do; không tạo tác vụ thực thi |
+| E2E-06 | APPROVER yêu cầu bổ sung → REQUESTER sửa → gửi lại | Mở lại phiên duyệt đúng bản sửa, không tạo hồ sơ trùng |
+| E2E-07 | EXECUTOR nộp kết quả thiếu file / file sai loại / quá 10 MB | Validate ngay trong popup, không gọi submit; form giữ nguyên, không đóng giả thành công |
+| E2E-08 | EXECUTOR upload file thành công, buộc API submit thất bại có kiểm soát rồi thử lại | Không tải trùng file, popup còn giá trị nhập; nếu server chưa xác nhận được tệp phải hiển thị lỗi; không tạo 2 execution records |
+| E2E-09 | ACCEPTOR yêu cầu làm lại → EXECUTOR nộp lại minh chứng | Tạo lượt xử lý đúng theo nghiệp vụ, timeline có lịch sử, nghiệm thu lại đúng |
+| E2E-10 | REQUESTER thử tự duyệt và user khác không được phân công thử duyệt | Button không hiển thị/không thực thi; gọi API trực tiếp cũng bị từ chối theo quy tắc SoD |
+| E2E-11 | Trưởng phòng mở Sơ đồ tổ chức, tìm nhân viên thuộc phòng mình → thử phòng khác | Cho phép tra cứu trong phòng mình, không mở danh sách phòng khác ở frontend |
+| E2E-12 | Nhân viên thường mở Sơ đồ tổ chức → thử tìm tên hoặc mở danh sách nhân viên | Không có ô tìm nhân sự, không mở được danh sách qua nút; **kiểm tra riêng API** có chặn truy vấn trực tiếp hay chưa |
+| E2E-13 | Double-click các nút Gửi / Duyệt / Nộp kết quả, làm mới danh sách | Chỉ 1 quyết định nghiệp vụ, không trùng thông báo, không cần F5 |
+| E2E-14 | Ngắt Redis hoặc mạng trong môi trường test, thử thao tác rồi khôi phục | Không báo thành công giả, có retry phù hợp, log xác định request/status/correlation |
+
+**Định nghĩa hoàn thành:** Không xem là PASS nếu chỉ có toast. Cần đồng thời: API trả trạng thái hợp lệ, dữ liệu được ghi, UI hiển thị bước tiếp theo, tài khoản vai trò tiếp theo nhìn thấy hồ sơ và không có thao tác trùng.

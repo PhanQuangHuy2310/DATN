@@ -82,7 +82,7 @@ export default function ClientRequests({
       ? initialStage
       : stages[0]?.key || "mine",
   );
-  const [mode, setMode] = useState("kanban");
+  const [mode, setMode] = useState("table");
   const [search, setSearch] = useState(initialQuery);
   const [debounced, setDebounced] = useState(initialQuery);
   const [type, setType] = useState("");
@@ -212,10 +212,12 @@ export default function ClientRequests({
         ))}
       </nav>
       <ClientFilterSection
+        advanced
+        activeAdvancedCount={Number(Boolean(departmentId)) + Number(Boolean(status)) + Number(Boolean(from)) + Number(Boolean(to)) + Number(sort !== (stage === "mine" ? "newest" : "urgent"))}
         footer={
           <>
-            <small className="muted">
-              {active?.help || "Danh sách hồ sơ theo quyền được cấp"} · Đang hiển thị{" "}
+            <small className="muted client-result-summary" aria-live="polite">
+              {active?.help || "Danh sách hồ sơ theo quyền được cấp"} · Hiển thị{" "}
               <strong>{rows.length}</strong> hồ sơ
             </small>
             <div className="actions">

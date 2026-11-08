@@ -31,6 +31,19 @@ const readWaiters = [];
 // Adaptive pacing limits bursts without refusing future reads while the DB
 // has already recovered. A failed widget must not keep all pages offline.
 const backendOutage = { failures: 0, retryAt: 0 };
+// The Django per-IP limiter is shared by all pages. Never send another burst
+// when it responds RATE_LIMIT_EXCEEDED; respect its Retry-After instead.
+let rateLimitUntil = 0;
+function remainingRateLimitMs() {
+  return Math.max(0, rateLimitUntil - Date.now());
+}
+function rateLimitError() {
+  const error = new Error("RATE_LIMIT_EXCEEDED");
+  error.status = 429;
+  error.retryAfterMs = remainingRateLimitMs();
+  return error;
+}
+
 const HEALTH_PATH = /^\/health\//;
 
 function readPermit() {
@@ -106,7 +119,7 @@ const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /** `silent`: a read-only POST (preview) or a call whose caller refreshes its own
  * view; skip the generic toast and global cache invalidation.
  * `timeoutMs`: override the default wait for long server-side work. */
-export async function api(path, { silent = false, timeoutMs, forceProbe = false, ...options } = {}) {
+export async function api(path, { silent = false, toast = true, timeoutMs, forceProbe = false, ...options } = {}) {
   const method = (options.method || "GET").toUpperCase();
   const isRead = method === "GET" || method === "HEAD";
   // Health checks must always be callable while the regular API is recovering.
@@ -116,6 +129,9 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
   const priority = isDiagnostic || /^\/api\/v1\/auth\/(me|csrf)$/.test(path);
   const release = isRead && !priority ? await readPermit() : () => {};
   try {
+    // Preserve /health/* probes during an API rate limit, but do not send
+    // more auth/AI/data requests to Django until its Retry-After expires.
+    if (!isDiagnostic && remainingRateLimitMs() > 0) throw rateLimitError();
     // A short shared pause replaces the old hard-fail 60-second circuit.
     // Every new request still gets a real attempt; success resets the backoff.
     if (isRead && !isDiagnostic && !forceProbe && backendOutage.retryAt > Date.now()) {
@@ -143,6 +159,7 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
       options.signal?.addEventListener("abort", onAbort, { once: true });
       if (options.signal?.aborted) controller.abort();
       try {
+        if (!isDiagnostic && remainingRateLimitMs() > 0) throw rateLimitError();
         const response = await fetch(`${API_BASE}${path}`, {
           ...options, method, headers, credentials: "include", signal: controller.signal,
         });
@@ -157,11 +174,22 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
           error.serverMessage = body?.error?.message || body?.message || "";
           error.correlationId = body?.correlation_id || response.headers.get("X-Correlation-ID") || "";
           const retryAfter = Number(response.headers.get("Retry-After"));
-          if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterMs = Math.min(60000, retryAfter * 1000);
+          if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfterMs = Math.min(300000, retryAfter * 1000);
+          if (response.status === 429 && code === "RATE_LIMIT_EXCEEDED") {
+            error.retryAfterMs ||= 60000;
+            rateLimitUntil = Math.max(rateLimitUntil, Date.now() + error.retryAfterMs);
+          }
           if (isRead && isRetryableStatus(error) && attempt < attempts - 1 && deadline - Date.now() > 1000) {
             await pause(350 + Math.floor(Math.random() * 200));
             continue;
           }
+          throw error;
+        }
+        if (!isRead && !silent && body?.success === false) {
+          const error = new Error(body?.error?.code || "OPERATION_NOT_CONFIRMED");
+          error.status = response.status;
+          error.responseBody = body;
+          error.serverMessage = body?.error?.message || body?.message || "";
           throw error;
         }
         if (body === null) {
@@ -180,7 +208,7 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
           } else if (!silent && !path.includes("/ai/")) {
             invalidateResources();
           }
-          if (!silent && !path.includes("/ai/")) notify(mutationMessage(path));
+          if (!silent && toast && !path.includes("/ai/")) notify(mutationMessage(path));
         }
         return body;
       } catch (error) {
@@ -191,7 +219,7 @@ export async function api(path, { silent = false, timeoutMs, forceProbe = false,
           continue;
         }
         if (isRead && !isDiagnostic && sharedOutage(error)) markOutage();
-        if (!isRead && !silent) notify(timedOut ? "Yêu cầu quá thời gian phản hồi. Kiểm tra trạng thái trước khi thử lại." : "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại.", "error");
+        if (!isRead && !silent && toast) notify(timedOut ? "Yêu cầu quá thời gian phản hồi. Kiểm tra trạng thái trước khi thử lại." : "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại.", "error");
         if (transportError) {
           const failure = new Error(timedOut || error.name === "AbortError"
             ? (isRead ? "REQUEST_TIMED_OUT" : "REQUEST_TIMEOUT_UNKNOWN")
@@ -243,5 +271,15 @@ export function onToast(listener) {
   window.addEventListener(TOAST_EVENT, listener);
   return () => window.removeEventListener(TOAST_EVENT, listener);
 }
-export async function initializeCsrf(options = {}) { return api("/api/v1/auth/csrf", options); }
+// One CSRF cookie is sufficient for the browser session. Avoid requesting a
+// new one on every login attempt, tab focus or simultaneous session bootstrap.
+let csrfInitialization = null;
+export async function initializeCsrf(options = {}) {
+  if (cookie("csrftoken")) return { status: "ok" };
+  if (csrfInitialization) return csrfInitialization;
+  const pending = api("/api/v1/auth/csrf", options);
+  csrfInitialization = pending;
+  try { return await pending; }
+  finally { if (csrfInitialization === pending) csrfInitialization = null; }
+}
 export function idempotencyKey() { return crypto.randomUUID(); }

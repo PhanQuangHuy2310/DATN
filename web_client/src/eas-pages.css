@@ -323,3 +323,25 @@
 @media (min-width: 1200px) {
   .client-metric-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 }
+
+/* Role-scoped directory and compact execution confirmation. */
+.org-chart-workspace .org-dept-header-card:disabled {
+  opacity: 1;
+  filter: none;
+  color: inherit;
+  cursor: default;
+}
+.org-directory-notice { margin: 0; font-size: 0.84rem; line-height: 1.45; max-width: 35rem; }
+.org-manager-search { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.org-manager-search > button { min-height: 38px; white-space: nowrap; }
+.org-manager-search-notice { flex-basis: 100%; font-size: .82rem; color: var(--eas-danger); }
+.request-detail-page dialog textarea[name="result_note"] { min-height: 84px; max-height: 30vh; resize: vertical; }
+.request-detail-page dialog input[name="external_reference"] { min-height: 38px; }
+.request-detail-page .eas-evidence-confirmed {
+  color: var(--eas-ok); border-left: 2px solid var(--eas-ok);
+  padding: 5px 10px; margin: 4px 0; font-size: .85rem; line-height: 1.5;
+}
+@media (max-width: 600px) {
+  .request-detail-page dialog { max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
+  .org-chart-workspace .org-search-wrap { max-width: 100%; min-width: 0; }
+}

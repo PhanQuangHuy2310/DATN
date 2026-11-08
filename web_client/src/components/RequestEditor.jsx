@@ -211,7 +211,7 @@ function FormFieldControl({
       max={kind === "number" ? spec?.maximum : undefined}
       minLength={kind === "text" ? spec?.minLength : undefined}
       maxLength={kind === "text" ? spec?.maxLength : undefined}
-      step={kind === "number" ? 1 : undefined}
+      step={kind === "number" ? (spec?.type === "number" ? "any" : 1) : undefined}
       defaultValue={initialValue ?? ""}
       placeholder={
         name === "title"
@@ -246,6 +246,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   const [catalogError, setCatalogError] = useState("");
   const createKey = useRef(idempotencyKey());
   const submitKeys = useRef(new Map());
+  const persistPendingRef = useRef(false);
   const [confirmSend, setConfirmSend] = useState(false);
   const [circuitBreaker, setCircuitBreaker] = useState(null);
 
@@ -348,7 +349,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   useEffect(() => {
     if (stage !== "form") return;
     const handle = requestAnimationFrame(() => {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      formRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
       formRef.current
         ?.querySelector("input:not([type=hidden]):not([readonly]),select,textarea")
         ?.focus({ preventScroll: true });
@@ -456,14 +457,16 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     e.preventDefault();
     const send = e.nativeEvent.submitter?.value === "send";
     // Submission starts the approval workflow; confirm first. Field values stay in the form.
+    if (persistPendingRef.current) return;
     if (send) { setConfirmSend(true); return; }
     void persist(e.currentTarget, false);
   }
 
   async function persist(form, send) {
+    if (persistPendingRef.current) throw new Error("Thao tác đang được xử lý. Vui lòng đợi kết quả.");
     if (send && isTypeBlocked) {
       setError(typeBlockedNotice);
-      return;
+      throw new Error(typeBlockedNotice);
     }
     const payload = Object.fromEntries(new FormData(form));
     delete payload.file;
@@ -496,15 +499,27 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       }
     }
     if (!current || !type) {
-      setError(
-        "Loại yêu cầu chưa có cấu hình đã công bố hoặc bạn chưa được cấp quyền tạo loại này.",
-      );
-      return;
+      const message = "Loại yêu cầu chưa có cấu hình đã công bố hoặc bạn chưa được cấp quyền tạo loại này.";
+      setError(message);
+      if (send) throw new Error(message);
+      return false;
     }
+    persistPendingRef.current = true;
     setBusy(true);
     setError("");
     setNotice("");
     try {
+      // Validate file selections before creating a draft on the server.
+      const inputs = [...form.querySelectorAll('input[type="file"]')];
+      const attachments = inputs.flatMap((input) => [...(input.files || [])]);
+      if (files.length + attachments.length > 5) {
+        throw new Error("Mỗi hồ sơ chỉ đính kèm tối đa 5 tệp tài liệu.");
+      }
+      for (const file of attachments) {
+        if (file.size > 10 * 1024 * 1024 || !["application/pdf", "image/png", "image/jpeg"].includes(file.type)) {
+          throw new Error("Tệp đính kèm chỉ nhận PDF/JPG/PNG và không quá 10 MB.");
+        }
+      }
       let r = record;
       if (!r) {
         r = (
@@ -624,9 +639,13 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
       } else {
         setNotice("Đã lưu bản nháp. Bạn có thể tiếp tục chỉnh sửa hoặc gửi phê duyệt.");
       }
+      return true;
     } catch (err) {
       setError(errorText(err));
+      if (send) throw err; // Keep confirmation visible and show the actual failure.
+      return false;
     } finally {
+      persistPendingRef.current = false;
       setBusy(false);
     }
   }
@@ -648,7 +667,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   }
 
   return (
-    <section className="panel">
+    <section className="panel request-editor">
       <div className="section-head">
         <div>
           <p className="eyebrow">HỒ SƠ ĐỀ XUẤT</p>
@@ -716,7 +735,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                   setSelectedAppCode("");
                   setError("");
                   requestAnimationFrame(() =>
-                    menuRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                    menuRef.current?.scrollIntoView({ behavior: "auto", block: "start" }),
                   );
                 }}
               >
@@ -824,25 +843,36 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                 </button>
               )}
             </div>
-            <AiRequestAssist
-              type={type}
-              lifecycle={current?.lifecycle}
-              riskWeight={current?.risk_weight || typeLevels[type]?.risk_weight}
-              getValues={() =>
-                formElementRef.current
-                  ? Object.fromEntries(new FormData(formElementRef.current))
-                  : {}
-              }
-              onSuggestType={record ? undefined : setType}
-            />
-            <RoutePreview
-              type={type}
-              getValues={() =>
-                formElementRef.current
-                  ? Object.fromEntries(new FormData(formElementRef.current))
-                  : {}
-              }
-            />
+            <details className="request-editor-assistance">
+              <summary>
+                <span>
+                  <strong>Hỗ trợ hoàn thiện hồ sơ</strong>
+                  <small>Gợi ý AI và xem trước tuyến phê duyệt (tùy chọn)</small>
+                </span>
+                <span className="request-editor-disclosure-indicator" aria-hidden="true"><Icon name="chevron" size={16} /></span>
+              </summary>
+              <div className="request-editor-assistance-body">
+                <AiRequestAssist
+                  type={type}
+                  lifecycle={current?.lifecycle}
+                  riskWeight={current?.risk_weight || typeLevels[type]?.risk_weight}
+                  getValues={() =>
+                    formElementRef.current
+                      ? Object.fromEntries(new FormData(formElementRef.current))
+                      : {}
+                  }
+                  onSuggestType={record ? undefined : setType}
+                />
+                <RoutePreview
+                  type={type}
+                  getValues={() =>
+                    formElementRef.current
+                      ? Object.fromEntries(new FormData(formElementRef.current))
+                      : {}
+                  }
+                />
+              </div>
+            </details>
             {error && (
               <p className="error" role="alert">
                 {error}
@@ -889,7 +919,6 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           confirmLabel="Gửi phê duyệt"
           onClose={() => setConfirmSend(false)}
           onConfirm={async () => {
-            setConfirmSend(false);
             await persist(formElementRef.current, true);
           }}
         />

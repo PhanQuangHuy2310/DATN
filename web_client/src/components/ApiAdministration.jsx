@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Icon from "./Icon.jsx";
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
@@ -15,6 +15,7 @@ export function ApiAdministration() {
   // Circuit breaker confirmation modal
   const [confirmToggleApi, setConfirmToggleApi] = useState(null);
   const [toggling, setToggling] = useState(false);
+  const togglePendingRef = useRef(false);
 
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
@@ -49,17 +50,22 @@ export function ApiAdministration() {
   };
 
   const executeToggle = async (apiItem) => {
+    if (togglePendingRef.current) return;
+    togglePendingRef.current = true;
     setToggling(true);
     try {
       const res = await api(`/api/v1/admin/mock-apis/${apiItem.id}/toggle`, {
         method: "PATCH",
+      toast: false,
       });
+      if (res?.success === false) throw new Error(res?.message || "Máy chủ chưa xác nhận thay đổi.");
       showToast(res.message || "Đã cập nhật trạng thái kết nối API!", "success");
       setConfirmToggleApi(null);
       loadApis(true);
     } catch (err) {
       showToast("Lỗi khi điều khiển Circuit Breaker: " + (err.message || ""), "error");
     } finally {
+      togglePendingRef.current = false;
       setToggling(false);
     }
   };
@@ -349,7 +355,7 @@ export function ApiAdministration() {
                 type="button"
                 className="eas-modal-close"
                 aria-label="Đóng"
-                onClick={() => setConfirmToggleApi(null)}
+                onClick={() => !toggling && setConfirmToggleApi(null)}
               >
                 <Icon name="x" size={16} />
               </button>
@@ -386,7 +392,7 @@ export function ApiAdministration() {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => setConfirmToggleApi(null)}
+                onClick={() => !toggling && setConfirmToggleApi(null)}
               >
                 Hủy bỏ
               </button>

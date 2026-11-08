@@ -327,13 +327,18 @@ export function Modal({ title, onClose, children }) {
     return () => el.close();
   }, []);
   return (
-    <dialog ref={ref} onCancel={onClose} aria-label={title}>
+    <dialog ref={ref} onCancel={(event) => {
+      if (ref.current?.querySelector('[aria-busy="true"]')) event.preventDefault();
+      else onClose();
+    }} aria-label={title}>
       <div className="section-head">
         <h2>{title}</h2>
         <button
           type="button"
           className="secondary"
-          onClick={onClose}
+          onClick={() => {
+            if (!ref.current?.querySelector('[aria-busy="true"]')) onClose();
+          }}
           aria-label="Đóng hộp thoại"
         >
           ×
@@ -367,21 +372,28 @@ export function ActionForm({
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  // React state updates asynchronously: the ref blocks a second submit in the
+  // same frame, before the button has been disabled.
+  const submittingRef = useRef(false);
   async function submit(e) {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     const values = Object.fromEntries(new FormData(e.currentTarget));
     setBusy(true);
     setError("");
     try {
-      await onSubmit(values);
+      const result = await onSubmit(values);
+      if (result === false) throw new Error("Máy chủ chưa xác nhận thao tác. Vui lòng kiểm tra lại.");
     } catch (err) {
       setError(errorText(err));
     } finally {
+      submittingRef.current = false;
       setBusy(false);
     }
   }
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} aria-busy={busy}>
       <fieldset disabled={busy}>
         {danger && warningNote && (
           <div className="ds-danger-callout" role="note">

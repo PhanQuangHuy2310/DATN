@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Icon from "./Icon.jsx";
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
@@ -47,6 +47,9 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
     password: "",
   });
   const [userSubmitting, setUserSubmitting] = useState(false);
+  const userPendingRef = useRef(false);
+  const leavePendingRef = useRef(false);
+  const lockPendingRef = useRef(new Set());
   const [toastMessage, setToastMessage] = useState(null);
 
   const showToast = (msg, type = "success") => {
@@ -70,7 +73,8 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
 
   // Quick leave/trip status update
   const handleLeaveTripSubmit = async (action) => {
-    if (!leaveModalUser) return;
+    if (!leaveModalUser || leavePendingRef.current) return;
+    leavePendingRef.current = true;
     setLeaveSubmitting(true);
     try {
       const payload = {
@@ -82,6 +86,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
         `${apiBase}/users-management/${leaveModalUser.id}/leave-trip`,
         {
           method: "POST",
+          toast: false,
           body: JSON.stringify(payload),
         }
       );
@@ -96,42 +101,63 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
     } catch (err) {
       showToast("Lỗi cập nhật trạng thái: " + errorText(err), "error");
     } finally {
+      leavePendingRef.current = false;
       setLeaveSubmitting(false);
     }
   };
 
   // Toggle user lock
   const handleToggleLock = async (user) => {
+    if (lockPendingRef.current.has(user.id)) return;
     if (!window.confirm(`Bạn có chắc muốn ${user.is_active ? "KHÓA" : "MỞ KHÓA"} tài khoản ${user.full_name}?`)) {
       return;
     }
+    lockPendingRef.current.add(user.id);
     try {
       await api(`${apiBase}/users-management/${user.id}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify({ is_active: !user.is_active }),
       });
       showToast(`Đã ${user.is_active ? "khóa" : "mở khóa"} người dùng thành công!`, "success");
       setRefreshKey((k) => k + 1);
     } catch (err) {
       showToast("Lỗi thay đổi trạng thái tài khoản: " + errorText(err), "error");
+    } finally {
+      lockPendingRef.current.delete(user.id);
     }
   };
 
   // Save add/edit user
   const handleSaveUser = async (e) => {
     e.preventDefault();
+    if (userPendingRef.current) return;
+    const payload = {
+      ...userFormData,
+      full_name: userFormData.full_name.trim(),
+      email: userFormData.email.trim().toLowerCase(),
+      job_title: userFormData.job_title.trim(),
+    };
+    if (!payload.full_name || !payload.email || !payload.role_id || !payload.department_id || (isNewUser && !payload.password)) {
+      showToast("Vui lòng điền đủ họ tên, email, vai trò, phòng ban và mật khẩu khi tạo mới.", "error");
+      return;
+    }
+    if (!isNewUser && !payload.password) delete payload.password;
+    userPendingRef.current = true;
     setUserSubmitting(true);
     try {
       if (isNewUser) {
         await api(`${apiBase}/users-management`, {
           method: "POST",
-          body: JSON.stringify(userFormData),
+          toast: false,
+          body: JSON.stringify(payload),
         });
         showToast("Tạo người dùng mới thành công!", "success");
       } else {
         await api(`${apiBase}/users-management/${editUserModal.id}`, {
           method: "PATCH",
-          body: JSON.stringify(userFormData),
+          toast: false,
+          body: JSON.stringify(payload),
         });
         showToast("Cập nhật thông tin người dùng thành công!", "success");
       }
@@ -140,6 +166,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
     } catch (err) {
       showToast("Lỗi lưu người dùng: " + errorText(err), "error");
     } finally {
+      userPendingRef.current = false;
       setUserSubmitting(false);
     }
   };
@@ -230,7 +257,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                   job_title: "Chuyên viên",
                   role_id: rolesRes.data?.items?.[2]?.id || "",
                   department_id: deptsRes.data?.items?.[0]?.id || "",
-                  password: "User@123456",
+                  password: "", // Never prefill a reusable password for new accounts.
                 });
                 setEditUserModal({});
               }}
@@ -644,11 +671,11 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
 
       {/* MODAL 2: Quick Leave / Trip Update */}
       {leaveModalUser && (
-        <div className="modal-backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && setLeaveModalUser(null)} onKeyDown={(e) => e.key === "Escape" && setLeaveModalUser(null)}>
+        <div className="modal-backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && !leaveSubmitting && setLeaveModalUser(null)} onKeyDown={(e) => e.key === "Escape" && !leaveSubmitting && setLeaveModalUser(null)}>
           <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: "520px" }}>
             <div className="modal-head">
               <h2>Cập nhật trạng thái làm việc</h2>
-              <button type="button" className="secondary ds-icon-button" aria-label="Đóng" onClick={() => setLeaveModalUser(null)}>
+              <button type="button" className="secondary ds-icon-button" aria-label="Đóng" disabled={leaveSubmitting} onClick={() => setLeaveModalUser(null)}>
                 <Icon name="x" size={16} />
               </button>
             </div>
@@ -718,11 +745,11 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
 
       {/* MODAL 3: Add / Edit User Modal */}
       {editUserModal && (
-        <div className="modal-backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && setEditUserModal(null)} onKeyDown={(e) => e.key === "Escape" && setEditUserModal(null)}>
+        <div className="modal-backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && !userSubmitting && setEditUserModal(null)} onKeyDown={(e) => e.key === "Escape" && !userSubmitting && setEditUserModal(null)}>
           <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: "560px" }}>
             <div className="modal-head">
               <h2>{isNewUser ? "Thêm người dùng mới" : "Chỉnh sửa người dùng"}</h2>
-              <button type="button" className="secondary ds-icon-button" aria-label="Đóng" onClick={() => setEditUserModal(null)}>
+              <button type="button" className="secondary ds-icon-button" aria-label="Đóng" disabled={userSubmitting} onClick={() => setEditUserModal(null)}>
                 <Icon name="x" size={16} />
               </button>
             </div>

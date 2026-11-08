@@ -327,7 +327,15 @@ def _resolve_approvers(
                     raise RoutingError("ROUTE_SOD_ESCALATION_UNRESOLVED")
                 actor, reason = replacement, "SOD_ESCALATED"
             else:
+                # Without an independently validated superior, the existing
+                # manager can replace the requester only if they are not
+                # already committed to a different approval level. Silently
+                # skipping this slot would shorten a required approval chain.
+                # The workflow service catches this error and verifies a
+                # higher-level candidate before resolving the route again.
                 actor, reason = _escalate_self_approval(requester, manager)
+                if actor is None or actor in reserved or actor in out_ids:
+                    raise RoutingError("Requester cannot approve own request")
         if actor is not None and actor in out_ids:
             actor, reason = None, "DUPLICATE_SKIPPED"
         if actor is not None:

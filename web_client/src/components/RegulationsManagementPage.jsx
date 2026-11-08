@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Icon from "./Icon.jsx";
 import { useApiBase } from "../apiBase.js";
 import { usePermission } from "../hooks/usePermission.jsx";
@@ -36,6 +36,7 @@ export function RegulationsManagementPage() {
   const [viewingRegulation, setViewingRegulation] = useState(null);
   const [deletingRegulation, setDeletingRegulation] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // Form inputs
   const [formCode, setFormCode] = useState("");
@@ -59,10 +60,11 @@ export function RegulationsManagementPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
     loadData();
-    // Auto-refresh periodically if AI is currently syncing/learning
+    // Keep regulations reasonably fresh without calling the endpoint every
+    // 2.5 seconds on idle/background tabs (each call counts toward 429).
     const timer = setInterval(() => {
-      loadData(true);
-    }, 2500);
+      if (document.visibilityState === "visible") void loadData(true);
+    }, 30000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -88,14 +90,17 @@ export function RegulationsManagementPage() {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!formTitle.trim() || !formContent.trim()) {
       showToast("Vui lòng nhập đầy đủ tiêu đề và nội dung quy định", "warning");
       return;
     }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const res = await api(`${apiBase}/regulations`, {
         method: "POST",
+        toast: false,
         body: JSON.stringify({
           code: formCode.trim(),
           title: formTitle.trim(),
@@ -109,20 +114,24 @@ export function RegulationsManagementPage() {
     } catch (err) {
       showToast("Lỗi khi thêm quy định: " + errorText(err), "error");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!formTitle.trim() || !formContent.trim()) {
       showToast("Vui lòng nhập đầy đủ tiêu đề và nội dung quy định", "warning");
       return;
     }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const res = await api(`${apiBase}/regulations/${editingRegulation.id}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify({
           title: formTitle.trim(),
           category: formCategory,
@@ -136,16 +145,19 @@ export function RegulationsManagementPage() {
     } catch (err) {
       showToast("Lỗi khi cập nhật quy định: " + errorText(err), "error");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleDeleteSubmit = async () => {
-    if (!deletingRegulation) return;
+    if (!deletingRegulation || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const res = await api(`${apiBase}/regulations/${deletingRegulation.id}`, {
         method: "DELETE",
+      toast: false,
       });
       showToast(res.message || "Đã gỡ bỏ quy định và nâng phiên bản lớn!", "success");
       setDeletingRegulation(null);
@@ -153,6 +165,7 @@ export function RegulationsManagementPage() {
     } catch (err) {
       showToast("Lỗi khi xóa quy định: " + errorText(err), "error");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -388,7 +401,7 @@ export function RegulationsManagementPage() {
                 type="button"
                 className="eas-modal-close"
                 aria-label="Đóng"
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => !submitting && setShowCreateModal(false)}
               >
                 <Icon name="x" size={16} />
               </button>
@@ -457,7 +470,7 @@ export function RegulationsManagementPage() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => !submitting && setShowCreateModal(false)}
                 >
                   Hủy bỏ
                 </button>
@@ -480,7 +493,7 @@ export function RegulationsManagementPage() {
                 type="button"
                 className="eas-modal-close"
                 aria-label="Đóng"
-                onClick={() => setEditingRegulation(null)}
+                onClick={() => !submitting && setEditingRegulation(null)}
               >
                 <Icon name="x" size={16} />
               </button>
@@ -557,7 +570,7 @@ export function RegulationsManagementPage() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setEditingRegulation(null)}
+                  onClick={() => !submitting && setEditingRegulation(null)}
                 >
                   Hủy bỏ
                 </button>
@@ -582,7 +595,7 @@ export function RegulationsManagementPage() {
                 type="button"
                 className="eas-modal-close"
                 aria-label="Đóng"
-                onClick={() => setDeletingRegulation(null)}
+                onClick={() => !submitting && setDeletingRegulation(null)}
               >
                 <Icon name="x" size={16} />
               </button>
@@ -610,7 +623,7 @@ export function RegulationsManagementPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => setDeletingRegulation(null)}
+                onClick={() => !submitting && setDeletingRegulation(null)}
               >
                 Hủy bỏ
               </button>

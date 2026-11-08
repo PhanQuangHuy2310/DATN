@@ -29,17 +29,32 @@ export function AiEngineManagementPage() {
 
   useEffect(() => {
     let active = true;
-    // Poll every 1.5s for real-time stepper updates.
-    const poll = () =>
-      api("/api/v1/admin/ai-engine/status")
-        .then((res) => active && setAiState(res))
-        .catch(() => {});
-    poll();
-    const interval = setInterval(poll, 1500);
-    return () => {
-      active = false;
-      clearInterval(interval);
+    let timer = null;
+    // Poll only this open screen; avoid overlapping queries and slow down
+    // when idle, hidden or rate-limited. Active learning still gets updates.
+    const poll = async () => {
+      if (!active) return;
+      let delay = 30000;
+      try {
+        if (document.visibilityState !== "visible") {
+          delay = 90000;
+        } else {
+          const data = await api("/api/v1/admin/ai-engine/status");
+          if (active) setAiState(data);
+          const syncing = data?.client_maintenance_lock
+            || ["QUEUED", "RUNNING", "UPDATING", "SYNCING"].includes(data?.sync_status)
+            || data?.jobs?.some((job) => ["QUEUED", "RUNNING"].includes(job.status));
+          delay = syncing ? 5000 : 30000;
+        }
+      } catch (error) {
+        delay = error?.status === 429
+          ? Math.max(60000, error.retryAfterMs || 0) : 30000;
+      } finally {
+        if (active) timer = window.setTimeout(poll, delay);
+      }
     };
+    void poll();
+    return () => { active = false; window.clearTimeout(timer); };
   }, []);
 
   const handleRetrain = async () => {

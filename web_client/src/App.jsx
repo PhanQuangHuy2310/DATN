@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import Icon from "./components/Icon.jsx";
 import { PermissionProvider } from "./hooks/usePermission.jsx";
 import { api, initializeCsrf } from "./api.js";
@@ -64,11 +64,14 @@ function Login({ onLogin, portal = "client", aiStatus }) {
     return () => clearInterval(timer);
   }, []);
 
+  const loginPendingRef = useRef(false);
+  const resetPendingRef = useRef(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState("");
   const [resetSubmitted, setResetSubmitted] = useState(false);
 
   function closeForgotModal() {
+    if (resetPendingRef.current) return;
     setShowForgotModal(false);
     setResetSubmitted(false);
     setResetError("");
@@ -76,6 +79,8 @@ function Login({ onLogin, portal = "client", aiStatus }) {
 
   async function submitReset(e) {
     e.preventDefault();
+    if (resetPendingRef.current) return;
+    resetPendingRef.current = true;
     const values = Object.fromEntries(new FormData(e.currentTarget));
     setResetBusy(true);
     setResetError("");
@@ -89,12 +94,14 @@ function Login({ onLogin, portal = "client", aiStatus }) {
     } catch (err) {
       setResetError(errorText(err));
     } finally {
+      resetPendingRef.current = false;
       setResetBusy(false);
     }
   }
 
   async function submit(e) {
     e.preventDefault();
+    if (loginPendingRef.current) return;
     const values = Object.fromEntries(new FormData(e.currentTarget));
     const email = String(values.email || "").trim().toLowerCase();
 
@@ -105,6 +112,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
       return;
     }
 
+    loginPendingRef.current = true;
     setBusy(true);
     setError("");
     try {
@@ -124,6 +132,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
         setError(errorText(err));
       }
     } finally {
+      loginPendingRef.current = false;
       setBusy(false);
     }
   }
@@ -173,7 +182,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
             </h1>
           </div>
 
-          <form onSubmit={submit} noValidate>
+          <form onSubmit={submit}>
             <fieldset disabled={busy} className="auth-fieldset">
               {error && (
                 <div role="alert" className="auth-error-banner">
@@ -316,7 +325,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
                 </div>
               </>
             ) : (
-              <form onSubmit={submitReset} noValidate>
+              <form onSubmit={submitReset}>
                 <fieldset disabled={resetBusy} className="auth-fieldset">
                   <div className="auth-modal-body">
                     <p>Nhập email nhân viên để gửi yêu cầu. Quản trị viên sẽ xác minh danh tính trước khi cấp mật khẩu tạm thời.</p>
@@ -1212,7 +1221,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const main = document.getElementById("main");
-      main?.scrollIntoView({ behavior: "smooth", block: "start" });
+      main?.scrollIntoView({ behavior: "auto", block: "start" });
       const heading = main?.querySelector("h1");
       if (heading) { heading.setAttribute("tabindex", "-1"); heading.focus({ preventScroll: true }); }
     });
@@ -1262,6 +1271,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
   return (
     <PermissionProvider user={user}>
       <div className={"app-shell" + (collapsed ? " sidebar-collapsed" : "")}>
+      <a className="skip-link" href="#main">Bỏ qua điều hướng, đến nội dung chính</a>
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")} aria-label="Thanh điều hướng">
         <button type="button" className="secondary ds-icon-button sidebar-close" aria-label="Đóng điều hướng" onClick={() => setMenuOpen(false)}><svg {...shellIcon}><path d="M6 6l12 12M18 6 6 18" /></svg></button>
@@ -1466,7 +1476,7 @@ export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unif
 }
 
 
-function useAiMaintenanceState() {
+function useAiMaintenanceState(enabled = true) {
   const [aiStatus, setAiStatus] = useState({
     client_maintenance_lock: false,
     sync_status: "COMPLETED",
@@ -1479,11 +1489,16 @@ function useAiMaintenanceState() {
   });
 
   useEffect(() => {
+    // The maintenance lock applies only to the employee portal. The admin
+    // portal must not poll AI status on its login screen or while idle.
+    if (!enabled) return undefined;
     let active = true;
     let pending = null;
     let inFlight = false;
     let failureStreak = 0;
     let lastAttempt = 0;
+    let nextAttemptAt = 0;
+    let rateLimitDelay = 0;
     let controller = null;
     let deadlineTimer = null;
     const fetchStatus = async () => {
@@ -1491,20 +1506,22 @@ function useAiMaintenanceState() {
       inFlight = true;
       lastAttempt = Date.now();
       let maintenance = false;
+      rateLimitDelay = 0;
       controller = new AbortController();
       // Direct health polling must not wait indefinitely on a stale socket.
       deadlineTimer = window.setTimeout(() => controller?.abort(), 12000);
       try {
-        const res = await fetch("/api/v1/system/ai-status", {
-          cache: "no-store", signal: controller.signal,
+        const data = await api("/api/v1/system/ai-status", {
+          cache: "no-store", signal: controller.signal, timeoutMs: 12000,
         });
-        if (!res.ok) throw new Error(`AI_STATUS_HTTP_${res.status}`);
-        const data = await res.json();
         maintenance = Boolean(data.client_maintenance_lock);
         failureStreak = 0;
         if (active) setAiStatus(data);
-      } catch {
-        // Preserve the last known state; 503 is an outage, not a new AI step.
+      } catch (error) {
+        // Preserve the last known state. A 429 requires respecting the
+        // server's Retry-After, not starting another probe immediately.
+        rateLimitDelay = error?.status === 429
+          ? Math.max(60000, error.retryAfterMs || 0) : 0;
         failureStreak = Math.min(6, failureStreak + 1);
       } finally {
         window.clearTimeout(deadlineTimer);
@@ -1515,13 +1532,16 @@ function useAiMaintenanceState() {
           const interval = document.visibilityState === "hidden" ? 120000
             : failureStreak ? Math.min(300000, 15000 * 2 ** failureStreak)
               : maintenance ? 3000 : 45000;
-          pending = window.setTimeout(fetchStatus, interval);
+          const delay = Math.max(interval, rateLimitDelay);
+          nextAttemptAt = Date.now() + delay;
+          pending = window.setTimeout(fetchStatus, delay);
         }
       }
     };
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
-      // Do not bypass the outage backoff on every tab focus.
+      // Do not bypass Retry-After or outage backoff on every tab focus.
+      if (Date.now() < nextAttemptAt) return;
       if (failureStreak && Date.now() - lastAttempt < 30000) return;
       window.clearTimeout(pending);
       if (!inFlight) void fetchStatus();
@@ -1535,7 +1555,7 @@ function useAiMaintenanceState() {
       controller?.abort();
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [enabled]);
 
   return aiStatus;
 }
@@ -1623,7 +1643,7 @@ function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
 function PortalApp({ portal, theme, toggleTheme }) {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
-  const aiStatus = useAiMaintenanceState();
+  const aiStatus = useAiMaintenanceState(portal === "client");
   // Only the open learning job locks users; a failed run (ERROR) keeps the old rules and stays unlocked.
   const aiMaintenanceActive = Boolean(aiStatus?.client_maintenance_lock);
   async function load(loginUser) {
@@ -1675,6 +1695,7 @@ function PortalApp({ portal, theme, toggleTheme }) {
     let pending = null;
     let failures = 0;
     let checking = false;
+    let retryAt = 0;
     const loadSession = async () => {
       if (!active || checking) return;
       checking = true;
@@ -1684,6 +1705,7 @@ function PortalApp({ portal, theme, toggleTheme }) {
           setUser(response?.user || null);
           setError("");
           failures = 0;
+          retryAt = 0;
         }
       } catch (e) {
         if (!active) return;
@@ -1691,8 +1713,15 @@ function PortalApp({ portal, theme, toggleTheme }) {
         else if (e.status === 401 || e.status === 403 || e.message === "SYSTEM_UNDER_MAINTENANCE") setUser(null);
         else {
           setError(errorText(e));
-          if (failures < 4) {
+          if (e.status === 429) {
+            // Global API throttle: a 1.5s bootstrap retry would extend the
+            // Console storm and prevent users from reaching the login screen.
+            const delay = Math.max(60000, e.retryAfterMs || 0);
+            retryAt = Date.now() + delay;
+            pending = window.setTimeout(loadSession, delay);
+          } else if (failures < 4) {
             const delay = Math.min(12000, 1500 * 2 ** failures++);
+            retryAt = Date.now() + delay;
             pending = window.setTimeout(loadSession, delay);
           }
         }
@@ -1701,7 +1730,8 @@ function PortalApp({ portal, theme, toggleTheme }) {
       }
     };
     const onReconnect = () => {
-      if (!active || checking || !failures || document.visibilityState !== "visible") return;
+      if (!active || checking || (!failures && !retryAt) || document.visibilityState !== "visible") return;
+      if (retryAt && Date.now() < retryAt) return;
       window.clearTimeout(pending);
       pending = null;
       void loadSession();

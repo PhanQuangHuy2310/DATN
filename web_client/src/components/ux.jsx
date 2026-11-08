@@ -27,7 +27,7 @@ export function PageControls({ offset, limit = 20, nextOffset, onPage, onLimit, 
     onPage(next);
     window.requestAnimationFrame(() => {
       const node = targetId ? document.getElementById(targetId) : pageRef.current?.closest("section");
-      (node || document.getElementById("main"))?.scrollIntoView({ behavior: "smooth", block: "start" });
+      (node || document.getElementById("main"))?.scrollIntoView({ behavior: "auto", block: "start" });
     });
   }
   return (
