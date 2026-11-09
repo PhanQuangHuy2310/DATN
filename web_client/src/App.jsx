@@ -1469,10 +1469,10 @@ function useAiMaintenanceState() {
         }
       } catch {}
     };
-    fetchStatus();
-    const timer = setInterval(fetchStatus, intervalMs);
+    void fetchStatus();
+    const timer = setInterval(() => { void fetchStatus(); }, intervalMs);
     const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") fetchStatus();
+      if (document.visibilityState === "visible") void fetchStatus();
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {

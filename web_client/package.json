@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint src vite.config.js",
     "preview": "vite preview --host 0.0.0.0",
+    "playwright:install": "playwright install --with-deps chromium",
     "e2e": "playwright test",
     "test": "node --test e2e/*.test.mjs",
     "test:ui": "playwright test --config playwright.ui.config.js",

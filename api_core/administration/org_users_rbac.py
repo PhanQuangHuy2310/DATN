@@ -413,7 +413,9 @@ def _grant_role(
     """Grant role unless the user already holds it (as any active membership)."""
     with connection.cursor() as cur:
         cur.execute(
-            f"SELECT 1 FROM eas.role_membership m WHERE m.user_id = %s AND m.role = %s AND {ACTIVE_MEMBERSHIP}",
+            "SELECT 1 FROM eas.role_membership m WHERE m.user_id = %s AND m.role = %s "
+            "AND m.revoked_at IS NULL AND m.valid_from <= statement_timestamp() "
+            "AND (m.valid_to IS NULL OR m.valid_to > statement_timestamp())",
             [user_id, role],
         )
         if cur.fetchone():
@@ -444,7 +446,9 @@ def _revoke_roles(
         return
     with connection.cursor() as cur:
         cur.execute(
-            f"SELECT m.id::text FROM eas.role_membership m WHERE m.user_id = %s AND m.role = ANY(%s) AND {ACTIVE_MEMBERSHIP}",
+            "SELECT m.id::text FROM eas.role_membership m WHERE m.user_id = %s AND m.role = ANY(%s) "
+            "AND m.revoked_at IS NULL AND m.valid_from <= statement_timestamp() "
+            "AND (m.valid_to IS NULL OR m.valid_to > statement_timestamp())",
             [user_id, list(roles_to_revoke)],
         )
         membership_ids = [r[0] for r in cur.fetchall()]
@@ -484,7 +488,9 @@ def _apply_user_role(
             # Executive positions hold global approval authority.
             with connection.cursor() as cur:
                 cur.execute(
-                    f"SELECT 1 FROM eas.role_membership m WHERE m.user_id = %s AND m.role = 'APPROVER' AND m.scope_kind = 'GLOBAL' AND {ACTIVE_MEMBERSHIP}",
+                    "SELECT 1 FROM eas.role_membership m WHERE m.user_id = %s AND m.role = 'APPROVER' AND m.scope_kind = 'GLOBAL' "
+                    "AND m.revoked_at IS NULL AND m.valid_from <= statement_timestamp() "
+                    "AND (m.valid_to IS NULL OR m.valid_to > statement_timestamp())",
                     [user_id],
                 )
                 has_global = bool(cur.fetchone())
@@ -736,9 +742,16 @@ def user_requests_detail_view(request, user_id):
         if not users:
             return api_error(request, "USER_NOT_FOUND", status=404)
         cur.execute(
-            f"""
+            """
             SELECT r.id::text, r.code, COALESCE(r.draft_payload->>'title', rt.name), rt.name,
-                   rt.lifecycle, {STAGE_SQL}, r.status,
+                   rt.lifecycle,
+                   CASE r.status
+                       WHEN 'DRAFT' THEN 'YEU_CAU' WHEN 'NEEDS_INFO' THEN 'YEU_CAU'
+                       WHEN 'PENDING_APPROVAL' THEN 'PHE_DUYET'
+                       WHEN 'READY_FOR_EXECUTION' THEN 'THUC_HIEN' WHEN 'IN_PROGRESS' THEN 'THUC_HIEN'
+                       WHEN 'WAITING_FOR_ACCEPTANCE' THEN 'NGHIEM_THU'
+                       ELSE 'HOAN_THANH' END,
+                   r.status,
                    array_agg(DISTINCT p.joined_as), r.created_at
             FROM eas.request_participant p
             JOIN eas.request r ON r.id = p.request_id
@@ -902,11 +915,15 @@ def rbac_roles_list(request):
         cur.execute("SELECT code, name, description, is_system FROM eas.role")
         rows = {r[0]: r for r in cur.fetchall()}
         cur.execute(
-            f"""
+            """
             SELECT m.role, count(DISTINCT m.user_id)::int
             FROM eas.role_membership m
             JOIN eas.app_user u ON u.id = m.user_id
-            WHERE {ACTIVE_MEMBERSHIP} AND u.is_active AND {EMPLOYEE_FILTER}
+            WHERE m.revoked_at IS NULL AND m.valid_from <= statement_timestamp()
+              AND (m.valid_to IS NULL OR m.valid_to > statement_timestamp())
+              AND u.is_active
+              AND COALESCE(u.account_type, 'EMPLOYEE') = 'EMPLOYEE'
+              AND NOT (COALESCE((to_jsonb(u)->>'is_system_account')::boolean, false) OR u.id = %s::uuid)
             GROUP BY m.role
             """,
             [settings.EAS_AI_SYSTEM_USER_ID],
@@ -946,11 +963,15 @@ def rbac_matrix_view(request):
     role = request.GET.get("role_id")
     with connection.cursor() as cur:
         modules = _modules(cur)
-        cur.execute(
-            "SELECT role_code, module_code, can_view, can_create, can_update, can_delete FROM eas.role_module_permission"
-            + (" WHERE role_code = %s" if role else ""),
-            [role] if role else [],
-        )
+        if role:
+            cur.execute(
+                "SELECT role_code, module_code, can_view, can_create, can_update, can_delete FROM eas.role_module_permission WHERE role_code = %s",
+                [role],
+            )
+        else:
+            cur.execute(
+                "SELECT role_code, module_code, can_view, can_create, can_update, can_delete FROM eas.role_module_permission"
+            )
         rows = cur.fetchall()
     if role:
         perms = {r[1]: dict(zip(PERMISSION_FIELDS, r[2:])) for r in rows}

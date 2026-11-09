@@ -78,7 +78,7 @@ export default function RequestWorkflowsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
-    loadData();
+    void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -137,7 +137,7 @@ export default function RequestWorkflowsPage() {
           `Đã cập nhật quy trình chuẩn Nhóm ${catData.category_code}. Các mẫu liên quan đã được đồng bộ!`,
           "success"
         );
-        loadData();
+        void loadData();
       }
     } catch (err) {
       showToast("Lỗi lưu quy trình: " + errorText(err), "error");
@@ -167,7 +167,7 @@ export default function RequestWorkflowsPage() {
             : `Đã cập nhật mẫu yêu cầu "${tplData.name}"!`,
           "success"
         );
-        loadData();
+        void loadData();
       }
     } catch (err) {
       showToast("Lỗi lưu mẫu: " + errorText(err), "error");
@@ -188,7 +188,7 @@ export default function RequestWorkflowsPage() {
             : `Đã xóa hoàn toàn mẫu "${template.name}".`,
           "success"
         );
-        loadData();
+        void loadData();
       }
     } catch (err) {
       showToast("Lỗi xóa mẫu: " + errorText(err), "error");

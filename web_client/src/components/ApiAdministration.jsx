@@ -34,7 +34,7 @@ export function ApiAdministration() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
-    loadApis();
+    void loadApis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -44,7 +44,7 @@ export function ApiAdministration() {
       setConfirmToggleApi(apiItem);
     } else {
       // Re-enabling directly
-      executeToggle(apiItem);
+      void executeToggle(apiItem);
     }
   };
 
@@ -56,7 +56,7 @@ export function ApiAdministration() {
       });
       showToast(res.message || "Đã cập nhật trạng thái kết nối API!", "success");
       setConfirmToggleApi(null);
-      loadApis(true);
+      void loadApis(true);
     } catch (err) {
       showToast("Lỗi khi điều khiển Circuit Breaker: " + errorText(err), "error");
     } finally {
@@ -320,7 +320,7 @@ export function ApiAdministration() {
                 type="button"
                 className="btn-secondary"
                 onClick={() => {
-                  navigator.clipboard?.writeText(JSON.stringify(viewingPayload.mock_payload || {}, null, 2));
+                  void navigator.clipboard?.writeText(JSON.stringify(viewingPayload.mock_payload || {}, null, 2));
                   showToast("Đã sao chép JSON payload vào bộ nhớ tạm!", "info");
                 }}
               >

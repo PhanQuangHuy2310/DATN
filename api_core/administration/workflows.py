@@ -191,9 +191,20 @@ def _fetch_types(where: str = "", params: list | None = None) -> list[dict]:
             """
         )
         api_rows = cur.fetchall()
-        cur.execute(
-            TYPE_SQL + where + " ORDER BY rt.lifecycle, rt.code", params or []
-        )  # NOSONAR python:S2077
+        if where and "rt.id" in where:
+            cur.execute(
+                TYPE_SQL + " WHERE rt.id = %s::uuid ORDER BY rt.lifecycle, rt.code",
+                params or [],
+            )
+        elif where and "rt.is_active" in where:
+            cur.execute(TYPE_SQL + " WHERE rt.is_active ORDER BY rt.lifecycle, rt.code")
+        elif where and "rt.lifecycle" in where:
+            cur.execute(
+                TYPE_SQL + " WHERE rt.lifecycle = %s ORDER BY rt.lifecycle, rt.code",
+                params or [],
+            )
+        else:
+            cur.execute(TYPE_SQL + " ORDER BY rt.lifecycle, rt.code")
         type_rows = cur.fetchall()
 
     result = []

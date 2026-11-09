@@ -54,13 +54,13 @@ export function SystemVersionsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
-    loadChangelog();
+    void loadChangelog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterType]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    loadChangelog();
+    void loadChangelog();
   };
 
   const handleExportJson = () => {

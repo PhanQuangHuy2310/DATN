@@ -57,10 +57,10 @@ export function RegulationsManagementPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
-    loadData();
+    void loadData();
     // Auto-refresh periodically if AI is currently syncing/learning
     const timer = setInterval(() => {
-      loadData(true);
+      void loadData(true);
     }, 2500);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,7 +104,7 @@ export function RegulationsManagementPage() {
       });
       showToast(res.message || "Đã thêm quy định mới và nâng phiên bản hệ thống!", "success");
       setShowCreateModal(false);
-      loadData();
+      void loadData();
     } catch (err) {
       showToast("Lỗi khi thêm quy định: " + errorText(err), "error");
     } finally {
@@ -131,7 +131,7 @@ export function RegulationsManagementPage() {
       });
       showToast(res.message || "Đã cập nhật quy định và nâng phiên bản nhỏ!", "success");
       setEditingRegulation(null);
-      loadData();
+      void loadData();
     } catch (err) {
       showToast("Lỗi khi cập nhật quy định: " + errorText(err), "error");
     } finally {
@@ -148,7 +148,7 @@ export function RegulationsManagementPage() {
       });
       showToast(res.message || "Đã gỡ bỏ quy định và nâng phiên bản lớn!", "success");
       setDeletingRegulation(null);
-      loadData();
+      void loadData();
     } catch (err) {
       showToast("Lỗi khi xóa quy định: " + errorText(err), "error");
     } finally {

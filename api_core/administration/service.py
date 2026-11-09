@@ -313,8 +313,8 @@ SELECT_BY_ID_SQL = {
 SELECT_FOR_UPDATE_SQL = {k: v + " FOR UPDATE" for k, v in SELECT_BY_ID_SQL.items()}
 
 USER_MEMBERSHIPS_SQL = (
-    f"SELECT {','.join(TABLES['memberships'][1])} FROM eas.role_membership "
-    "WHERE user_id=%s ORDER BY role,id"
+    "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,valid_from,valid_to,revoked_at "
+    "FROM eas.role_membership WHERE user_id=%s ORDER BY role,id"
 )
 
 
@@ -331,7 +331,7 @@ def read_record(actor, kind, record_id, authorizer=None):
         item = serialize(columns, row)
         if kind == "users":
             member_columns = TABLES["memberships"][1]
-            c.execute(USER_MEMBERSHIPS_SQL, [record_id])
+            c.execute(USER_MEMBERSHIPS_SQL, [record_id])  # NOSONAR python:S2077
             item["memberships"] = [serialize(member_columns, r) for r in c.fetchall()]
     return {"item": item}
 

@@ -50,7 +50,7 @@ def integration_api(methods: tuple[str, ...]):
     """Shared-secret auth (service to service), JSON in/out, uniform errors."""
 
     def decorator(view):
-        @csrf_exempt
+        @csrf_exempt  # NOSONAR python:S4502 - machine-to-machine integration API protected by shared secret
         @wraps(view)
         def wrapped(request, *args, **kwargs):
             supplied = request.headers.get("X-Integration-Secret") or ""
@@ -351,11 +351,18 @@ def facility_resources(request, _body):
 
 
 def _resource(cur, code: str, lock: bool = False):
-    cur.execute(
-        "SELECT id::text, capacity, availability_status FROM mock_facilities.resource "
-        "WHERE resource_code = %s" + (" FOR UPDATE" if lock else ""),
-        [code],
-    )
+    if lock:
+        cur.execute(
+            "SELECT id::text, capacity, availability_status FROM mock_facilities.resource "
+            "WHERE resource_code = %s FOR UPDATE",
+            [code],
+        )
+    else:
+        cur.execute(
+            "SELECT id::text, capacity, availability_status FROM mock_facilities.resource "
+            "WHERE resource_code = %s",
+            [code],
+        )
     row = cur.fetchone()
     if not row:
         raise ApiError("UNKNOWN_RESOURCE", 404)

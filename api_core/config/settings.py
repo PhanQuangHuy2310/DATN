@@ -327,7 +327,7 @@ EAS_MOCK_API_URL = os.getenv(
     "EAS_MOCK_API_URL",
     "http://127.0.0.1:8100/mock-api/v1"
     if ENVIRONMENT in {"development", "test"}
-    else "http://mock_systems:8000/mock-api/v1",
+    else "http://mock_systems:8000/mock-api/v1",  # NOSONAR python:S5332 - internal docker service communication
 ).rstrip("/")
 EAS_MOCK_API_SECRET = os.getenv("EAS_MOCK_API_SECRET", "")
 if not EAS_MOCK_API_SECRET and ENVIRONMENT in {"development", "test"}:

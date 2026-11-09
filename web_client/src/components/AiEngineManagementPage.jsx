@@ -34,8 +34,8 @@ export function AiEngineManagementPage() {
       api("/api/v1/admin/ai-engine/status")
         .then((res) => active && setAiState(res))
         .catch(() => {});
-    poll();
-    const interval = setInterval(poll, 1500);
+    void poll();
+    const interval = setInterval(() => { void poll(); }, 1500);
     return () => {
       active = false;
       clearInterval(interval);
@@ -49,7 +49,7 @@ export function AiEngineManagementPage() {
         method: "POST",
       });
       showToast(res.message || "Đã kích hoạt chu trình huấn luyện lại AI!", "info");
-      fetchAiStatus();
+      void fetchAiStatus();
     } catch (err) {
       showToast("Lỗi khi kích hoạt huấn luyện AI: " + errorText(err), "error");
     } finally {
@@ -58,7 +58,7 @@ export function AiEngineManagementPage() {
   };
 
   useEffect(() => {
-    api("/api/v1/admin/request-templates")
+    void api("/api/v1/admin/request-templates")
       .then((res) => {
         const items = (res?.items || []).filter((t) => t.is_active);
         setRequestTypes(items);
