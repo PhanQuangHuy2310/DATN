@@ -1639,6 +1639,10 @@ function PortalApp({ portal, theme, toggleTheme }) {
           // During an AI learning lock the login page shows the progress bar,
           // so a reload must land there instead of a generic connection error.
           else if (e.status === 401 || e.status === 403 || e.message === "SYSTEM_UNDER_MAINTENANCE") setUser(null);
+          else if (e.status === 429) {
+            setUser(null);
+            notify("Hệ thống đang điều tiết lưu lượng truy cập. Vui lòng thử lại sau giây lát.", "warning");
+          }
           else setError(errorText(e));
         }
       });

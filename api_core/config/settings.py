@@ -195,7 +195,12 @@ if EAS_EMAIL_TEST_RECIPIENT:
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise RuntimeError("Configure only one of EAS_EMAIL_USE_TLS or EAS_EMAIL_USE_SSL")
 
-EAS_API_RATE_LIMIT_PER_MINUTE = int(os.getenv("EAS_API_RATE_LIMIT_PER_MINUTE", "300"))
+EAS_API_RATE_LIMIT_PER_MINUTE = int(
+    os.getenv(
+        "EAS_API_RATE_LIMIT_PER_MINUTE",
+        "1200" if ENVIRONMENT != "production" else "300",
+    )
+)
 if EAS_API_RATE_LIMIT_PER_MINUTE < 1:
     raise RuntimeError("EAS_API_RATE_LIMIT_PER_MINUTE must be >= 1")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")

@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import uuid4
 
+from django.core.cache import cache
 from django.db import connection, transaction
 from django.http import HttpRequest, JsonResponse
 
@@ -464,25 +465,29 @@ def public_ai_status_view(request: HttpRequest) -> JsonResponse:
     """GET /api/v1/system/ai-status — unauthenticated lock status for the login page.
 
     Returns only what the login screen shows; no provider/model internals.
+    Cached for 5s to eliminate polling latency and remote DB round-trips.
     """
     if request.method != "GET":
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    cached_status = cache.get("eas:public:ai_status")
+    if cached_status is not None:
+        return JsonResponse(cached_status)
     state = ai_engine_state()
-    return JsonResponse(
-        {
-            key: state.get(key)
-            for key in (
-                "client_maintenance_lock",
-                "sync_status",
-                "current_step_index",
-                "current_step_label",
-                "progress_percent",
-                "active_regulation_version",
-                "target_regulation_version",
-                "steps_detail",
-            )
-        }
-    )
+    res_data = {
+        key: state.get(key)
+        for key in (
+            "client_maintenance_lock",
+            "sync_status",
+            "current_step_index",
+            "current_step_label",
+            "progress_percent",
+            "active_regulation_version",
+            "target_regulation_version",
+            "steps_detail",
+        )
+    }
+    cache.set("eas:public:ai_status", res_data, timeout=5)
+    return JsonResponse(res_data)
 
 
 @require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")

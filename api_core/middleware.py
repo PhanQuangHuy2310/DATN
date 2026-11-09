@@ -75,7 +75,9 @@ class ApiRateLimitMiddleware:
         if (
             env == "test"
             or not request.path.startswith("/api/v1/")
-            or request.path.startswith(("/api/v1/system/", "/health/"))
+            or request.path.startswith(
+                ("/api/v1/system/", "/health/", "/api/v1/auth/csrf")
+            )
         ):
             return self.get_response(request)
 
