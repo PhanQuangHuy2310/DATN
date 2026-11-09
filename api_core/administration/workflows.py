@@ -63,13 +63,22 @@ RESOLVER_LABELS = {
     "PROJECT_MANAGER": "Quản lý dự án",
     "WAREHOUSE_MANAGER": "Quản lý kho",
 }
-TYPE_SQL = """
+TYPE_SELECT_SQL = """
     SELECT rt.id::text, rt.code, rt.name, rt.category, rt.lifecycle, rt.is_active,
            rt.risk_weight, rt.approval_level, rt.description,
            cr.version, cr.form_schema, cr.route_rules, cr.sla_profile, cr.published_at
     FROM eas.request_type rt
     LEFT JOIN eas.config_release cr ON cr.id = rt.active_release_id
 """
+TYPE_SQL = TYPE_SELECT_SQL
+TYPE_SQL_BY_ID = (
+    TYPE_SELECT_SQL + " WHERE rt.id = %s::uuid ORDER BY rt.lifecycle, rt.code"
+)
+TYPE_SQL_ACTIVE = TYPE_SELECT_SQL + " WHERE rt.is_active ORDER BY rt.lifecycle, rt.code"
+TYPE_SQL_BY_LIFECYCLE = (
+    TYPE_SELECT_SQL + " WHERE rt.lifecycle = %s ORDER BY rt.lifecycle, rt.code"
+)
+TYPE_SQL_ALL = TYPE_SELECT_SQL + " ORDER BY rt.lifecycle, rt.code"
 
 
 def _group_labels() -> dict[str, str]:
@@ -192,19 +201,13 @@ def _fetch_types(where: str = "", params: list | None = None) -> list[dict]:
         )
         api_rows = cur.fetchall()
         if where and "rt.id" in where:
-            cur.execute(
-                TYPE_SQL + " WHERE rt.id = %s::uuid ORDER BY rt.lifecycle, rt.code",
-                params or [],
-            )
+            cur.execute(TYPE_SQL_BY_ID, params or [])  # NOSONAR python:S2077
         elif where and "rt.is_active" in where:
-            cur.execute(TYPE_SQL + " WHERE rt.is_active ORDER BY rt.lifecycle, rt.code")
+            cur.execute(TYPE_SQL_ACTIVE)  # NOSONAR python:S2077
         elif where and "rt.lifecycle" in where:
-            cur.execute(
-                TYPE_SQL + " WHERE rt.lifecycle = %s ORDER BY rt.lifecycle, rt.code",
-                params or [],
-            )
+            cur.execute(TYPE_SQL_BY_LIFECYCLE, params or [])  # NOSONAR python:S2077
         else:
-            cur.execute(TYPE_SQL + " ORDER BY rt.lifecycle, rt.code")
+            cur.execute(TYPE_SQL_ALL)  # NOSONAR python:S2077
         type_rows = cur.fetchall()
 
     result = []
