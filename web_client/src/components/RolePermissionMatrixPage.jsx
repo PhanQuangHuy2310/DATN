@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { useState, useEffect, useRef } from "react";
 import Icon from "./Icon.jsx";
+=======
+import { useState, useEffect } from "react";
+import { errorText } from "../domain.js";
+>>>>>>> origin/main
 import { api } from "../api.js";
 import { useResource } from "./ui.jsx";
 import { notifyPermissionsChanged } from "../sessionRefresh.js";
@@ -44,7 +49,7 @@ export default function RolePermissionMatrixPage() {
     api(`/api/v1/admin/rbac/matrix?role_id=${roleId}`)
       .then(setMatrixData)
       .catch((err) => {
-        showToast("Không thể tải ma trận phân quyền: " + (err.message || err), "error");
+        showToast("Không thể tải ma trận phân quyền: " + errorText(err), "error");
       });
   }, [roleId]);
 
@@ -54,7 +59,7 @@ export default function RolePermissionMatrixPage() {
     api(`/api/v1/admin/rbac/user-permissions/${selectedUserId}`)
       .then(setUserMatrixData)
       .catch((err) => {
-        showToast("Không thể tải quyền riêng người dùng: " + (err.message || err), "error");
+        showToast("Không thể tải quyền riêng người dùng: " + errorText(err), "error");
       });
   }, [selectedUserId]);
 
@@ -99,7 +104,7 @@ export default function RolePermissionMatrixPage() {
       showToast(`Đã lưu quyền "${moduleCode} - ${action}" cho chức vụ!`, "success");
       notifyPermissionsChanged();
     } catch (err) {
-      showToast("Lỗi cập nhật quyền: " + (err.message || err), "error");
+      showToast("Lỗi cập nhật quyền: " + errorText(err), "error");
       // Revert optimistic update
       setMatrixData((prev) => {
         if (!prev) return prev;
@@ -160,7 +165,7 @@ export default function RolePermissionMatrixPage() {
       showToast(`Đã cập nhật quyền riêng "${moduleCode} - ${action}" cho nhân viên!`, "success");
       notifyPermissionsChanged();
     } catch (err) {
-      showToast("Lỗi cập nhật quyền riêng: " + (err.message || err), "error");
+      showToast("Lỗi cập nhật quyền riêng: " + errorText(err), "error");
       // Revert
       setUserMatrixData((prev) => {
         if (!prev) return prev;
@@ -199,9 +204,13 @@ export default function RolePermissionMatrixPage() {
       setUserMatrixData(res);
       notifyPermissionsChanged();
     } catch (err) {
+<<<<<<< HEAD
       showToast("Lỗi khôi phục quyền: " + (err.message || err), "error");
     } finally {
       pendingPermissionRef.current.delete(pendingId);
+=======
+      showToast("Lỗi khôi phục quyền: " + errorText(err), "error");
+>>>>>>> origin/main
     }
   };
 
@@ -248,11 +257,11 @@ export default function RolePermissionMatrixPage() {
       {/* TAB 1: ROLE RBAC MATRIX */}
       {activeTab === "role" && (
         <div className="rbac-role-section">
-          {/* Role Selector Tabs */}
+          {/* Position Selector Bar (5 Enterprise Positions) */}
           <div className="role-selector-bar">
-            <span className="role-selector-label">Chọn Chức vụ / Vai trò:</span>
+            <span className="role-selector-label">Chọn Chức vụ doanh nghiệp (5 cấp):</span>
             <div className="role-pill-list">
-              {(rolesRes.data?.items || []).map((r) => {
+              {(rolesRes.data?.items || []).map((r, index) => {
                 const isActive = r.id === roleId;
                 return (
                   <button
@@ -262,13 +271,37 @@ export default function RolePermissionMatrixPage() {
                     onClick={() => setSelectedRoleId(r.id)}
                     disabled={Boolean(savingKey)}
                   >
+                    <span className="role-level-index">Cấp {index + 1}</span>
                     <strong>{r.name}</strong>
                     <span className="role-code-tag">{r.code}</span>
+                    {typeof r.member_count === "number" && (
+                      <span className="role-count-tag">{r.member_count} nhân sự</span>
+                    )}
                   </button>
                 );
               })}
             </div>
           </div>
+
+          {/* Selected Position Framed Summary */}
+          {(() => {
+            const activeRoleObj = (rolesRes.data?.items || []).find((r) => r.id === roleId);
+            if (!activeRoleObj) return null;
+            return (
+              <div className="rbac-position-summary-box">
+                <div className="rbac-position-summary-head">
+                  <strong>Chức vụ đang cấu hình: {activeRoleObj.name}</strong>
+                  <code className="rbac-code-chip">{activeRoleObj.code}</code>
+                  {typeof activeRoleObj.member_count === "number" && (
+                    <span className="rbac-member-chip">
+                      Đang áp dụng cho {activeRoleObj.member_count} nhân sự
+                    </span>
+                  )}
+                </div>
+                <p className="rbac-position-summary-desc">{activeRoleObj.description}</p>
+              </div>
+            );
+          })()}
 
           {/* RBAC Info Notice */}
           <div className="rbac-info-box">
@@ -278,11 +311,17 @@ export default function RolePermissionMatrixPage() {
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             <div>
-              <strong>Quy tắc áp dụng phân quyền trực tiếp:</strong>
+              <strong>Quy tắc áp dụng phân quyền trực tiếp theo Chức vụ:</strong>
               <p>
+<<<<<<< HEAD
                 - Nếu <strong>Xem</strong> tắt: chức năng bị ẩn khỏi thanh điều hướng và không truy cập được.
                 <br />
                 - Nếu <strong>Xem</strong> bật nhưng <strong>Thêm / Sửa / Xóa</strong> tắt: người dùng chỉ xem dữ liệu; các nút thao tác tương ứng được ẩn.
+=======
+                - Nếu <strong>Xem (can_view) = TẮT</strong>: Chức năng sẽ bị <strong>ẨN HOÀN TOÀN</strong> khỏi thanh điều hướng Sidebar và chặn truy cập URL đối với chức vụ này.
+                <br />
+                - Nếu <strong>Xem = BẬT</strong> nhưng <strong>Thêm / Sửa / Xóa = TẮT</strong>: Người dùng thuộc chức vụ này xem được dữ liệu nhưng các nút Thêm mới, Sửa hoặc Khóa/Xóa sẽ tự động ẩn khỏi giao diện.
+>>>>>>> origin/main
               </p>
             </div>
           </div>
@@ -293,27 +332,39 @@ export default function RolePermissionMatrixPage() {
               Đang tải dữ liệu ma trận phân quyền...
             </div>
           ) : (
-            <div className="table-wrap" style={{ marginTop: "1rem" }}>
+            <div className="rbac-table-card">
               <table className="rbac-matrix-table">
+                <colgroup>
+                  <col style={{ width: "36%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                </colgroup>
                 <thead>
                   <tr>
+<<<<<<< HEAD
                     <th style={{ width: "35%" }}>Chức năng hệ thống</th>
                     <th style={{ width: "16%", textAlign: "center" }}>
+=======
+                    <th>Chức năng hệ thống (Module)</th>
+                    <th style={{ textAlign: "center" }}>
+>>>>>>> origin/main
                       <div className="th-toggle-header">
                         <span>Xem</span>
                       </div>
                     </th>
-                    <th style={{ width: "16%", textAlign: "center" }}>
+                    <th style={{ textAlign: "center" }}>
                       <div className="th-toggle-header">
                         <span>Thêm</span>
                       </div>
                     </th>
-                    <th style={{ width: "16%", textAlign: "center" }}>
+                    <th style={{ textAlign: "center" }}>
                       <div className="th-toggle-header">
                         <span>Sửa</span>
                       </div>
                     </th>
-                    <th style={{ width: "16%", textAlign: "center" }}>
+                    <th style={{ textAlign: "center" }}>
                       <div className="th-toggle-header">
                         <span>Xóa / Khóa</span>
                       </div>
@@ -324,7 +375,7 @@ export default function RolePermissionMatrixPage() {
                   {(!matrixData?.modules || matrixData.modules.length === 0) ? (
                     <tr>
                       <td colSpan={5} style={{ textAlign: "center", padding: "3rem" }}>
-                        Chưa có dữ liệu phân quyền cho vai trò này.
+                        Chưa có dữ liệu phân quyền cho chức vụ này.
                       </td>
                     </tr>
                   ) : (
@@ -338,7 +389,7 @@ export default function RolePermissionMatrixPage() {
                             <div className="module-title-cell">
                               <span className="module-order-num">{idx + 1}</span>
                               <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                                   <strong className="module-display-name">{m.name}</strong>
                                   {isLocked && (
                                     <span className="badge badge-locked" style={{ backgroundColor: "var(--eas-danger-soft)", color: "var(--eas-danger)", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "4px" }} title="Chức năng hệ thống được khóa cố định; chỉ quản trị viên cấp cao được truy cập">
@@ -347,7 +398,7 @@ export default function RolePermissionMatrixPage() {
                                   )}
                                 </div>
                                 <div className="module-code-hint">
-                                  <code>{m.code}</code> • {m.description || "Chức năng hệ thống"}
+                                  <code>{m.code}</code> • <span>{m.group_name || m.description || "Chức năng hệ thống"}</span>
                                 </div>
                               </div>
                             </div>
@@ -475,7 +526,7 @@ export default function RolePermissionMatrixPage() {
               Đang tải quyền riêng của nhân viên...
             </div>
           ) : (
-            <div className="table-wrap" style={{ marginTop: "1.5rem" }}>
+            <div className="rbac-table-card" style={{ marginTop: "1.25rem" }}>
               <div className="user-override-summary-badge">
                 <span>Nhân viên: <strong>{userMatrixData?.user?.full_name}</strong></span>
                 <span>Chức vụ gốc: <strong>{userMatrixData?.user?.role_name}</strong></span>
@@ -483,6 +534,13 @@ export default function RolePermissionMatrixPage() {
               </div>
 
               <table className="rbac-matrix-table">
+                <colgroup>
+                  <col style={{ width: "36%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "16%" }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th style={{ width: "35%" }}>Chức năng hệ thống</th>

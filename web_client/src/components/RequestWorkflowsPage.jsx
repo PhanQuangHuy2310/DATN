@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
+=======
+import { useEffect, useMemo, useState } from "react";
+import { errorText } from "../domain.js";
+>>>>>>> origin/main
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
 import { PermissionGuard } from "./PermissionGuard.jsx";
@@ -81,13 +86,13 @@ export default function RequestWorkflowsPage() {
       setTemplates(tplRes.items || []);
       setMockApis(apiRes.items || []);
     } catch (err) {
-      showToast("Lỗi tải dữ liệu: " + (err.message || "Không thể kết nối"), "error");
+      showToast("Lỗi tải dữ liệu: " + errorText(err), "error");
     }
   };
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
-    loadData();
+    void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -112,7 +117,7 @@ export default function RequestWorkflowsPage() {
         );
       }
     } catch (err) {
-      showToast("Lỗi khi chuyển phân loại: " + (err.message || "Không thể cập nhật"), "error");
+      showToast("Lỗi khi chuyển phân loại: " + errorText(err), "error");
     }
     });
   };
@@ -134,7 +139,7 @@ export default function RequestWorkflowsPage() {
         showToast(`Đã lưu trọng số tự động hóa ${val}% cho mẫu "${template.name}".`, "success");
       }
     } catch (err) {
-      showToast("Lỗi lưu trọng số: " + err.message, "error");
+      showToast("Lỗi lưu trọng số: " + errorText(err), "error");
     }
     });
   };
@@ -155,11 +160,14 @@ export default function RequestWorkflowsPage() {
           "success"
         );
         void loadData();
+<<<<<<< HEAD
         return true;
+=======
+>>>>>>> origin/main
       }
       throw new Error("Máy chủ chưa xác nhận lưu quy trình.");
     } catch (err) {
-      showToast("Lỗi lưu quy trình: " + err.message, "error");
+      showToast("Lỗi lưu quy trình: " + errorText(err), "error");
     }
     });
   };
@@ -190,12 +198,19 @@ export default function RequestWorkflowsPage() {
           "success"
         );
         void loadData();
+<<<<<<< HEAD
         return true;
+=======
+>>>>>>> origin/main
       }
       throw new Error("Máy chủ chưa xác nhận lưu mẫu yêu cầu.");
     } catch (err) {
+<<<<<<< HEAD
       showToast("Lỗi lưu mẫu: " + err.message, "error");
       throw err;
+=======
+      showToast("Lỗi lưu mẫu: " + errorText(err), "error");
+>>>>>>> origin/main
     }
     });
   };
@@ -217,11 +232,14 @@ export default function RequestWorkflowsPage() {
           "success"
         );
         void loadData();
+<<<<<<< HEAD
         return true;
+=======
+>>>>>>> origin/main
       }
       throw new Error("Máy chủ chưa xác nhận xóa mẫu yêu cầu.");
     } catch (err) {
-      showToast("Lỗi xóa mẫu: " + err.message, "error");
+      showToast("Lỗi xóa mẫu: " + errorText(err), "error");
     }
     });
   };
@@ -413,16 +431,31 @@ export default function RequestWorkflowsPage() {
 
         {/* Templates Data Table */}
         <div className="rw-table-card">
-          <div className="table-wrap">
+          <div className="rw-table-wrap">
             <table className="rw-table">
+              <colgroup>
+                <col style={{ width: "21%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "11%" }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Tên mẫu yêu cầu</th>
+<<<<<<< HEAD
                   <th>Loại nghiệp vụ</th>
                   <th style={{ minWidth: 170 }}>Thuộc phân loại</th>
                   <th style={{ minWidth: 200 }}>Trọng số</th>
+=======
+                  <th>Nghiệp vụ</th>
+                  <th>Thuộc phân loại</th>
+                  <th>Trọng số tự động</th>
+>>>>>>> origin/main
                   <th>API tích hợp</th>
-                  <th>Quy trình hiện tại</th>
+                  <th>Quy trình</th>
                   <th style={{ textAlign: "right" }}>Thao tác</th>
                 </tr>
               </thead>
@@ -462,9 +495,9 @@ export default function RequestWorkflowsPage() {
                               className={`rw-cat-select rw-cat-select-${tpl.category_code.toLowerCase()}`}
                               title="Thay đổi phân loại sẽ tự động cập nhật lại các bước quy trình"
                             >
-                              <option value="A">Phân loại A (Tự động - 4h)</option>
-                              <option value="B">Phân loại B (Phòng ban - 24h)</option>
-                              <option value="C">Phân loại C (Đa cấp - 48h)</option>
+                              <option value="A">Loại A · Tự động</option>
+                              <option value="B">Loại B · Phòng ban</option>
+                              <option value="C">Loại C · Đa cấp</option>
                             </select>
                             <span className="rw-auto-sync-hint"><Icon name="bolt" size={14} /> Tự động đổi quy trình</span>
                           </div>
@@ -530,10 +563,10 @@ export default function RequestWorkflowsPage() {
                             onClick={() => setViewingWorkflow(tpl)}
                             title="Xem chi tiết các bước quy trình"
                           >
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2">
                               <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
-                            <span>{stepsCount} bước (Nhóm {tpl.category_code})</span>
+                            <span>{stepsCount} bước · {tpl.category_code}</span>
                           </button>
                         </td>
 

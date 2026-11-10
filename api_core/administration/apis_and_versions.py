@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 from django.db import DatabaseError, connection, transaction
 from django.http import HttpRequest, JsonResponse
+from django.views.decorators.http import require_GET
 
 from api_core.authn.service import require_actor
 from api_core.catalog import integrations
@@ -186,6 +187,7 @@ def mock_api_toggle_circuit_breaker(request: HttpRequest, api_id: str) -> JsonRe
     )
 
 
+@require_GET
 def public_circuit_breaker_status(request: HttpRequest) -> JsonResponse:
     with connection.cursor() as cur:
         cur.execute(

@@ -63,13 +63,22 @@ RESOLVER_LABELS = {
     "PROJECT_MANAGER": "Quản lý dự án",
     "WAREHOUSE_MANAGER": "Quản lý kho",
 }
-TYPE_SQL = """
+TYPE_SELECT_SQL = """
     SELECT rt.id::text, rt.code, rt.name, rt.category, rt.lifecycle, rt.is_active,
            rt.risk_weight, rt.approval_level, rt.description,
            cr.version, cr.form_schema, cr.route_rules, cr.sla_profile, cr.published_at
     FROM eas.request_type rt
     LEFT JOIN eas.config_release cr ON cr.id = rt.active_release_id
 """
+TYPE_SQL = TYPE_SELECT_SQL
+TYPE_SQL_BY_ID = (
+    TYPE_SELECT_SQL + " WHERE rt.id = %s::uuid ORDER BY rt.lifecycle, rt.code"
+)
+TYPE_SQL_ACTIVE = TYPE_SELECT_SQL + " WHERE rt.is_active ORDER BY rt.lifecycle, rt.code"
+TYPE_SQL_BY_LIFECYCLE = (
+    TYPE_SELECT_SQL + " WHERE rt.lifecycle = %s ORDER BY rt.lifecycle, rt.code"
+)
+TYPE_SQL_ALL = TYPE_SELECT_SQL + " ORDER BY rt.lifecycle, rt.code"
 
 
 def _group_labels() -> dict[str, str]:
@@ -191,9 +200,14 @@ def _fetch_types(where: str = "", params: list | None = None) -> list[dict]:
             """
         )
         api_rows = cur.fetchall()
-        cur.execute(
-            TYPE_SQL + where + " ORDER BY rt.lifecycle, rt.code", params or []
-        )  # NOSONAR python:S2077
+        if where and "rt.id" in where:
+            cur.execute(TYPE_SQL_BY_ID, params or [])  # NOSONAR python:S2077
+        elif where and "rt.is_active" in where:
+            cur.execute(TYPE_SQL_ACTIVE)  # NOSONAR python:S2077
+        elif where and "rt.lifecycle" in where:
+            cur.execute(TYPE_SQL_BY_LIFECYCLE, params or [])  # NOSONAR python:S2077
+        else:
+            cur.execute(TYPE_SQL_ALL)  # NOSONAR python:S2077
         type_rows = cur.fetchall()
 
     result = []
@@ -328,6 +342,17 @@ def request_templates_list(request):
 
     _require_writer(request)
     payload = parse_json_object(request)
+    raw_cat = str(payload.get("category_code") or "").strip().upper()
+    if raw_cat not in ("A", "B", "C"):
+        raise CommandError(
+            "INVALID_CATEGORY_CODE",
+            status=422,
+            fields={
+                "category_code": [
+                    "Phân loại quy trình bắt buộc phải thuộc ('A', 'B', 'C')."
+                ]
+            },
+        )
     group = payload.get("group_code") or next(
         (k for k, v in _group_labels().items() if v == payload.get("request_type")),
         None,
@@ -343,7 +368,7 @@ def request_templates_list(request):
                 payload.get("description") or payload.get("name") or ""
             ).strip(),
             "category": group,
-            "lifecycle": payload.get("category_code"),
+            "lifecycle": raw_cat,
             "risk_weight": _risk_from_automation(payload.get("automation_weight", 50)),
             "is_active": False,
             "reason": _reason(payload, "Tạo loại yêu cầu mới từ trang Quy trình"),
@@ -397,11 +422,23 @@ def request_template_detail(request, template_id):
 
     category_changed = False
     new_cat = payload.get("category_code")
-    if (
-        new_cat
-        and new_cat.upper() in ("A", "B", "C")
-        and new_cat.upper() != current["category_code"]
-    ):
+    if "category_code" in payload and new_cat is not None:
+        if not isinstance(new_cat, str) or new_cat.strip().upper() not in (
+            "A",
+            "B",
+            "C",
+        ):
+            raise CommandError(
+                "INVALID_CATEGORY_CODE",
+                status=422,
+                fields={
+                    "category_code": [
+                        "Phân loại quy trình bắt buộc phải thuộc ('A', 'B', 'C')."
+                    ]
+                },
+            )
+        new_cat = new_cat.strip().upper()
+    if new_cat and new_cat in ("A", "B", "C") and new_cat != current["category_code"]:
         with transaction.atomic(), connection.cursor() as cur:
             cur.execute(
                 "UPDATE eas.request_type SET lifecycle = %s WHERE id = %s::uuid",

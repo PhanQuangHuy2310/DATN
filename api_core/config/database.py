@@ -57,7 +57,7 @@ def parse_database_url(url: str) -> dict[str, object]:
             "OPTIONS": {
                 "sslmode": sslmode,
                 "connect_timeout": int(
-                    os.getenv("EAS_DB_CONNECT_TIMEOUT_SECONDS", "8")
+                    os.getenv("EAS_DB_CONNECT_TIMEOUT_SECONDS", "5")
                 ),
                 "prepare_threshold": None,
                 # Keep reused Supabase TLS sockets alive across idle periods.

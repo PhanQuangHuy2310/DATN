@@ -11,8 +11,12 @@ import {
   TableSkeleton,
 } from "./design.jsx";
 import { Badge, ResourceState, useResource } from "./ui.jsx";
+<<<<<<< HEAD
 const WorkflowDiagrams = lazy(() => import("./WorkflowDiagrams.jsx"));
+=======
+>>>>>>> origin/main
 
+const WorkflowDiagrams = lazy(() => import("./WorkflowDiagrams.jsx"));
 const RequestWorkflowsPage = lazy(() => import("./RequestWorkflowsPage.jsx"));
 const AiProcessGuide = lazy(() => import("./AiProcessGuide.jsx"));
 
@@ -336,8 +340,12 @@ export default function ClientRequestsHub({
           {tab === "ai" && (
             <AiProcessGuide user={user} onOpen={onOpen} portal="client" />
           )}
+          {tab === "diagrams" && <WorkflowDiagrams />}
         </Suspense>
+<<<<<<< HEAD
         {tab === "diagrams" && <Suspense fallback={<CardGridSkeleton count={4} />}><WorkflowDiagrams /></Suspense>}
+=======
+>>>>>>> origin/main
       </div>
     </>
   );

@@ -64,8 +64,7 @@ class _LoginPageState extends State<LoginPage> {
           if (error != null) Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           FilledButton(onPressed: busy ? null : submit, child: Text(busy ? 'Đang đăng nhập…' : 'Đăng nhập')),
         ],
-      )))))))
-  );
+      )))))));
 }
 
 class PasswordPage extends StatefulWidget {

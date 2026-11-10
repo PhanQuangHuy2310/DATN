@@ -16,8 +16,8 @@ Tài liệu này hướng dẫn **chạy hệ thống trên máy Windows**.
 | Mock Systems API | http://127.0.0.1:8100 | Có |
 | API (backend) | http://127.0.0.1:8000 | Có |
 | Worker nền (thông báo, SLA, tự trả đồ mượn) | — | Có |
-| Web nhân viên | http://127.0.0.1:5173 | Có |
-| Web quản trị | http://127.0.0.1:5174 | Có |
+| Web nhân viên | http://127.0.0.1:5173 (local dev) / http://127.0.0.1:8080 (Docker Nginx) | Có |
+| Web quản trị | http://127.0.0.1:5174 (local dev) / http://127.0.0.1:8081 (Docker Nginx) | Có |
 | AI service | http://127.0.0.1:8001 | Không: thiếu AI thì hệ thống dùng quy tắc dự phòng |
 
 Dữ liệu nằm trên **một database Supabase** có sẵn, không cần cài database trên máy.
@@ -39,11 +39,12 @@ Dữ liệu nằm trên **một database Supabase** có sẵn, không cần cài
    cd web_admin;  npm ci; cd ..
    ```
 
-   Nếu dùng AI:
+   Nếu dùng AI (và OCR hóa đơn tiếng Việt bằng PaddleOCR):
 
    ```powershell
    py -3.11 -m venv ai_service\.venv-ai
    .\ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-local.txt
+   .\ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-paddle.txt
    ```
 
 5. Kiểm tra kết nối database: `.\check_local.cmd`.

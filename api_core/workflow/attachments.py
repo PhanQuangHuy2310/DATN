@@ -33,7 +33,7 @@ def register_attachment(
     correlation_id: str,
 ) -> dict[str, object]:
     try:
-        request_id = str(UUID(request_id))
+        request_id = str(UUID(str(request_id)))
     except (ValueError, TypeError, AttributeError):
         raise CommandError("INVALID_REQUEST_ID") from None
     if not data or len(data) > 10 * 1024 * 1024:
@@ -90,6 +90,19 @@ def register_attachment(
                 department_id=owner[1],
                 type_id=owner[0],
             )
+            cursor.execute(
+                """
+                SELECT (
+                  SELECT count(*) FROM eas.draft_attachment WHERE request_id=%s
+                ), (
+                  SELECT count(*) FROM eas.attachment WHERE request_id=%s AND deleted_at IS NULL
+                )
+                """,
+                [request_id, request_id],
+            )
+            counts_row = cursor.fetchone() or (0, 0)
+            if int(counts_row[0] or 0) >= 5 or int(counts_row[1] or 0) >= 5:
+                raise CommandError("MAX_ATTACHMENTS_EXCEEDED", status=422)
             cursor.execute(
                 """
                 INSERT INTO eas.attachment(
@@ -166,7 +179,7 @@ def register_execution_evidence(
     correlation_id: str,
 ) -> dict[str, object]:
     try:
-        request_id = str(UUID(request_id))
+        request_id = str(UUID(str(request_id)))
     except (ValueError, TypeError, AttributeError):
         raise CommandError("INVALID_REQUEST_ID") from None
     if not data or len(data) > 10 * 1024 * 1024:
@@ -224,6 +237,13 @@ def register_execution_evidence(
                 department_id=department_id,
                 type_id=type_id,
             )
+            cursor.execute(
+                "SELECT count(*) FROM eas.execution_attachment WHERE attempt_id=%s",
+                [attempt_id],
+            )
+            exec_att_row = cursor.fetchone() or (0,)
+            if int(exec_att_row[0] or 0) >= 5:
+                raise CommandError("MAX_ATTACHMENTS_EXCEEDED", status=422)
             cursor.execute(
                 """
                 INSERT INTO eas.attachment(
@@ -292,7 +312,7 @@ def get_attachment_metadata(
     attachment_id: str,
 ) -> dict[str, Any]:
     try:
-        att_uuid = str(UUID(attachment_id))
+        att_uuid = str(UUID(str(attachment_id)))
     except (ValueError, TypeError, AttributeError):
         raise CommandError("NOT_FOUND", status=404) from None
 
@@ -356,7 +376,7 @@ def download_attachment(
     correlation_id: str,
 ) -> tuple[bytes, str, str]:
     try:
-        att_uuid = str(UUID(attachment_id))
+        att_uuid = str(UUID(str(attachment_id)))
     except (ValueError, TypeError, AttributeError):
         raise CommandError("NOT_FOUND", status=404) from None
 

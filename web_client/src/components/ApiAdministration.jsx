@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import { useState, useEffect, useRef } from "react";
 import Icon from "./Icon.jsx";
+=======
+import { useState, useEffect } from "react";
+import { errorText } from "../domain.js";
+>>>>>>> origin/main
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -27,7 +32,7 @@ export function ApiAdministration() {
       const res = await api("/api/v1/admin/mock-apis");
       setApis(res.apis || []);
     } catch (err) {
-      if (!silent) showToast("Không thể tải danh sách API: " + (err.message || ""), "error");
+      if (!silent) showToast("Không thể tải danh sách API: " + errorText(err), "error");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -35,7 +40,7 @@ export function ApiAdministration() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
-    loadApis();
+    void loadApis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -45,7 +50,7 @@ export function ApiAdministration() {
       setConfirmToggleApi(apiItem);
     } else {
       // Re-enabling directly
-      executeToggle(apiItem);
+      void executeToggle(apiItem);
     }
   };
 
@@ -61,9 +66,9 @@ export function ApiAdministration() {
       if (res?.success === false) throw new Error(res?.message || "Máy chủ chưa xác nhận thay đổi.");
       showToast(res.message || "Đã cập nhật trạng thái kết nối API!", "success");
       setConfirmToggleApi(null);
-      loadApis(true);
+      void loadApis(true);
     } catch (err) {
-      showToast("Lỗi khi điều khiển Circuit Breaker: " + (err.message || ""), "error");
+      showToast("Lỗi khi điều khiển Circuit Breaker: " + errorText(err), "error");
     } finally {
       togglePendingRef.current = false;
       setToggling(false);
@@ -327,7 +332,7 @@ export function ApiAdministration() {
                 type="button"
                 className="btn-secondary"
                 onClick={() => {
-                  navigator.clipboard?.writeText(JSON.stringify(viewingPayload.mock_payload || {}, null, 2));
+                  void navigator.clipboard?.writeText(JSON.stringify(viewingPayload.mock_payload || {}, null, 2));
                   showToast("Đã sao chép JSON payload vào bộ nhớ tạm!", "info");
                 }}
               >

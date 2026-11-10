@@ -85,7 +85,9 @@ def invalidate() -> None:
     try:
         cache.delete(CACHE_KEY)
     except (RedisError, OSError):
-        log.warning("Integration cache unavailable; entry expires within %ss", CACHE_SECONDS)
+        log.warning(
+            "Integration cache unavailable; entry expires within %ss", CACHE_SECONDS
+        )
 
 
 def blocks(domain_key: str, type_code: str, category: str | None) -> bool:

@@ -137,6 +137,8 @@ Tạo môi trường Python 3.11 từ thư mục gốc repo, cài dependencies A
 ```powershell
 py -3.11 -m venv ai_service\.venv-ai
 ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-local.txt
+# Cài đặt thêm PaddleOCR để chạy nhận dạng hóa đơn tiếng Việt cục bộ (PP-OCRv6):
+ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-paddle.txt
 ai_service\.venv-ai\Scripts\python.exe ai_service\training\train_all_models.py
 ```
 

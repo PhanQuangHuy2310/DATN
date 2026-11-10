@@ -29,13 +29,47 @@ READ_ROLES = ("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
 WRITE_ROLES = frozenset({"OPS_ADMIN", "POLICY_ADMIN"})
 PERMISSION_FIELDS = ("can_view", "can_create", "can_update", "can_delete")
 LEAVE_TYPES = {"PAID_LEAVE", "UNPAID_LEAVE", "LATE_IN", "EARLY_OUT", "BUSINESS_TRIP"}
+# Enterprise Positions (Chức vụ) in ascending seniority order.
+POSITION_ROLES = ("STAFF", "TEAM_LEAD", "MANAGER", "VICE_DIRECTOR", "DIRECTOR")
+POSITION_METADATA = {
+    "STAFF": (
+        "Nhân viên",
+        "Nhân viên chuyên môn khởi tạo yêu cầu, thực hiện công việc và nghiệm thu kết quả.",
+    ),
+    "TEAM_LEAD": (
+        "Trưởng nhóm",
+        "Trưởng nhóm điều phối nhân sự nhóm và phê duyệt cấp 1 trong phòng ban.",
+    ),
+    "MANAGER": (
+        "Trưởng phòng",
+        "Trưởng phòng quản lý nhân sự phòng ban và phê duyệt cấp phòng.",
+    ),
+    "VICE_DIRECTOR": (
+        "Phó giám đốc",
+        "Phó giám đốc phụ trách khối nghiệp vụ và phê duyệt cấp Ban điều hành.",
+    ),
+    "DIRECTOR": (
+        "Giám đốc",
+        "Giám đốc điều hành toàn công ty và phê duyệt cấp cao nhất.",
+    ),
+}
 # Business roles an employee account may hold (admin roles live on admin accounts).
-EMPLOYEE_ROLES = ("APPROVER", "EXECUTOR", "ACCEPTOR", "REQUESTER")
+WORKFLOW_EMPLOYEE_ROLES = ("APPROVER", "EXECUTOR", "ACCEPTOR", "REQUESTER")
+EMPLOYEE_ROLES = (*POSITION_ROLES, *WORKFLOW_EMPLOYEE_ROLES)
+# Roles the user screen may grant. AUDITOR (global read-only audit) is an
+# employee duty too (M3), but like APPROVER only an administrator grants it.
+ASSIGNABLE_ROLES = (*POSITION_ROLES, *WORKFLOW_EMPLOYEE_ROLES, "AUDITOR")
+ADMIN_GRANTED_ROLES = frozenset({"APPROVER", "AUDITOR", "VICE_DIRECTOR", "DIRECTOR"})
 DEPARTMENT_SCOPED_ROLES = {"APPROVER", "EXECUTOR"}
-# The most senior role is shown as the user's role/job title.
+# The most senior position/role is shown as the user's role/job title.
 ROLE_PRIORITY = (
     "OPS_ADMIN",
     "POLICY_ADMIN",
+    "DIRECTOR",
+    "VICE_DIRECTOR",
+    "MANAGER",
+    "TEAM_LEAD",
+    "STAFF",
     "AUDITOR",
     "APPROVER",
     "EXECUTOR",
@@ -231,18 +265,65 @@ def _assert_employee(cur, user_id: str) -> None:
 # ==============================================================================
 
 
-@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR", "APPROVER", "REQUESTER")
+@require_actor(
+    "OPS_ADMIN",
+    "POLICY_ADMIN",
+    "AUDITOR",
+    "DIRECTOR",
+    "VICE_DIRECTOR",
+    "MANAGER",
+    "TEAM_LEAD",
+    "STAFF",
+    "APPROVER",
+    "EXECUTOR",
+    "ACCEPTOR",
+    "REQUESTER",
+)
 def org_chart_tree_view(request):
     """Departments with head, roster and working-status summary."""
     if request.method != "GET":
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
 
     with connection.cursor() as cur:
-        users = _fetch_users(cur, " AND u.is_active")
+        raw_users = _fetch_users(cur, " AND u.is_active")
         cur.execute(
             "SELECT id::text, code, name, parent_id::text FROM eas.department WHERE is_active ORDER BY code"
         )
         departments = cur.fetchall()
+
+    is_privileged = bool(
+        request.actor.roles
+        & {
+            "OPS_ADMIN",
+            "POLICY_ADMIN",
+            "AUDITOR",
+            "DIRECTOR",
+            "VICE_DIRECTOR",
+            "MANAGER",
+            "TEAM_LEAD",
+            "APPROVER",
+        }
+    ) or can(request, "users", "view")
+
+    if is_privileged:
+        users = raw_users
+    else:
+        users = [
+            {
+                "id": u["id"],
+                "employee_code": u["employee_code"],
+                "full_name": u["full_name"],
+                "email": u["email"],
+                "department_id": u["department_id"],
+                "department_name": u["department_name"],
+                "is_active": u["is_active"],
+                "job_title": u["job_title"],
+                "working_status_code": u["working_status_code"],
+                "working_status_label": u["working_status_label"],
+                "manager_id": u["manager_id"],
+            }
+            for u in raw_users
+        ]
 
     by_id = {u["id"]: u for u in users}
     by_dept: dict[str, list[dict]] = {}
@@ -332,7 +413,9 @@ def _grant_role(
     """Grant role unless the user already holds it (as any active membership)."""
     with connection.cursor() as cur:
         cur.execute(
-            f"SELECT 1 FROM eas.role_membership m WHERE m.user_id = %s AND m.role = %s AND {ACTIVE_MEMBERSHIP}",
+            "SELECT 1 FROM eas.role_membership m WHERE m.user_id = %s AND m.role = %s "
+            "AND m.revoked_at IS NULL AND m.valid_from <= statement_timestamp() "
+            "AND (m.valid_to IS NULL OR m.valid_to > statement_timestamp())",
             [user_id, role],
         )
         if cur.fetchone():
@@ -350,18 +433,111 @@ def _grant_role(
         )
 
 
+def _revoke_roles(
+    request,
+    user_id: str,
+    roles_to_revoke: tuple[str, ...] | list[str],
+    key: str,
+    reason: str,
+    action: str = "update",
+) -> None:
+    """Revoke active memberships in roles_to_revoke for user_id."""
+    if not roles_to_revoke:
+        return
+    with connection.cursor() as cur:
+        cur.execute(
+            "SELECT m.id::text FROM eas.role_membership m WHERE m.user_id = %s AND m.role = ANY(%s) "
+            "AND m.revoked_at IS NULL AND m.valid_from <= statement_timestamp() "
+            "AND (m.valid_to IS NULL OR m.valid_to > statement_timestamp())",
+            [user_id, list(roles_to_revoke)],
+        )
+        membership_ids = [r[0] for r in cur.fetchall()]
+    authorizer = _users_authorizer(request, action)
+    for idx, mid in enumerate(membership_ids):
+        rec = read_record(request.actor, "memberships", mid, authorizer)["item"]
+        mutate(
+            request.actor,
+            "memberships",
+            mid,
+            {"reason": reason, "expected_revision": rec["revision"]},
+            "DELETE",
+            str(uuid5(UUID(key), f"revoke:{mid}:{idx}")),
+            correlation_id(request),
+            authorizer=authorizer,
+        )
+
+
+def _apply_user_role(
+    request,
+    user_id: str,
+    department_id: str,
+    role: str,
+    key: str,
+    reason: str,
+    action: str = "update",
+) -> None:
+    """Assign an Enterprise Position (and sync workflow duties) or an extra duty role."""
+    if role in POSITION_ROLES:
+        other_positions = [p for p in POSITION_ROLES if p != role]
+        _revoke_roles(request, user_id, other_positions, key, reason, action)
+        _grant_role(request, user_id, department_id, role, key, reason, action)
+        # Keep operational workflow roles synchronized with the assigned Position.
+        for wf_role in ("REQUESTER", "ACCEPTOR"):
+            _grant_role(request, user_id, department_id, wf_role, key, reason, action)
+        if role in ("DIRECTOR", "VICE_DIRECTOR"):
+            # Executive positions hold global approval authority.
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM eas.role_membership m WHERE m.user_id = %s AND m.role = 'APPROVER' AND m.scope_kind = 'GLOBAL' "
+                    "AND m.revoked_at IS NULL AND m.valid_from <= statement_timestamp() "
+                    "AND (m.valid_to IS NULL OR m.valid_to > statement_timestamp())",
+                    [user_id],
+                )
+                has_global = bool(cur.fetchone())
+            if not has_global:
+                mutate(
+                    request.actor,
+                    "memberships",
+                    None,
+                    {
+                        "user_id": user_id,
+                        "role": "APPROVER",
+                        "scope_kind": "GLOBAL",
+                        "department_id": None,
+                        "type_scope": "ALL",
+                        "type_id": None,
+                        "reason": reason,
+                    },
+                    "POST",
+                    str(uuid5(UUID(key), f"role:APPROVER:global:{role}")),
+                    correlation_id(request),
+                    authorizer=_users_authorizer(request, action),
+                )
+        elif role in ("MANAGER", "TEAM_LEAD"):
+            _grant_role(
+                request, user_id, department_id, "APPROVER", key, reason, action
+            )
+        elif role == "STAFF":
+            _revoke_roles(request, user_id, ["APPROVER"], key, reason, action)
+            _grant_role(
+                request, user_id, department_id, "EXECUTOR", key, reason, action
+            )
+    else:
+        _grant_role(request, user_id, department_id, role, key, reason, action)
+
+
 def _validated_role(value, request=None) -> str | None:
     if value in (None, ""):
         return None
-    if value not in EMPLOYEE_ROLES:
+    if value not in ASSIGNABLE_ROLES:
         raise CommandError("INVALID_ROLE", status=422)
-    # Approval authority is granted by the administrator only.
+    # Approval and audit authority are granted by the administrator only.
     if (
-        value == "APPROVER"
+        value in ADMIN_GRANTED_ROLES
         and request is not None
         and not request.actor.roles & ADMIN_ROLES
     ):
-        raise CommandError("APPROVER_ROLE_ADMIN_ONLY", status=403)
+        raise CommandError(f"{value}_ROLE_ADMIN_ONLY", status=403)
     return value
 
 
@@ -437,12 +613,15 @@ def users_management_list(request):
             authorizer=_users_authorizer(request, "create"),
         )
         user_id = created.body["item"]["id"]
-        # Every employee can create and accept their own requests.
-        for granted in dict.fromkeys(("REQUESTER", "ACCEPTOR", role)):
-            if granted:
-                _grant_role(
-                    request, user_id, department_id, granted, key, reason, "create"
-                )
+        _apply_user_role(
+            request,
+            user_id,
+            department_id,
+            role or "STAFF",
+            key,
+            reason,
+            "create",
+        )
 
     return JsonResponse(
         {
@@ -512,6 +691,10 @@ def user_management_detail(request, user_id):
         changes["display_name"] = payload["full_name"]
     if payload.get("department_id"):
         changes["department_id"] = payload["department_id"]
+    if "manager_id" in payload:
+        # Empty value removes the manager; service.mutate validates the UUID,
+        # that the manager is an active user, and rejects self/cyclic chains.
+        changes["manager_id"] = payload["manager_id"] or None
     if "is_active" in payload:
         changes["is_active"] = payload["is_active"]
     if payload.get("password"):
@@ -531,7 +714,7 @@ def user_management_detail(request, user_id):
                 authorizer=authorizer,
             ).body["item"]
         if role:
-            _grant_role(
+            _apply_user_role(
                 request, u_str, item["department_id"], role, key, reason, action
             )
 
@@ -559,9 +742,16 @@ def user_requests_detail_view(request, user_id):
         if not users:
             return api_error(request, "USER_NOT_FOUND", status=404)
         cur.execute(
-            f"""
+            """
             SELECT r.id::text, r.code, COALESCE(r.draft_payload->>'title', rt.name), rt.name,
-                   rt.lifecycle, {STAGE_SQL}, r.status,
+                   rt.lifecycle,
+                   CASE r.status
+                       WHEN 'DRAFT' THEN 'YEU_CAU' WHEN 'NEEDS_INFO' THEN 'YEU_CAU'
+                       WHEN 'PENDING_APPROVAL' THEN 'PHE_DUYET'
+                       WHEN 'READY_FOR_EXECUTION' THEN 'THUC_HIEN' WHEN 'IN_PROGRESS' THEN 'THUC_HIEN'
+                       WHEN 'WAITING_FOR_ACCEPTANCE' THEN 'NGHIEM_THU'
+                       ELSE 'HOAN_THANH' END,
+                   r.status,
                    array_agg(DISTINCT p.joined_as), r.created_at
             FROM eas.request_participant p
             JOIN eas.request r ON r.id = p.request_id
@@ -628,7 +818,10 @@ def user_leave_trip_manage(request, user_id):
 
     u_str = str(user_id)
     payload = parse_json_object(request)
-    action = str(payload.get("action") or "create").upper()
+    raw_action = payload.get("action")
+    action = str(raw_action if raw_action is not None else "create").strip().upper()
+    if action not in {"CREATE", "ADD", "SET", "CANCEL_TODAY", "RESET_TODAY"}:
+        raise CommandError("INVALID_LEAVE_ACTION", status=422)
     with transaction.atomic(), connection.cursor() as cur:
         _assert_employee(cur, u_str)
         if action in ("CANCEL_TODAY", "RESET_TODAY"):
@@ -642,7 +835,10 @@ def user_leave_trip_manage(request, user_id):
                 "Đã hủy đơn nghỉ/công tác hôm nay. Trạng thái trở về Đang làm việc."
             )
         else:
-            leave_type = str(payload.get("type") or "PAID_LEAVE").upper()
+            raw_type = payload.get("type")
+            leave_type = (
+                str(raw_type if raw_type is not None else "PAID_LEAVE").strip().upper()
+            )
             if leave_type not in LEAVE_TYPES:
                 raise CommandError("INVALID_LEAVE_TYPE", status=422)
             title = str(
@@ -712,30 +908,43 @@ def user_leave_trip_manage(request, user_id):
 
 @require_actor(*READ_ROLES)
 def rbac_roles_list(request):
-    """Role catalog; the role code is used as its id."""
+    """Enterprise Position catalog (5 positions: Nhân viên -> Giám đốc)."""
     if request.method != "GET":
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
     with connection.cursor() as cur:
         cur.execute("SELECT code, name, description, is_system FROM eas.role")
         rows = {r[0]: r for r in cur.fetchall()}
-    order = [c for c in ROLE_PRIORITY[::-1] if c in rows] + sorted(
-        set(rows) - set(ROLE_PRIORITY)
-    )
-    return JsonResponse(
-        {
-            "items": [
-                {
-                    "id": code,
-                    "code": code,
-                    "name": rows[code][1],
-                    "description": rows[code][2] or "",
-                    "is_system": rows[code][3],
-                    "assignable": code in EMPLOYEE_ROLES,
-                }
-                for code in order
-            ]
-        }
-    )
+        cur.execute(
+            """
+            SELECT m.role, count(DISTINCT m.user_id)::int
+            FROM eas.role_membership m
+            JOIN eas.app_user u ON u.id = m.user_id
+            WHERE m.revoked_at IS NULL AND m.valid_from <= statement_timestamp()
+              AND (m.valid_to IS NULL OR m.valid_to > statement_timestamp())
+              AND u.is_active
+              AND COALESCE(u.account_type, 'EMPLOYEE') = 'EMPLOYEE'
+              AND NOT (COALESCE((to_jsonb(u)->>'is_system_account')::boolean, false) OR u.id = %s::uuid)
+            GROUP BY m.role
+            """,
+            [settings.EAS_AI_SYSTEM_USER_ID],
+        )
+        counts = dict(cur.fetchall())
+    items = []
+    for code in POSITION_ROLES:
+        default_name, default_desc = POSITION_METADATA[code]
+        db_row = rows.get(code)
+        items.append(
+            {
+                "id": code,
+                "code": code,
+                "name": db_row[1] if db_row else default_name,
+                "description": (db_row[2] if db_row else default_desc) or default_desc,
+                "is_system": db_row[3] if db_row else True,
+                "assignable": True,
+                "member_count": counts.get(code, 0),
+            }
+        )
+    return JsonResponse({"items": items})
 
 
 def _modules(cur) -> list[dict]:
@@ -754,11 +963,15 @@ def rbac_matrix_view(request):
     role = request.GET.get("role_id")
     with connection.cursor() as cur:
         modules = _modules(cur)
-        cur.execute(
-            "SELECT role_code, module_code, can_view, can_create, can_update, can_delete FROM eas.role_module_permission"
-            + (" WHERE role_code = %s" if role else ""),
-            [role] if role else [],
-        )
+        if role:
+            cur.execute(
+                "SELECT role_code, module_code, can_view, can_create, can_update, can_delete FROM eas.role_module_permission WHERE role_code = %s",
+                [role],
+            )
+        else:
+            cur.execute(
+                "SELECT role_code, module_code, can_view, can_create, can_update, can_delete FROM eas.role_module_permission"
+            )
         rows = cur.fetchall()
     if role:
         perms = {r[1]: dict(zip(PERMISSION_FIELDS, r[2:])) for r in rows}
@@ -843,7 +1056,7 @@ def rbac_role_permission_update(request):
         cur.execute("SELECT 1 FROM eas.role WHERE code = %s", [role])
         if not cur.fetchone():
             raise CommandError("ROLE_NOT_FOUND", status=404)
-        _assert_grantable(cur, module, value, employee=role in EMPLOYEE_ROLES)
+        _assert_grantable(cur, module, value, employee=role not in ADMIN_ROLES)
         # field is one of PERMISSION_FIELDS (validated above).
         cur.execute(  # NOSONAR python:S2077
             f"""

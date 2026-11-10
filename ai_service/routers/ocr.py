@@ -61,14 +61,41 @@ def fold_ocr_text(raw_text: str) -> str:
     """Uppercase ASCII form of OCR text for robust matching.
 
     PaddleOCR's Vietnamese model often drops or garbles diacritics
-    ("TỔNG CỘNG" -> "TÓNG CÖNG", "THƯƠNG" -> "THU'O'NG"), so field patterns
-    run on this folded text; accented and unaccented inputs fold the same.
+    ("TỔNG CỘNG" -> "TÓNG CÖNG", "THƯƠNG" -> "THU'O'NG", "DỊCH" -> "Dļch"),
+    so field patterns run on this folded text; accented and unaccented inputs
+    fold the same.
     """
-    text = unicodedata.normalize("NFD", raw_text or "")
+    raw = (raw_text or "").replace("ļ", "i").replace("Ļ", "I").replace("ı", "i")
+    text = unicodedata.normalize("NFD", raw)
     text = text.replace("đ", "d").replace("Đ", "D")
     text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
     text = re.sub(r"(?<=[A-Za-z])'(?=[A-Za-z])", "", text)  # U'O'NG -> UONG
     return text.upper()
+
+
+_COMPANY_TYPE_PREFIX_RE = re.compile(
+    r"^(?:(?:TNHH\s+MTV|TNHH|C[OỔÔƠÒÓỎÕỌ]?\.?\s*PH[AẦÂĂÀÁẢÃẠ]?N|CP)\s+)+",
+    re.IGNORECASE,
+)
+
+# Hậu xử lý các lỗi nhận dạng chữ tiếng Việt phổ biến của PP-OCRv6 trên hóa đơn
+_VIETNAMESE_OCR_VENDOR_FIXES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bD[ļĻlI1]ch\b", re.IGNORECASE), "Dịch"),
+    (re.compile(r"\bDịch\s+V\b", re.IGNORECASE), "Dịch Vụ"),
+    (re.compile(r"\bÂu\s+L(?:ac|ạc|c)\b", re.IGNORECASE), "Âu Lạc"),
+)
+
+
+def normalize_vietnamese_ocr_vendor(raw_vendor: str) -> str:
+    """Chuẩn hóa tên nhà cung cấp tiếng Việt sau khi trích xuất từ OCR."""
+    cleaned = (raw_vendor or "").strip()
+    cleaned = re.sub(r"(?<=[A-Za-z])'(?=[A-Za-z])", "", cleaned)
+    cleaned = _COMPANY_TYPE_PREFIX_RE.sub("", cleaned).strip()
+    cleaned = cleaned.replace("ļ", "ị").replace("Ļ", "Ị")
+    titled = cleaned.title()
+    for pattern, replacement in _VIETNAMESE_OCR_VENDOR_FIXES:
+        titled = pattern.sub(replacement, titled)
+    return re.sub(r"\s+", " ", titled).strip()
 
 
 def _first_match(patterns, text):
@@ -138,17 +165,20 @@ def parse_invoice_fields(raw_text: str) -> dict:
     # Prefer the original text (keeps diacritics when OCR read them), then
     # fall back to the folded text when OCR lost the accents.
     vendor = _first_match(
-        [r"CÔNG TY\s+(?:(?:TNHH MTV|TNHH|CỔ PHẦN|CP)\s+)?([^\n]{3,80})"], text
+        [
+            r"CÔNG\s+TY\s+(?:(?:TNHH\s+MTV|TNHH|C[OỔÔƠÒÓỎÕỌ]?\.?\s*PH[AẦÂĂÀÁẢÃẠ]?N|CP)\s+)?([^\n]{3,80})"
+        ],
+        text,
     ) or _first_match(
         [
-            r"CONG TY\s+(?:(?:TNHH MTV|TNHH|CO PHAN|CP)\s+)?([^\n]{3,80})",
+            r"CONG\s+TY\s+(?:(?:TNHH\s+MTV|TNHH|C[O]?\s*PH[A]?N|CP)\s+)?([^\n]{3,80})",
             r"VENDOR[:\s]+([^\n]{3,80})",
             r"SELLER[:\s]+([^\n]{3,80})",
         ],
         folded,
     )
     if vendor:
-        fields["vendor_name"] = vendor.group(1).strip().title()
+        fields["vendor_name"] = normalize_vietnamese_ocr_vendor(vendor.group(1))
 
     # --- MST (Mã số thuế) ---
     mst_match = re.search(r"MST[:\s]+(\d{10,13})", folded)

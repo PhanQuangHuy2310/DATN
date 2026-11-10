@@ -49,7 +49,7 @@ export function RegulationsManagementPage() {
     try {
       const res = await api(`${apiBase}/regulations`);
       setRegulations(res.regulations || []);
-      setAiState(res.ai_state || null);
+      setAiState(res.ai_state || {});
     } catch (err) {
       if (!silent) showToast("Không thể tải danh sách quy định: " + errorText(err), "error");
     } finally {
@@ -59,12 +59,20 @@ export function RegulationsManagementPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
+<<<<<<< HEAD
     loadData();
     // Keep regulations reasonably fresh without calling the endpoint every
     // 2.5 seconds on idle/background tabs (each call counts toward 429).
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") void loadData(true);
     }, 30000);
+=======
+    void loadData();
+    // Auto-refresh periodically if AI is currently syncing/learning
+    const timer = setInterval(() => {
+      void loadData(true);
+    }, 2500);
+>>>>>>> origin/main
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -110,7 +118,7 @@ export function RegulationsManagementPage() {
       });
       showToast(res.message || "Đã thêm quy định mới và nâng phiên bản hệ thống!", "success");
       setShowCreateModal(false);
-      loadData();
+      void loadData();
     } catch (err) {
       showToast("Lỗi khi thêm quy định: " + errorText(err), "error");
     } finally {
@@ -141,7 +149,7 @@ export function RegulationsManagementPage() {
       });
       showToast(res.message || "Đã cập nhật quy định và nâng phiên bản nhỏ!", "success");
       setEditingRegulation(null);
-      loadData();
+      void loadData();
     } catch (err) {
       showToast("Lỗi khi cập nhật quy định: " + errorText(err), "error");
     } finally {
@@ -161,7 +169,7 @@ export function RegulationsManagementPage() {
       });
       showToast(res.message || "Đã gỡ bỏ quy định và nâng phiên bản lớn!", "success");
       setDeletingRegulation(null);
-      loadData();
+      void loadData();
     } catch (err) {
       showToast("Lỗi khi xóa quy định: " + errorText(err), "error");
     } finally {
@@ -193,7 +201,15 @@ export function RegulationsManagementPage() {
 
   const activeVersion = aiState?.active_regulation_version || "v1.0";
   const targetVersion = aiState?.target_regulation_version || activeVersion;
-  const isSyncing = aiState?.client_maintenance_lock || aiState?.sync_status !== "COMPLETED";
+  // L9: no state yet means "loading", not "learning"; a failed run (ERROR)
+  // keeps the old rules and is not a training in progress either.
+  const aiLoading = aiState === null;
+  const isSyncing =
+    !aiLoading &&
+    Boolean(
+      aiState.client_maintenance_lock ||
+        ["SYNCING", "LEARNING", "APPLYING"].includes(aiState.sync_status),
+    );
 
   return (
     <div className="page-container regulations-page">
@@ -230,19 +246,21 @@ export function RegulationsManagementPage() {
         <div className={`eas-meta-stat-card ${isSyncing ? "warning-border" : "success-border"}`}>
           <div className="eas-meta-stat-header">
             <span className="eas-meta-stat-label">Trạng thái đồng bộ AI Engine</span>
-            {isSyncing ? (
+            {aiLoading ? null : isSyncing ? (
               <span className="eas-badge-warning pulse">ĐANG HUẤN LUYỆN ({aiState?.progress_percent || 0}%)</span>
             ) : (
               <span className="eas-badge-success">ĐÃ ĐỒNG BỘ 100%</span>
             )}
           </div>
           <div className="eas-meta-stat-value">
-            {isSyncing ? `${aiState?.progress_percent || 0}%` : "Sẵn sàng"}
+            {aiLoading ? "…" : isSyncing ? `${aiState?.progress_percent || 0}%` : "Sẵn sàng"}
           </div>
           <div className="eas-meta-stat-sub">
-            {isSyncing
-              ? `AI đang học phiên bản ${targetVersion} (${aiState?.current_step_label || "Đang xử lý..."})`
-              : `Mô hình Gemini & Scikit-Learn đang áp dụng ${activeVersion}`}
+            {aiLoading
+              ? "Đang tải trạng thái AI..."
+              : isSyncing
+                ? `AI đang học phiên bản ${targetVersion} (${aiState?.current_step_label || "Đang xử lý..."})`
+                : `Mô hình Gemini & Scikit-Learn đang áp dụng ${activeVersion}`}
           </div>
         </div>
       </div>

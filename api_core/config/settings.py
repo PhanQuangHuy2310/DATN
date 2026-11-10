@@ -192,7 +192,12 @@ if EAS_EMAIL_TEST_RECIPIENT:
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise RuntimeError("Configure only one of EAS_EMAIL_USE_TLS or EAS_EMAIL_USE_SSL")
 
-EAS_API_RATE_LIMIT_PER_MINUTE = int(os.getenv("EAS_API_RATE_LIMIT_PER_MINUTE", "300"))
+EAS_API_RATE_LIMIT_PER_MINUTE = int(
+    os.getenv(
+        "EAS_API_RATE_LIMIT_PER_MINUTE",
+        "1200" if ENVIRONMENT != "production" else "300",
+    )
+)
 if EAS_API_RATE_LIMIT_PER_MINUTE < 1:
     raise RuntimeError("EAS_API_RATE_LIMIT_PER_MINUTE must be >= 1")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
@@ -203,6 +208,7 @@ EAS_CLAMAV_PORT = int(os.getenv("EAS_CLAMAV_PORT", "3310"))
 EAS_REQUIRE_STORAGE = os.getenv("EAS_REQUIRE_STORAGE", "true").lower() == "true"
 SESSION_COOKIE_SECURE = ENVIRONMENT == "production"
 CSRF_COOKIE_SECURE = ENVIRONMENT == "production"
+CSRF_FAILURE_VIEW = "api_core.http.csrf_failure"
 SECURE_SSL_REDIRECT = (
     ENVIRONMENT == "production"
     and os.getenv("EAS_SSL_REDIRECT", "true").lower() == "true"
@@ -230,13 +236,18 @@ if ENVIRONMENT in {"development", "test"}:
         "http://127.0.0.1:8000",
         "http://localhost:8080",
         "http://127.0.0.1:8080",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
         "http://localhost:8088",
         "http://127.0.0.1:8088",
     ]
     for origin in local_origins:
         if origin not in CSRF_TRUSTED_ORIGINS:
             CSRF_TRUSTED_ORIGINS.append(origin)
-if os.getenv("EAS_TRUST_PROXY_HEADERS", "false").lower() == "true":
+if (
+    ENVIRONMENT != "test"
+    and os.getenv("EAS_TRUST_PROXY_HEADERS", "false").lower() == "true"
+):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 EAS_RELEASE = os.getenv("EAS_RELEASE", "dev")
@@ -318,7 +329,7 @@ EAS_MOCK_API_URL = os.getenv(
     "EAS_MOCK_API_URL",
     "http://127.0.0.1:8100/mock-api/v1"
     if ENVIRONMENT in {"development", "test"}
-    else "http://mock_systems:8000/mock-api/v1",
+    else "http://mock_systems:8000/mock-api/v1",  # NOSONAR python:S5332 - internal docker service communication
 ).rstrip("/")
 EAS_MOCK_API_SECRET = os.getenv("EAS_MOCK_API_SECRET", "")
 if not EAS_MOCK_API_SECRET and ENVIRONMENT in {"development", "test"}:

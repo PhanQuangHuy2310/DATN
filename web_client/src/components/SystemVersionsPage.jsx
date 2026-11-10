@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
+<<<<<<< HEAD
 import Icon from "./Icon.jsx";
+=======
+import { errorText } from "../domain.js";
+>>>>>>> origin/main
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -46,7 +50,7 @@ export function SystemVersionsPage() {
       const res = await api(url);
       setData(res);
     } catch (err) {
-      if (!silent) showToast("Không thể tải nhật ký phiên bản: " + (err.message || ""), "error");
+      if (!silent) showToast("Không thể tải nhật ký phiên bản: " + errorText(err), "error");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -54,13 +58,13 @@ export function SystemVersionsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
-    loadChangelog();
+    void loadChangelog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterType]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    loadChangelog();
+    void loadChangelog();
   };
 
   const handleExportJson = () => {

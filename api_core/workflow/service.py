@@ -590,7 +590,7 @@ def _validate_update_draft_input(
     if amount_vnd is not None and (
         isinstance(amount_vnd, bool)
         or not isinstance(amount_vnd, int)
-        or amount_vnd <= 0
+        or not (0 < amount_vnd <= 999_999_999_999)
     ):
         raise CommandError("INVALID_AMOUNT", status=422)
 
@@ -753,6 +753,8 @@ def update_draft(
                 merged_payload, existing_amount_vnd, allow_zero=False
             )
         )
+        if final_amount_vnd is not None and final_amount_vnd > 999_999_999_999:
+            raise CommandError("INVALID_AMOUNT", status=422)
         if type_code in {"LEAVE", "ACCESS"} and final_amount_vnd is not None:
             raise CommandError("AMOUNT_NOT_ALLOWED", status=422)
 
@@ -1536,6 +1538,8 @@ def submit_request(
         ):
             raise CommandError("DEPARTMENT_SCOPE_VIOLATION", status=403)
         amount = extract_amount_vnd(normalized, allow_zero=False)
+        if amount is not None and amount > 999_999_999_999:
+            raise CommandError("INVALID_AMOUNT", status=422)
         # Codes picked from external catalogues, leave balance, budget.
         external.validate_submit(
             cursor,
@@ -2688,6 +2692,9 @@ def _apply_execution_submission(
             SQL_COMPLETE_WORKFLOW,
             [now, instance_id],
         )
+        # B ends here: close the EXECUTION stage opened at final approval,
+        # otherwise the worker keeps raising overdue alerts on a done request.
+        cursor.execute(SQL_CLOSE_SLA_STAGE, [now, request_id])
         return "COMPLETED", now
     elif lifecycle == "C":
         cursor.execute(

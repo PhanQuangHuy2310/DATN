@@ -98,7 +98,7 @@ services:
       EAS_EMAIL_FROM: ${EAS_EMAIL_FROM:-}
       EAS_EMAIL_TEST_RECIPIENT: ${EAS_EMAIL_TEST_RECIPIENT:-}
       EAS_EMAIL_TIMEOUT_SECONDS: ${EAS_EMAIL_TIMEOUT_SECONDS:-10}
-      EAS_TRUST_PROXY_HEADERS: ${EAS_TRUST_PROXY_HEADERS:-false}
+      EAS_TRUST_PROXY_HEADERS: ${EAS_TRUST_PROXY_HEADERS:-true}
       EAS_SSL_REDIRECT: ${EAS_SSL_REDIRECT:-true}
       EAS_HSTS_PRELOAD: ${EAS_HSTS_PRELOAD:-false}
       LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
@@ -214,10 +214,10 @@ services:
     # run_worker_local.py) so it never collides with a host Redis on 6379.
     ports:
       - "127.0.0.1:${EAS_REDIS_HOST_PORT:-6380}:6379"
-    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
     read_only: true
-    tmpfs:
-      - /data:size=32m,noexec,nosuid
+    volumes:
+      - redis-data:/data
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -282,3 +282,4 @@ services:
 volumes:
   ai_ocr_models:
   clamav-db:
+  redis-data:

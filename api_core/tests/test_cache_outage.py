@@ -29,8 +29,9 @@ class CacheOutageTests(SimpleTestCase):
         broken.get.side_effect = RedisConnectionError("down")
         broken.set.side_effect = RedisConnectionError("down")
         broken.delete.side_effect = RedisConnectionError("down")
-        with patch.object(integrations, "cache", broken), patch.object(
-            integrations, "connection", connection
+        with (
+            patch.object(integrations, "cache", broken),
+            patch.object(integrations, "connection", connection),
         ):
             self.assertEqual(integrations.disabled_apis(), [("HRM", "hr", "HRM")])
             integrations.invalidate()  # must not raise either

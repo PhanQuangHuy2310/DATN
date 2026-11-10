@@ -51,7 +51,7 @@ export function SystemUpdateDialog() {
   const current = queue[0];
   if (!current) return null;
   const acknowledge = () => {
-    api(`/api/v1/announcements/${current.id}/read`, { method: "POST", body: "{}" }).catch(() => {});
+    api(`/api/v1/announcements/${current.id}/read`, { method: "POST", body: "{}", silent: true }).catch(() => {});
     setQueue((q) => q.slice(1));
   };
   return (

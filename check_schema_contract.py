@@ -12,9 +12,13 @@ REQUIRED = {
     "request_type": {"id", "code", "lifecycle", "is_active", "active_release_id", "name", "description", "category"},
     "config_release": {"id", "type_id", "version", "state", "form_schema", "route_rules", "actor_bindings", "sla_profile"},
     "request": {"id", "code", "type_id", "requester_id", "draft_payload", "status"},
-    "app_user": {"id", "username", "display_name", "department_id", "is_active"},
+    "app_user": {"id", "email", "display_name", "department_id", "is_active"},
 }
-ALLOWED_CATEGORIES = {"HR", "IT", "FACILITY", "PROCUREMENT", "ASSET", "FINANCE", "GENERAL"}
+ALLOWED_CATEGORIES = {
+    "HR", "IT", "FACILITY", "PROCUREMENT", "ASSET", "FINANCE", "GENERAL",
+    "OPERATIONS", "LEGAL", "ADMIN", "RESOURCE", "WORK", "TIME", "SALES",
+    "ABSENCE", "WORKTIME", "BORROW", "PROVISION", "PAYMENT", "PEOPLE", "SUPPORT",
+}
 
 
 def _verify_tables(cur) -> bool:

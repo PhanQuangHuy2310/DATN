@@ -75,7 +75,9 @@ class ApiRateLimitMiddleware:
         if (
             env == "test"
             or not request.path.startswith("/api/v1/")
-            or request.path.startswith("/health/")
+            or request.path.startswith(
+                ("/api/v1/system/", "/health/", "/api/v1/auth/csrf")
+            )
         ):
             return self.get_response(request)
 
@@ -112,6 +114,19 @@ class ApiDatabaseErrorMiddleware:
     def __call__(self, request):
         start = time.perf_counter()
         response = self.get_response(request)
+        if (
+            request.path.startswith("/api/v1/")
+            and response.status_code == 405
+            and "application/json" not in (response.get("Content-Type") or "")
+        ):
+            allow = response.get("Allow")
+            response = api_error(
+                request,
+                "METHOD_NOT_ALLOWED",
+                status=405,
+                message="Phương thức HTTP không được phép cho đường dẫn này.",
+                headers={"Allow": allow} if allow else None,
+            )
         duration_ms = round((time.perf_counter() - start) * 1000, 1)
         if request.path.startswith("/api/v1/"):
             response["Server-Timing"] = f"app;dur={duration_ms}"

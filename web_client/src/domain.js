@@ -169,6 +169,11 @@ Object.assign(types, catalogTypeNames);
 Object.assign(typeLevels, catalogTypeLevels);
 
 export const roles = {
+  STAFF: "Nhân viên",
+  TEAM_LEAD: "Trưởng nhóm",
+  MANAGER: "Trưởng phòng",
+  VICE_DIRECTOR: "Phó giám đốc",
+  DIRECTOR: "Giám đốc",
   REQUESTER: "Người gửi yêu cầu",
   APPROVER: "Người phê duyệt",
   EXECUTOR: "Người thực hiện",
@@ -178,16 +183,29 @@ export const roles = {
   AUDITOR: "Kiểm toán viên",
 };
 
+export const POSITION_CODES = [
+  "DIRECTOR",
+  "VICE_DIRECTOR",
+  "MANAGER",
+  "TEAM_LEAD",
+  "STAFF",
+];
+
 export function getPrimaryRoleBadge(userRoles = []) {
-  if (!userRoles || !userRoles.length) return { name: "Thành viên", tone: "badge-default" };
+  if (!userRoles || !userRoles.length) return { name: "Nhân viên", tone: "badge-default" };
   if (userRoles.includes("OPS_ADMIN")) return { name: "Quản trị vận hành", tone: "badge-admin" };
   if (userRoles.includes("POLICY_ADMIN")) return { name: "Quản trị chính sách", tone: "badge-policy" };
+  if (userRoles.includes("DIRECTOR")) return { name: "Giám đốc", tone: "badge-approver" };
+  if (userRoles.includes("VICE_DIRECTOR")) return { name: "Phó giám đốc", tone: "badge-approver" };
+  if (userRoles.includes("MANAGER")) return { name: "Trưởng phòng", tone: "badge-approver" };
+  if (userRoles.includes("TEAM_LEAD")) return { name: "Trưởng nhóm", tone: "badge-approver" };
+  if (userRoles.includes("STAFF")) return { name: "Nhân viên", tone: "badge-requester" };
   if (userRoles.includes("AUDITOR")) return { name: "Kiểm toán viên", tone: "badge-audit" };
   if (userRoles.includes("APPROVER")) return { name: "Người phê duyệt", tone: "badge-approver" };
   if (userRoles.includes("EXECUTOR")) return { name: "Người thực hiện", tone: "badge-executor" };
   if (userRoles.includes("ACCEPTOR")) return { name: "Người nghiệm thu", tone: "badge-acceptor" };
-  if (userRoles.includes("REQUESTER")) return { name: "Người gửi yêu cầu", tone: "badge-requester" };
-  return { name: "Thành viên", tone: "badge-default" };
+  if (userRoles.includes("REQUESTER")) return { name: "Nhân viên", tone: "badge-requester" };
+  return { name: "Nhân viên", tone: "badge-default" };
 }
 
 export const fields = {
@@ -521,6 +539,8 @@ const ERROR_MESSAGES = {
   DELEGATION_NOT_INSTALLED: "Chức năng ủy quyền phê duyệt hiện đang tạm ngưng.",
   AI_APPROVAL_NOT_REVOCABLE: "Đã quá thời hạn 24 giờ hoặc hồ sơ không phải do AI tự động duyệt nên không thể thu hồi.",
   AI_SERVICE_UNAVAILABLE: "Trợ lý AI hiện đang bận hoặc bảo trì. Bạn vẫn có thể gửi và xử lý hồ sơ bình thường.",
+  APPROVER_ROLE_ADMIN_ONLY: "Chỉ Quản trị viên được cấp vai trò Người phê duyệt.",
+  AUDITOR_ROLE_ADMIN_ONLY: "Chỉ Quản trị viên được cấp vai trò Kiểm toán viên.",
   CACHE_UNAVAILABLE: "Hệ thống bảo mật tạm thời gián đoạn. Vui lòng thử lại sau vài giây.",
   AI_SERVICE_ERROR: "Trợ lý AI tạm thời chưa phản hồi được yêu cầu phân tích. Vui lòng thử lại sau.",
   INTEGRATION_UNAVAILABLE: "Kết nối đến hệ thống nghiệp vụ liên quan (Nhân sự / Tài chính / CNTT / Hành chính) đang tạm ngắt hoặc bảo trì. Vui lòng thử lại sau.",

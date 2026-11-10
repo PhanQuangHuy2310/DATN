@@ -2,10 +2,22 @@
  * Authorization always remains enforced on the Django API with role + scope + SoD.
  */
 export const ROLE_NAVIGATION = Object.freeze({
+<<<<<<< HEAD
   REQUESTER: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "notifications", "profile"],
   APPROVER: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "org-client", "approval", "team", "team-employees", "notifications", "profile"],
   EXECUTOR: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
   ACCEPTOR: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
+=======
+  STAFF: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "execution", "acceptance", "notifications", "profile"],
+  TEAM_LEAD: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  MANAGER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  VICE_DIRECTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  DIRECTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  REQUESTER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "notifications", "profile"],
+  APPROVER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "approval", "team", "team-employees", "notifications", "profile"],
+  EXECUTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
+  ACCEPTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
+>>>>>>> origin/main
   POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "ai-policy", "ai-rules", "release-workspace", "plan-catalog", "notifications", "profile"],
   OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
   AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "team", "team-employees", "notifications", "profile"],
@@ -14,12 +26,32 @@ export const ROLE_NAVIGATION = Object.freeze({
 const NAV_ORDER = ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "team", "team-employees", "history", "policy", "ai-policy", "ai-rules", "release-workspace", "plan-catalog", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
 
 export const ADMIN_ROLES = Object.freeze(["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"]);
+<<<<<<< HEAD
 /** Administrator accounts use only the system portal even if old workflow
  * memberships are still present. Real authorization is enforced by Django. */
 export function canUsePortal(roles = [], portal = "client") {
   const isAdmin = roles.some((role) => ADMIN_ROLES.includes(role));
   if (portal === "admin") return isAdmin;
   return !isAdmin;
+=======
+const WORKFLOW_DUTY_ROLES = ["APPROVER", "EXECUTOR"];
+
+/** Admin portal: any admin role. Employee portal: everyone except pure admins;
+ * an admin who also approves or executes keeps access to process requests. */
+// Pure system administration roles. AUDITOR is an employee duty (audit
+// lookup, admin event log) and works in the employee portal (M3).
+const SYSTEM_ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN"];
+
+export function canUsePortal(roles = [], portal = "client") {
+  const isAdmin = roles.some((role) => ADMIN_ROLES.includes(role));
+  if (portal === "admin") return isAdmin;
+  const isSystemAdmin = roles.some((role) => SYSTEM_ADMIN_ROLES.includes(role));
+  return (
+    !isSystemAdmin ||
+    roles.includes("AUDITOR") ||
+    roles.some((role) => WORKFLOW_DUTY_ROLES.includes(role))
+  );
+>>>>>>> origin/main
 }
 
 export function visiblePages(roles = [], capabilities = {}) {

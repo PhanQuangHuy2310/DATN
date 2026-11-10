@@ -243,6 +243,14 @@ class InvoiceFieldExtractionTests(unittest.TestCase):
             self.parse(self.VAT_INVOICE)["vendor_name"], "Thương Mại Đại Phát"
         )
 
+    def test_receipt_service_garbled_ocr_vendor_normalized(self):
+        garbled = (
+            "CÔNG TY C Phân Dļch V Âu Lc\nNgày 02/11/2026\nTổng cộng: 320.000 VND\n"
+        )
+        fields = self.parse(garbled)
+        self.assertEqual(fields["vendor_name"], "Dịch Vụ Âu Lạc")
+        self.assertEqual(fields["amount"], 320_000)
+
     def test_vat_invoice_tax_code_and_number(self):
         fields = self.parse(self.VAT_INVOICE)
         self.assertEqual(fields["tax_code"], "0312345678")
