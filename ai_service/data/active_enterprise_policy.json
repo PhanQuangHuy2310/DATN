@@ -1,0 +1,24 @@
+{
+  "version": "v5.0",
+  "rules": [
+    {
+      "id": "REG-002-3",
+      "description": "Phân loại C áp dụng cho ngân sách từ 30.000.000 VNĐ trở lên và bắt buộc qua Ban Giám Đốc phê duyệt.",
+      "request_type": null,
+      "amount_gt": 29999999.0,
+      "days_gt": null,
+      "min_risk": 5,
+      "auto_approve": false
+    },
+    {
+      "id": "REG-002-4",
+      "description": "Bổ sung: yêu cầu trên 10 triệu bắt buộc duyệt thủ công.",
+      "request_type": null,
+      "amount_gt": 10000000.0,
+      "days_gt": null,
+      "min_risk": 4,
+      "auto_approve": false
+    }
+  ],
+  "loaded_at": "2026-11-08T01:47:21.276003+00:00"
+}
