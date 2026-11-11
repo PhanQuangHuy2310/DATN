@@ -1,5 +1,4 @@
 import { CATALOG_GROUPS, CATEGORY_LABELS } from "../catalogV2.js";
-import Icon from "./Icon.jsx";
 import { notifyPermissionsChanged } from "../sessionRefresh.js";
 import { useEffect, useState } from "react";
 import { PasswordField, PageControls } from "./ux.jsx";
@@ -261,7 +260,7 @@ export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users
       <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
         {onNavigateOrgChart && (
           <button type="button" className="secondary" onClick={onNavigateOrgChart}>
-            <Icon name="building" size={14} /> Sơ đồ tổ chức
+            🏛 Sơ đồ tổ chức
           </button>
         )}
         <button type="button" aria-label="+ Thêm mới" onClick={() => setModal({mode: "edit", record: null})}>+ {({ users: "Tạo người dùng", memberships: "Cấp quyền", "request-types": "Tạo loại yêu cầu" })[kind] || "Thêm mới"}</button>

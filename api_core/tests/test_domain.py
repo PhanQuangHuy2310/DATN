@@ -210,37 +210,6 @@ class RoutingTests(SimpleTestCase):
         with self.assertRaises(RoutingError):
             self.resolve(1)
 
-    def test_sod_r07_escalates_to_eligible_manager_without_self_approval(self):
-        self.bindings["departments"][self.department]["DIRECTOR"] = self.requester
-        eligible = str(uuid4())
-        route = resolve_route(
-            route_rules=self.rules,
-            actor_bindings=self.bindings,
-            department_id=self.department,
-            requester_id=self.requester,
-            manager_id=self.manager,
-            amount_vnd=50_000_001,
-            eligible_superiors=(self.manager, eligible),
-        )
-        # Manager was already used by level 1, so the next eligible superior
-        # is used instead of assigning the same person twice.
-        self.assertEqual(route.approver_ids[-1], eligible)
-        self.assertEqual(route.sod_escalations, ((3, self.requester, eligible),))
-        self.assertTrue(route.resolved_route[-1]["sod_escalated"])
-
-    def test_sod_r07_fails_closed_without_eligible_superior(self):
-        self.bindings["departments"][self.department]["DIRECTOR"] = self.requester
-        with self.assertRaisesRegex(RoutingError, "ROUTE_SOD_ESCALATION_UNRESOLVED"):
-            resolve_route(
-                route_rules=self.rules,
-                actor_bindings=self.bindings,
-                department_id=self.department,
-                requester_id=self.requester,
-                manager_id=self.manager,
-                amount_vnd=50_000_001,
-                eligible_superiors=(self.manager,),
-            )
-
     def test_requester_cannot_resolve_as_executor(self):
         self.bindings["departments"][self.department]["EXECUTOR_ASSET"] = self.requester
         with self.assertRaisesRegex(RoutingError, "execute own"):

@@ -108,7 +108,7 @@ services:
       EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
       EAS_WORKER_INTERNAL_SECRET: ${EAS_WORKER_INTERNAL_SECRET:-}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5}
-      EAS_MOCK_API_URL: http://mock_systems:8000/mock-api/v1
+      EAS_MOCK_API_URL: http://mock-systems:8000/mock-api/v1
       EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
     ports:
       - "127.0.0.1:8000:8000"
@@ -124,11 +124,11 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/db', timeout=8)"
-      interval: 20s
-      timeout: 10s
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"
+      interval: 15s
+      timeout: 5s
       retries: 4
-      start_period: 40s
+      start_period: 20s
     restart: unless-stopped
     depends_on:
       redis:
@@ -152,9 +152,9 @@ services:
       SUPABASE_URL: ${EAS_SUPABASE_URL:?Set EAS_SUPABASE_URL to the project URL}
       EAS_ENV: ${EAS_ENV:-development}
       EAS_ALLOW_ADMIN_DB: "false"
-      DJANGO_ALLOWED_HOSTS: mock_systems,localhost,127.0.0.1
+      DJANGO_ALLOWED_HOSTS: mock-systems,localhost,127.0.0.1
       EAS_SSL_REDIRECT: "false"
-      REDIS_URL: redis://redis:6379/1
+      REDIS_URL: redis://redis:6379/
       LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
     read_only: true
     tmpfs:
@@ -167,7 +167,10 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-
+    networks:
+      default:
+        aliases:
+          - mock-systems
   worker:
     build:
       context: .
@@ -192,8 +195,8 @@ services:
       EAS_WORKER_INTERNAL_SECRET: ${EAS_WORKER_INTERNAL_SECRET:-}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5.0}
       REDIS_URL: redis://redis:6379/0
-      EAS_MOCK_API_URL: http://mock_systems:8000/mock-api/v1
-      EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
+      EAS_MOCK_API_URL: http://mock-systems:8000/mock-api/v1
+      EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock-systems}
     read_only: true
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
@@ -210,6 +213,7 @@ services:
 
   redis:
     image: redis:8.0.3-alpine
+    user: "999:1000"
     # Published on 6380 for processes running outside Docker (manage.py,
     # run_worker_local.py) so it never collides with a host Redis on 6379.
     ports:
@@ -259,7 +263,7 @@ services:
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
-      - EAS_MOCK_API_URL=http://mock_systems:8000/mock-api/v1
+      - EAS_MOCK_API_URL=http://mock-systems:8000/mock-api/v1
       - EAS_MOCK_API_SECRET=${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
       - EAS_API_INTERNAL_URL=http://api:8000
       - EAS_ENV=${EAS_ENV:-development}

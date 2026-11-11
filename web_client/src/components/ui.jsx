@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import Icon from "./Icon.jsx";
 import {
   api,
   getResource,
@@ -196,63 +195,20 @@ export function useResource(url) {
 
   useEffect(() => onDataChanged(() => setMutationVersion((v) => v + 1)), []);
   useEffect(() => {
-    if (!url) return;
+    if (!url) {
+      return;
+    }
     let active = true;
-    let fetching = false;
-    let failed = false;
-    let retryCount = 0;
-    let timer = null;
-
-    const retryable = (e) => e?.status === 0
-      || [408, 429, 500, 502, 503, 504].includes(e?.status)
-      || ["NETWORK_UNAVAILABLE", "REQUEST_TIMED_OUT"].includes(e?.message);
-
-    const refresh = async () => {
-      if (!active || fetching) return;
-      fetching = true;
-      try {
-        const data = await getResource(url);
-        failed = false;
-        retryCount = 0;
-        if (active) setState({ url, data, error: "", errorStatus: null, loading: false, refreshing: false });
-      } catch (e) {
-        failed = true;
-        if (active) {
-          setState((old) => ({ ...old, loading: false, refreshing: false, error: errorText(e), errorStatus: e?.status ?? null }));
-          // Only safe GETs are retried here; write actions are never repeated.
-          // Back off and stop after a few attempts rather than filling Console.
-          if (retryable(e) && retryCount < 4 && document.visibilityState !== "hidden") {
-            const delay = e?.status === 429
-              ? Math.max(15000, e?.retryAfterMs || 0)
-              : Math.min(12000, 1500 * 2 ** retryCount);
-            retryCount += 1;
-            timer = window.setTimeout(() => {
-              timer = null;
-              invalidateResource(url);
-              void refresh();
-            }, delay);
-          }
-        }
-      } finally {
-        fetching = false;
-      }
-    };
-    const onReconnect = () => {
-      if (!active || !failed || fetching || document.visibilityState !== "visible") return;
-      window.clearTimeout(timer);
-      timer = null;
-      retryCount = 0;
-      invalidateResource(url);
-      void refresh();
-    };
-    void refresh();
-    window.addEventListener("online", onReconnect);
-    document.addEventListener("visibilitychange", onReconnect);
+    getResource(url)
+      .then((data) => {
+        if (active) setState({ url, data, error: "", loading: false, refreshing: false });
+      })
+      .catch((e) => {
+        if (active)
+          setState((s) => ({ ...s, loading: false, refreshing: false, error: errorText(e) }));
+      });
     return () => {
       active = false;
-      window.clearTimeout(timer);
-      window.removeEventListener("online", onReconnect);
-      document.removeEventListener("visibilitychange", onReconnect);
     };
   }, [url, version, mutationVersion]);
   return {
@@ -278,15 +234,6 @@ export function ResourceState({ resource, skeleton = null, children }) {
           </span>
         )}
       </output>
-    );
-  }
-  if (resource.error && !resource.data && resource.errorStatus === 403) {
-    // Permission is decided by the server; retrying cannot help.
-    return (
-      <div role="status" className="ds-permission-denied">
-        <strong>Bạn không có quyền xem nội dung này</strong>
-        <p className="muted">Quyền truy cập do quản trị viên cấp theo vai trò và phạm vi phòng ban. Liên hệ quản trị viên nếu bạn cần sử dụng chức năng này.</p>
-      </div>
     );
   }
   if (resource.error && !resource.data) {
@@ -327,18 +274,13 @@ export function Modal({ title, onClose, children }) {
     return () => el.close();
   }, []);
   return (
-    <dialog ref={ref} onCancel={(event) => {
-      if (ref.current?.querySelector('[aria-busy="true"]')) event.preventDefault();
-      else onClose();
-    }} aria-label={title}>
+    <dialog ref={ref} onCancel={onClose} aria-label={title}>
       <div className="section-head">
         <h2>{title}</h2>
         <button
           type="button"
           className="secondary"
-          onClick={() => {
-            if (!ref.current?.querySelector('[aria-busy="true"]')) onClose();
-          }}
+          onClick={onClose}
           aria-label="Đóng hộp thoại"
         >
           ×
@@ -374,32 +316,25 @@ export function ActionForm({
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  // React state updates asynchronously: the ref blocks a second submit in the
-  // same frame, before the button has been disabled.
-  const submittingRef = useRef(false);
   async function submit(e) {
     e.preventDefault();
-    if (submittingRef.current) return;
-    submittingRef.current = true;
     const values = Object.fromEntries(new FormData(e.currentTarget));
     setBusy(true);
     setError("");
     try {
-      const result = await onSubmit(values);
-      if (result === false) throw new Error("Máy chủ chưa xác nhận thao tác. Vui lòng kiểm tra lại.");
+      await onSubmit(values);
     } catch (err) {
       setError(errorText(err));
     } finally {
-      submittingRef.current = false;
       setBusy(false);
     }
   }
   return (
-    <form onSubmit={submit} aria-busy={busy}>
+    <form onSubmit={submit}>
       <fieldset disabled={busy}>
         {danger && warningNote && (
           <div className="ds-danger-callout" role="note">
-            <strong aria-hidden="true"><Icon name="alert" size={14} /></strong>
+            <strong aria-hidden="true">⚠</strong>
             <span>{warningNote}</span>
           </div>
         )}

@@ -143,34 +143,6 @@ def _establish_user_session(request: HttpRequest, user) -> None:
     )
 
 
-<<<<<<< HEAD
-ADMIN_PORTAL_ROLES = ("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
-
-
-def _has_active_admin_role(user_id: str) -> bool:
-    """Portal identity is based on active role grants, never a hard-coded email.
-
-    Login checks this *after* validating the password, so the portal response
-    cannot be used to enumerate privileged accounts. API authorization remains
-    responsible for enforcing roles and scope for every action.
-    """
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT EXISTS (
-                SELECT 1 FROM eas.role_membership
-                WHERE user_id = %s
-                  AND role IN ('OPS_ADMIN', 'POLICY_ADMIN', 'AUDITOR')
-                  AND revoked_at IS NULL
-                  AND valid_from <= statement_timestamp()
-                  AND (valid_to IS NULL OR valid_to > statement_timestamp())
-            )
-            """,
-            [user_id],
-        )
-        row = cursor.fetchone()
-    return bool(row and row[0])
-=======
 def _resolve_request_portal(
     request: HttpRequest, body_portal: str | None = None
 ) -> str | None:
@@ -193,7 +165,6 @@ def _resolve_request_portal(
         if ":8080" in lowered or ":5173" in lowered:
             return "client"
     return None
->>>>>>> origin/main
 
 
 @require_POST
@@ -202,14 +173,6 @@ def login(request: HttpRequest) -> JsonResponse:
     if isinstance(parsed, JsonResponse):
         return parsed
     email, password, portal_body = parsed
-<<<<<<< HEAD
-    header_portal = request.headers.get("X-EAS-Portal")
-    if header_portal and portal_body and header_portal != portal_body:
-        return api_error(request, "INVALID_PORTAL", status=400)
-    portal = header_portal or portal_body
-    if portal not in (None, "client", "admin"):
-        return api_error(request, "INVALID_PORTAL", status=400)
-=======
     portal = _resolve_request_portal(request, portal_body)
     if portal == "admin" and email != "admin@eas.com":
         return api_error(
@@ -233,7 +196,6 @@ def login(request: HttpRequest) -> JsonResponse:
                 ]
             },
         )
->>>>>>> origin/main
 
     keys = throttle_keys(email, client_ip(request))
     if is_throttled(
@@ -255,13 +217,6 @@ def login(request: HttpRequest) -> JsonResponse:
             cache, keys, window_seconds=settings.EAS_LOGIN_WINDOW_SECONDS
         )
         return api_error(request, "INVALID_CREDENTIALS", status=401)
-
-    # Authorize the destination portal *before* creating a session. Admin
-    # identities are system-only, including legacy accounts with REQUESTER.
-    if portal in ("client", "admin"):
-        has_admin_role = _has_active_admin_role(user.id)
-        if (portal == "admin") != has_admin_role:
-            return api_error(request, "ACCESS_DENIED", status=403)
 
     m_err, m_payload = _check_maintenance_login(request, user.id)
     if m_err:

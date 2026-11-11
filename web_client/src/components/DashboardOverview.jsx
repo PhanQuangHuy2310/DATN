@@ -65,8 +65,8 @@ export function SystemOverview({navigate}) {
       {r.data && <DashboardStats byStatus={r.data.by_status} total={r.data.total} overdue={r.data.overdue} topTypes={r.data.top_types}/>}
     </ResourceState>}
     <div className="overview-grid">
-      <section className="panel"><h2>Sức khỏe dịch vụ</h2><p className="muted">Trạng thái thực tế của máy chủ, cơ sở dữ liệu và dịch vụ AI.</p>
-        <span className={`health-indicator ${health.data?.status === "ready" ? "healthy" : "warning"}`} role="status">{health.loading ? "Đang kiểm tra…" : health.error ? "Chưa kết nối được máy chủ" : health.data?.status === "ready" ? "Dịch vụ sẵn sàng" : "Cần kiểm tra dịch vụ"}</span>
+      <section className="panel"><h2>Sức khỏe dịch vụ</h2><p className="muted">Đọc trạng thái từ Backend, không tự suy đoán tình trạng Supabase hoặc dịch vụ AI.</p>
+        <span className={`health-indicator ${health.data?.status === "ready" ? "healthy" : "warning"}`} role="status">{health.loading ? "Đang kiểm tra…" : health.error ? "Chưa kết nối được Backend" : health.data?.status === "ready" ? "Dịch vụ sẵn sàng" : "Cần kiểm tra dịch vụ"}</span>
         <div className="dashboard-quick"><button className="secondary" type="button" onClick={health.reload}>Kiểm tra lại</button><button type="button" onClick={()=>navigate("ops")}>Đi đến vận hành →</button></div>
       </section>
       <section className="panel"><h2>Quản lý nhanh</h2><div className="dashboard-quick"><button type="button" onClick={()=>navigate("ops")}>Theo dõi người xử lý & hạn →</button><button className="secondary" type="button" onClick={()=>navigate("request-catalog")}>Danh mục yêu cầu →</button><button className="secondary" type="button" onClick={()=>navigate("users")}>Quản lý nhân viên →</button></div></section>

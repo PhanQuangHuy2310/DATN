@@ -71,11 +71,7 @@ test('each portal renders in its own mode, never the unrestricted "unified" fall
 });
 test('administrative accounts stay system-only on the client portal', () => {
  const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
-<<<<<<< HEAD
- assert.match(app,/portal === "client" && !canUsePortal\(user\.roles, "client"\)/);
-=======
  assert.match(app,/portal === "client" && \(user\.email === "admin@eas\.com" \|\| !canUsePortal\(user\.roles, "client"\)\)/);
->>>>>>> origin/main
 });
 test('admin overview shows API data, not hardcoded head counts', () => {
  const app=readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');

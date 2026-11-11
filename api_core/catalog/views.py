@@ -446,19 +446,3 @@ def colleague_choices(request):
         if p["id"] != request.actor.id
     ]
     return JsonResponse({"items": choices, "organization": people})
-
-
-@require_GET
-@require_actor()
-def department_options(request):
-    """Lightweight department picker, without loading the employee org chart.
-
-    The existing authenticated organization read model exposes these active
-    department names; this narrower endpoint does not reveal employee data.
-    """
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT id::text, name FROM eas.department WHERE is_active ORDER BY name, id"
-        )
-        items = [{"id": row[0], "name": row[1]} for row in cursor.fetchall()]
-    return JsonResponse({"items": items})

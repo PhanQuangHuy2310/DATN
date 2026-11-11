@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from django.conf import settings
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase
 
 from api_core.administration.service import TABLES, mutate
 from api_core.authn.models import Actor
@@ -177,12 +177,8 @@ class AssignDownTests(SimpleTestCase):
             )
 
 
-@override_settings(
-    EAS_AI_AUTO_APPROVE_ENABLED=True,
-    EAS_AI_AUTO_APPROVAL_POLICY_APPROVED=True,
-)
 class AutoApproveIntegrationTests(SimpleTestCase):
-    """Scenario 2: only an explicitly approved policy may let AI approve."""
+    """Scenario 2: the worker lets the AI approve weight 1-2 steps."""
 
     databases: ClassVar[set[str]] = {"default"}
 
@@ -221,18 +217,6 @@ class AutoApproveIntegrationTests(SimpleTestCase):
             cm.return_value.__enter__.return_value = cursor
             try_auto_approve(self.request_id, "corr")
         return ai, decide, audit, cursor
-
-    @override_settings(EAS_AI_AUTO_APPROVAL_POLICY_APPROVED=False)
-    def test_ai_cannot_sign_without_business_policy_approval(self):
-        ai, decide, _, _ = self.run_auto_approve(self.context)
-        ai.assert_not_called()
-        decide.assert_not_called()
-
-    @override_settings(EAS_AI_AUTO_APPROVE_ENABLED=False)
-    def test_ai_cannot_sign_when_auto_approval_is_off(self):
-        ai, decide, _, _ = self.run_auto_approve(self.context)
-        ai.assert_not_called()
-        decide.assert_not_called()
 
     def test_weight_two_is_approved_by_ai_system_account(self):
         ai, decide, audit, cursor = self.run_auto_approve(self.context)

@@ -71,13 +71,9 @@ TYPE_SELECT_SQL = """
     LEFT JOIN eas.config_release cr ON cr.id = rt.active_release_id
 """
 TYPE_SQL = TYPE_SELECT_SQL
-TYPE_SQL_BY_ID = (
-    TYPE_SELECT_SQL + " WHERE rt.id = %s::uuid ORDER BY rt.lifecycle, rt.code"
-)
+TYPE_SQL_BY_ID = TYPE_SELECT_SQL + " WHERE rt.id = %s::uuid ORDER BY rt.lifecycle, rt.code"
 TYPE_SQL_ACTIVE = TYPE_SELECT_SQL + " WHERE rt.is_active ORDER BY rt.lifecycle, rt.code"
-TYPE_SQL_BY_LIFECYCLE = (
-    TYPE_SELECT_SQL + " WHERE rt.lifecycle = %s ORDER BY rt.lifecycle, rt.code"
-)
+TYPE_SQL_BY_LIFECYCLE = TYPE_SELECT_SQL + " WHERE rt.lifecycle = %s ORDER BY rt.lifecycle, rt.code"
 TYPE_SQL_ALL = TYPE_SELECT_SQL + " ORDER BY rt.lifecycle, rt.code"
 
 

@@ -31,12 +31,6 @@ export default function ClientOrgChart({ user }) {
   const needle = fold(search.trim());
   const departments = useMemo(() => chart.data?.departments || [], [chart.data]);
   const people = useMemo(() => chart.data?.users || [], [chart.data]);
-  const ownDepartment = String(user?.department_id || "");
-  const maySearchMembers = people.some((person) =>
-    String(person.manager_id || "") === String(user?.id || "") &&
-    String(person.department_id || "") === ownDepartment &&
-    String(person.id) !== String(user?.id || "")
-  );
 
   const tree = useMemo(() => {
     const byId = new Map(people.map((p) => [p.id, p]));
@@ -62,7 +56,7 @@ export default function ClientOrgChart({ user }) {
   const visibleDepartments = departments.filter((d) => {
     if (departmentFilter && d.id !== departmentFilter) return false;
     if (!needle) return true;
-    return fold(d.name).includes(needle) || (maySearchMembers && String(d.id) === ownDepartment && people.some((p) => p.department_id === d.id && fold(p.display_name).includes(needle)));
+    return fold(d.name).includes(needle) || people.some((p) => p.department_id === d.id && fold(p.display_name).includes(needle));
   });
   const scopeLabel = chart.data?.scope === "organization" ? "Toàn tổ chức" : "Phòng ban của bạn và cấp quản lý trực tiếp";
   function toggle(id) { setCollapsed((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; }); }
@@ -78,8 +72,8 @@ export default function ClientOrgChart({ user }) {
             <button type="button" className="secondary" onClick={chart.reload}>Cập nhật</button>
           </div></div>
         <div className="client-org-filters">
-          {maySearchMembers && <label className="client-org-search">Tìm nhân viên phòng ban
-            <input value={search} onChange={(e) => setSearch(e.target.value)} type="search" placeholder="Nhập tên nhân viên…" /></label>}
+          <label className="client-org-search">Tìm nhân sự hoặc phòng ban
+            <input value={search} onChange={(e) => setSearch(e.target.value)} type="search" placeholder="Nhập tên…" /></label>
           <label>Phòng ban
             <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)}>
               <option value="">Tất cả phòng ban</option>
@@ -88,11 +82,10 @@ export default function ClientOrgChart({ user }) {
         </div>
         <div className="client-org-tree" aria-label="Cây tổ chức">
           {visibleDepartments.map((dept) => {
-            const canExpand = maySearchMembers && String(dept.id) === ownDepartment;
-            const roots = canExpand ? (tree.rootsByDept.get(dept.id) || []) : [];
-            const isOpen = canExpand && (!collapsed.has(dept.id) || Boolean(needle));
+            const roots = tree.rootsByDept.get(dept.id) || [];
+            const isOpen = !collapsed.has(dept.id) || Boolean(needle);
             return <section key={dept.id} className="client-org-group">
-              <button type="button" className="client-org-dept-head" aria-expanded={isOpen} disabled={!canExpand} onClick={() => toggle(dept.id)}>
+              <button type="button" className="client-org-dept-head" aria-expanded={isOpen} onClick={() => toggle(dept.id)}>
                 <span aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
                 <strong>{dept.name}</strong>
                 <small>{dept.member_count} thành viên{dept.id === user.department_id ? " · Phòng của bạn" : ""}</small>
@@ -104,7 +97,6 @@ export default function ClientOrgChart({ user }) {
           })}
           {!visibleDepartments.length && <p className="muted">Không tìm thấy phòng ban hoặc nhân sự phù hợp.</p>}
         </div>
-        {!maySearchMembers && <p className="muted" role="note">Danh sách nhân sự chỉ mở cho người quản lý trực tiếp. Bạn đang xem cơ cấu phòng ban.</p>}
         <p className="muted client-org-footnote">Sơ đồ chỉ dùng họ tên, phòng ban và quan hệ quản lý trực tiếp; không công bố email hay quyền hệ thống. Là quản lý trực tiếp không đồng nghĩa có quyền phê duyệt mọi loại yêu cầu.</p>
       </section>
     </ResourceState>

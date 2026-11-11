@@ -60,22 +60,22 @@ export default class ErrorBoundary extends React.Component {
                   width: "48px",
                   height: "48px",
                   borderRadius: "50%",
-                  backgroundColor: "var(--eas-danger-soft)",
-                  color: "var(--eas-danger)",
+                  backgroundColor: "#fee2e2",
+                  color: "#dc2626",
                 }}
                 aria-hidden="true"
               >
                 !
               </span>
               <div>
-                <h1 style={{ margin: 0, fontSize: "1.25rem", color: "var(--eas-ink-900)" }}>
+                <h1 style={{ margin: 0, fontSize: "1.25rem", color: "#111827" }}>
                   {this.props.title || "Đã xảy ra sự cố hiển thị"}
                 </h1>
                 <small className="muted">Giao diện gặp lỗi ngoài dự kiến và đã được ngắt an toàn.</small>
               </div>
             </div>
 
-            <p style={{ margin: "1rem 0", color: "var(--eas-ink-600)", fontSize: "0.95rem" }}>
+            <p style={{ margin: "1rem 0", color: "#4b5563", fontSize: "0.95rem" }}>
               Hệ thống đã cách ly lỗi để bảo vệ phiên làm việc và dữ liệu của bạn. Bạn có thể thử tải lại khối này
               hoặc làm mới trang để tiếp tục.
             </p>
@@ -93,8 +93,8 @@ export default class ErrorBoundary extends React.Component {
             </div>
 
             {import.meta.env.DEV && this.state.error && (
-              <details style={{ marginTop: "1.5rem", padding: "0.75rem", background: "var(--eas-surface-sunken)", borderRadius: "6px" }}>
-                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.85rem", color: "var(--eas-ink-700)" }}>
+              <details style={{ marginTop: "1.5rem", padding: "0.75rem", background: "#f3f4f6", borderRadius: "6px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "0.85rem", color: "#374151" }}>
                   Chi tiết kỹ thuật (dành cho Nhà phát triển)
                 </summary>
                 <pre
@@ -103,8 +103,8 @@ export default class ErrorBoundary extends React.Component {
                     padding: "0.5rem",
                     fontSize: "0.75rem",
                     overflowX: "auto",
-                    background: "var(--eas-ink-900)",
-                    color: "var(--eas-surface-sunken)",
+                    background: "#1f2937",
+                    color: "#f9fafb",
                     borderRadius: "4px",
                   }}
                 >

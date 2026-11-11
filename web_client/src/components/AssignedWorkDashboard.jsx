@@ -19,6 +19,6 @@ export default function AssignedWorkDashboard({ user, onOpen, navigate }) {
    {list.data?.next_offset!==null&&list.data?.next_offset!==undefined&&<small className="muted">Còn hồ sơ khác. Vào danh sách công việc để xem tiếp.</small>}
   </section>
   <div className="role-task-grid">{queues.map(task=><button type="button" key={task.tab} className="panel role-task" onClick={()=>navigate(task.tab)}><strong>{task.name}</strong><span aria-hidden="true">→</span></button>)}</div>
-  <section className="panel client-scope-note"><h2>Báo cáo cấp quản lý</h2><p>Trang này hiển thị các công việc đang được phân công cho bạn. Số liệu toàn phòng ban nằm ở mục Tổng quan phòng ban nếu bạn được cấp quyền quản lý.</p></section>
+  <section className="panel client-scope-note"><h2>Báo cáo cấp quản lý</h2><p>Để xem toàn bộ phòng ban hoặc đơn vị, Backend cần cung cấp endpoint thống kê và quyền truy cập theo từng cấp quản lý. Hiện tại cổng này chỉ hiển thị các công việc được phân công thực sự.</p></section>
  </div>;
 }

@@ -1,15 +1,11 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-<<<<<<< HEAD
-import Icon from "./components/Icon.jsx";
-=======
->>>>>>> origin/main
 import { PermissionProvider } from "./hooks/usePermission.jsx";
 import { api, initializeCsrf, invalidateResources, notify, SESSION_EXPIRED_EVENT } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
 import { PageControls } from "./components/ux.jsx";
 import { canNavigate, canUsePortal } from "./rolePolicy.js";
 import { PERMISSIONS_CHANGED, createRefresher } from "./sessionRefresh.js";
-
+import RoleTasks from "./components/RoleTasks.jsx";
 import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
 import {
   ActionForm,
@@ -18,33 +14,26 @@ import {
   useResource,
 } from "./components/ui.jsx";
 import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
-
-
-
+import ClientRequests from "./components/ClientRequests.jsx";
+import Notifications from "./components/NotificationsPage.jsx";
+import Profile from "./components/ProfilePage.jsx";
 import { SystemUpdateDialog, SystemUpdateHistory } from "./components/SystemUpdates.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
 import { ApiBaseContext, WORKSPACE_API } from "./apiBase.js";
-
+import ClientRequestsHub from "./components/ClientRequestsHub.jsx";
 import { formatVnd } from "./formatters.js";
 
 function AdminDashboard(props) {
   return <AdminScreen name="AdminDashboard" {...props} />;
 }
 // Screens opened after the first page load are split into their own chunks.
-// Load only the current workspace screen; the login shell stays small.
-const RoleTasks = lazy(() => import("./components/RoleTasks.jsx"));
-const ClientRequests = lazy(() => import("./components/ClientRequests.jsx"));
-const Notifications = lazy(() => import("./components/NotificationsPage.jsx"));
-const Profile = lazy(() => import("./components/ProfilePage.jsx"));
-const ClientRequestsHub = lazy(() => import("./components/ClientRequestsHub.jsx"));
-const TeamDashboard = lazy(() => import("./components/TeamDashboard.jsx"));
 const RequestEditor = lazy(() => import("./components/RequestEditor.jsx"));
 const RequestDetail = lazy(() => import("./components/RequestDetail.jsx"));
 const WorkflowDiagrams = lazy(() => import("./components/WorkflowDiagrams.jsx"));
 const AiProcessGuide = lazy(() => import("./components/AiProcessGuide.jsx"));
 const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
 const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
-
+import TeamDashboard from "./components/TeamDashboard.jsx";
 import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
 import { PageHeader, ShellSkeleton, TableSkeleton } from "./components/design.jsx";
 function getRealtimeGreeting() {
@@ -67,14 +56,11 @@ function Login({ onLogin, portal = "client", aiStatus }) {
     return () => clearInterval(timer);
   }, []);
 
-  const loginPendingRef = useRef(false);
-  const resetPendingRef = useRef(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState("");
   const [resetSubmitted, setResetSubmitted] = useState(false);
 
   function closeForgotModal() {
-    if (resetPendingRef.current) return;
     setShowForgotModal(false);
     setResetSubmitted(false);
     setResetError("");
@@ -82,8 +68,6 @@ function Login({ onLogin, portal = "client", aiStatus }) {
 
   async function submitReset(e) {
     e.preventDefault();
-    if (resetPendingRef.current) return;
-    resetPendingRef.current = true;
     const values = Object.fromEntries(new FormData(e.currentTarget));
     setResetBusy(true);
     setResetError("");
@@ -97,25 +81,32 @@ function Login({ onLogin, portal = "client", aiStatus }) {
     } catch (err) {
       setResetError(errorText(err));
     } finally {
-      resetPendingRef.current = false;
       setResetBusy(false);
     }
   }
 
   async function submit(e) {
     e.preventDefault();
-    if (loginPendingRef.current) return;
     const values = Object.fromEntries(new FormData(e.currentTarget));
     const email = String(values.email || "").trim().toLowerCase();
 
-    // The server validates portal access from current role memberships;
-    // email addresses are not authorization policies.
-    if (portal === "client" && aiStatus?.client_maintenance_lock) {
-      setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được sau khi quá trình cập nhật hoàn tất.`);
-      return;
+    // Strict portal separation check
+    if (portal === "admin") {
+      if (email !== "admin@eas.com") {
+        setError("Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).");
+        return;
+      }
+    } else if (portal === "client") {
+      if (email === "admin@eas.com") {
+        setError(`Từ chối truy cập: Tài khoản Quản trị viên hệ thống không được phép đăng nhập vào Cổng Nhân viên. Vui lòng đăng nhập tại Cổng Quản trị (${ADMIN_PORTAL_URL}).`);
+        return;
+      }
+      if (aiStatus?.client_maintenance_lock) {
+        setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật hoàn tất.`);
+        return;
+      }
     }
 
-    loginPendingRef.current = true;
     setBusy(true);
     setError("");
     try {
@@ -135,7 +126,6 @@ function Login({ onLogin, portal = "client", aiStatus }) {
         setError(errorText(err));
       }
     } finally {
-      loginPendingRef.current = false;
       setBusy(false);
     }
   }
@@ -185,7 +175,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
             </h1>
           </div>
 
-          <form onSubmit={submit}>
+          <form onSubmit={submit} noValidate>
             <fieldset disabled={busy} className="auth-fieldset">
               {error && (
                 <div role="alert" className="auth-error-banner">
@@ -298,7 +288,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
           <div className="auth-modal-card">
             <div className="auth-modal-header">
               <h3 id="info-modal-title">{portal === "admin" ? "Enterprise Admin Portal" : "Enterprise Approval System"}</h3>
-              <button type="button" className="auth-modal-close" onClick={() => setShowInfoModal(false)} aria-label="Đóng"><Icon name="x" size={16} /></button>
+              <button type="button" className="auth-modal-close" onClick={() => setShowInfoModal(false)} aria-label="Đóng">✕</button>
             </div>
             <div className="auth-modal-body">
               <p>Nền tảng giúp bạn tạo yêu cầu, theo dõi tiến độ và nhận thông báo khi có quyết định xử lý.</p>
@@ -316,7 +306,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
           <div className="auth-modal-card">
             <div className="auth-modal-header">
               <h3 id="forgot-modal-title">Cấp lại mật khẩu</h3>
-              <button type="button" className="auth-modal-close" onClick={closeForgotModal} aria-label="Đóng"><Icon name="x" size={16} /></button>
+              <button type="button" className="auth-modal-close" onClick={closeForgotModal} aria-label="Đóng">✕</button>
             </div>
             {resetSubmitted ? (
               <>
@@ -328,7 +318,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
                 </div>
               </>
             ) : (
-              <form onSubmit={submitReset}>
+              <form onSubmit={submitReset} noValidate>
                 <fieldset disabled={resetBusy} className="auth-fieldset">
                   <div className="auth-modal-body">
                     <p>Nhập email nhân viên để gửi yêu cầu. Quản trị viên sẽ xác minh danh tính trước khi cấp mật khẩu tạm thời.</p>
@@ -491,8 +481,8 @@ function pageLabel(key, portal) {
   return (portal === "admin" && ADMIN_LABELS[key]) || menu.find((m) => m[0] === key)?.[1] || "";
 }
 
-function renderNavIcon(key, _fallback) {
-  const p = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
+function renderNavIcon(key, fallback) {
+  const p = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
   switch (key) {
     case "home":
       return (
@@ -660,60 +650,10 @@ function renderNavIcon(key, _fallback) {
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
       );
-    case "requests":
-      return (
-        <svg {...p}>
-          <rect x="5" y="3" width="14" height="18" rx="2" />
-          <path d="M9 3v2h6V3" />
-          <path d="M9 11h6M9 15h4" />
-        </svg>
-      );
-    case "people":
-    case "identity":
-      return (
-        <svg {...p}>
-          <circle cx="9" cy="8" r="3.5" />
-          <path d="M2.5 20v-1a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v1" />
-          <path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20v-1a5 5 0 0 0-3.5-4.8" />
-        </svg>
-      );
-    case "regulations-view":
-      return (
-        <svg {...p}>
-          <path d="M12 3v18M7 21h10" />
-          <path d="M5 7h14" />
-          <path d="m5 7-3 7a3 3 0 0 0 6 0Z" />
-          <path d="m19 7-3 7a3 3 0 0 0 6 0Z" />
-        </svg>
-      );
-    case "ai-rules":
-      return (
-        <svg {...p}>
-          <path d="M9 4h6M12 4v3" />
-          <rect x="4" y="7" width="16" height="12" rx="3" />
-          <path d="M9 12v1M15 12v1M9.5 16h5" />
-        </svg>
-      );
-    case "release-workspace":
-      return (
-        <svg {...p}>
-          <circle cx="6" cy="5" r="2" />
-          <circle cx="6" cy="19" r="2" />
-          <circle cx="18" cy="8" r="2" />
-          <path d="M6 7v10M18 10a6 6 0 0 1-6 6H8" />
-        </svg>
-      );
     default:
-      // Never fall back to text glyphs: a neutral bullet keeps the icon column aligned.
-      return (
-        <svg {...p}>
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      );
+      return fallback;
   }
 }
-
-const shellIcon = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
 function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) {
   const [status, setStatus] = useState(""),
     [type, setType] = useState(""),
@@ -761,18 +701,18 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
       </div>
       <section className="request-summary-strip" aria-label="Thống kê hồ sơ hiển thị">
         {[
-          ["Tất cả", "", "layers"],
-          ["Cần bổ sung", "NEEDS_INFO", "alert"],
-          ["Chờ duyệt", "PENDING_APPROVAL", "clock"],
-          ["Đang thực hiện", "IN_PROGRESS", "reset"],
-          ["Hoàn thành", "COMPLETED", "check"],
-          ["Bản nháp", "DRAFT", "edit"],
+          ["Tất cả", "", "◫"],
+          ["Cần bổ sung", "NEEDS_INFO", "!"],
+          ["Chờ duyệt", "PENDING_APPROVAL", "⌛"],
+          ["Đang thực hiện", "IN_PROGRESS", "⇄"],
+          ["Hoàn thành", "COMPLETED", "✓"],
+          ["Bản nháp", "DRAFT", "▤"],
         ].map(([label, code, icon]) => (
           <button key={label} type="button"
             className={`request-mini-stat ${status === code ? "current" : ""}`}
             onClick={() => {setStatus(code);setOffset(0);}}
             aria-pressed={status === code}>
-            <span className="mini-stat-icon" aria-hidden="true"><Icon name={icon} size={16} /></span>
+            <span className="mini-stat-icon" aria-hidden="true">{icon}</span>
             <span className="mini-stat-label">{label}</span>
             <strong>{code ? items.filter((item) => item.status === code).length : items.length}</strong>
             <small>hồ sơ hiển thị</small>
@@ -1029,7 +969,7 @@ function renderWorkspaceContent({
     if (!user.permissions.by_module[mod].can_view) {
       return (
         <div className="access-denied-view panel" style={{ textAlign: "center", padding: "4rem 2rem", margin: "2rem auto", maxWidth: "600px" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}><Icon name="block" size={14} /></div>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🚫</div>
           <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Không có quyền truy cập</h2>
           <p className="muted" style={{ marginBottom: "1.5rem" }}>
             Tài khoản của bạn chưa được cấp quyền Xem cho chức năng <strong>{pageLabel(page, portal)}</strong>. Vui lòng liên hệ Quản trị viên để được cấp quyền.
@@ -1196,7 +1136,7 @@ export function AdminOverview({ navigate, user }) {
     <PageHeader eyebrow="TRUNG TÂM QUẢN TRỊ" title="Tổng quan quản trị" description="Chọn khu vực chức năng theo vai trò quản trị được cấp." />
     <div className="admin-tiles-grid">{tiles.map(([key, label, detail, icon]) => (
       <button key={key} type="button" className="admin-feature-card" onClick={() => navigate(key)}>
-        <div className="admin-feature-icon" aria-hidden="true">{renderNavIcon(key, icon)}</div>
+        <div className="admin-feature-icon" aria-hidden="true">{icon}</div>
         <div className="admin-feature-body"><strong>{label}</strong><p>{detail}</p></div>
         <span className="admin-feature-arrow" aria-hidden="true">→</span>
       </button>))}
@@ -1211,12 +1151,9 @@ const WorkspaceDashboard = lazy(() => import("./components/AdminPages.jsx").then
 const WorkspaceUsers = lazy(() => import("./components/UserManagementPage.jsx"));
 const WorkspaceRegulations = lazy(() => import("./components/RegulationsManagementPage.jsx"));
 const WorkspaceOrgChart = lazy(() => import("./components/OrgChart.jsx"));
-<<<<<<< HEAD
-=======
 // Read-only audit lookup (employee APIs only), loaded on demand in the employee portal.
 const ClientAuditorWorkspace = lazy(() => import("./components/AuditorWorkspace.jsx"));
 const ADMIN_PORTAL_URL = import.meta.env.VITE_ADMIN_PORTAL_URL || "http://localhost:8081";
->>>>>>> origin/main
 
 function writeFlag(key, value) { try { window.localStorage.setItem(key, value ? "1" : "0"); } catch { /* storage unavailable */ } }
 
@@ -1252,7 +1189,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const main = document.getElementById("main");
-      main?.scrollIntoView({ behavior: "auto", block: "start" });
+      main?.scrollIntoView({ behavior: "smooth", block: "start" });
       const heading = main?.querySelector("h1");
       if (heading) { heading.setAttribute("tabindex", "-1"); heading.focus({ preventScroll: true }); }
     });
@@ -1301,10 +1238,9 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
   return (
     <PermissionProvider user={user}>
       <div className={"app-shell" + (collapsed ? " sidebar-collapsed" : "")}>
-      <a className="skip-link" href="#main">Bỏ qua điều hướng, đến nội dung chính</a>
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
       <aside className={"sidebar " + (menuOpen ? "open" : "")} aria-label="Thanh điều hướng">
-        <button type="button" className="secondary ds-icon-button sidebar-close" aria-label="Đóng điều hướng" onClick={() => setMenuOpen(false)}><svg {...shellIcon}><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+        <button type="button" className="secondary ds-icon-button sidebar-close" aria-label="Đóng điều hướng" onClick={() => setMenuOpen(false)}>×</button>
         <button
           type="button"
           className="sidebar-edge-toggle"
@@ -1359,7 +1295,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
             return (
               <div key={group} className={"nav-group" + (isClosed ? " is-collapsed" : "")}>
                 <button type="button" className="nav-caption" aria-expanded={!isClosed} onClick={() => toggleGroup(group)}>
-                  <span>{group}</span><span className="nav-caption-chevron" aria-hidden="true"><svg {...shellIcon} width="14" height="14"><path d="m6 9 6 6 6-6" /></svg></span>
+                  <span>{group}</span><span className="nav-caption-chevron" aria-hidden="true">▾</span>
                 </button>
                 {(!isClosed || collapsed) && visible.map(([key, , icon]) => {
                   const active = page === key && !selected && !editor;
@@ -1377,15 +1313,12 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
           })}
         </nav>
         <button type="button" className="secondary sidebar-collapse" onClick={toggleCollapsed} aria-pressed={collapsed}
-          aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}>
-          <svg {...shellIcon} width="16" height="16">{collapsed ? <path d="m13 17 5-5-5-5M6 17l5-5-5-5" /> : <path d="m11 17-5-5 5-5M18 17l-5-5 5-5" />}</svg>
-          {!collapsed && <span>Thu gọn</span>}
-        </button>
+          aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}>{collapsed ? "»" : "« Thu gọn"}</button>
       </aside>
       <div className="workspace">
         <header className="topbar">
           <div className="topbar-left">
-            <button type="button" className="secondary menu-toggle" aria-label="Mở điều hướng" onClick={() => setMenuOpen(!menuOpen)}><svg {...shellIcon}><path d="M4 6h16M4 12h16M4 18h16" /></svg></button>
+            <button type="button" className="secondary menu-toggle" aria-label="Mở điều hướng" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
             <div className="topbar-page-identity">
               <span className="topbar-page-title">{activeTitle}</span>
               <nav className="ds-breadcrumb" aria-label="Vị trí hiện tại"><ol>
@@ -1506,7 +1439,7 @@ export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unif
 }
 
 
-function useAiMaintenanceState(enabled = true) {
+function useAiMaintenanceState() {
   const [aiStatus, setAiStatus] = useState({
     client_maintenance_lock: false,
     sync_status: "COMPLETED",
@@ -1519,54 +1452,7 @@ function useAiMaintenanceState(enabled = true) {
   });
 
   useEffect(() => {
-    // The maintenance lock applies only to the employee portal. The admin
-    // portal must not poll AI status on its login screen or while idle.
-    if (!enabled) return undefined;
     let active = true;
-<<<<<<< HEAD
-    let pending = null;
-    let inFlight = false;
-    let failureStreak = 0;
-    let lastAttempt = 0;
-    let nextAttemptAt = 0;
-    let rateLimitDelay = 0;
-    let controller = null;
-    let deadlineTimer = null;
-    const fetchStatus = async () => {
-      if (!active || inFlight) return;
-      inFlight = true;
-      lastAttempt = Date.now();
-      let maintenance = false;
-      rateLimitDelay = 0;
-      controller = new AbortController();
-      // Direct health polling must not wait indefinitely on a stale socket.
-      deadlineTimer = window.setTimeout(() => controller?.abort(), 12000);
-      try {
-        const data = await api("/api/v1/system/ai-status", {
-          cache: "no-store", signal: controller.signal, timeoutMs: 12000,
-        });
-        maintenance = Boolean(data.client_maintenance_lock);
-        failureStreak = 0;
-        if (active) setAiStatus(data);
-      } catch (error) {
-        // Preserve the last known state. A 429 requires respecting the
-        // server's Retry-After, not starting another probe immediately.
-        rateLimitDelay = error?.status === 429
-          ? Math.max(60000, error.retryAfterMs || 0) : 0;
-        failureStreak = Math.min(6, failureStreak + 1);
-      } finally {
-        window.clearTimeout(deadlineTimer);
-        deadlineTimer = null;
-        inFlight = false;
-        controller = null;
-        if (active) {
-          const interval = document.visibilityState === "hidden" ? 120000
-            : failureStreak ? Math.min(300000, 15000 * 2 ** failureStreak)
-              : maintenance ? 3000 : 45000;
-          const delay = Math.max(interval, rateLimitDelay);
-          nextAttemptAt = Date.now() + delay;
-          pending = window.setTimeout(fetchStatus, delay);
-=======
     const isMaintenance = Boolean(aiStatus?.client_maintenance_lock);
     const intervalMs = isMaintenance ? 4000 : 20000;
     const fetchStatus = async () => {
@@ -1580,30 +1466,9 @@ function useAiMaintenanceState(enabled = true) {
         if (res.ok) {
           const data = await res.json();
           if (active) setAiStatus(data);
->>>>>>> origin/main
         }
-      }
+      } catch {}
     };
-<<<<<<< HEAD
-    const onVisible = () => {
-      if (document.visibilityState !== "visible") return;
-      // Do not bypass Retry-After or outage backoff on every tab focus.
-      if (Date.now() < nextAttemptAt) return;
-      if (failureStreak && Date.now() - lastAttempt < 30000) return;
-      window.clearTimeout(pending);
-      if (!inFlight) void fetchStatus();
-    };
-    void fetchStatus();
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      active = false;
-      window.clearTimeout(pending);
-      window.clearTimeout(deadlineTimer);
-      controller?.abort();
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [enabled]);
-=======
     void fetchStatus();
     const timer = setInterval(() => { void fetchStatus(); }, intervalMs);
     const onVisibilityChange = () => {
@@ -1616,7 +1481,6 @@ function useAiMaintenanceState(enabled = true) {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [aiStatus?.client_maintenance_lock]);
->>>>>>> origin/main
 
   return aiStatus;
 }
@@ -1644,7 +1508,7 @@ function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
       <div className="client-maintenance-card">
         <div className="maintenance-icon-badge">
           <div className="maintenance-radar-pulse"></div>
-          <span className="maintenance-robot-icon"><Icon name="spark" size={14} /></span>
+          <span className="maintenance-robot-icon">🤖</span>
         </div>
 
         <h2 className="client-maintenance-title">
@@ -1658,22 +1522,22 @@ function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
 
         <div className="client-maintenance-steps">
           <div className={`m-step-item ${currentStep >= 1 ? (currentStep > 1 ? "done" : "active") : ""}`}>
-            <div className="m-step-dot">{currentStep > 1 ? "" : "1"}</div>
+            <div className="m-step-dot">{currentStep > 1 ? "✓" : "1"}</div>
             <span>Đồng bộ</span>
           </div>
           <div className="m-step-line"></div>
           <div className={`m-step-item ${currentStep >= 2 ? (currentStep > 2 ? "done" : "active") : ""}`}>
-            <div className="m-step-dot">{currentStep > 2 ? "" : "2"}</div>
+            <div className="m-step-dot">{currentStep > 2 ? "✓" : "2"}</div>
             <span>Học quy định</span>
           </div>
           <div className="m-step-line"></div>
           <div className={`m-step-item ${currentStep >= 3 ? (currentStep > 3 ? "done" : "active") : ""}`}>
-            <div className="m-step-dot">{currentStep > 3 ? "" : "3"}</div>
+            <div className="m-step-dot">{currentStep > 3 ? "✓" : "3"}</div>
             <span>Áp dụng</span>
           </div>
           <div className="m-step-line"></div>
           <div className={`m-step-item ${currentStep >= 4 ? "done" : ""}`}>
-            <div className="m-step-dot">{currentStep >= 4 ? "" : "4"}</div>
+            <div className="m-step-dot">{currentStep >= 4 ? "✓" : "4"}</div>
             <span>Hoàn tất</span>
           </div>
         </div>
@@ -1704,7 +1568,7 @@ function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
 function PortalApp({ portal, theme, toggleTheme }) {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
-  const aiStatus = useAiMaintenanceState(portal === "client");
+  const aiStatus = useAiMaintenanceState();
   // Only the open learning job locks users; a failed run (ERROR) keeps the old rules and stays unlocked.
   const aiMaintenanceActive = Boolean(aiStatus?.client_maintenance_lock);
   // L11: any 401 from a business endpoint means the session is gone.
@@ -1731,7 +1595,6 @@ function PortalApp({ portal, theme, toggleTheme }) {
     }
     try {
       setUser((await api("/api/v1/auth/me")).user);
-      setError("");
     } catch (e) {
       if (e.message === "PASSWORD_CHANGE_REQUIRED")
         setUser({ roles: [], must_change_password: true });
@@ -1744,12 +1607,7 @@ function PortalApp({ portal, theme, toggleTheme }) {
     if (!signedIn) return undefined;
     const refresher = createRefresher(() => {
       api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } })
-        .then((r) => {
-          // Optional /me responds 200 with user:null after session expiry.
-          // Clear the UI session rather than leaving every other API at 401.
-          if (r?.user) setUser(r.user);
-          else setUser(null);
-        })
+        .then((r) => r?.user && setUser(r.user))
         .catch((e) => {
           if (e.status === 401) setUser(null);
         });
@@ -1770,22 +1628,12 @@ function PortalApp({ portal, theme, toggleTheme }) {
   }, [signedIn]);
   useEffect(() => {
     let active = true;
-    let pending = null;
-    let failures = 0;
-    let checking = false;
-    let retryAt = 0;
-    const loadSession = async () => {
-      if (!active || checking) return;
-      checking = true;
-      try {
-        const response = await fetchInitialSession();
+    fetchInitialSession()
+      .then((r) => {
+        if (active) setUser(r?.user || null);
+      })
+      .catch((e) => {
         if (active) {
-<<<<<<< HEAD
-          setUser(response?.user || null);
-          setError("");
-          failures = 0;
-          retryAt = 0;
-=======
           if (e.message === "PASSWORD_CHANGE_REQUIRED")
             setUser({ roles: [], must_change_password: true });
           // During an AI learning lock the login page shows the progress bar,
@@ -1796,45 +1644,10 @@ function PortalApp({ portal, theme, toggleTheme }) {
             notify("Hệ thống đang điều tiết lưu lượng truy cập. Vui lòng thử lại sau giây lát.", "warning");
           }
           else setError(errorText(e));
->>>>>>> origin/main
         }
-      } catch (e) {
-        if (!active) return;
-        if (e.message === "PASSWORD_CHANGE_REQUIRED") setUser({ roles: [], must_change_password: true });
-        else if (e.status === 401 || e.status === 403 || e.message === "SYSTEM_UNDER_MAINTENANCE") setUser(null);
-        else {
-          setError(errorText(e));
-          if (e.status === 429) {
-            // Global API throttle: a 1.5s bootstrap retry would extend the
-            // Console storm and prevent users from reaching the login screen.
-            const delay = Math.max(60000, e.retryAfterMs || 0);
-            retryAt = Date.now() + delay;
-            pending = window.setTimeout(loadSession, delay);
-          } else if (failures < 4) {
-            const delay = Math.min(12000, 1500 * 2 ** failures++);
-            retryAt = Date.now() + delay;
-            pending = window.setTimeout(loadSession, delay);
-          }
-        }
-      } finally {
-        checking = false;
-      }
-    };
-    const onReconnect = () => {
-      if (!active || checking || (!failures && !retryAt) || document.visibilityState !== "visible") return;
-      if (retryAt && Date.now() < retryAt) return;
-      window.clearTimeout(pending);
-      pending = null;
-      void loadSession();
-    };
-    void loadSession();
-    window.addEventListener("online", onReconnect);
-    document.addEventListener("visibilitychange", onReconnect);
+      });
     return () => {
       active = false;
-      window.clearTimeout(pending);
-      window.removeEventListener("online", onReconnect);
-      document.removeEventListener("visibilitychange", onReconnect);
     };
   }, []);
   async function logout() {
@@ -1856,11 +1669,8 @@ function PortalApp({ portal, theme, toggleTheme }) {
           <button type="button" onClick={async () => {
             setError("");
             try {
-              // Explicit user action is allowed to probe immediately after an outage.
-              await initializeCsrf({ forceProbe: true });
-              const result = await api("/api/v1/auth/me", {
-                forceProbe: true, headers: { "X-Auth-Optional": "1" },
-              });
+              await initializeCsrf();
+              const result = await api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } });
               setUser(result?.user || null);
             } catch (e) { setError(errorText(e)); }
           }}>Kết nối lại</button>
@@ -1878,11 +1688,11 @@ function PortalApp({ portal, theme, toggleTheme }) {
       <main id="main" className="content">
         <h1>Đổi mật khẩu để tiếp tục</h1>
         <p>Tài khoản đang sử dụng mật khẩu tạm.</p>
-        <Suspense fallback={<ShellSkeleton />}><Profile user={user} onChanged={() => { void load(); }} /></Suspense>
+        <Profile user={user} onChanged={() => { void load(); }} />
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );
-  if (user && portal === "admin" && (!canUsePortal(user.roles, "admin"))) {
+  if (user && portal === "admin" && (user.email !== "admin@eas.com" || !canUsePortal(user.roles, "admin"))) {
     return (
       <main className="auth-shell">
         <section className="panel">
@@ -1902,28 +1712,18 @@ function PortalApp({ portal, theme, toggleTheme }) {
       </main>
     );
   }
-<<<<<<< HEAD
-  // Administrative identities use only the Admin portal even when historic
-  // workflow grants remain; enforced independently on every backend API.
-  if (user && portal === "client" && !canUsePortal(user.roles, "client")) {
-=======
   // Administrative identities are system-only (enforced again by the API);
   // an admin who also approves or executes keeps the employee portal.
   if (user && portal === "client" && (user.email === "admin@eas.com" || !canUsePortal(user.roles, "client"))) {
->>>>>>> origin/main
     return (
       <main className="auth-shell">
         <section className="panel">
           <h1>Tài khoản quản trị</h1>
-<<<<<<< HEAD
-          <p>Tài khoản có quyền quản trị chỉ được sử dụng Cổng Quản trị. Vui lòng chuyển sang cổng phù hợp.</p>
-=======
           <p>
             {user.email === "admin@eas.com"
               ? "Tài khoản Quản trị viên (admin@eas.com) không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081)."
               : "Tài khoản quản trị hệ thống không có nghiệp vụ trên Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081)."}
           </p>
->>>>>>> origin/main
           <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
             <a
               href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:8081`}

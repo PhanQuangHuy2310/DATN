@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
-<<<<<<< HEAD
-import Icon from "./Icon.jsx";
-=======
 import { errorText } from "../domain.js";
->>>>>>> origin/main
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -18,12 +14,12 @@ const CHANGE_TYPE_LABELS = {
 };
 
 const CHANGE_TYPE_COLORS = {
-  REGULATION: { bg: "var(--eas-signal-soft)", text: "var(--eas-signal)", border: "var(--eas-signal-soft)" },
-  WORKFLOW: { bg: "var(--eas-hover)", text: "var(--eas-ink-600)", border: "var(--eas-hover)" },
-  PERMISSION: { bg: "var(--eas-warn-soft)", text: "var(--eas-warn)", border: "var(--eas-warn-soft)" },
-  API_STATUS: { bg: "var(--eas-warn-soft)", text: "var(--eas-warn)", border: "var(--eas-warn-soft)" },
-  AI_CONFIG: { bg: "var(--eas-ok-soft)", text: "var(--eas-ok)", border: "var(--eas-ok-soft)" },
-  SYSTEM: { bg: "var(--eas-surface-sunken)", text: "var(--eas-ink-700)", border: "var(--eas-line)" },
+  REGULATION: { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
+  WORKFLOW: { bg: "#FAF5FF", text: "#7E22CE", border: "#E9D5FF" },
+  PERMISSION: { bg: "#FEF3C7", text: "#B45309", border: "#FDE68A" },
+  API_STATUS: { bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
+  AI_CONFIG: { bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
+  SYSTEM: { bg: "#F3F4F6", text: "#374151", border: "#E5E7EB" },
 };
 
 export function SystemVersionsPage() {
@@ -86,8 +82,8 @@ export function SystemVersionsPage() {
     <div className="eas-system-versions-page">
       <PageHeader
         eyebrow="QUẢN TRỊ NỀN TẢNG"
-        title="Phiên bản hệ thống"
-        description="Thông tin phiên bản các thành phần và lịch sử thay đổi cấu hình hệ thống."
+        title="Phiên bản hệ thống & Nhật ký kiểm toán"
+        description="Theo dõi toàn bộ thông số phiên bản, các mốc phát hành (Semantic Versioning) và lịch sử thay đổi cấu hình hệ thống theo thời gian thực."
         actions={
           <div style={{ display: "flex", gap: "10px" }}>
             <button
@@ -96,7 +92,7 @@ export function SystemVersionsPage() {
               onClick={() => loadChangelog(false)}
               disabled={loading}
             >
-              <Icon name="reset" size={14} /> Tải lại
+              🔄 Tải lại
             </button>
             <button
               type="button"
@@ -104,7 +100,7 @@ export function SystemVersionsPage() {
               onClick={handleExportJson}
               disabled={loading || changelog.length === 0}
             >
-              <Icon name="download" size={14} /> Xuất Audit (.JSON)
+              📥 Xuất Audit (.JSON)
             </button>
           </div>
         }
@@ -119,8 +115,8 @@ export function SystemVersionsPage() {
       {/* 1. TOP SPECIFICATION CARDS */}
       <div className="eas-version-spec-grid">
         <div className="eas-spec-card">
-          <div className="eas-spec-card-icon" style={{ background: "var(--eas-signal-soft)", color: "var(--eas-signal)" }}>
-            <Icon name="layers" size={14} />
+          <div className="eas-spec-card-icon" style={{ background: "#EEF2FF", color: "#4F46E5" }}>
+            🚀
           </div>
           <div className="eas-spec-card-content">
             <span className="eas-spec-label">Phiên bản Hệ thống</span>
@@ -133,8 +129,8 @@ export function SystemVersionsPage() {
         </div>
 
         <div className="eas-spec-card">
-          <div className="eas-spec-card-icon" style={{ background: "var(--eas-ok-soft)", color: "var(--eas-ok)" }}>
-            <Icon name="file" size={14} />
+          <div className="eas-spec-card-icon" style={{ background: "#F0FDF4", color: "#16A34A" }}>
+            📜
           </div>
           <div className="eas-spec-card-content">
             <span className="eas-spec-label">Phiên bản Quy định</span>
@@ -147,8 +143,8 @@ export function SystemVersionsPage() {
         </div>
 
         <div className="eas-spec-card">
-          <div className="eas-spec-card-icon" style={{ background: "var(--eas-hover)", color: "var(--eas-ink-600)" }}>
-            <Icon name="spark" size={14} />
+          <div className="eas-spec-card-icon" style={{ background: "#FAF5FF", color: "#9333EA" }}>
+            🧠
           </div>
           <div className="eas-spec-card-content">
             <span className="eas-spec-label">AI Engine & Model</span>
@@ -165,8 +161,8 @@ export function SystemVersionsPage() {
         </div>
 
         <div className="eas-spec-card">
-          <div className="eas-spec-card-icon" style={{ background: "var(--eas-warn-soft)", color: "var(--eas-warn)" }}>
-            <Icon name="plug" size={14} />
+          <div className="eas-spec-card-icon" style={{ background: "#FFF7ED", color: "#EA580C" }}>
+            🔌
           </div>
           <div className="eas-spec-card-content">
             <span className="eas-spec-label">Kết nối API Nội bộ</span>
@@ -280,7 +276,7 @@ export function SystemVersionsPage() {
                       )}
                     </div>
                     <span className="eas-changelog-time" title={entry.created_at}>
-                      <Icon name="clock" size={14} /> {formattedDate}
+                      🕒 {formattedDate}
                     </span>
                   </div>
 
@@ -291,7 +287,7 @@ export function SystemVersionsPage() {
 
                   <div className="eas-changelog-foot">
                     <span className="eas-changelog-author">
-                      <Icon name="user" size={14} /> Thực hiện bởi: <strong>{entry.created_by_name || entry.created_by || "Admin"}</strong>
+                      👤 Thực hiện bởi: <strong>{entry.created_by_name || entry.created_by || "Admin"}</strong>
                     </span>
 
                     {(entry.old_value || entry.new_value) && (
@@ -300,7 +296,7 @@ export function SystemVersionsPage() {
                         className="btn btn-sm btn-outline"
                         onClick={() => setDiffModal(entry)}
                       >
-                        <Icon name="search" size={14} /> Xem Diff chi tiết
+                        🔍 Xem Diff chi tiết
                       </button>
                     )}
                   </div>
@@ -321,7 +317,7 @@ export function SystemVersionsPage() {
           >
             <div className="eas-modal-header">
               <div>
-                <h3 className="eas-modal-title">Chi tiết thay đổi</h3>
+                <h3 className="eas-modal-title">Chi tiết thay đổi (Before / After Diff)</h3>
                 <p className="eas-modal-sub">
                   Mã sự kiện: <code>{diffModal.id}</code> · {diffModal.title}
                 </p>
@@ -332,7 +328,7 @@ export function SystemVersionsPage() {
                 onClick={() => setDiffModal(null)}
                 aria-label="Đóng"
               >
-                <Icon name="x" size={16} />
+                ✕
               </button>
             </div>
 
@@ -354,7 +350,7 @@ export function SystemVersionsPage() {
               <div className="eas-diff-compare-container">
                 <div className="eas-diff-column">
                   <div className="eas-diff-col-head eas-diff-old-head">
-                    <span><span className="status-dot is-red" aria-hidden="true" />Trước thay đổi</span>
+                    <span>🔴 Trạng thái Trước (Before)</span>
                   </div>
                   <pre className="eas-diff-code">
                     {diffModal.old_value
@@ -367,7 +363,7 @@ export function SystemVersionsPage() {
 
                 <div className="eas-diff-column">
                   <div className="eas-diff-col-head eas-diff-new-head">
-                    <span><span className="status-dot is-green" aria-hidden="true" />Sau thay đổi</span>
+                    <span>🟢 Trạng thái Sau (After)</span>
                   </div>
                   <pre className="eas-diff-code">
                     {diffModal.new_value

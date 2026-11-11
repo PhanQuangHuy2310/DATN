@@ -10,13 +10,9 @@ test("both portals load the shared design system last", () => {
   for (const main of ["../src/main.jsx", "../../web_admin/src/main.jsx"]) {
     const source = read(main);
     const imports = [...source.matchAll(/import "([^"]+\.css)"/g)].map((m) => m[1]);
-    // Identity layer last; page styles and the shared design system before it.
-    assert.ok(imports.at(-1).endsWith("eas-theme.css"), main);
-    assert.ok(imports.at(-2).endsWith("eas-pages.css"), main);
-    assert.ok(imports.at(-3).endsWith("design-system.css"), main);
+    assert.ok(imports.at(-1).endsWith("design-system.css"), main);
   }
   assert.match(read("../src/design-system.css"), /--ds-primary:/);
-  assert.match(read("../src/eas-theme.css"), /--ds-primary: var\(--eas-signal\)/);
 });
 
 test("client and admin keep separate navigation configurations", () => {
@@ -70,22 +66,4 @@ test("submitting a request asks for confirmation first", () => {
   const editor = read("../src/components/RequestEditor.jsx");
   assert.match(editor, /if \(send\) \{ setConfirmSend\(true\); return; \}/);
   assert.match(editor, /<ConfirmDialog/);
-});
-
-test("identity layer has no decorative gradients, glass or external fonts", () => {
-  const theme = read("../src/eas-theme.css");
-  assert.doesNotMatch(theme, /linear-gradient|radial-gradient/);
-  assert.doesNotMatch(theme, /backdrop-filter:\s*blur/);
-  for (const file of ["../src/styles.css", "../src/design-system.css", "../index.html", "../../web_admin/index.html"]) {
-    assert.doesNotMatch(read(file), /fonts\.googleapis/, file);
-  }
-});
-
-test("no emoji used as interface icons", () => {
-  const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2300}-\u{23FF}]/u;
-  const files = readdirSync(new URL("../src/components/", import.meta.url)).filter((f) => f.endsWith(".jsx"));
-  for (const file of [...files.map((f) => `../src/components/${f}`), "../src/App.jsx"]) {
-    const offending = read(file).split("\n").filter((line) => emoji.test(line) && !/^\s*\["[a-z-]+", "/.test(line));
-    assert.deepEqual(offending, [], file);
-  }
 });

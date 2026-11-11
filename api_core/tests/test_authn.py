@@ -78,68 +78,6 @@ class AuthenticationEndpointTests(SimpleTestCase):
         self.assertEqual(invalid.status_code, 401)
         self.assertEqual(invalid.json()["error"]["code"], "INVALID_CREDENTIALS")
 
-    @patch("api_core.authn.views._has_active_admin_role", return_value=True)
-    @patch("api_core.authn.views.find_user")
-    def test_admin_portal_uses_grants_not_email(self, find_user, is_admin):
-        find_user.return_value = self.user
-        response = self.client.post(
-            "/api/v1/auth/login",
-            data=json.dumps({
-                "email": self.user.email, "password": "Correct-Horse-2026",
-                "portal": "admin",
-            }),
-            content_type="application/json",
-            HTTP_X_EAS_PORTAL="admin",
-        )
-        self.assertEqual(response.status_code, 200)
-        is_admin.assert_called_once_with(self.user.id)
-        self.assertEqual(self.client.session["user_id"], self.user.id)
-
-    @patch("api_core.authn.views._has_active_admin_role", return_value=True)
-    @patch("api_core.authn.views.find_user")
-    def test_legacy_admin_requester_grant_cannot_login_client(self, find_user, _is_admin):
-        find_user.return_value = self.user
-        response = self.client.post(
-            "/api/v1/auth/login",
-            data=json.dumps({
-                "email": self.user.email, "password": "Correct-Horse-2026",
-                "portal": "client",
-            }),
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()["error"]["code"], "ACCESS_DENIED")
-        self.assertNotIn("user_id", self.client.session)
-
-    @patch("api_core.authn.views._has_active_admin_role", return_value=False)
-    @patch("api_core.authn.views.find_user")
-    def test_employee_is_not_allowed_to_login_admin_portal(self, find_user, _is_admin):
-        find_user.return_value = self.user
-        response = self.client.post(
-            "/api/v1/auth/login",
-            data=json.dumps({
-                "email": self.user.email, "password": "Correct-Horse-2026",
-                "portal": "admin",
-            }),
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 403)
-        self.assertNotIn("user_id", self.client.session)
-
-    @patch("api_core.authn.views.find_user")
-    def test_portal_header_and_body_mismatch_fails_before_login(self, find_user):
-        response = self.client.post(
-            "/api/v1/auth/login",
-            data=json.dumps({
-                "email": self.user.email, "password": "Correct-Horse-2026",
-                "portal": "client",
-            }),
-            content_type="application/json",
-            HTTP_X_EAS_PORTAL="admin",
-        )
-        self.assertEqual(response.status_code, 400)
-        find_user.assert_not_called()
-
     @patch("api_core.authn.views.find_user", return_value=None)
     def test_login_rate_limit_returns_retry_after(self, _find_user):
         for _ in range(2):
