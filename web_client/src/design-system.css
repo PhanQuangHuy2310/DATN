@@ -2548,8 +2548,6 @@ button.rw-btn-secondary:hover:not(:disabled) {
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  font-size: 13px;
-  border-radius: 6px;
   border-radius: 6px;
   background: #f5f3ff;
   border: 1px solid #c4b5fd;
