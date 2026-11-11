@@ -22,6 +22,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from .mock_context import lookup_facility_available, lookup_leave_balance
+from .policy import apply_policy
 
 settings = get_settings()
 router = APIRouter()
@@ -45,6 +46,10 @@ class AutoApproveInput(BaseModel):
     )
     requester_name: str
     requester_dept: str
+    requester_email: str | None = Field(
+        None, description="Email để tra quỹ phép trong hệ thống HRM"
+    )
+    room_code: str | None = Field(None, description="Mã phòng họp (ROOM_BOOKING)")
 
 
 class AutoApproveDecision(BaseModel):
@@ -55,6 +60,7 @@ class AutoApproveDecision(BaseModel):
         None, description="Ghi chú hiển thị với badge 🤖"
     )
     evaluated_at: str
+    policy_version: str | None = Field(None, description="Bộ luật quy định đã áp dụng")
 
 
 # ---------------------------------------------------------------------------
@@ -78,8 +84,8 @@ class AutoApproveChecker:
             ok = False
 
         effective_balance = inp.leave_balance_remaining
-        if effective_balance <= 0 and inp.requester_name:
-            looked_up = lookup_leave_balance(inp.requester_name)
+        if effective_balance <= 0 and (inp.requester_email or inp.requester_name):
+            looked_up = lookup_leave_balance(inp.requester_email or inp.requester_name)
             if looked_up is not None:
                 effective_balance = looked_up
                 reasons.append(
@@ -110,12 +116,12 @@ class AutoApproveChecker:
         ok = True
 
         room_available = inp.room_available
-        if room_available is None:
-            # Tra cứu thử từ mock facilities snapshot
-            room_available = lookup_facility_available("PH-01")
+        if room_available is None and inp.room_code:
+            # Hệ thống quản lý toà nhà (qua API), đúng phòng của đơn.
+            room_available = lookup_facility_available(inp.room_code)
             if room_available is not None:
                 reasons.append(
-                    f"ℹ️ Đã tự động đối chiếu lịch phòng từ mock Facilities (khả dụng: {room_available})"
+                    f"ℹ️ Đã đối chiếu tình trạng phòng {inp.room_code} với hệ thống toà nhà"
                 )
 
         if room_available is None:
@@ -197,6 +203,21 @@ async def evaluate_auto_approve(body: AutoApproveInput):
     detail_reasons = []
     can_auto_approve = True
 
+    # --- Gate 0: Quy định đã nạp (đọc lại theo mtime, hiệu lực ngay) ---
+    risk_score, forced_manual, matched_rules, policy_version = apply_policy(
+        request_type=body.request_type,
+        amount=body.amount,
+        days=body.days_requested,
+        risk=body.risk_score,
+    )
+    if matched_rules:
+        detail_reasons.append(
+            f"ℹ️ Quy định {policy_version} áp dụng luật: {', '.join(matched_rules)}"
+        )
+    if forced_manual:
+        detail_reasons.append("❌ Quy định yêu cầu duyệt thủ công cho trường hợp này")
+        can_auto_approve = False
+
     # --- Gate 1: Template A chỉ ---
     if body.lifecycle_template != "A":
         detail_reasons.append(
@@ -207,14 +228,14 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         detail_reasons.append("✅ Template A (Approve-Only) — phù hợp auto-approve")
 
     # --- Gate 2: Risk score ---
-    if body.risk_score > settings.auto_approve_max_risk:
+    if risk_score > settings.auto_approve_max_risk:
         detail_reasons.append(
-            f"❌ Risk score {body.risk_score}/5 > ngưỡng {settings.auto_approve_max_risk} — cần người duyệt"
+            f"❌ Risk score {risk_score}/5 > ngưỡng {settings.auto_approve_max_risk} — cần người duyệt"
         )
         can_auto_approve = False
     else:
         detail_reasons.append(
-            f"✅ Risk score {body.risk_score}/5 ≤ {settings.auto_approve_max_risk}"
+            f"✅ Risk score {risk_score}/5 ≤ {settings.auto_approve_max_risk}"
         )
 
     # --- Gate 3: Business rules theo loại ---
@@ -249,4 +270,5 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         detail_reasons=detail_reasons,
         auto_approve_note=note,
         evaluated_at=datetime.now(timezone.utc).isoformat(),
+        policy_version=policy_version,
     )

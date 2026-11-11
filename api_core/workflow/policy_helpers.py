@@ -11,6 +11,28 @@ from uuid import UUID
 
 from api_core.domain.routing import ACCEPTOR_SLOTS, APPROVER_SLOTS, EXECUTOR_SLOTS
 
+# Codes of the mock asset / facility systems used by the borrowing forms.
+ROOM_CODES = [
+    "MR-DN-01",
+    "MR-HCM-01",
+    "MR-HCM-02",
+    "MR-HCM-03",
+    "MR-HCM-04",
+    "MR-HCM-05",
+    "MR-HN-01",
+    "MR-HN-02",
+]
+ASSET_CATEGORIES = [
+    "AV",
+    "FURNITURE",
+    "LAPTOP",
+    "MOBILE",
+    "MONITOR",
+    "NETWORK",
+    "PERIPHERAL",
+]
+VEHICLE_CODES = ["CAR-HCM-01", "CAR-HCM-02", "CAR-HCM-03"]
+
 # Readable mapping from the plan's approval-route descriptions to existing
 # single-executor engine slots. These are only suggested DRAFT routes.
 # Routes with parallel execution (RESIGNATION) are not publishable by P0.
@@ -73,24 +95,17 @@ CORE_EXTRA_TEMPLATES = {
             "additionalProperties": False,
             "properties": {
                 "title": {"type": "string", "minLength": 5, "maxLength": 150},
-                "room_name": {
-                    "type": "string",
-                    "enum": [
-                        "PHONG_HOP_A_10P",
-                        "PHONG_HOP_B_20P",
-                        "HOI_TRUONG_VIP",
-                        "STUDIO_MEDIA",
-                    ],
-                },
+                # Meeting rooms of mock_facilities (migration 17).
+                "room_code": {"type": "string", "enum": ROOM_CODES},
                 "booking_date": {"type": "string", "format": "date"},
                 "start_time": {"type": "string", "minLength": 5, "maxLength": 5},
                 "end_time": {"type": "string", "minLength": 5, "maxLength": 5},
-                "attendees_count": {"type": "integer", "minimum": 2, "maximum": 200},
+                "attendees_count": {"type": "integer", "minimum": 1, "maximum": 200},
                 "purpose": {"type": "string", "minLength": 5, "maxLength": 500},
             },
             "required": [
                 "title",
-                "room_name",
+                "room_code",
                 "booking_date",
                 "start_time",
                 "end_time",
@@ -319,6 +334,8 @@ CORE_EXTRA_TEMPLATES = {
             "additionalProperties": False,
             "properties": {
                 "title": {"type": "string", "minLength": 5, "maxLength": 150},
+                # Equipment groups of mock_assets (migration 17).
+                "asset_category": {"type": "string", "enum": ASSET_CATEGORIES},
                 "item_name": {"type": "string", "minLength": 2, "maxLength": 150},
                 "quantity": {"type": "integer", "minimum": 1, "maximum": 20},
                 "start_date": {"type": "string", "format": "date"},
@@ -327,7 +344,7 @@ CORE_EXTRA_TEMPLATES = {
             },
             "required": [
                 "title",
-                "item_name",
+                "asset_category",
                 "quantity",
                 "start_date",
                 "end_date",

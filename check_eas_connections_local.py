@@ -135,10 +135,10 @@ def main(argv=None):
     )
     a = p.parse_args(argv)
     c = Checks()
-    dbfile = ROOT / ".env.database"
+    dbfile = ROOT / ".env"
     local = read_env(dbfile)
     root = read_env(ROOT / ".env")
-    worker = read_env(ROOT / ".env.worker")
+    worker = read_env(ROOT / ".env")
     ai = read_env(ROOT / "ai_service" / ".env")
     effective = os.environ.copy()
     for k, v in local.items():
@@ -146,10 +146,10 @@ def main(argv=None):
     print("=== EAS LOCAL CONNECTIVITY AUDIT (read-only; credentials hidden) ===")
     for f in [
         "connect_database.py",
-        ".env.database",
+        ".env",
         "web_client/vite.config.js",
         "ai_service/main.py",
-        "ai_service/.env",
+        ".env",
     ]:
         c.add(
             "PASS" if (ROOT / f).is_file() else "FAIL",
@@ -157,7 +157,7 @@ def main(argv=None):
             "Có" if (ROOT / f).is_file() else "Không tìm thấy",
         )
     if not local:
-        c.add("FAIL", "Backend config", "Không đọc được .env.database")
+        c.add("FAIL", "Backend config", "Không đọc được .env")
     if local and (ROOT / "connect_database.py").exists():
         try:
             from connect_database import database_url
@@ -238,7 +238,7 @@ def main(argv=None):
         c.add(
             "WARN",
             "AI secret missing",
-            "Chưa cấu hình INTERNAL_API_SECRET trong ai_service/.env (đang dùng fallback local)",
+            "Chưa cấu hình INTERNAL_API_SECRET trong .env (đang dùng fallback local)",
         )
     aiurl = effective.get("EAS_AI_SERVICE_URL", "http://ai-service:8001").rstrip("/")
     if aiurl == "http://127.0.0.1:8001" or aiurl == "http://localhost:8001":
@@ -360,7 +360,7 @@ def main(argv=None):
         c.add(
             "WARN",
             "Worker DSN",
-            "Không tìm thấy EAS_WORKER_DATABASE_URL trong .env.worker (hoặc .env Docker)",
+            "Không tìm thấy EAS_WORKER_DATABASE_URL trong .env (hoặc .env Docker)",
         )
     elif has_placeholder:
         c.add(
@@ -489,7 +489,7 @@ def main(argv=None):
                     f"HTTP {status if status else 'không kết nối được'}",
                 )
             else:
-                c.add("FAIL", "Supabase bucket", "Thiếu cấu hình trong .env.database")
+                c.add("FAIL", "Supabase bucket", "Thiếu cấu hình trong .env")
         else:
             c.add(
                 "SKIP",

@@ -1,6 +1,6 @@
 """Safe diagnostic for DATN/connect_database.py. Does not print database passwords or URLs.
 
-Place beside connect_database.py and .env.database, then run:
+Place beside connect_database.py and .env, then run:
     .\\.venv\\Scripts\\python.exe diagnose_supabase.py
 """
 
@@ -18,8 +18,8 @@ def main() -> int:
             "ERROR: Dat file diagnose_supabase.py cung thu muc voi connect_database.py"
         )
         return 2
-    if not (root / ".env.database").is_file():
-        print("ERROR: Thieu .env.database tai thu muc DATN")
+    if not (root / ".env").is_file():
+        print("ERROR: Thieu .env tai thu muc DATN")
         return 2
 
     import connect_database as eas
@@ -37,7 +37,7 @@ def main() -> int:
     ]
     print("ENV_OVERRIDES:", ", ".join(overrides) if overrides else "none")
     try:
-        eas.load_environment(root / ".env.database")
+        eas.load_environment(root / ".env")
         uri = eas.database_url()
         parsed = urlsplit(uri)
     except (ValueError, eas.ConfigurationError) as exc:

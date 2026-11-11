@@ -19,7 +19,7 @@ export default function RoleTasks({ user, navigate }) {
       <div className="role-task-grid">
         {tasks.map((task) => <button type="button" key={task.role + task.page} className="role-task" onClick={() => navigate(task.page)}>
           <span className="role-task-icon" aria-hidden="true">{task.icon}</span>
-          <span className="role-task-content"><strong>{task.title}</strong><small>{task.description}</small><em>{task.uc}</em></span>
+          <span className="role-task-content"><strong>{task.title}</strong><small>{task.description}</small></span>
           <span className="role-task-arrow" aria-hidden="true">→</span>
         </button>)}
         {tasks.length === 0 && <p className="muted">Tài khoản chưa được gán vai trò nghiệp vụ. Liên hệ người quản trị danh tính.</p>}

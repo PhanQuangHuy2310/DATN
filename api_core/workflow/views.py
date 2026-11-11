@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import hmac
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from django.db import connection
+from django.conf import settings
+from django.db import DatabaseError, connection
 from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.utils import timezone as django_timezone
+from django.utils.http import content_disposition_header
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.authn.service import require_actor
@@ -28,6 +33,14 @@ from api_core.workflow.config_service import (
     validate_release_candidate,
 )
 from api_core.workflow.constants import ERR_REQUEST_NOT_FOUND
+from api_core.workflow.insights import (
+    build_request_progress,
+    list_ai_assessments,
+    org_chart,
+    preview_route,
+    run_ai_assessment,
+    team_report,
+)
 from api_core.workflow.ops_service import (
     list_ops_metadata,
     reassign_actor,
@@ -47,6 +60,7 @@ from api_core.workflow.service import (
     create_draft,
     decide_acceptance,
     decide_approval,
+    list_assignable_executors,
     report_execution_issue,
     start_execution,
     submit_execution,
@@ -100,6 +114,7 @@ def request_list(request: HttpRequest) -> JsonResponse:
     search_filter = (request.GET.get("q") or "").strip()[:100] or None
     type_code_filter = (request.GET.get("type_code") or "").strip() or None
     dept_raw = (request.GET.get("department_id") or "").strip() or None
+    requester_raw = (request.GET.get("requester_id") or "").strip() or None
     from_raw = (request.GET.get("created_from") or "").strip() or None
     to_raw = (request.GET.get("created_to") or "").strip() or None
 
@@ -109,6 +124,13 @@ def request_list(request: HttpRequest) -> JsonResponse:
             dept_filter = str(UUID(dept_raw))
         except (ValueError, TypeError):
             return api_error(request, "INVALID_DEPARTMENT_ID", status=400)
+
+    requester_filter = None
+    if requester_raw:
+        try:
+            requester_filter = str(UUID(requester_raw))
+        except (ValueError, TypeError):
+            return api_error(request, "INVALID_REQUESTER_ID", status=400)
 
     from_filter = None
     if from_raw:
@@ -127,14 +149,51 @@ def request_list(request: HttpRequest) -> JsonResponse:
     sql = """
         SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                r.updated_at, r.created_at,
-               COALESCE(r.risk_weight, rt.risk_weight),
-               COALESCE(r.approval_level, rt.approval_level)
+               COALESCE(v.risk_weight, rt.risk_weight),
+               COALESCE(v.approval_level, rt.approval_level),
+               u.display_name,
+               (SELECT au.display_name FROM eas.approval_step ast2
+                  JOIN eas.workflow_instance wi2 ON wi2.id = ast2.instance_id
+                  JOIN eas.app_user au ON au.id = ast2.assignee_id
+                 WHERE ast2.request_id = r.id AND ast2.state = 'ACTIVE'
+                   AND wi2.revision_id = r.current_revision_id
+                   AND r.status = 'PENDING_APPROVAL'
+                 LIMIT 1),
+               (SELECT eu.display_name FROM eas.workflow_instance wi3
+                  JOIN eas.app_user eu ON eu.id = CASE
+                    WHEN r.status = 'WAITING_FOR_ACCEPTANCE' THEN wi3.acceptor_id
+                    ELSE COALESCE((SELECT ea3.executor_id FROM eas.execution_attempt ea3
+                                    WHERE ea3.instance_id = wi3.id
+                                      AND ea3.state IN ('READY','RUNNING','SUBMITTED')
+                                    ORDER BY ea3.attempt_no DESC LIMIT 1),
+                                  wi3.planned_executor_id) END
+                 WHERE wi3.revision_id = r.current_revision_id
+                   AND r.status IN ('READY_FOR_EXECUTION','IN_PROGRESS','WAITING_FOR_ACCEPTANCE')
+                 LIMIT 1),
+               (SELECT st.due_at FROM eas.sla_stage st
+                 WHERE st.request_id = r.id AND st.closed_at IS NULL
+                 ORDER BY st.started_at DESC LIMIT 1),
+               rt.name,
+               COALESCE(
+                 NULLIF(TRIM(v.payload->>'title'), ''),
+                 NULLIF(TRIM(r.draft_payload->>'title'), ''),
+                 rt.name
+               ),
+               COALESCE(v.department_id, u.department_id)::text,
+               d.name,
+               COALESCE(v.amount_vnd, r.draft_amount_vnd),
+               r.requester_id::text
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
         LEFT JOIN eas.app_user u ON u.id = r.requester_id
+        LEFT JOIN eas.department d ON d.id = COALESCE(v.department_id, u.department_id)
         WHERE (%s::text IS NULL OR r.status = %s)
-          AND (%s::text IS NULL OR STRPOS(LOWER(r.code), LOWER(%s::text)) > 0)
+          AND (%s::uuid IS NULL OR r.requester_id = %s::uuid)
+          AND (%s::text IS NULL OR (STRPOS(LOWER(r.code), LOWER(%s::text)) > 0
+               OR STRPOS(LOWER(COALESCE(v.payload->>'title', r.draft_payload->>'title', '')),
+                         LOWER(%s::text)) > 0
+               OR STRPOS(LOWER(COALESCE(u.display_name, '')), LOWER(%s::text)) > 0))
           AND (%s::text IS NULL OR rt.code = %s)
           AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
           AND (%s::timestamptz IS NULL OR r.created_at >= %s::timestamptz)
@@ -258,6 +317,10 @@ def request_list(request: HttpRequest) -> JsonResponse:
     params = [
         status_filter,
         status_filter,
+        requester_filter,
+        requester_filter,
+        search_filter,
+        search_filter,
         search_filter,
         search_filter,
         type_code_filter,
@@ -291,11 +354,13 @@ def request_list(request: HttpRequest) -> JsonResponse:
     ]
 
     with connection.cursor() as cursor:
-        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
-        cursor.execute(sql, params)
+        cursor.execute(  # NOSONAR python:S2077 - query parameterized with psycopg placeholders
+            sql, params
+        )
         rows = cursor.fetchall()
 
     items = []
+    now = django_timezone.now()
     for row in rows[:limit]:
         risk_w, app_lvl = resolve_five_level_metadata(
             row[2],
@@ -313,6 +378,19 @@ def request_list(request: HttpRequest) -> JsonResponse:
                 "created_at": row[6].isoformat(),
                 "risk_weight": risk_w,
                 "approval_level": app_lvl,
+                "requester_name": row[9] if len(row) > 9 else None,
+                "current_assignee_name": (
+                    (row[10] or row[11]) if len(row) > 11 else None
+                ),
+                "due_at": row[12].isoformat() if len(row) > 12 and row[12] else None,
+                # Server clock decides overdue so clients never disagree.
+                "overdue": bool(len(row) > 12 and row[12] and row[12] < now),
+                "type_name": row[13] if len(row) > 13 else None,
+                "title": row[14] if len(row) > 14 else None,
+                "department_id": row[15] if len(row) > 15 else None,
+                "department_name": row[16] if len(row) > 16 else None,
+                "amount_vnd": row[17] if len(row) > 17 else None,
+                "requester_id": row[18] if len(row) > 18 else None,
             }
         )
     return JsonResponse(
@@ -333,25 +411,91 @@ def request_list_or_create(request: HttpRequest) -> JsonResponse:
     return api_error(request, "METHOD_NOT_ALLOWED", status=405)
 
 
+@csrf_exempt  # NOSONAR python:S4502 - machine-to-machine call with HMAC token
+@require_POST
+def internal_auto_approve_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    from api_core.workflow.auto_approval import try_auto_approve
+
+    supplied = request.headers.get("X-Internal-Secret") or ""
+    expected = settings.EAS_WORKER_INTERNAL_SECRET
+    if not expected or not hmac.compare_digest(supplied, expected):
+        return api_error(request, "UNAUTHORIZED", status=401)
+    result = try_auto_approve(str(request_id), correlation_id(request))
+    return JsonResponse(
+        {
+            "approved": result is not None,
+            "result": result,
+            "correlation_id": correlation_id(request),
+        }
+    )
+
+
+@require_actor("APPROVER")
+def assignable_executors_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    try:
+        result = list_assignable_executors(
+            actor=request.actor, request_id=str(request_id)
+        )
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    result["correlation_id"] = correlation_id(request)
+    return JsonResponse(result)
+
+
 @require_actor()
 def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
     try:
-        req_uuid = str(UUID(request_id))
+        req_uuid = str(UUID(str(request_id)))
     except (ValueError, TypeError, AttributeError):
         return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
+    # Steps and the active workflow are fetched as JSON in the same statement:
+    # each round trip to the Supabase pooler costs far more than the query.
     with connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT r.id::text, r.code, rt.code, r.status, r.lock_version,
                    r.requester_id::text, r.draft_payload, v.payload, v.revision_no,
                    r.created_at, r.updated_at,
-                   COALESCE(v.risk_weight, r.risk_weight, rt.risk_weight),
-                   COALESCE(v.approval_level, r.approval_level, rt.approval_level)
+                   COALESCE(v.risk_weight, rt.risk_weight),
+                   COALESCE(v.approval_level, rt.approval_level),
+                   (SELECT COALESCE(json_agg(json_build_object(
+                        'step_no', s.step_no, 'assignee_id', s.assignee_id,
+                        'state', s.state, 'activated_at', s.activated_at,
+                        'closed_at', s.closed_at,
+                        'tier_level', COALESCE(s.tier_level, s.step_no),
+                        'resolver_code', s.resolver_code,
+                        'assignee_name', su.display_name) ORDER BY s.step_no), '[]'::json)
+                      FROM eas.approval_step s
+                      JOIN eas.workflow_instance si ON si.id = s.instance_id
+                      LEFT JOIN eas.app_user su ON su.id = s.assignee_id
+                     WHERE s.request_id = r.id AND si.revision_id = r.current_revision_id),
+                   (SELECT json_build_object(
+                        'lifecycle', wi.lifecycle,
+                        'planned_executor_id', wi.planned_executor_id,
+                        'acceptor_id', wi.acceptor_id,
+                        'attempt', (SELECT json_build_object(
+                            'id', a.id, 'attempt_no', a.attempt_no,
+                            'executor_id', a.executor_id, 'state', a.state,
+                            'result_note', a.result_note,
+                            'external_reference', a.external_reference)
+                          FROM eas.execution_attempt a
+                         WHERE a.instance_id = wi.id
+                           AND a.state IN ('READY', 'RUNNING', 'SUBMITTED')
+                         ORDER BY a.attempt_no DESC LIMIT 1))
+                      FROM eas.workflow_instance wi
+                     WHERE wi.request_id = r.id AND wi.revision_id = r.current_revision_id
+                     LIMIT 1),
+                   u.display_name,
+                   COALESCE(v.department_id, u.department_id)::text,
+                   d.name,
+                   COALESCE(v.amount_vnd, r.draft_amount_vnd),
+                   rt.name
             FROM eas.request r
             JOIN eas.request_type rt ON rt.id = r.type_id
             LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
             LEFT JOIN eas.app_user u ON u.id = r.requester_id
+            LEFT JOIN eas.department d ON d.id = COALESCE(v.department_id, u.department_id)
             WHERE r.id = %s
               AND (
                 r.requester_id = %s
@@ -382,36 +526,16 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
         if not row:
             return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
-        cursor.execute(
-            """
-            SELECT s.step_no, s.assignee_id::text, s.state, s.activated_at, s.closed_at,
-                   s.tier_level, s.resolver_code, u.display_name
-            FROM eas.approval_step s
-            JOIN eas.workflow_instance i ON i.id = s.instance_id
-            JOIN eas.request r ON r.id = i.request_id
-            LEFT JOIN eas.app_user u ON u.id = s.assignee_id
-            WHERE r.id = %s AND i.revision_id = r.current_revision_id
-            ORDER BY s.step_no
-            """,
-            [req_uuid],
+        step_items = list(row[13] or []) if len(row) > 13 else []
+        workflow_payload = row[14] if len(row) > 14 else None
+        progress = build_request_progress(
+            cursor,
+            request_id=req_uuid,
+            status=row[3],
+            steps=step_items,
+            workflow=workflow_payload,
+            requester_id=row[5],
         )
-        steps = cursor.fetchall()
-        cursor.execute(
-            """
-            SELECT i.lifecycle, i.planned_executor_id::text, i.acceptor_id::text,
-                   a.id::text, a.attempt_no, a.executor_id::text, a.state,
-                   a.result_note, a.external_reference
-            FROM eas.workflow_instance i
-            LEFT JOIN eas.execution_attempt a ON a.instance_id = i.id
-              AND a.state IN ('READY', 'RUNNING', 'SUBMITTED')
-            WHERE i.request_id = %s AND i.revision_id = (
-              SELECT current_revision_id FROM eas.request WHERE id = %s
-            )
-            ORDER BY a.attempt_no DESC NULLS LAST LIMIT 1
-            """,
-            [req_uuid, req_uuid],
-        )
-        workflow = cursor.fetchone()
 
     status = row[3]
     requester_id = row[5]
@@ -432,64 +556,69 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
             revision_payload if revision_payload is not None else draft_payload
         )
 
-    workflow_payload = None
-    if workflow:
-        attempt_payload = (
-            {
-                "id": workflow[3],
-                "attempt_no": workflow[4],
-                "executor_id": workflow[5],
-                "state": workflow[6],
-                "result_note": workflow[7],
-                "external_reference": workflow[8],
-            }
-            if workflow[3]
-            else None
-        )
-        workflow_payload = {
-            "lifecycle": workflow[0],
-            "planned_executor_id": workflow[1],
-            "acceptor_id": workflow[2],
-            "attempt": attempt_payload,
-        }
-
     raw_risk = row[11] if len(row) > 11 else None
-    if steps:
-        raw_app_level = len(steps)
+    if step_items:
+        raw_app_level = len(step_items)
     elif len(row) > 12:
         raw_app_level = row[12]
     else:
         raw_app_level = None
     risk_w, app_lvl = resolve_five_level_metadata(row[2], raw_risk, raw_app_level)
+    resolved_users: dict[str, str] = {}
+    if isinstance(effective_payload, dict):
+        candidate_uuids: list[str] = []
+        for val in effective_payload.values():
+            if isinstance(val, str) and len(val) == 36:
+                try:
+                    candidate_uuids.append(str(UUID(val)))
+                except (ValueError, TypeError):
+                    continue
+        if candidate_uuids:
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT id::text, display_name FROM eas.app_user WHERE id = ANY(%s::uuid[])",
+                        [candidate_uuids],
+                    )
+                    resolved_users = {
+                        urow[0]: urow[1]
+                        for urow in (cursor.fetchall() or [])
+                        if urow and len(urow) >= 2 and urow[1]
+                    }
+            except (DatabaseError, AttributeError, TypeError):
+                resolved_users = {}
+
+    ai_approval = None
+    if row[3] == "COMPLETED":
+        from api_core.workflow.auto_approval import ai_approval_info
+
+        with connection.cursor() as cursor:
+            ai_approval = ai_approval_info(cursor, row[0], row[3])
     return JsonResponse(
         {
             "request": {
+                "ai_auto_approval": ai_approval,
                 "id": row[0],
                 "code": row[1],
                 "type_code": row[2],
+                "type_name": row[19] if len(row) > 19 else None,
                 "status": row[3],
                 "lock_version": row[4],
                 "requester_id": row[5],
+                "requester_name": row[15] if len(row) > 15 else None,
+                "department_id": row[16] if len(row) > 16 else None,
+                "department_name": row[17] if len(row) > 17 else None,
+                "amount_vnd": row[18] if len(row) > 18 else None,
                 "payload": effective_payload,
+                "resolved_users": resolved_users,
                 "revision_no": row[8],
                 "created_at": row[9].isoformat(),
                 "updated_at": row[10].isoformat(),
                 "risk_weight": risk_w,
                 "approval_level": app_lvl,
-                "approval_steps": [
-                    {
-                        "step_no": step[0],
-                        "assignee_id": step[1],
-                        "state": step[2],
-                        "activated_at": step[3].isoformat() if step[3] else None,
-                        "closed_at": step[4].isoformat() if step[4] else None,
-                        "tier_level": step[5] if len(step) > 5 and step[5] else step[0],
-                        "resolver_code": step[6] if len(step) > 6 else None,
-                        "assignee_name": step[7] if len(step) > 7 else None,
-                    }
-                    for step in steps
-                ],
+                "approval_steps": step_items,
                 "workflow": workflow_payload,
+                "progress": progress,
             },
             "correlation_id": correlation_id(request),
         }
@@ -559,6 +688,72 @@ def submit(request: HttpRequest, request_id: str | None = None) -> JsonResponse:
     response["X-Idempotent-Replay"] = "true" if result.replayed else "false"
     response["X-Correlation-ID"] = correlation_id(request)
     return response
+
+
+@require_actor("APPROVER")
+def delegations_view(request: HttpRequest) -> JsonResponse:
+    from api_core.http import JsonBodyError as _BodyError
+    from api_core.workflow import delegation
+
+    try:
+        if request.method == "GET":
+            result = delegation.list_delegations(actor=request.actor)
+            status = 200
+        elif request.method == "POST":
+            result = delegation.create_delegation(
+                actor=request.actor,
+                body=parse_json_object(request),
+                correlation_id=correlation_id(request),
+            )
+            status = 201
+        else:
+            return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    except _BodyError as exc:
+        return api_error(request, str(exc), status=400)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse(
+        {**result, "correlation_id": correlation_id(request)}, status=status
+    )
+
+
+@require_GET
+@require_actor("APPROVER")
+def delegation_candidates_view(request: HttpRequest) -> JsonResponse:
+    from api_core.workflow import delegation
+
+    return JsonResponse(
+        {
+            **delegation.delegate_candidates(actor=request.actor),
+            "correlation_id": correlation_id(request),
+        }
+    )
+
+
+@require_POST
+@require_actor("APPROVER")
+def delegation_revoke_view(request: HttpRequest, delegation_id) -> JsonResponse:
+    from api_core.workflow import delegation
+
+    try:
+        result = delegation.revoke_delegation(
+            actor=request.actor,
+            delegation_id=str(delegation_id),
+            correlation_id=correlation_id(request),
+        )
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse({**result, "correlation_id": correlation_id(request)})
+
+
+@require_POST
+@require_actor("APPROVER")
+def revoke_ai_approval_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    from api_core.workflow.auto_approval import revoke_ai_auto_approval
+
+    return _command_response(
+        request, revoke_ai_auto_approval, request_id=str(request_id)
+    )
 
 
 @require_POST
@@ -664,7 +859,7 @@ def report_issue_view(request: HttpRequest, request_id: str) -> JsonResponse:
 @require_actor()
 def revisions_list(request: HttpRequest, request_id: str) -> JsonResponse:
     try:
-        req_uuid = str(UUID(request_id))
+        req_uuid = str(UUID(str(request_id)))
     except (ValueError, TypeError, AttributeError):
         return api_error(request, ERR_REQUEST_NOT_FOUND, status=404)
 
@@ -764,8 +959,8 @@ def revision_detail(
     request: HttpRequest, request_id: str, revision_id: str
 ) -> JsonResponse:
     try:
-        req_uuid = str(UUID(request_id))
-        rev_uuid = str(UUID(revision_id))
+        req_uuid = str(UUID(str(request_id)))
+        rev_uuid = str(UUID(str(revision_id)))
     except (ValueError, TypeError, AttributeError):
         return api_error(request, "NOT_FOUND", status=404)
 
@@ -880,13 +1075,15 @@ def attachment_download(request: HttpRequest, attachment_id: str) -> HttpRespons
 
     safe_mime = (
         "application/octet-stream"
-        if mime in ("text/html", "application/xhtml+xml", "text/xml")
+        if mime in ("text/html", "application/xhtml+xml", "text/xml", "image/svg+xml")
         else mime
     )
     response = HttpResponse(
         data, content_type=safe_mime
     )  # NOSONAR pythonsecurity:S5131
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    # RFC 6266 quoting/encoding: Vietnamese names survive and a stored name
+    # cannot inject extra header parameters.
+    response["Content-Disposition"] = content_disposition_header(True, filename)
     response["Content-Security-Policy"] = "default-src 'none'"
     response["Cache-Control"] = "no-store"
     response["X-Content-Type-Options"] = "nosniff"
@@ -1071,7 +1268,7 @@ def request_audit_verify_view(request: HttpRequest, request_id: str) -> JsonResp
 
 
 @require_GET
-@require_actor()
+@require_actor("AUDITOR", "POLICY_ADMIN", "OPS_ADMIN")
 def admin_events_view(request: HttpRequest) -> JsonResponse:
     try:
         res = list_admin_events(actor=request.actor, query_params=request.GET.dict())
@@ -1260,3 +1457,62 @@ def system_maintenance_complete_view(request: HttpRequest) -> JsonResponse:
         {"status": "ok", "maintenance": info, "correlation_id": cid},
         status=200,
     )
+
+
+@require_POST
+@require_actor("REQUESTER")
+def route_preview_view(request: HttpRequest) -> JsonResponse:
+    try:
+        body = parse_json_object(request)
+        return JsonResponse(
+            {
+                "preview": preview_route(request.actor, body),
+                "correlation_id": correlation_id(request),
+            }
+        )
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+
+
+@require_GET
+@require_actor()
+def team_report_view(request: HttpRequest) -> JsonResponse:
+    try:
+        return JsonResponse(team_report(request.actor, request.GET.dict()))
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+
+
+@require_GET
+@require_actor()
+def org_chart_view(request: HttpRequest) -> JsonResponse:
+    return JsonResponse(org_chart(request.actor))
+
+
+@require_actor()
+def _ai_assessment_history(request: HttpRequest, request_id: str) -> JsonResponse:
+    try:
+        return JsonResponse(list_ai_assessments(request.actor, request_id))
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+
+
+# Running an assessment appends to the request audit chain, so it is limited to
+# business participants; auditors and other administrators stay read-only.
+@require_actor("REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR")
+def _ai_assessment_run(request: HttpRequest, request_id: str) -> JsonResponse:
+    try:
+        result = run_ai_assessment(request.actor, request_id, correlation_id(request))
+        return JsonResponse(result, status=201)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+
+
+def ai_assessment_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    if request.method == "GET":
+        return _ai_assessment_history(request, request_id)
+    if request.method == "POST":
+        return _ai_assessment_run(request, request_id)
+    return api_error(request, "METHOD_NOT_ALLOWED", status=405)

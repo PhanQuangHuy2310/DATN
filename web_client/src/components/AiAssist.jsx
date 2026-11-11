@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { api } from "../api.js";
-import { errorText } from "../domain.js";
+import { api, notify } from "../api.js";
+import { errorText, types } from "../domain.js";
 
 function riskLevel(score) {
   if (score <= 2) return "low";
@@ -17,24 +17,25 @@ function mapPredictedType(predicted) {
   return null;
 }
 
-function riskPayload(type, amount) {
+function riskPayload(type, amount, lifecycle, riskWeight) {
   return {
     request_type: type.toLowerCase(),
-    lifecycle_template: type === "EQUIPMENT" ? "B" : "A",
-    risk_weight: type === "EQUIPMENT" ? 3 : 2,
+    lifecycle_template: lifecycle || "A",
+    risk_weight: Number(riskWeight) || 3,
     amount_vnd: amount,
   };
 }
 
 /**
- * AI hỗ trợ khi soạn hồ sơ: gợi ý phân loại + dự đoán rủi ro.
- * Chỉ mang tính tham khảo; không tự phê duyệt (AI auto-approve ngoài P0).
+ * Hỗ trợ nội dung và phân tích rủi ro; không thay quyết định của người duyệt.
  */
-export function AiRequestAssist({ type, getValues, onSuggestType }) {
+export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSuggestType }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [classify, setClassify] = useState(null),
-    [risk, setRisk] = useState(null);
+    [risk, setRisk] = useState(null),
+    [steps, setSteps] = useState({}),
+    [suggested, setSuggested] = useState(null);
 
   async function run() {
     const { title = "", reason = "", amount_vnd: amount = 0 } = getValues();
@@ -44,26 +45,40 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
     }
     setBusy(true);
     setError("");
-    try {
-      const [c, r] = await Promise.all([
-        api("/api/v1/ai/classify", {
-          method: "POST",
-          body: JSON.stringify({ title, description: reason }),
-        }),
-        api("/api/v1/ai/risk-score", {
-          method: "POST",
-          body: JSON.stringify(riskPayload(type, Number(amount) || 0)),
-        }),
-      ]);
-      setClassify(c.data);
-      setRisk(r.data);
-      const suggested = mapPredictedType(c.data?.predicted_request_type);
-      if (suggested && suggested !== type) onSuggestType?.(suggested);
-    } catch (e) {
-      setError(`AI tạm thời không khả dụng: ${errorText(e)}`);
-    } finally {
-      setBusy(false);
-    }
+    setClassify(null);
+    setRisk(null);
+    setSuggested(null);
+    setSteps({ classify: "running", risk: "running" });
+    const tasks = await Promise.allSettled([
+      api("/api/v1/ai/classify", {
+        method: "POST", body: JSON.stringify({ title, description: reason }),
+      }).then((response) => {
+        setClassify(response.data);
+        setSteps((prev) => ({ ...prev, classify: response.data?.fallback_used ? "fallback" : "done" }));
+        // Only suggest: switching the form discards what the user typed.
+        const mapped = mapPredictedType(response.data?.predicted_request_type);
+        setSuggested(mapped && mapped !== type ? mapped : null);
+        return response;
+      }).catch((error) => {
+        setSteps((prev) => ({ ...prev, classify: "error" }));
+        throw error;
+      }),
+      api("/api/v1/ai/risk-score", {
+        method: "POST", body: JSON.stringify(riskPayload(type, Number(amount) || 0, lifecycle, riskWeight)),
+      }).then((response) => {
+        setRisk(response.data);
+        setSteps((prev) => ({ ...prev, risk: response.data?.fallback_used ? "fallback" : "done" }));
+        return response;
+      }).catch((error) => {
+        setSteps((prev) => ({ ...prev, risk: "error" }));
+        throw error;
+      }),
+    ]);
+    const rejected = tasks.filter((item) => item.status === "rejected");
+    if (rejected.length) setError(`Một số phân tích chưa hoàn tất: ${errorText(rejected[0].reason)}`);
+    else if (tasks.some((item) => item.value?.data?.fallback_used)) setError("AI chưa phản hồi đầy đủ; một phần kết quả là dữ liệu dự phòng, không phải kết quả mô hình.");
+    else notify("AI đã hoàn thành phân loại và đánh giá rủi ro");
+    setBusy(false);
   }
 
   return (
@@ -74,6 +89,16 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
           {busy ? "AI đang xử lý…" : "Gợi ý & đánh giá rủi ro"}
         </button>
       </div>
+      {Object.keys(steps).length > 0 && (
+        <div className="ai-progress" aria-live="polite">
+          {[["classify", "Phân loại nội dung"], ["risk", "Đánh giá rủi ro"]].map(([key, title]) => (
+            <div className={`ai-progress-step ${steps[key]}`} key={key}>
+              <span aria-hidden="true">{steps[key] === "done" ? "" : ["error", "fallback"].includes(steps[key]) ? "!" : "◌"}</span>
+              <span>{title}</span><small>{steps[key] === "done" ? "Hoàn thành" : steps[key] === "error" ? "Không thành công" : steps[key] === "fallback" ? "Dữ liệu dự phòng" : "Đang xử lý…"}</small>
+            </div>
+          ))}
+        </div>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}
@@ -81,10 +106,10 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
       )}
       {classify && (
         <p>
-          Loại đề xuất: <strong>{classify.predicted_request_type}</strong> (độ
+          Loại đề xuất: <strong>{types[classify.predicted_request_type] || "Yêu cầu được phân loại"}</strong> (độ
           tin cậy{" "}
           {Math.round((classify.confidence_request_type || 0) * 100)}%) · Phòng
-          ban: <strong>{classify.predicted_department}</strong>
+          ban: <strong>{({HR:"Nhân sự",FINANCE:"Tài chính",IT:"Công nghệ thông tin",OPS:"Vận hành",LEGAL:"Pháp chế",GENERAL:"Bộ phận liên quan"})[classify.predicted_department] || "Bộ phận liên quan"}</strong>
           {classify.workflow_suggestion && (
             <>
               <br />
@@ -93,13 +118,22 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
           )}
         </p>
       )}
+      {suggested && onSuggestType && (
+        <p className="ai-suggest-switch">
+          AI thấy nội dung giống loại <strong>{types[suggested] || suggested}</strong> hơn.{" "}
+          <button type="button" className="secondary" onClick={() => { onSuggestType(suggested); setSuggested(null); }}>
+            Chuyển sang biểu mẫu này
+          </button>{" "}
+          <small className="muted">(dữ liệu đã nhập ở biểu mẫu hiện tại sẽ không được giữ)</small>
+        </p>
+      )}
       {risk && (
         <p>
           Điểm rủi ro:{" "}
           <span className={`badge badge-${riskLevel(risk.risk_score)}`}>
             {risk.risk_score}/5 ({risk.risk_label})
           </span>{" "}
-          · Đủ điều kiện duyệt nhanh:{" "}
+          · Có thể ưu tiên xem xét:{" "}
           <strong>{risk.auto_approve_eligible ? "Có" : "Không"}</strong>
         </p>
       )}
@@ -107,15 +141,17 @@ export function AiRequestAssist({ type, getValues, onSuggestType }) {
   );
 }
 
-/** AI tóm tắt nội dung hồ sơ cho người xử lý. */
+
 export function AiSummary({ request }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [summary, setSummary] = useState(null);
+    [summary, setSummary] = useState(null),
+    [phase, setPhase] = useState("idle");
 
   async function run() {
     setBusy(true);
     setError("");
+    setPhase("running");
     try {
       const res = await api("/api/v1/ai/summarize", {
         method: "POST",
@@ -128,8 +164,12 @@ export function AiSummary({ request }) {
         }),
       });
       setSummary(res.data);
+      setPhase(res.data?.fallback_used ? "fallback" : "done");
+      if (res.data?.fallback_used) setError("AI không phản hồi. Phần hiển thị là tóm tắt dự phòng.");
+      else notify("AI đã tạo tóm tắt thành công");
     } catch (e) {
       setError(`Không thể tóm tắt: ${errorText(e)}`);
+      setPhase("error");
     } finally {
       setBusy(false);
     }
@@ -145,6 +185,7 @@ export function AiSummary({ request }) {
           {error}
         </p>
       )}
+      {phase !== "idle" && <div className={`ai-progress-step ${phase}`} role="status"><span aria-hidden="true">{phase === "done" ? "" : ["error", "fallback"].includes(phase) ? "!" : "◌"}</span> {phase === "running" ? "Dịch vụ AI đang phân tích và tạo tóm tắt…" : phase === "done" ? "Đã hoàn thành tóm tắt" : phase === "fallback" ? "Dịch vụ AI không sẵn sàng — bản dự phòng" : "Tóm tắt chưa thành công"}</div>}
       {summary && (
         <>
           <p>

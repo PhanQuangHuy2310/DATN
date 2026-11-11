@@ -1,7 +1,7 @@
 """Read-only check of current PostgreSQL schema against 2026-10-26 EAS contract.
 
 Windows: python check_schema_contract.py
-Uses .env.database; never prints a URL or credential.
+Uses .env; never prints a URL or credential.
 """
 from __future__ import annotations
 import sys
@@ -12,9 +12,13 @@ REQUIRED = {
     "request_type": {"id", "code", "lifecycle", "is_active", "active_release_id", "name", "description", "category"},
     "config_release": {"id", "type_id", "version", "state", "form_schema", "route_rules", "actor_bindings", "sla_profile"},
     "request": {"id", "code", "type_id", "requester_id", "draft_payload", "status"},
-    "app_user": {"id", "username", "display_name", "department_id", "is_active"},
+    "app_user": {"id", "email", "display_name", "department_id", "is_active"},
 }
-ALLOWED_CATEGORIES = {"HR", "IT", "FACILITY", "PROCUREMENT", "ASSET", "FINANCE", "GENERAL"}
+ALLOWED_CATEGORIES = {
+    "HR", "IT", "FACILITY", "PROCUREMENT", "ASSET", "FINANCE", "GENERAL",
+    "OPERATIONS", "LEGAL", "ADMIN", "RESOURCE", "WORK", "TIME", "SALES",
+    "ABSENCE", "WORKTIME", "BORROW", "PROVISION", "PAYMENT", "PEOPLE", "SUPPORT",
+}
 
 
 def _verify_tables(cur) -> bool:
@@ -45,7 +49,7 @@ def _verify_categories(cur) -> bool:
     return ok
 
 def main():
-    load_environment(Path(__file__).with_name(".env.database"))
+    load_environment(Path(__file__).with_name(".env"))
     import psycopg
     try:
         with psycopg.connect(database_url(), connect_timeout=8, prepare_threshold=None,

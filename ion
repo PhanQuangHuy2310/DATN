@@ -1,0 +1,40 @@
+[1mdiff --git a/ai_service/Dockerfile b/ai_service/Dockerfile[m
+[1mindex fe8e639..811c25b 100644[m
+[1m--- a/ai_service/Dockerfile[m
+[1m+++ b/ai_service/Dockerfile[m
+[36m@@ -1,10 +1,10 @@[m
+ # syntax=docker/dockerfile:1.7[m
+[31m-# ---------------------------------------------------------------------------[m
+[32m+[m[32m#---------------------------------------------------------------------------[m
+ # Stage 1 — builder: virtualenv with all wheels + pre-downloaded OCR models.[m
+ # PaddlePaddle (largest dependency) is its own layer so changing other[m
+ # requirements does not reinstall it; pip downloads stay in a BuildKit cache[m
+ # mount and never land in an image layer.[m
+[31m-# ---------------------------------------------------------------------------[m
+[32m+[m[32m#---------------------------------------------------------------------------[m
+ FROM python:3.11-slim AS builder[m
+ [m
+ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \[m
+[36m@@ -30,14 +30,14 @@[m [mCOPY requirements.txt .[m
+ RUN --mount=type=cache,target=/root/.cache/pip \[m
+     pip install -r requirements.txt[m
+ [m
+[31m-# Pre-download the Vietnamese OCR models into the image (no network at runtime).[m
+[31m-# Without network the build still succeeds; models then download on first use.[m
+[31m-# If it fails (seen under BuildKit: zlib stream error), the compose volume[m
+[31m-# ai_ocr_models keeps the models after the first runtime download instead.[m
+[31m-RUN (if [ "$ENABLE_PADDLE_OCR" = "true" ]; then \[m
+[31m-       python -c "from paddleocr import PaddleOCR; PaddleOCR(lang='vi', device='cpu', use_textline_orientation=True, use_doc_orientation_classify=False, use_doc_unwarping=False, enable_mkldnn=False)"; \[m
+[31m-     fi || echo "OCR model pre-download skipped") \[m
+[31m-    && mkdir -p /root/.paddlex \[m
+[32m+[m[32m# Do not initialize PaddleOCR during Docker build (avoids SIGBUS on Docker Desktop).[m
+[32m+[m[32m# PaddleOCR is still installed. Models will be downloaded on first OCR use[m
+[32m+[m[32m# and persisted in the ai_ocr_models named Docker volume.[m
+[32m+[m[32mARG PRELOAD_OCR_MODELS=false[m
+[32m+[m[32mRUN mkdir -p /root/.paddlex \[m
+[32m+[m[32m    && if [ "$ENABLE_PADDLE_OCR" = "true" ] && [ "$PRELOAD_OCR_MODELS" = "true" ]; then \[m
+[32m+[m[32m         python -c "from paddleocr import PaddleOCR; PaddleOCR(lang='vi', device='cpu', use_textline_orientation=True, use_doc_orientation_classify=False, use_doc_unwarping=False, enable_mkldnn=False)"; \[m
+[32m+[m[32m       fi \[m
+     && find /opt/venv -name '__pycache__' -type d -prune -exec rm -rf {} +[m
+ [m
+ # ---------------------------------------------------------------------------[m

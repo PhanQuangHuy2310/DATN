@@ -1,91 +1,723 @@
-import { useEffect, useState } from "react";
-import { api, initializeCsrf } from "./api.js";
-import { PasswordField, PageControls } from "./components/ux.jsx";
-import { canNavigate } from "./rolePolicy.js";
-import RoleTasks from "./components/RoleTasks.jsx";
-import AuditorWorkspace from "./components/AuditorWorkspace.jsx";
-import { date, errorText, roles, statuses, types, typeLevels } from "./domain.js";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
+<<<<<<< HEAD
+import Icon from "./components/Icon.jsx";
+=======
+>>>>>>> origin/main
+import { PermissionProvider } from "./hooks/usePermission.jsx";
+import { api, initializeCsrf, invalidateResources, notify, SESSION_EXPIRED_EVENT } from "./api.js";
+import ToastCenter from "./components/ToastCenter.jsx";
+import { PageControls } from "./components/ux.jsx";
+import { canNavigate, canUsePortal } from "./rolePolicy.js";
+import { PERMISSIONS_CHANGED, createRefresher } from "./sessionRefresh.js";
+
+import { date, errorText, statuses, types, typeLevels, getPrimaryRoleBadge } from "./domain.js";
 import {
   ActionForm,
   Badge,
   ResourceState,
   useResource,
 } from "./components/ui.jsx";
-import RequestEditor from "./components/RequestEditor.jsx";
-import RequestDetail from "./components/RequestDetail.jsx";
-import IdentityAdmin from "./components/IdentityAdmin.jsx";
-import ApiAdministration from "./components/ApiAdministration.jsx";
-import PlanCatalog from "./components/PlanCatalog.jsx";
-import {
-  AdminEvents,
-  Notifications,
-  Operations,
-  Policy,
-  Profile,
-} from "./components/Admin.jsx";
-function Login({ onLogin }) {
+import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOverview.jsx";
+
+
+
+import { SystemUpdateDialog, SystemUpdateHistory } from "./components/SystemUpdates.jsx";
+import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
+import { ApiBaseContext, WORKSPACE_API } from "./apiBase.js";
+
+import { formatVnd } from "./formatters.js";
+
+function AdminDashboard(props) {
+  return <AdminScreen name="AdminDashboard" {...props} />;
+}
+// Screens opened after the first page load are split into their own chunks.
+// Load only the current workspace screen; the login shell stays small.
+const RoleTasks = lazy(() => import("./components/RoleTasks.jsx"));
+const ClientRequests = lazy(() => import("./components/ClientRequests.jsx"));
+const Notifications = lazy(() => import("./components/NotificationsPage.jsx"));
+const Profile = lazy(() => import("./components/ProfilePage.jsx"));
+const ClientRequestsHub = lazy(() => import("./components/ClientRequestsHub.jsx"));
+const TeamDashboard = lazy(() => import("./components/TeamDashboard.jsx"));
+const RequestEditor = lazy(() => import("./components/RequestEditor.jsx"));
+const RequestDetail = lazy(() => import("./components/RequestDetail.jsx"));
+const WorkflowDiagrams = lazy(() => import("./components/WorkflowDiagrams.jsx"));
+const AiProcessGuide = lazy(() => import("./components/AiProcessGuide.jsx"));
+const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
+const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
+
+import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
+import { PageHeader, ShellSkeleton, TableSkeleton } from "./components/design.jsx";
+function getRealtimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
+  if (hour >= 12 && hour < 18) return "Chào buổi chiều!";
+  return "Chào buổi tối!";
+}
+
+function Login({ onLogin, portal = "client", aiStatus }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [greeting, setGreeting] = useState(getRealtimeGreeting);
+
+  useEffect(() => {
+    const timer = setInterval(() => setGreeting(getRealtimeGreeting()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const loginPendingRef = useRef(false);
+  const resetPendingRef = useRef(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetSubmitted, setResetSubmitted] = useState(false);
+
+  function closeForgotModal() {
+    if (resetPendingRef.current) return;
+    setShowForgotModal(false);
+    setResetSubmitted(false);
+    setResetError("");
+  }
+
+  async function submitReset(e) {
+    e.preventDefault();
+    if (resetPendingRef.current) return;
+    resetPendingRef.current = true;
+    const values = Object.fromEntries(new FormData(e.currentTarget));
+    setResetBusy(true);
+    setResetError("");
+    try {
+      await initializeCsrf();
+      await api("/api/v1/auth/password-reset/request", {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+      setResetSubmitted(true);
+    } catch (err) {
+      setResetError(errorText(err));
+    } finally {
+      resetPendingRef.current = false;
+      setResetBusy(false);
+    }
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (loginPendingRef.current) return;
+    const values = Object.fromEntries(new FormData(e.currentTarget));
+    const email = String(values.email || "").trim().toLowerCase();
+
+    // The server validates portal access from current role memberships;
+    // email addresses are not authorization policies.
+    if (portal === "client" && aiStatus?.client_maintenance_lock) {
+      setError(`Hệ thống đang cập nhật quy định mới (Đang ở bước: ${aiStatus?.current_step_label || "Đang đồng bộ..."}). Bạn sẽ đăng nhập lại được sau khi quá trình cập nhật hoàn tất.`);
+      return;
+    }
+
+    loginPendingRef.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      await initializeCsrf();
+      const result = await api("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "X-EAS-Portal": portal },
+        body: JSON.stringify({ ...values, email, portal }),
+      });
+      await onLogin(result.user);
+    } catch (err) {
+      if (err?.serverMessage) {
+        setError(err.serverMessage);
+      } else if (err?.code === "INVALID_CREDENTIALS" || err?.message?.includes("INVALID_CREDENTIALS") || String(err?.code).includes("CREDENTIALS") || err?.status === 401) {
+        setError("Thông tin đăng nhập không hợp lệ.");
+      } else {
+        setError(errorText(err));
+      }
+    } finally {
+      loginPendingRef.current = false;
+      setBusy(false);
+    }
+  }
+
   return (
-    <main id="main" className="auth-shell">
-      <section className="auth-intro">
-        <div className="brand-mark">E</div>
-        <p className="eyebrow">ENTERPRISE APPROVAL SYSTEM</p>
-        <h1>
-          Mọi yêu cầu.
-          <br />
-          Một quy trình rõ ràng.
-        </h1>
-        <p>
-          Kết nối đề xuất, phê duyệt và thực hiện trong một không gian làm việc.
-        </p>
-        <div className="login-steps">
-          01 · Đề xuất　　02 · Phê duyệt　　03 · Hoàn thành
+    <main id="main" className="auth-shell auth-split-layout">
+      <div className="auth-split-card">
+      {/* Left Pane: Branding / Hero matching design */}
+      <section className="auth-hero-pane" aria-label="Giới thiệu hệ thống">
+        <div className="auth-hero-arcs-wrap" aria-hidden="true">
+          <svg className="auth-hero-arcs" viewBox="0 0 500 500">
+            <circle cx="40" cy="460" r="180" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+            <circle cx="40" cy="460" r="290" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="1.5" />
+            <circle cx="40" cy="460" r="400" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1.5" />
+            <circle cx="40" cy="460" r="520" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="1.5" />
+          </svg>
+        </div>
+
+        <div className="auth-hero-content">
+          <h1 className="auth-hero-title">
+            {portal === "admin" ? "Enterprise Admin" : "Enterprise Approval"}
+          </h1>
+          <p className="auth-hero-subtitle">
+            {portal === "admin"
+              ? "Cổng quản trị hệ thống và kiểm soát bảo mật"
+              : "Hệ thống phê duyệt và quản lý quy trình doanh nghiệp"}
+          </p>
+          <button
+            type="button"
+            className="auth-hero-btn"
+            onClick={() => setShowInfoModal(true)}
+          >
+            <span>Tìm hiểu thêm</span>
+          </button>
         </div>
       </section>
-      <section className="panel auth-card">
-        <p className="eyebrow">CHÀO MỪNG TRỞ LẠI</p>
-        <h2>Đăng nhập EAS Portal</h2>
-        <p className="muted">Sử dụng tài khoản doanh nghiệp của bạn.</p>
-        <ActionForm
-          submitLabel="Đăng nhập"
-          onSubmit={async (values) => {
-            await initializeCsrf();
-            const result = await api("/api/v1/auth/login", {
-              method: "POST",
-              body: JSON.stringify(values),
-            });
-            await onLogin(result.user);
-          }}
-        >
-          <label>
-            Tên đăng nhập
-            <input name="username" autoComplete="username" required />
-          </label>
-          <PasswordField label="Mật khẩu" name="password" autoComplete="current-password" required />
-        </ActionForm>
+      {/* Right Pane: Login Form matching design */}
+      <section className="auth-form-pane" aria-label="Màn hình đăng nhập">
+        <div className="auth-card-clean">
+          <div className="auth-header">
+            <div className="auth-form-brand">
+              <img src="/logo.png" alt="EAS Logo" className="auth-form-logo-img" />
+            </div>
+            <h1 className="auth-greeting">
+              {greeting}
+              <span className="sr-only"> - {portal === "admin" ? "Đăng nhập Quản trị hệ thống" : "Đăng nhập EAS Portal"}</span>
+            </h1>
+          </div>
+
+          <form onSubmit={submit}>
+            <fieldset disabled={busy} className="auth-fieldset">
+              {error && (
+                <div role="alert" className="auth-error-banner">
+                  {error}
+                </div>
+              )}
+
+              <div className="auth-field-group">
+                <label htmlFor="login-email" className="sr-only">
+                  Email nhân viên
+                </label>
+                <div className="auth-input-wrapper">
+                  <span className="auth-field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L1 7" />
+                    </svg>
+                  </span>
+                  <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    placeholder="Email nhân viên"
+                    autoComplete="email"
+                    required
+                    className="auth-pill-input"
+                  />
+                </div>
+              </div>
+
+              <div className="auth-field-group">
+                <label htmlFor="login-password" className="sr-only">
+                  Mật khẩu
+                </label>
+                <div className="auth-input-wrapper">
+                  <span className="auth-field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </span>
+                  <input
+                    id="login-password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Mật khẩu"
+                    autoComplete="current-password"
+                    required
+                    className="auth-pill-input auth-password-input"
+                  />
+                  <button
+                    type="button"
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? "Ẩn ký tự" : "Hiện ký tự"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {portal === "client" && aiStatus?.client_maintenance_lock && (
+                <div className="login-maintenance-box" role="status">
+                  <strong>AI đang học quy định mới {aiStatus.target_regulation_version ? `(${aiStatus.target_regulation_version})` : ""}</strong>
+                  <span>{aiStatus.current_step_label || "Đang đồng bộ quy định…"}</span>
+                  <div className="m-progress-track"><div className="m-progress-fill" style={{ width: `${aiStatus.progress_percent ?? 0}%` }} /></div>
+                  <small>Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật tự động hoàn tất.</small>
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={busy || (portal === "client" && aiStatus?.client_maintenance_lock)}
+                className="auth-btn-primary"
+                aria-label="Đăng nhập"
+              >
+                {busy
+                  ? "Đang xác thực…"
+                  : (portal === "client" && aiStatus?.client_maintenance_lock)
+                  ? `Hệ thống đang bảo trì (${aiStatus?.progress_percent ?? 0}%)`
+                  : "Đăng nhập"}
+              </button>
+
+              <button
+                type="button"
+                className="auth-forgot-link"
+                onClick={() => setShowForgotModal(true)}
+              >
+                Quên mật khẩu
+              </button>
+            </fieldset>
+          </form>
+        </div>
       </section>
+      </div>
+
+      {/* Modals */}
+      {showInfoModal && (
+        <div className="auth-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+          <div className="auth-modal-card">
+            <div className="auth-modal-header">
+              <h3 id="info-modal-title">{portal === "admin" ? "Enterprise Admin Portal" : "Enterprise Approval System"}</h3>
+              <button type="button" className="auth-modal-close" onClick={() => setShowInfoModal(false)} aria-label="Đóng"><Icon name="x" size={16} /></button>
+            </div>
+            <div className="auth-modal-body">
+              <p>Nền tảng giúp bạn tạo yêu cầu, theo dõi tiến độ và nhận thông báo khi có quyết định xử lý.</p>
+              <ul><li>Quy trình rõ ràng từ tạo yêu cầu đến hoàn thành.</li><li>Phân công người xử lý, hiển thị hạn và lịch sử quyết định.</li><li>Trợ lý AI hỗ trợ tóm tắt và đánh giá rủi ro; người có thẩm quyền vẫn quyết định phê duyệt.</li></ul>
+            </div>
+            <div className="auth-modal-footer">
+              <button type="button" className="auth-btn-primary auth-modal-btn" onClick={() => setShowInfoModal(false)}>Đã hiểu</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showForgotModal && (
+        <div className="auth-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="forgot-modal-title">
+          <div className="auth-modal-card">
+            <div className="auth-modal-header">
+              <h3 id="forgot-modal-title">Cấp lại mật khẩu</h3>
+              <button type="button" className="auth-modal-close" onClick={closeForgotModal} aria-label="Đóng"><Icon name="x" size={16} /></button>
+            </div>
+            {resetSubmitted ? (
+              <>
+                <div className="auth-modal-body">
+                  <p role="status">Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị. Quản trị viên phải xác minh danh tính trước khi phê duyệt; sau đó mật khẩu tạm thời sẽ được gửi đến email nhân viên.</p>
+                </div>
+                <div className="auth-modal-footer">
+                  <button type="button" className="auth-btn-primary auth-modal-btn" onClick={closeForgotModal}>Đóng</button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={submitReset}>
+                <fieldset disabled={resetBusy} className="auth-fieldset">
+                  <div className="auth-modal-body">
+                    <p>Nhập email nhân viên để gửi yêu cầu. Quản trị viên sẽ xác minh danh tính trước khi cấp mật khẩu tạm thời.</p>
+                    <p>Không chia sẻ mật khẩu hoặc mã xác minh trong yêu cầu hỗ trợ.</p>
+                    {resetError && <div role="alert" className="auth-error-banner">{resetError}</div>}
+                    <label htmlFor="reset-email" className="sr-only">Email nhân viên</label>
+                    <input id="reset-email" name="email" type="email" autoComplete="email" placeholder="Email nhân viên" required className="auth-pill-input" />
+                  </div>
+                  <div className="auth-modal-footer">
+                    <button type="submit" className="auth-btn-primary auth-modal-btn">{resetBusy ? "Đang gửi…" : "Gửi yêu cầu đặt lại"}</button>
+                  </div>
+                </fieldset>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
+
 const menu = [
   ["home", "Tổng quan", "◫"],
-  ["mine", "Yêu cầu của tôi", "▤", "REQUESTER"],
-  ["approval", "Chờ tôi phê duyệt", "✓", "APPROVER"],
-  ["execution", "Công việc thực hiện", "▣", "EXECUTOR"],
-  ["acceptance", "Chờ nghiệm thu", "◇", "ACCEPTOR"],
-  ["history", "Hồ sơ liên quan", "◷"],
-  ["policy", "Cấu hình quy trình", "⚙", "POLICY_ADMIN"],
-  ["plan-catalog", "Danh mục 18 loại đơn", "▦"],
-  ["ops", "Theo dõi vận hành", "⇄", "OPS_ADMIN"],
-  ["identity", "Danh tính & phân quyền", "◎", "OPS_ADMIN"],
-  ["api-admin", "Quản lý API", "⌘", "OPS_ADMIN"],
-  ["audit", "Kiểm toán hồ sơ", "⌕", "AUDITOR"],
-  ["events", "Nhật ký quản trị", "≡", "AUDITOR"],
-  ["notifications", "Thông báo", "○"],
+  ["requests", "Yêu cầu & Quy trình", "▤"],
+  ["people", "Người dùng", "♙"],
+  ["regulations-view", "Quy định", "⚙"],
+  ["mine", "Yêu cầu của tôi", "▤"],
+  ["approval", "Chờ phê duyệt", "✓"],
+  ["execution", "Công việc thực hiện", "▣"],
+  ["acceptance", "Chờ nghiệm thu", "◇"],
+  ["team", "Tổng quan phòng ban", "▥"],
+  ["team-employees", "Nhân viên phòng ban", "♙"],
+  ["org-client", "Sơ đồ tổ chức", "⌂"],
+  ["flow-diagrams", "Sơ đồ luồng", "⇢"],
+  ["ai-process", "Quy trình AI", "✧"],
   ["profile", "Tài khoản cá nhân", "◎"],
+  ["notifications", "Thông báo", "○"],
+  ["ops", "Theo dõi vận hành", "⇄"],
+  ["users", "Quản lý người dùng", "♙"],
+  ["departments", "Phòng ban", "▦"],
+  ["permissions", "Ma trận phân quyền", "▩"],
+  ["org-chart", "Sơ đồ tổ chức", "⌂"],
+  ["request-catalog", "Danh mục yêu cầu", "▤"],
+  ["policy", "Quy chế & quy trình", "⚙"],
+  ["ai-policy", "Bộ luật quy định AI", "✧"],
+  ["ai-rules", "Luật AI thủ công", "✧"],
+  ["release-workspace", "Phiên bản cấu hình quy trình", "⚙"],
+  ["sla", "SLA & thông báo", "◷"],
+  ["audit", "Nhật ký kiểm toán", "⌕"],
+  ["system", "Cấu hình hệ thống", "⛭"],
+  // Legacy keys kept for the unified development portal and deep links.
+  ["identity", "Danh tính & phân quyền", "◎"],
+  ["plan-catalog", "Danh mục loại yêu cầu", "▦"],
+  ["api-admin", "Quản lý API", "⌘"],
+  ["events", "Nhật ký quản trị", "≡"],
 ];
-function RequestList({ page, user, onOpen, onNew, revision }) {
+export function pageToModuleCode(key, portal = "admin") {
+  // Employee-portal pages that share a key with an admin module (AI guide,
+  // department roster) are governed by workflow roles, not admin modules.
+  if (portal !== "admin" && (key === "ai-process" || key === "team-employees")) return null;
+  switch (key) {
+    case "home":
+    case "dashboard":
+      return "dashboard";
+    case "requests":
+      return "requests_workflows";
+    case "people":
+      return "users";
+    case "regulations-view":
+      return "regulations";
+    case "mine":
+    case "requests_workflows":
+    case "request-catalog":
+    case "release-workspace":
+    case "ops":
+    case "approval":
+    case "execution":
+    case "acceptance":
+      return "requests_workflows";
+    case "org_chart":
+    case "org-chart":
+    case "org-client":
+    case "departments":
+      return "org_chart";
+    case "users":
+    case "identity":
+    case "team-employees":
+      return "users";
+    case "permissions":
+      return "permissions";
+    case "regulations":
+    case "policy":
+      return "regulations";
+    case "ai_engine":
+    case "ai-policy":
+    case "ai-process":
+    case "ai-rules":
+      return "ai_engine";
+    case "api_management":
+    case "api-admin":
+      return "api_management";
+    case "system_versions":
+    case "system":
+    case "sla":
+    case "audit":
+    case "events":
+      return "system_versions";
+    default:
+      return null;
+  }
+}
+
+const ADMIN_LABELS = {
+  home: "Tổng quan",
+  dashboard: "Tổng quan",
+  ops: "Theo dõi vận hành",
+  "request-catalog": "Yêu cầu & Quy trình",
+  requests_workflows: "Yêu cầu & Quy trình",
+  "org-chart": "Sơ đồ công ty",
+  org_chart: "Sơ đồ công ty",
+  departments: "Phòng ban",
+  users: "Người dùng",
+  identity: "Danh tính & phạm vi quyền",
+  "release-workspace": "Phiên bản cấu hình quy trình",
+  "ai-rules": "Luật AI thủ công",
+  permissions: "Phân quyền",
+  policy: "Quy định",
+  regulations: "Quy định",
+  "ai-policy": "Quản trị AI",
+  "ai-process": "Quản trị AI",
+  ai_engine: "Quản trị AI",
+  "api-admin": "Quản lý API",
+  api_management: "Quản lý API",
+  system: "Phiên bản hệ thống",
+  system_versions: "Phiên bản hệ thống",
+  sla: "Thông báo SLA",
+  audit: "Nhật ký kiểm toán",
+  team: "Báo cáo phòng ban",
+};
+// Same 5 business modules as the admin portal; each item shows only when the
+// admin granted "Xem" on its module (system modules never appear here).
+const CLIENT_NAV = [
+  ["GIÁM SÁT", ["home"]],
+  ["LUỒNG CÔNG VIỆC", ["requests"]],
+  ["TỔ CHỨC & NHÂN SỰ", ["org-client", "people"]],
+  ["TRI THỨC", ["regulations-view"]],
+  ["QUẢN LÝ PHÒNG BAN", ["team", "team-employees"]],
+  // M3: employees holding AUDITOR use the read-only audit lookup here.
+  ["KIỂM TOÁN", ["audit"]],
+  ["TÀI KHOẢN", ["profile"]],
+];
+const ADMIN_NAV = [
+  ["GIÁM SÁT", ["home"]],
+  ["LUỒNG CÔNG VIỆC", ["request-catalog"]],
+  ["TỔ CHỨC & NHÂN SỰ", ["org-chart", "users", "permissions"]],
+  ["TRI THỨC & AI", ["policy", "ai-policy"]],
+  ["HỆ THỐNG", ["api-admin", "system"]],
+];
+function pageLabel(key, portal) {
+  return (portal === "admin" && ADMIN_LABELS[key]) || menu.find((m) => m[0] === key)?.[1] || "";
+}
+
+function renderNavIcon(key, _fallback) {
+  const p = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
+  switch (key) {
+    case "home":
+      return (
+        <svg {...p}>
+          <rect x="3" y="3" width="7" height="7" rx="2" />
+          <rect x="14" y="3" width="7" height="7" rx="2" />
+          <rect x="14" y="14" width="7" height="7" rx="2" />
+          <rect x="3" y="14" width="7" height="7" rx="2" />
+        </svg>
+      );
+    case "mine":
+      return (
+        <svg {...p}>
+          <rect x="2" y="7" width="20" height="14" rx="2" />
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+        </svg>
+      );
+    case "approval":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    case "execution":
+      return (
+        <svg {...p}>
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" />
+          <line x1="3" y1="12" x2="3.01" y2="12" />
+          <line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+      );
+    case "acceptance":
+      return (
+        <svg {...p}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    case "team":
+    case "team-employees":
+      return (
+        <svg {...p}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      );
+    case "org-client":
+    case "org-chart":
+      return (
+        <svg {...p}>
+          <rect x="9" y="3" width="6" height="4" rx="1" />
+          <rect x="2" y="17" width="6" height="4" rx="1" />
+          <rect x="16" y="17" width="6" height="4" rx="1" />
+          <path d="M12 7v5m0 0H5v5m7-5h7v5" />
+        </svg>
+      );
+    case "flow-diagrams":
+      return (
+        <svg {...p}>
+          <circle cx="18" cy="6" r="3" />
+          <circle cx="6" cy="18" r="3" />
+          <path d="M6 15V9a4 4 0 0 1 4-4h5" />
+        </svg>
+      );
+    case "ai-process":
+    case "ai-policy":
+      return (
+        <svg {...p}>
+          <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+        </svg>
+      );
+    case "profile":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="10" r="3" />
+          <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
+        </svg>
+      );
+    case "notifications":
+      return (
+        <svg {...p}>
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      );
+    case "ops":
+      return (
+        <svg {...p}>
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+      );
+    case "users":
+      return (
+        <svg {...p}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      );
+    case "departments":
+      return (
+        <svg {...p}>
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />
+        </svg>
+      );
+    case "permissions":
+      return (
+        <svg {...p}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      );
+    case "request-catalog":
+    case "plan-catalog":
+      return (
+        <svg {...p}>
+          <path d="m12 3-9 4.5 9 4.5 9-4.5-9-4.5Z" />
+          <path d="m3 12 9 4.5 9-4.5" />
+          <path d="m3 16.5 9 4.5 9-4.5" />
+        </svg>
+      );
+    case "policy":
+      return (
+        <svg {...p}>
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+      );
+    case "sla":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      );
+    case "audit":
+    case "events":
+      return (
+        <svg {...p}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <circle cx="11.5" cy="14.5" r="2.5" />
+          <path d="m16 18-2-2" />
+        </svg>
+      );
+    case "api-admin":
+      return (
+        <svg {...p}>
+          <rect x="2" y="2" width="20" height="8" rx="2" />
+          <rect x="2" y="14" width="20" height="8" rx="2" />
+          <line x1="6" y1="6" x2="6.01" y2="6" />
+          <line x1="6" y1="18" x2="6.01" y2="18" />
+        </svg>
+      );
+    case "system":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+      );
+    case "requests":
+      return (
+        <svg {...p}>
+          <rect x="5" y="3" width="14" height="18" rx="2" />
+          <path d="M9 3v2h6V3" />
+          <path d="M9 11h6M9 15h4" />
+        </svg>
+      );
+    case "people":
+    case "identity":
+      return (
+        <svg {...p}>
+          <circle cx="9" cy="8" r="3.5" />
+          <path d="M2.5 20v-1a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v1" />
+          <path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20v-1a5 5 0 0 0-3.5-4.8" />
+        </svg>
+      );
+    case "regulations-view":
+      return (
+        <svg {...p}>
+          <path d="M12 3v18M7 21h10" />
+          <path d="M5 7h14" />
+          <path d="m5 7-3 7a3 3 0 0 0 6 0Z" />
+          <path d="m19 7-3 7a3 3 0 0 0 6 0Z" />
+        </svg>
+      );
+    case "ai-rules":
+      return (
+        <svg {...p}>
+          <path d="M9 4h6M12 4v3" />
+          <rect x="4" y="7" width="16" height="12" rx="3" />
+          <path d="M9 12v1M15 12v1M9.5 16h5" />
+        </svg>
+      );
+    case "release-workspace":
+      return (
+        <svg {...p}>
+          <circle cx="6" cy="5" r="2" />
+          <circle cx="6" cy="19" r="2" />
+          <circle cx="18" cy="8" r="2" />
+          <path d="M6 7v10M18 10a6 6 0 0 1-6 6H8" />
+        </svg>
+      );
+    default:
+      // Never fall back to text glyphs: a neutral bullet keeps the icon column aligned.
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      );
+  }
+}
+
+const shellIcon = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" };
+function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) {
   const [status, setStatus] = useState(""),
     [type, setType] = useState(""),
+    [departmentId, setDepartmentId] = useState(""),
     [offset, setOffset] = useState(0),
     [limit, setLimit] = useState(20),
     [query, setQuery] = useState(""),
@@ -102,9 +734,12 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
     params.set("tab", page);
   if (status) params.set("status", status);
   if (type) params.set("type_code", type);
+  if (departmentId) params.set("department_id", departmentId);
   if (from) params.set("created_from", from + "T00:00:00+07:00");
   if (to) params.set("created_to", to + "T23:59:59.999999+07:00");
   const availableTypes = useResource("/api/v1/request-types");
+  const orgMeta = useResource(page === "ops" ? "" : "/api/v1/meta/org-chart");
+  const departments = orgMeta.data?.departments || [];
   const r = useResource(
     `/api/v1/${page === "ops" ? "ops/requests" : "requests"}?${params}&_revision=${revision}`,
   );
@@ -117,41 +752,41 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
           <p className="eyebrow">CỔNG DỊCH VỤ EAS / QUẢN LÝ HỒ SƠ</p>
           <h1>{menu.find((m) => m[0] === page)?.[1]}</h1>
           <p className="muted">
-            Theo dõi tiến độ, xử lý công việc và tra cứu lịch sử.
+            Theo dõi tiến độ, người gửi, phòng ban, người đang phụ trách và hạn xử lý SLA của từng hồ sơ.
           </p>
         </div>
-        {user.roles.includes("REQUESTER") && (
+        {canCreate && user.roles.includes("REQUESTER") && (
           <button type="button" onClick={onNew}>+ Tạo yêu cầu mới</button>
         )}
       </div>
-      <section className="request-summary-strip" aria-label="Thống kê hồ sơ trên trang">
+      <section className="request-summary-strip" aria-label="Thống kê hồ sơ hiển thị">
         {[
-          ["Tất cả", "", "◫"],
-          ["Cần bổ sung", "NEEDS_INFO", "!"],
-          ["Chờ duyệt", "PENDING_APPROVAL", "⌛"],
-          ["Đang thực hiện", "IN_PROGRESS", "⇄"],
-          ["Hoàn thành", "COMPLETED", "✓"],
-          ["Bản nháp", "DRAFT", "▤"],
+          ["Tất cả", "", "layers"],
+          ["Cần bổ sung", "NEEDS_INFO", "alert"],
+          ["Chờ duyệt", "PENDING_APPROVAL", "clock"],
+          ["Đang thực hiện", "IN_PROGRESS", "reset"],
+          ["Hoàn thành", "COMPLETED", "check"],
+          ["Bản nháp", "DRAFT", "edit"],
         ].map(([label, code, icon]) => (
           <button key={label} type="button"
             className={`request-mini-stat ${status === code ? "current" : ""}`}
             onClick={() => {setStatus(code);setOffset(0);}}
             aria-pressed={status === code}>
-            <span className="mini-stat-icon" aria-hidden="true">{icon}</span>
+            <span className="mini-stat-icon" aria-hidden="true"><Icon name={icon} size={16} /></span>
             <span className="mini-stat-label">{label}</span>
             <strong>{code ? items.filter((item) => item.status === code).length : items.length}</strong>
-            <small>trên trang đang tải</small>
+            <small>hồ sơ hiển thị</small>
           </button>
         ))}
       </section>
       <section className="panel filter-panel">
         <div className="filters">
           <label>
-            Tìm mã yêu cầu (toàn bộ dữ liệu)
+            Tìm yêu cầu
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ví dụ: REQ-2026-001"
+              placeholder="Mã REQ, tiêu đề hoặc tên người gửi…"
             />
           </label>
           <label>
@@ -171,6 +806,25 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
               ))}
             </select>
           </label>
+          {departments.length > 1 && (
+            <label>
+              Phòng ban
+              <select
+                value={departmentId}
+                onChange={(e) => {
+                  setDepartmentId(e.target.value);
+                  setOffset(0);
+                }}
+              >
+                <option value="">Tất cả phòng ban</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             Trạng thái
             <select
@@ -188,7 +842,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
               ))}
             </select>
           </label>
-          {page !== "ops" && (
+          {(
             <>
               <label>
                 Từ ngày
@@ -218,7 +872,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
         </div>
         <div className="section-head">
           <small className="muted">
-            Dữ liệu hiển thị theo phạm vi được cấp quyền
+            Dữ liệu hiển thị theo phạm vi được cấp quyền · Đang hiển thị <strong>{filtered.length}</strong> hồ sơ
           </small>
           <div className="actions">
             <button
@@ -226,6 +880,7 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
               onClick={() => {
                 setStatus("");
                 setType("");
+                setDepartmentId("");
                 setOffset(0);
                 setQuery("");
                 setFrom("");
@@ -240,9 +895,9 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
           </div>
         </div>
       </section>
-      <ResourceState resource={r}>
+      <ResourceState resource={r} skeleton={<TableSkeleton rows={5} cols={6} />}>
         {page === "ops" ? (
-          <Operations items={filtered} onRefresh={r.reload} />
+          <AdminScreen name="Operations" items={filtered} onRefresh={r.reload} />
         ) : (
           <section className="panel table-panel" id="request-results">
             <div className="table-wrap">
@@ -250,38 +905,64 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
                 <thead>
                   <tr>
                     <th>Mã yêu cầu</th>
-                    <th>Nghiệp vụ</th>
+                    <th>Tiêu đề &amp; Nghiệp vụ</th>
+                    <th>Người gửi / Phòng ban</th>
                     <th>Trạng thái</th>
-                    <th>Cập nhật</th>
+                    <th>Người đang xử lý</th>
+                    <th>Hạn / Cập nhật</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((i) => (
-                    <tr key={i.id}>
-                      <td data-label="Mã yêu cầu" className="request-code">{i.code}</td>
-                      <td data-label="Nghiệp vụ">
-                        <span className="type-icon">
-                          {i.type_code === "LEAVE"
-                            ? "◷"
-                            : i.type_code === "ACCESS"
-                              ? "◇"
-                              : "▣"}
-                        </span>
-                        {types[i.type_code] || i.type_code}
-                        <small className="muted" style={{display: "block"}}>Trọng số Cấp {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · Duyệt {i.approval_level || typeLevels[i.type_code]?.approval_level || 1}/5 cấp</small>
-                      </td>
-                      <td data-label="Trạng thái">
-                        <Badge value={i.status} />
-                      </td>
-                      <td data-label="Cập nhật">{date(i.updated_at)}</td>
-                      <td data-label="Thao tác">
-                        <button type="button" className="link" onClick={() => onOpen(i.id)}>
-                          Xem chi tiết →
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map((i) => {
+                    const typeName = availableTypes.data?.items?.find((t) => t.code === i.type_code)?.name || i.type_name || types[i.type_code] || "Loại yêu cầu";
+                    return (
+                      <tr key={i.id} className={i.overdue ? "is-overdue" : ""}>
+                        <td data-label="Mã yêu cầu" className="request-code">{i.code}</td>
+                        <td data-label="Tiêu đề & Nghiệp vụ">
+                          {i.title ? (
+                            <>
+                              <strong>{i.title}</strong>
+                              <span className="ds-cell-sub">
+                                {typeName}
+                                {i.amount_vnd > 0 ? ` · ${formatVnd(i.amount_vnd)}` : ""}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="type-icon">
+                                {i.type_code === "LEAVE"
+                                  ? "◷"
+                                  : i.type_code === "ACCESS"
+                                    ? "◇"
+                                    : "▣"}
+                              </span>
+                              {typeName}
+                              <small className="muted" style={{display: "block"}}>
+                                Mức rủi ro {i.risk_weight || typeLevels[i.type_code]?.risk_weight || 3}/5 · {i.approval_level || typeLevels[i.type_code]?.approval_level || 1} cấp duyệt
+                              </small>
+                            </>
+                          )}
+                        </td>
+                        <td data-label="Người gửi / Phòng ban">
+                          {i.requester_name || "—"}
+                          {i.department_name && <span className="ds-cell-sub">{i.department_name}</span>}
+                        </td>
+                        <td data-label="Trạng thái">
+                          <Badge value={i.status} />
+                        </td>
+                        <td data-label="Người đang xử lý">{i.current_assignee_name || "—"}</td>
+                        <td data-label="Hạn / Cập nhật" className={i.overdue ? "overdue" : ""}>
+                          {i.due_at ? `${date(i.due_at)}${i.overdue ? " · Quá hạn" : ""}` : date(i.updated_at)}
+                        </td>
+                        <td data-label="Thao tác">
+                          <button type="button" className="link" onClick={() => onOpen(i.id)}>
+                            Xem chi tiết →
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -301,111 +982,33 @@ function RequestList({ page, user, onOpen, onNew, revision }) {
   );
 }
 function Overview({ navigate, onOpen, user }) {
-  const [period] = useState(() => {
-    const end = new Date();
-    return new URLSearchParams({
-      created_from: new Date(end.getTime() - 30 * 86400000).toISOString(),
-      created_to: end.toISOString(),
-    }).toString();
-  });
-  const r = useResource("/api/v1/reports/requests?" + period);
+  const today = () => new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Ho_Chi_Minh"});
+  const [from, setFrom] = useState(() => new Date(Date.now()-29*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Ho_Chi_Minh"}));
+  const [to, setTo] = useState(today);
+  const valid = Boolean(from && to && from <= to && (Date.parse(to)-Date.parse(from)) <= 366*86400000);
+  const params = new URLSearchParams({created_from:`${from}T00:00:00+07:00`, created_to:`${to}T23:59:59+07:00`});
+  const r = useResource(`/api/v1/reports/requests?${params}`);
   const recent = useResource("/api/v1/requests?limit=5&offset=0");
   const report = r.data?.report;
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p>
-          <h1>Tổng quan xử lý yêu cầu</h1>
-          <p className="muted">
-            Thống kê theo phạm vi dữ liệu bạn được phép xem.
-          </p>
-        </div>
-      </div>
-      <ResourceState resource={r}>
-        {report && (
-          <>
-            <p className="muted">
-              Kỳ báo cáo: {date(report.period?.from)} —{" "}
-              {date(report.period?.to)}
-            </p>
-            <div className="stats-grid">
-              {[
-                ["Đã gửi", report.submitted],
-                ["Đã phê duyệt", report.approved],
-                ["Đã hoàn thành", report.completed],
-                [
-                  "Tỷ lệ hoàn thành",
-                  report.completed_rate == null
-                    ? "—"
-                    : Math.round(report.completed_rate * 100) + "%",
-                ],
-              ].map(([label, value]) => (
-                <article className="stat" key={label}>
-                  <span>{label}</span>
-                  <strong>{value ?? 0}</strong>
-                  <small>Trong kỳ báo cáo</small>
-                </article>
-              ))}
-            </div>
-            <section className="panel">
-              <h2>Phân bố trạng thái</h2>
-              <p className="muted">
-                Báo cáo không tính bản nháp; xem bản nháp trong Yêu cầu của tôi.
-              </p>
-              <div className="status-grid">
-                {Object.entries(statuses).map(([key, label]) => (
-                  <div key={key}>
-                    <Badge value={key} />
-                    <strong aria-label={label}>
-                      {key === "DRAFT" ? "—" : report.by_status?.[key] || 0}
-                    </strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
-      </ResourceState>
-      <RoleTasks user={user} navigate={navigate} />
-      <div className="dashboard-board">
-        <section className="panel" aria-label="Hồ sơ cập nhật gần đây">
-          <div className="section-head">
-            <div><h2>Hồ sơ mới cập nhật</h2><p className="muted">Danh sách thực tế trong phạm vi bạn được phép xem.</p></div>
-            <button type="button" className="secondary" onClick={() => navigate("history")}>Xem danh sách →</button>
-          </div>
-          <ResourceState resource={recent}>
-            {recent.data?.items?.length ? (
-              <ul className="dashboard-list">
-                {recent.data.items.map((item) => <li key={item.id}>
-                  <div><strong>{item.code}</strong><small>{types[item.type_code] || item.type_code} · {date(item.updated_at)}</small><Badge value={item.status}/></div>
-                  <button type="button" className="link" onClick={() => onOpen(item.id)}>Xem chi tiết →</button>
-                </li>)}
-              </ul>
-            ) : <p className="muted">Chưa có hồ sơ trong phạm vi quyền xem.</p>}
-          </ResourceState>
-        </section>
-        <aside className="panel">
-          <h2>Truy cập nhanh</h2>
-          <p className="muted">Đi thẳng đến khu vực làm việc, hệ thống tự cuộn về phần thao tác.</p>
-          <div className="dashboard-quick">
-            <button type="button" onClick={() => navigate("mine")}>▤ Yêu cầu của tôi →</button>
-            <button type="button" className="secondary" onClick={() => navigate("notifications")}>◉ Trung tâm thông báo →</button>
-            <button type="button" className="secondary" onClick={() => navigate("history")}>◷ Tra cứu hồ sơ →</button>
-          </div>
-        </aside>
-      </div>
-      <section className="welcome-banner">
-        <div>
-          <h2>Công việc rõ ràng. Tiến độ minh bạch.</h2>
-          <p>Mỗi quyết định được lưu lại xuyên suốt vòng đời yêu cầu.</p>
-        </div>
-        <button type="button" onClick={() => navigate("history")}>
-          Xem hồ sơ liên quan →
-        </button>
-      </section>
-    </>
-  );
+  return <>
+    <div className="page-heading"><div><p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p><h1>Tổng quan yêu cầu</h1>
+      <p className="muted">Nắm nhanh tiến độ, trạng thái hồ sơ và những loại yêu cầu phổ biến trong phạm vi bạn được phép xem.</p></div></div>
+    <PeriodChooser start={from} end={to} setStart={setFrom} setEnd={setTo} reload={r.reload}/>
+    {!valid && <p className="error" role="alert">Vui lòng chọn khoảng thời gian hợp lệ, không quá 12 tháng.</p>}
+    {valid && <ResourceState resource={r}>{report && <PersonalOverviewStats report={report}/>}</ResourceState>}
+    <RoleTasks user={user} navigate={navigate}/>
+    <div className="dashboard-board"><section className="panel" aria-label="Hồ sơ cập nhật gần đây">
+      <div className="section-head"><div><h2>Hồ sơ mới cập nhật</h2><p className="muted">Thông tin bạn được phép xem.</p></div><button type="button" className="secondary" onClick={()=>navigate("history")}>Xem danh sách →</button></div>
+      <ResourceState resource={recent}>{recent.data?.items?.length ? <ul className="dashboard-list">{recent.data.items.map(item=><li key={item.id}>
+        <div><strong>{item.code}</strong><small>{types[item.type_code] || item.type_name || "Yêu cầu"} · {date(item.updated_at)}</small><Badge value={item.status}/></div>
+        <button type="button" className="link" onClick={()=>onOpen(item.id)}>Xem chi tiết →</button>
+      </li>)}</ul> : <p className="muted">Chưa có hồ sơ trong phạm vi quyền xem.</p>}</ResourceState>
+    </section><aside className="panel"><h2>Không gian làm việc</h2><div className="dashboard-quick">
+      <button type="button" onClick={()=>navigate("mine")}>Yêu cầu của tôi →</button>
+      <button className="secondary" type="button" onClick={()=>navigate("notifications")}>Thông báo →</button>
+      <button className="secondary" type="button" onClick={()=>navigate("history")}>Tra cứu hồ sơ →</button>
+    </div></aside></div>
+  </>;
 }
 function renderWorkspaceContent({
   editor,
@@ -417,7 +1020,27 @@ function renderWorkspaceContent({
   setSelected,
   setEditor,
   setRevision,
+  portal,
+  searchText = "",
 }) {
+  const canOpenAsAdmin = user.roles.includes("AUDITOR");
+  const mod = pageToModuleCode(page, portal);
+  if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
+    if (!user.permissions.by_module[mod].can_view) {
+      return (
+        <div className="access-denied-view panel" style={{ textAlign: "center", padding: "4rem 2rem", margin: "2rem auto", maxWidth: "600px" }}>
+          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}><Icon name="block" size={14} /></div>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Không có quyền truy cập</h2>
+          <p className="muted" style={{ marginBottom: "1.5rem" }}>
+            Tài khoản của bạn chưa được cấp quyền Xem cho chức năng <strong>{pageLabel(page, portal)}</strong>. Vui lòng liên hệ Quản trị viên để được cấp quyền.
+          </p>
+          <button type="button" className="primary" onClick={() => navigate("home")}>
+            Quay về trang Tổng quan
+          </button>
+        </div>
+      );
+    }
+  }
   if (editor) {
     return (
       <RequestEditor
@@ -435,7 +1058,7 @@ function renderWorkspaceContent({
   if (selected) {
     return (
       <RequestDetail
-        initialTab={page === "audit" ? "audit" : "info"}
+        initialTab={page === "audit" ? "activity" : "info"}
         key={selected}
         id={selected}
         user={user}
@@ -447,28 +1070,100 @@ function renderWorkspaceContent({
   }
   switch (page) {
     case "home":
-      return <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+      if (portal === "admin") return <AdminDashboard navigate={navigate} />;
+      return portal === "client" ? (
+        <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceDashboard navigate={navigate} workspace /></ApiBaseContext.Provider>
+      ) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
+    case "requests":
+      return <ClientRequestsHub user={user} revision={revision} onOpen={setSelected} onNew={(init) => { setSelected(null); setEditor(init || {}); }} />;
+    case "people":
+      return <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceUsers onNavigateOrgChart={() => navigate("org-client")} /></ApiBaseContext.Provider>;
+    case "regulations-view":
+      return <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceRegulations /></ApiBaseContext.Provider>;
+    case "org-client":
+      return portal === "client" ? (
+        <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceOrgChart navigate={navigate} portal="client" user={user} /></ApiBaseContext.Provider>
+      ) : <ClientOrgChart user={user} />;
+    case "team":
+      return <TeamDashboard onOpen={portal === "admin" && !canOpenAsAdmin ? undefined : setSelected} />;
+    case "team-employees":
+      return <TeamDashboard mode="employees" onOpen={setSelected} />;
+    case "mine":
+    case "approval":
+    case "execution":
+    case "acceptance":
+      return portal === "client" ? <ClientRequests key={page} initialStage={page === "mine" ? "mine" : page} initialQuery={searchText} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} /> : <RequestList key={page} page={page} user={user} revision={revision} onOpen={setSelected} onNew={()=>setEditor({})} />;
     case "audit":
-      return <AuditorWorkspace onOpen={(id) => setSelected(id)} />;
-    case "identity":
-      return <IdentityAdmin />;
-    case "api-admin":
-      return <ApiAdministration />;
-    case "plan-catalog":
-      return <PlanCatalog />;
-    case "policy":
-      return (
-        <Policy
-          canManageAccess={user.roles.includes("OPS_ADMIN")}
-          onManageAccess={() => navigate("identity")}
-        />
-      );
-    case "notifications":
-      return <Notifications onOpen={setSelected} />;
-    case "profile":
-      return <Profile user={user} />;
+      return portal === "admin" ? <AdminScreen name="AuditLogPage" onOpen={setSelected} /> : <ClientAuditorWorkspace onOpen={(id) => setSelected(id)} />;
     case "events":
-      return <AdminEvents />;
+      return <AdminScreen name="AdminEvents" />;
+    case "users":
+      return <AdminScreen name="UserManagementPage" onNavigateOrgChart={() => navigate("org-chart")} />;
+    case "identity":
+      return portal === "admin" ? (
+        <AdminScreen name="IdentityAdmin" key="identity" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />
+      ) : (
+        <AdminScreen name="UserManagementPage" onNavigateOrgChart={() => navigate("org-chart")} />
+      );
+    case "release-workspace":
+      return <AdminScreen name="PolicyWorkspace" canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />;
+    case "ai-rules":
+      return <AdminScreen name="AiPolicyAdmin" />;
+    case "departments":
+      return <AdminScreen name="OrgChart" navigate={navigate} portal={portal} user={user} />;
+    case "permissions":
+      return <AdminScreen name="RolePermissionMatrixPage" />;
+    case "request-catalog":
+    case "requests_workflows":
+      return <AdminScreen name="RequestWorkflowsPage" />;
+    case "org-chart":
+      return <AdminScreen name="OrgChart" navigate={navigate} portal={portal} user={user} />;
+    case "api-admin":
+    case "mock_apis":
+    case "api_management":
+      return <AdminScreen name="ApiAdministration" />;
+    case "plan-catalog":
+      return <AdminScreen name="PlanCatalog" />;
+    case "ops":
+      return <AdminScreen name="OperationsPage" key={searchText} initialQuery={searchText} onOpen={canOpenAsAdmin ? setSelected : undefined} />;
+    case "sla":
+      return <AdminScreen name="SlaNotificationsPage" navigate={navigate} />;
+    case "system":
+    case "system_versions":
+    case "versions":
+      return <AdminScreen name="SystemVersionsPage" />;
+    case "ai-process":
+    case "ai_engine":
+      return portal === "admin" ? (
+        <AdminScreen name="AiEngineManagementPage" />
+      ) : (
+        <AiProcessGuide user={user} portal={portal} onOpen={setSelected} navigate={navigate} />
+      );
+    case "flow-diagrams":
+      return <><PageHeader eyebrow="QUY TRÌNH" title="Sơ đồ luồng" description="Tra cứu các sơ đồ xử lý và vòng đời yêu cầu."/><WorkflowDiagrams /></>;
+    case "policy":
+    case "regulations":
+      return portal === "admin" ? (
+        <AdminScreen name="RegulationsManagementPage" />
+      ) : (
+        <AdminScreen name="Policy" canManageAccess={user.roles.includes("OPS_ADMIN")} onManageAccess={() => navigate("identity")} />
+      );
+    case "ai-policy":
+      return portal === "admin" ? <AdminScreen name="AiEngineManagementPage" /> : <AdminScreen name="AiPolicyAdmin" />;
+    case "notifications":
+      return (
+        <>
+          <SystemUpdateHistory />
+          <Notifications onOpen={portal === "admin" && !canOpenAsAdmin ? undefined : setSelected} />
+        </>
+      );
+    case "profile":
+      return (
+        <>
+          <Profile user={user} />
+          {user.roles.includes("APPROVER") && <DelegationSettings />}
+        </>
+      );
     default:
       return (
         <RequestList
@@ -476,6 +1171,7 @@ function renderWorkspaceContent({
           page={page}
           user={user}
           revision={revision}
+          canCreate={portal !== "admin"}
           onOpen={setSelected}
           onNew={() => setEditor({})}
         />
@@ -483,112 +1179,271 @@ function renderWorkspaceContent({
   }
 }
 
-function Workspace({ user, onLogout }) {
-  const [page, setPage] = useState("home"),
-    [selected, setSelected] = useState(null),
+const navKeys = (groups) => groups.flatMap(([, keys]) => keys);
+const ADMIN_PAGES = new Set([...navKeys(ADMIN_NAV), "ops", "sla", "audit", "identity", "departments", "notifications", "release-workspace"]);
+const CLIENT_PAGES = new Set([...navKeys(CLIENT_NAV), "notifications"]);
+const UNIFIED_NAV = [...CLIENT_NAV, ...ADMIN_NAV.map(([group, keys]) => [group, keys.filter((key) => !navKeys(CLIENT_NAV).includes(key))])];
+
+/** Overview for administrators without OPS scope (policy admins, auditors). */
+export function AdminOverview({ navigate, user }) {
+  const tiles = [
+    ["policy", "Quy chế & quy trình", "Soạn thảo biểu mẫu, luồng duyệt, SLA và công bố quy chế", "⚙"],
+    ["audit", "Nhật ký kiểm toán", "Xác minh chuỗi nhật ký hồ sơ và tra cứu thay đổi quản trị", "⌕"],
+    ["team", "Báo cáo phòng ban", "Số liệu hồ sơ theo phòng ban trong phạm vi kiểm toán", "▥"],
+    ["ai-process", "Quy trình AI", "Lịch sử đánh giá AI của hồ sơ được phép xem", "✧"],
+  ].filter(([key]) => canNavigate(user.roles, key, user.capabilities));
+  return <section className="admin-home">
+    <PageHeader eyebrow="TRUNG TÂM QUẢN TRỊ" title="Tổng quan quản trị" description="Chọn khu vực chức năng theo vai trò quản trị được cấp." />
+    <div className="admin-tiles-grid">{tiles.map(([key, label, detail, icon]) => (
+      <button key={key} type="button" className="admin-feature-card" onClick={() => navigate(key)}>
+        <div className="admin-feature-icon" aria-hidden="true">{renderNavIcon(key, icon)}</div>
+        <div className="admin-feature-body"><strong>{label}</strong><p>{detail}</p></div>
+        <span className="admin-feature-arrow" aria-hidden="true">→</span>
+      </button>))}
+    </div>
+  </section>;
+}
+
+function readFlag(key) { try { return window.localStorage.getItem(key) === "1"; } catch { return false; } }
+// Screens shared with the admin portal, opened in the employee portal through
+// /api/v1/workspace (module rights granted by the admin). Loaded on demand.
+const WorkspaceDashboard = lazy(() => import("./components/AdminPages.jsx").then((m) => ({ default: m.AdminDashboard })));
+const WorkspaceUsers = lazy(() => import("./components/UserManagementPage.jsx"));
+const WorkspaceRegulations = lazy(() => import("./components/RegulationsManagementPage.jsx"));
+const WorkspaceOrgChart = lazy(() => import("./components/OrgChart.jsx"));
+<<<<<<< HEAD
+=======
+// Read-only audit lookup (employee APIs only), loaded on demand in the employee portal.
+const ClientAuditorWorkspace = lazy(() => import("./components/AuditorWorkspace.jsx"));
+const ADMIN_PORTAL_URL = import.meta.env.VITE_ADMIN_PORTAL_URL || "http://localhost:8081";
+>>>>>>> origin/main
+
+function writeFlag(key, value) { try { window.localStorage.setItem(key, value ? "1" : "0"); } catch { /* storage unavailable */ } }
+
+// Same checks as navigate(): role navigation, portal page set, module rights.
+function pageAllowed(next, user, portal) {
+  const allowed = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
+  if (!canNavigate(user.roles, next, user.capabilities) || !allowed.has(next)) return false;
+  const mod = pageToModuleCode(next, portal);
+  if (mod && portal === "client" && !user?.permissions?.by_module?.[mod]?.can_view) return false;
+  if (mod && user?.permissions?.by_module?.[mod] && !user.permissions.by_module[mod].can_view) return false;
+  return true;
+}
+
+function readHashLocation() {
+  const [rawPage = "", rawRequest = ""] = window.location.hash.replace(/^#\/?/, "").split("/");
+  let hashPage = "";
+  try { hashPage = decodeURIComponent(rawPage); } catch { hashPage = ""; }
+  return { hashPage, hashRequest: /^[0-9a-f-]{36}$/i.test(rawRequest) ? rawRequest : null };
+}
+
+function Workspace({ user, onLogout, portal = "client", theme = "light", toggleTheme = () => {} }) {
+  const [page, setPage] = useState(() => {
+      const { hashPage } = readHashLocation();
+      return hashPage && pageAllowed(hashPage, user, portal) ? hashPage : "home";
+    }),
+    [selected, setSelected] = useState(() => readHashLocation().hashRequest),
     [editor, setEditor] = useState(null),
     [revision, setRevision] = useState(0),
-    [menuOpen, setMenuOpen] = useState(false);
+    [menuOpen, setMenuOpen] = useState(false),
+    [searchText, setSearchText] = useState(""),
+    [collapsed, setCollapsed] = useState(() => readFlag("eas.sidebarCollapsed")),
+    [closedGroups, setClosedGroups] = useState(() => new Set());
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const main = document.getElementById("main");
-      main?.scrollIntoView({ behavior: "smooth", block: "start" });
+      main?.scrollIntoView({ behavior: "auto", block: "start" });
       const heading = main?.querySelector("h1");
       if (heading) { heading.setAttribute("tabindex", "-1"); heading.focus({ preventScroll: true }); }
     });
     return () => cancelAnimationFrame(frame);
   }, [page, selected, editor]);
-  function navigate(next) {
-    if (!canNavigate(user.roles, next, user.capabilities)) return;
+  const allowedPages = portal === "admin" ? ADMIN_PAGES : (portal === "client" ? CLIENT_PAGES : new Set(menu.map((x) => x[0])));
+  const groups = portal === "admin" ? ADMIN_NAV : portal === "client" ? CLIENT_NAV : UNIFIED_NAV;
+  function navigate(next, query = "") {
+    if (!pageAllowed(next, user, portal)) return;
     setPage(next);
     setSelected(null);
     setEditor(null);
     setMenuOpen(false);
+    setSearchText(query);
   }
+  function openRequest(id) {
+    setEditor(null);
+    setSelected(id);
+    setMenuOpen(false);
+  }
+  // L10: keep the open page (and request) in the URL so F5 returns to it.
+  useEffect(() => {
+    const hash = `#/${encodeURIComponent(page)}${selected ? `/${selected}` : ""}`;
+    if (window.location.hash !== hash) window.history.replaceState(null, "", hash);
+  }, [page, selected]);
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (event) => { if (event.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+  function toggleCollapsed() {
+    setCollapsed((value) => { writeFlag("eas.sidebarCollapsed", !value); return !value; });
+  }
+  function toggleGroup(name) {
+    setClosedGroups((prev) => { const next = new Set(prev); if (next.has(name)) next.delete(name); else next.add(name); return next; });
+  }
+  const primaryRole = getPrimaryRoleBadge(user.roles);
+  const currentGroup = groups.find(([, keys]) => keys.includes(page))?.[0];
+  const activeTitle = editor ? (editor.id ? "Chỉnh sửa hồ sơ" : "Tạo yêu cầu mới") : selected ? "Chi tiết hồ sơ" : pageLabel(page, portal);
+  const crumbs = [portal === "admin" ? "Quản trị" : "Không gian làm việc", currentGroup, pageLabel(page, portal), editor ? (editor.id ? "Chỉnh sửa hồ sơ" : "Tạo yêu cầu") : selected ? "Chi tiết hồ sơ" : null].filter(Boolean);
+  // OPS admins only see request metadata (UC05), so admin search lands on the operations table.
+  const adminSearch = portal === "admin" && user.roles.includes("OPS_ADMIN");
+  const canSearch = portal !== "admin" || adminSearch;
+
   return (
-    <div className="app-shell">
+    <PermissionProvider user={user}>
+      <div className={"app-shell" + (collapsed ? " sidebar-collapsed" : "")}>
+      <a className="skip-link" href="#main">Bỏ qua điều hướng, đến nội dung chính</a>
       {menuOpen && <button type="button" className="nav-backdrop" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
-      <aside className={"sidebar " + (menuOpen ? "open" : "")}>
-        <a className="brand" href="#main" onClick={() => navigate("home")}>
-          <span className="brand-mark">E</span>
+      <aside className={"sidebar " + (menuOpen ? "open" : "")} aria-label="Thanh điều hướng">
+        <button type="button" className="secondary ds-icon-button sidebar-close" aria-label="Đóng điều hướng" onClick={() => setMenuOpen(false)}><svg {...shellIcon}><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+        <button
+          type="button"
+          className="sidebar-edge-toggle"
+          onClick={toggleCollapsed}
+          aria-pressed={collapsed}
+          aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+          title={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {collapsed ? <path d="m9 18 6-6-6-6" /> : <path d="m15 18-6-6 6-6" />}
+          </svg>
+        </button>
+        <a className="brand" href="#main" onClick={(event) => { event.preventDefault(); navigate("home"); }}>
+          <img src="/logo.png" alt="EAS Logo" className="brand-logo-img" />
           <span>
-            EAS Portal<small>ENTERPRISE APPROVAL</small>
+            {portal === "admin" ? "EAS Admin" : "EAS Portal"}<small>{portal === "admin" ? "QUẢN TRỊ HỆ THỐNG" : "PHÊ DUYỆT DOANH NGHIỆP"}</small>
           </span>
         </a>
-        {user.roles.includes("REQUESTER") && (
-          <button
-            className="create-button"
-            onClick={() => {
-              setSelected(null);
-              setEditor({});
-              setMenuOpen(false);
-            }}
-          >
-            + Tạo yêu cầu mới
-          </button>
+        {portal !== "admin" && (user?.permissions?.by_module?.requests_workflows ? Boolean(user.permissions.by_module.requests_workflows.can_create) : user.roles.includes("REQUESTER")) && (
+          <div className="sidebar-create-wrap">
+            <button
+              type="button"
+              className="create-button"
+              title="Tạo yêu cầu mới"
+              onClick={() => { setSelected(null); setEditor({}); setMenuOpen(false); }}
+            >
+              <span className="create-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </span>
+              <span className="create-label">Tạo yêu cầu mới</span>
+            </button>
+          </div>
         )}
-        <nav aria-label="Điều hướng chính">
-          {[
-            ["KHÔNG GIAN LÀM VIỆC", ["home", "mine", "history"]],
-            ["PHÊ DUYỆT & THỰC HIỆN", ["approval", "execution", "acceptance"]],
-            ["QUẢN TRỊ HỆ THỐNG", ["policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events"]],
-            ["TÀI KHOẢN & TIỆN ÍCH", ["notifications", "profile"]],
-          ].map(([group, keys]) => {
-            const visible = menu.filter((m) => keys.includes(m[0]) && canNavigate(user.roles, m[0], user.capabilities));
-            return visible.length ? (
-              <div key={group} className="nav-group">
-                <p className="nav-caption">{group}</p>
-                {visible.map(([key, title, icon]) => (
-                  <button key={key}
-                    className={page === key && !selected && !editor ? "nav-item active" : "nav-item"}
-                    aria-current={page === key && !selected && !editor ? "page" : undefined}
-                    onClick={() => navigate(key)}>
-                    <span aria-hidden="true">{icon}</span>{title}
-                  </button>
-                ))}
+        <nav aria-label="Điều hướng chính" className="sidebar-nav">
+          {groups.map(([group, keys]) => {
+            const visible = keys.map((key) => menu.find((m) => m[0] === key)).filter((m) => {
+              if (!m) return false;
+              if (!allowedPages.has(m[0])) return false;
+              if (!canNavigate(user.roles, m[0], user.capabilities)) return false;
+              const mod = pageToModuleCode(m[0], portal);
+              // Employee portal: a module page appears only after the admin grants "Xem".
+              if (mod && portal === "client") return Boolean(user?.permissions?.by_module?.[mod]?.can_view);
+              if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
+                return Boolean(user.permissions.by_module[mod].can_view);
+              }
+              return true;
+            });
+            if (!visible.length) return null;
+            const isClosed = closedGroups.has(group);
+            return (
+              <div key={group} className={"nav-group" + (isClosed ? " is-collapsed" : "")}>
+                <button type="button" className="nav-caption" aria-expanded={!isClosed} onClick={() => toggleGroup(group)}>
+                  <span>{group}</span><span className="nav-caption-chevron" aria-hidden="true"><svg {...shellIcon} width="14" height="14"><path d="m6 9 6 6 6-6" /></svg></span>
+                </button>
+                {(!isClosed || collapsed) && visible.map(([key, , icon]) => {
+                  const active = page === key && !selected && !editor;
+                  const title = pageLabel(key, portal);
+                  return (
+                    <button key={key} type="button" title={collapsed ? title : undefined} className={active ? "nav-item active" : "nav-item"}
+                      aria-current={active ? "page" : undefined} onClick={() => navigate(key)}>
+                      <span className="nav-icon" aria-hidden="true">{renderNavIcon(key, icon)}</span>
+                      <span className="nav-text">{title}</span>
+                    </button>
+                  );
+                })}
               </div>
-            ) : null;
+            );
           })}
         </nav>
-        <div className="sidebar-footer">
-          <strong>Quy trình có kiểm soát</strong>
-          <small>Phê duyệt · Thực hiện · Nghiệm thu</small>
-        </div>
+        <button type="button" className="secondary sidebar-collapse" onClick={toggleCollapsed} aria-pressed={collapsed}
+          aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}>
+          <svg {...shellIcon} width="16" height="16">{collapsed ? <path d="m13 17 5-5-5-5M6 17l5-5-5-5" /> : <path d="m11 17-5-5 5-5M18 17l-5-5 5-5" />}</svg>
+          {!collapsed && <span>Thu gọn</span>}
+        </button>
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <button
-            className="secondary menu-toggle"
-            aria-label="Mở điều hướng"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            ☰
-          </button>
-          <span className="muted">
-            Cổng dịch vụ / {menu.find((m) => m[0] === page)?.[1]}
-          </span>
-          <div className="topbar-right">
-            <button
-              className="secondary"
-              onClick={() => navigate("notifications")}
-            >
-              Thông báo
-            </button>
-            <button
-              className="avatar"
-              onClick={() => navigate("profile")}
-              aria-label="Hồ sơ cá nhân"
-            >
-              {user.display_name?.slice(0, 1) || "U"}
-            </button>
-            <div>
-              <strong>{user.display_name}</strong>
-              <small>{user.roles.map((r) => roles[r] || r).join(" · ")}</small>
+          <div className="topbar-left">
+            <button type="button" className="secondary menu-toggle" aria-label="Mở điều hướng" onClick={() => setMenuOpen(!menuOpen)}><svg {...shellIcon}><path d="M4 6h16M4 12h16M4 18h16" /></svg></button>
+            <div className="topbar-page-identity">
+              <span className="topbar-page-title">{activeTitle}</span>
+              <nav className="ds-breadcrumb" aria-label="Vị trí hiện tại"><ol>
+                {crumbs.map((crumb, index) => <li key={crumb} aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb}</li>)}
+              </ol></nav>
             </div>
-            <ActionForm onSubmit={onLogout} submitLabel="Đăng xuất" />
+          </div>
+          {canSearch && <GlobalSearch portal={portal} onOpen={(id, item) => {
+            if (adminSearch) {
+              // Metadata-only scope: open the operations row instead of the restricted detail.
+              if (user.roles.includes("AUDITOR")) openRequest(id); else navigate("ops", item?.code || "");
+            } else openRequest(id);
+          }} onNavigate={navigate} />}
+          <div className="topbar-right client-topbar-actions">
+            <button
+              type="button"
+              className="secondary ds-icon-button theme-toggle-btn"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Chuyển sang giao diện Sáng" : "Chuyển sang giao diện Tối"}
+              title={theme === "dark" ? "Chuyển sang giao diện Sáng" : "Chuyển sang giao diện Tối"}
+            >
+              {theme === "dark" ? (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </button>
+            {portal !== "admin" && user.working_status && (
+              <span className={`working-status-badge ws-${String(user.working_status.code).toLowerCase()}`} title={user.working_status.detail}>
+                {user.working_status.label}
+              </span>
+            )}
+            <NotificationBell onOpen={portal === "admin" && !user.roles.includes("AUDITOR") ? () => navigate("notifications") : openRequest} onViewAll={() => navigate("notifications")} />
+            <button type="button" className="client-account-link" disabled={portal === "admin"} onClick={() => navigate("profile")} aria-label={`Tài khoản ${user.display_name || "người dùng"}`}>
+              <span className="client-avatar">{user.display_name?.slice(0, 1) || "U"}</span>
+              <div className="topbar-user-pill">
+                <strong className="topbar-display-name">{user.display_name || "Người dùng"}</strong>
+                <span className={`topbar-role-badge ${primaryRole.tone}`}>{user.job_title || primaryRole.name}</span>
+                {user.department_name && <small className="topbar-department">{user.department_name}</small>}
+              </div>
+            </button>
+            <button type="button" className="secondary ds-icon-button" aria-label="Đăng xuất" title="Đăng xuất" onClick={onLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
           </div>
         </header>
         <main id="main" className="content" tabIndex={-1}>
+          <Suspense fallback={<output className="ds-loading" aria-busy="true"><span className="sr-only">Đang tải trang…</span><span className="ds-skeleton" aria-hidden="true"><span className="ds-skeleton-line" style={{ width: "60%" }} /><span className="ds-skeleton-line" style={{ width: "90%" }} /></span></output>}>
           {renderWorkspaceContent({
             editor,
             selected,
@@ -596,18 +1451,23 @@ function Workspace({ user, onLogout }) {
             user,
             revision,
             navigate,
-            setSelected,
+            setSelected: openRequest,
             setEditor,
             setRevision,
+            portal,
+            searchText,
           })}
+          </Suspense>
         </main>
         <footer className="page-footer">
-          EAS · Hệ thống phê duyệt yêu cầu doanh nghiệp
+          EAS · {portal === "admin" ? "Trung tâm quản trị hệ thống" : "Hệ thống phê duyệt yêu cầu doanh nghiệp"}
         </footer>
       </div>
     </div>
+    </PermissionProvider>
   );
 }
+
 let _bootstrapSessionPromise = null;
 
 function fetchInitialSession() {
@@ -623,9 +1483,247 @@ function fetchInitialSession() {
   return _bootstrapSessionPromise;
 }
 
-export default function App() {
+export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unified"), adminScreens = {} }) {
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem("eas.theme") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    } catch {
+      return "light";
+    }
+  });
+  useEffect(() => {
+    try {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("eas.theme", theme);
+    } catch {}
+  }, [theme]);
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  return (
+    <AdminScreensContext.Provider value={adminScreens}>
+      <PortalApp portal={portal} theme={theme} toggleTheme={toggleTheme} />
+    </AdminScreensContext.Provider>
+  );
+}
+
+
+function useAiMaintenanceState(enabled = true) {
+  const [aiStatus, setAiStatus] = useState({
+    client_maintenance_lock: false,
+    sync_status: "COMPLETED",
+    active_regulation_version: "v1.0",
+    target_regulation_version: "v1.0",
+    progress_percent: 100,
+    current_step_index: 4,
+    current_step_label: "",
+    steps_detail: [],
+  });
+
+  useEffect(() => {
+    // The maintenance lock applies only to the employee portal. The admin
+    // portal must not poll AI status on its login screen or while idle.
+    if (!enabled) return undefined;
+    let active = true;
+<<<<<<< HEAD
+    let pending = null;
+    let inFlight = false;
+    let failureStreak = 0;
+    let lastAttempt = 0;
+    let nextAttemptAt = 0;
+    let rateLimitDelay = 0;
+    let controller = null;
+    let deadlineTimer = null;
+    const fetchStatus = async () => {
+      if (!active || inFlight) return;
+      inFlight = true;
+      lastAttempt = Date.now();
+      let maintenance = false;
+      rateLimitDelay = 0;
+      controller = new AbortController();
+      // Direct health polling must not wait indefinitely on a stale socket.
+      deadlineTimer = window.setTimeout(() => controller?.abort(), 12000);
+      try {
+        const data = await api("/api/v1/system/ai-status", {
+          cache: "no-store", signal: controller.signal, timeoutMs: 12000,
+        });
+        maintenance = Boolean(data.client_maintenance_lock);
+        failureStreak = 0;
+        if (active) setAiStatus(data);
+      } catch (error) {
+        // Preserve the last known state. A 429 requires respecting the
+        // server's Retry-After, not starting another probe immediately.
+        rateLimitDelay = error?.status === 429
+          ? Math.max(60000, error.retryAfterMs || 0) : 0;
+        failureStreak = Math.min(6, failureStreak + 1);
+      } finally {
+        window.clearTimeout(deadlineTimer);
+        deadlineTimer = null;
+        inFlight = false;
+        controller = null;
+        if (active) {
+          const interval = document.visibilityState === "hidden" ? 120000
+            : failureStreak ? Math.min(300000, 15000 * 2 ** failureStreak)
+              : maintenance ? 3000 : 45000;
+          const delay = Math.max(interval, rateLimitDelay);
+          nextAttemptAt = Date.now() + delay;
+          pending = window.setTimeout(fetchStatus, delay);
+=======
+    const isMaintenance = Boolean(aiStatus?.client_maintenance_lock);
+    const intervalMs = isMaintenance ? 4000 : 20000;
+    const fetchStatus = async () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        return;
+      }
+      try {
+        const res = await fetch("/api/v1/system/ai-status", {
+          signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (active) setAiStatus(data);
+>>>>>>> origin/main
+        }
+      }
+    };
+<<<<<<< HEAD
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      // Do not bypass Retry-After or outage backoff on every tab focus.
+      if (Date.now() < nextAttemptAt) return;
+      if (failureStreak && Date.now() - lastAttempt < 30000) return;
+      window.clearTimeout(pending);
+      if (!inFlight) void fetchStatus();
+    };
+    void fetchStatus();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      active = false;
+      window.clearTimeout(pending);
+      window.clearTimeout(deadlineTimer);
+      controller?.abort();
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [enabled]);
+=======
+    void fetchStatus();
+    const timer = setInterval(() => { void fetchStatus(); }, intervalMs);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void fetchStatus();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [aiStatus?.client_maintenance_lock]);
+>>>>>>> origin/main
+
+  return aiStatus;
+}
+
+function ClientMaintenanceOverlay({ aiStatus, onLogout }) {
+  const [countdown, setCountdown] = useState(3);
+  const targetV = aiStatus?.target_regulation_version || "mới";
+  const progress = aiStatus?.progress_percent ?? 0;
+  const currentStep = aiStatus?.current_step_index || 1;
+  const stepLabel = aiStatus?.current_step_label || "Đang đồng bộ dữ liệu quy định...";
+
+  useEffect(() => {
+    if (countdown <= 0) {
+      onLogout();
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCountdown((c) => c - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, onLogout]);
+
+  return (
+    <div className="client-maintenance-backdrop" role="dialog" aria-modal="true">
+      <div className="client-maintenance-card">
+        <div className="maintenance-icon-badge">
+          <div className="maintenance-radar-pulse"></div>
+          <span className="maintenance-robot-icon"><Icon name="spark" size={14} /></span>
+        </div>
+
+        <h2 className="client-maintenance-title">
+          Hệ thống đang cập nhật và huấn luyện AI theo quy định mới
+          <span className="client-maintenance-version"> (Phiên bản {targetV})</span>
+        </h2>
+
+        <p className="client-maintenance-desc">
+          Vui lòng thoát ra và đăng nhập lại sau ít phút. Hệ thống đang đồng bộ tri thức và khóa truy cập người dùng để đảm bảo tính nhất quán dữ liệu.
+        </p>
+
+        <div className="client-maintenance-steps">
+          <div className={`m-step-item ${currentStep >= 1 ? (currentStep > 1 ? "done" : "active") : ""}`}>
+            <div className="m-step-dot">{currentStep > 1 ? "" : "1"}</div>
+            <span>Đồng bộ</span>
+          </div>
+          <div className="m-step-line"></div>
+          <div className={`m-step-item ${currentStep >= 2 ? (currentStep > 2 ? "done" : "active") : ""}`}>
+            <div className="m-step-dot">{currentStep > 2 ? "" : "2"}</div>
+            <span>Học quy định</span>
+          </div>
+          <div className="m-step-line"></div>
+          <div className={`m-step-item ${currentStep >= 3 ? (currentStep > 3 ? "done" : "active") : ""}`}>
+            <div className="m-step-dot">{currentStep > 3 ? "" : "3"}</div>
+            <span>Áp dụng</span>
+          </div>
+          <div className="m-step-line"></div>
+          <div className={`m-step-item ${currentStep >= 4 ? "done" : ""}`}>
+            <div className="m-step-dot">{currentStep >= 4 ? "" : "4"}</div>
+            <span>Hoàn tất</span>
+          </div>
+        </div>
+
+        <div className="client-maintenance-progress-box">
+          <div className="m-progress-header">
+            <span className="m-step-label">{stepLabel}</span>
+            <span className="m-percent">{progress}%</span>
+          </div>
+          <div className="m-progress-track">
+            <div className="m-progress-fill" style={{ width: `${progress}%` }}></div>
+          </div>
+        </div>
+
+        <div className="client-maintenance-footer">
+          <p className="client-countdown-notice">
+            Tự động đưa bạn ra màn hình chờ sau <strong>{countdown} giây</strong>...
+          </p>
+          <button type="button" className="btn-primary btn-logout-now" onClick={onLogout}>
+            Thoát ra ngay (Đăng xuất)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PortalApp({ portal, theme, toggleTheme }) {
   const [user, setUser] = useState(undefined),
     [error, setError] = useState("");
+  const aiStatus = useAiMaintenanceState(portal === "client");
+  // Only the open learning job locks users; a failed run (ERROR) keeps the old rules and stays unlocked.
+  const aiMaintenanceActive = Boolean(aiStatus?.client_maintenance_lock);
+  // L11: any 401 from a business endpoint means the session is gone.
+  // Parallel requests can all return 401: notify once per signed-in session.
+  const sessionActive = useRef(false);
+  useEffect(() => {
+    sessionActive.current = Boolean(user);
+  }, [user]);
+  useEffect(() => {
+    const onExpired = () => {
+      if (!sessionActive.current) return;
+      sessionActive.current = false;
+      notify("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", "error");
+      invalidateResources();
+      setUser(null);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
   async function load(loginUser) {
     if (loginUser?.must_change_password) {
       setUser({ ...loginUser, roles: [] });
@@ -633,6 +1731,7 @@ export default function App() {
     }
     try {
       setUser((await api("/api/v1/auth/me")).user);
+      setError("");
     } catch (e) {
       if (e.message === "PASSWORD_CHANGE_REQUIRED")
         setUser({ roles: [], must_change_password: true });
@@ -640,22 +1739,102 @@ export default function App() {
       else setError(errorText(e));
     }
   }
+  const signedIn = Boolean(user && !user.must_change_password);
+  useEffect(() => {
+    if (!signedIn) return undefined;
+    const refresher = createRefresher(() => {
+      api("/api/v1/auth/me", { headers: { "X-Auth-Optional": "1" } })
+        .then((r) => {
+          // Optional /me responds 200 with user:null after session expiry.
+          // Clear the UI session rather than leaving every other API at 401.
+          if (r?.user) setUser(r.user);
+          else setUser(null);
+        })
+        .catch((e) => {
+          if (e.status === 401) setUser(null);
+        });
+    });
+    const onVisible = () => document.visibilityState === "visible" && refresher.trigger();
+    window.addEventListener("focus", refresher.trigger);
+    window.addEventListener(PERMISSIONS_CHANGED, refresher.trigger);
+    document.addEventListener("visibilitychange", onVisible);
+    // Rights granted or revoked by the admin show up within ~15 s on an open tab.
+    const poll = setInterval(() => document.visibilityState === "visible" && refresher.trigger(), 15000);
+    return () => {
+      clearInterval(poll);
+      refresher.dispose();
+      window.removeEventListener("focus", refresher.trigger);
+      window.removeEventListener(PERMISSIONS_CHANGED, refresher.trigger);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [signedIn]);
   useEffect(() => {
     let active = true;
-    fetchInitialSession()
-      .then((r) => {
-        if (active) setUser(r?.user || null);
-      })
-      .catch((e) => {
+    let pending = null;
+    let failures = 0;
+    let checking = false;
+    let retryAt = 0;
+    const loadSession = async () => {
+      if (!active || checking) return;
+      checking = true;
+      try {
+        const response = await fetchInitialSession();
         if (active) {
+<<<<<<< HEAD
+          setUser(response?.user || null);
+          setError("");
+          failures = 0;
+          retryAt = 0;
+=======
           if (e.message === "PASSWORD_CHANGE_REQUIRED")
             setUser({ roles: [], must_change_password: true });
-          else if (e.status === 401 || e.status === 403) setUser(null);
+          // During an AI learning lock the login page shows the progress bar,
+          // so a reload must land there instead of a generic connection error.
+          else if (e.status === 401 || e.status === 403 || e.message === "SYSTEM_UNDER_MAINTENANCE") setUser(null);
+          else if (e.status === 429) {
+            setUser(null);
+            notify("Hệ thống đang điều tiết lưu lượng truy cập. Vui lòng thử lại sau giây lát.", "warning");
+          }
           else setError(errorText(e));
+>>>>>>> origin/main
         }
-      });
+      } catch (e) {
+        if (!active) return;
+        if (e.message === "PASSWORD_CHANGE_REQUIRED") setUser({ roles: [], must_change_password: true });
+        else if (e.status === 401 || e.status === 403 || e.message === "SYSTEM_UNDER_MAINTENANCE") setUser(null);
+        else {
+          setError(errorText(e));
+          if (e.status === 429) {
+            // Global API throttle: a 1.5s bootstrap retry would extend the
+            // Console storm and prevent users from reaching the login screen.
+            const delay = Math.max(60000, e.retryAfterMs || 0);
+            retryAt = Date.now() + delay;
+            pending = window.setTimeout(loadSession, delay);
+          } else if (failures < 4) {
+            const delay = Math.min(12000, 1500 * 2 ** failures++);
+            retryAt = Date.now() + delay;
+            pending = window.setTimeout(loadSession, delay);
+          }
+        }
+      } finally {
+        checking = false;
+      }
+    };
+    const onReconnect = () => {
+      if (!active || checking || (!failures && !retryAt) || document.visibilityState !== "visible") return;
+      if (retryAt && Date.now() < retryAt) return;
+      window.clearTimeout(pending);
+      pending = null;
+      void loadSession();
+    };
+    void loadSession();
+    window.addEventListener("online", onReconnect);
+    document.addEventListener("visibilitychange", onReconnect);
     return () => {
       active = false;
+      window.clearTimeout(pending);
+      window.removeEventListener("online", onReconnect);
+      document.removeEventListener("visibilitychange", onReconnect);
     };
   }, []);
   async function logout() {
@@ -665,6 +1844,7 @@ export default function App() {
     });
     setUser(null);
   }
+  const screen = (() => {
   if (error)
     return (
       <main id="main" className="auth-shell">
@@ -673,14 +1853,24 @@ export default function App() {
           <p className="error" role="alert">
             {error}
           </p>
-          <button type="button" onClick={() => window.location.reload()}>Thử lại</button>
+          <button type="button" onClick={async () => {
+            setError("");
+            try {
+              // Explicit user action is allowed to probe immediately after an outage.
+              await initializeCsrf({ forceProbe: true });
+              const result = await api("/api/v1/auth/me", {
+                forceProbe: true, headers: { "X-Auth-Optional": "1" },
+              });
+              setUser(result?.user || null);
+            } catch (e) { setError(errorText(e)); }
+          }}>Kết nối lại</button>
         </section>
       </main>
     );
   if (user === undefined)
     return (
-      <main id="main" className="empty" aria-live="polite">
-        Đang khởi tạo EAS Portal…
+      <main id="main" aria-live="polite">
+        <ShellSkeleton />
       </main>
     );
   if (user?.must_change_password)
@@ -688,13 +1878,78 @@ export default function App() {
       <main id="main" className="content">
         <h1>Đổi mật khẩu để tiếp tục</h1>
         <p>Tài khoản đang sử dụng mật khẩu tạm.</p>
-        <Profile user={user} onChanged={() => { void load(); }} />
+        <Suspense fallback={<ShellSkeleton />}><Profile user={user} onChanged={() => { void load(); }} /></Suspense>
         <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
       </main>
     );
+  if (user && portal === "admin" && (!canUsePortal(user.roles, "admin"))) {
+    return (
+      <main className="auth-shell">
+        <section className="panel">
+          <h1>Không có quyền quản trị</h1>
+          <p>Tài khoản nhân viên không được phép sử dụng Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).</p>
+          <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+            <a
+              href={import.meta.env.VITE_CLIENT_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:8080`}
+              className="btn-primary"
+              style={{ display: "inline-flex", alignItems: "center", textDecoration: "none", padding: "8px 16px", borderRadius: "6px" }}
+            >
+              Mở Cổng Nhân viên
+            </a>
+            <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
+          </div>
+        </section>
+      </main>
+    );
+  }
+<<<<<<< HEAD
+  // Administrative identities use only the Admin portal even when historic
+  // workflow grants remain; enforced independently on every backend API.
+  if (user && portal === "client" && !canUsePortal(user.roles, "client")) {
+=======
+  // Administrative identities are system-only (enforced again by the API);
+  // an admin who also approves or executes keeps the employee portal.
+  if (user && portal === "client" && (user.email === "admin@eas.com" || !canUsePortal(user.roles, "client"))) {
+>>>>>>> origin/main
+    return (
+      <main className="auth-shell">
+        <section className="panel">
+          <h1>Tài khoản quản trị</h1>
+<<<<<<< HEAD
+          <p>Tài khoản có quyền quản trị chỉ được sử dụng Cổng Quản trị. Vui lòng chuyển sang cổng phù hợp.</p>
+=======
+          <p>
+            {user.email === "admin@eas.com"
+              ? "Tài khoản Quản trị viên (admin@eas.com) không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081)."
+              : "Tài khoản quản trị hệ thống không có nghiệp vụ trên Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081)."}
+          </p>
+>>>>>>> origin/main
+          <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+            <a
+              href={import.meta.env.VITE_ADMIN_PORTAL_URL || `${window.location.protocol}//${window.location.hostname}:8081`}
+              className="btn-primary"
+              style={{ display: "inline-flex", alignItems: "center", textDecoration: "none", padding: "8px 16px", borderRadius: "6px" }}
+            >
+              Mở Cổng Quản trị
+            </a>
+            <ActionForm onSubmit={logout} submitLabel="Đăng xuất" />
+          </div>
+        </section>
+      </main>
+    );
+  }
   return user ? (
-    <Workspace user={user} onLogout={logout} />
+    <>
+      <Workspace user={user} onLogout={logout} portal={portal} theme={theme} toggleTheme={toggleTheme} aiStatus={aiStatus} />
+      {portal === "client" && aiMaintenanceActive ? (
+        <ClientMaintenanceOverlay aiStatus={aiStatus} onLogout={logout} />
+      ) : (
+        <SystemUpdateDialog key={user.id} />
+      )}
+    </>
   ) : (
-    <Login onLogin={load} />
+    <Login onLogin={load} portal={portal} aiStatus={aiStatus} />
   );
+  })();
+  return <><ToastCenter />{screen}</>;
 }

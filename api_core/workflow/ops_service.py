@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
 from django.db import connection
+from django.utils import timezone
 from psycopg.types.json import Jsonb
 
 from api_core.authn.service import Actor
@@ -66,6 +68,30 @@ def list_ops_metadata(
     type_code_filter = (query_params.get("type_code") or "").strip() or None
     dept_filter = (query_params.get("department_id") or "").strip() or None
 
+    from_filter = (query_params.get("created_from") or "").strip()
+    to_filter = (query_params.get("created_to") or "").strip()
+    try:
+        from_dt = (
+            datetime.fromisoformat(from_filter.replace("Z", "+00:00"))
+            if from_filter
+            else None
+        )
+        to_dt = (
+            datetime.fromisoformat(to_filter.replace("Z", "+00:00"))
+            if to_filter
+            else None
+        )
+        if (from_dt and from_dt.tzinfo is None) or (to_dt and to_dt.tzinfo is None):
+            raise ValueError
+        if (
+            from_dt
+            and to_dt
+            and (to_dt <= from_dt or to_dt - from_dt > timedelta(days=366))
+        ):
+            raise ValueError
+    except (ValueError, TypeError):
+        raise CommandError("PERIOD_INVALID", status=422) from None
+
     dept_uuid = None
     if dept_filter:
         try:
@@ -80,7 +106,14 @@ def list_ops_metadata(
                a.id::text AS attempt_id, a.attempt_no, a.executor_id::text, a.state,
                i.acceptor_id::text, i.planned_executor_id::text,
                sla.id::text, sla.kind, sla.started_at, sla.due_at, sla.breached_at,
-               r.updated_at
+               r.updated_at,
+               assignee.display_name AS approver_name,
+               executor.display_name AS executor_name,
+               acceptor.display_name AS acceptor_name,
+               planned.display_name AS planned_executor_name,
+               rt.name AS type_name,
+               u.display_name AS requester_name,
+               dept.name AS department_name
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         JOIN eas.app_user u ON u.id = r.requester_id
@@ -89,9 +122,18 @@ def list_ops_metadata(
         LEFT JOIN eas.approval_step s ON s.instance_id = i.id AND s.state = 'ACTIVE'
         LEFT JOIN eas.execution_attempt a ON a.instance_id = i.id AND a.state IN ('READY', 'RUNNING', 'SUBMITTED')
         LEFT JOIN eas.sla_stage sla ON sla.request_id = r.id AND sla.closed_at IS NULL
+        LEFT JOIN eas.app_user assignee ON assignee.id = s.assignee_id
+        LEFT JOIN eas.app_user executor ON executor.id = a.executor_id
+        LEFT JOIN eas.app_user acceptor ON acceptor.id = i.acceptor_id
+        LEFT JOIN eas.app_user planned ON planned.id = i.planned_executor_id
+        LEFT JOIN eas.department dept ON dept.id = COALESCE(v.department_id, u.department_id)
         WHERE (%s::text IS NULL OR r.status = %s)
-          AND (%s::text IS NULL OR STRPOS(LOWER(r.code), LOWER(%s::text)) > 0)
+          AND (%s::text IS NULL OR (STRPOS(LOWER(r.code), LOWER(%s::text)) > 0
+               OR STRPOS(LOWER(COALESCE(v.payload->>'title', r.draft_payload->>'title', '')),
+                         LOWER(%s::text)) > 0))
           AND (%s::text IS NULL OR rt.code = %s)
+          AND (%s::timestamptz IS NULL OR r.created_at >= %s)
+          AND (%s::timestamptz IS NULL OR r.created_at <= %s)
           AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
           AND EXISTS (
             SELECT 1 FROM eas.role_membership rm
@@ -112,8 +154,13 @@ def list_ops_metadata(
         status_filter,
         search_filter,
         search_filter,
+        search_filter,
         type_code_filter,
         type_code_filter,
+        from_dt,
+        from_dt,
+        to_dt,
+        to_dt,
         dept_uuid,
         dept_uuid,
         actor.id,
@@ -162,6 +209,19 @@ def list_ops_metadata(
                 else None
             ),
             "updated_at": row[20].isoformat(),
+            "type_name": row[25],
+            "responsible": (
+                {"name": row[21], "stage": "APPROVAL"}
+                if row[6] and row[21]
+                else {"name": row[22] or row[24], "stage": "EXECUTION"}
+                if row[9] and (row[22] or row[24])
+                else {"name": row[23], "stage": "ACCEPTANCE"}
+                if row[13] and row[23]
+                else None
+            ),
+            "overdue": bool(row[18] and row[18] < timezone.now()),
+            "requester_name": row[26] if len(row) > 26 else None,
+            "department_name": row[27] if len(row) > 27 else None,
         }
         for row in rows[:limit]
     ]

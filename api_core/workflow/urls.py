@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import history_views, views
+from . import announcement_views, history_views, policy_views, views
 
 urlpatterns = [
     path("requests/<uuid:request_id>/history", history_views.history),
@@ -12,6 +12,14 @@ urlpatterns = [
     path("request-drafts", views.draft, name="request-draft-create"),
     path("requests", views.request_list_or_create, name="request-list"),
     path("requests/submit", views.submit, name="request-submit"),
+    path(
+        "requests/route-preview", views.route_preview_view, name="request-route-preview"
+    ),
+    path(
+        "requests/<uuid:request_id>/ai-assessments",
+        views.ai_assessment_view,
+        name="request-ai-assessments",
+    ),
     path(
         "requests/<uuid:request_id>/submit", views.submit, name="request-submit-with-id"
     ),
@@ -53,6 +61,16 @@ urlpatterns = [
         name="execution-attachment-upload",
     ),
     path(
+        "internal/requests/<uuid:request_id>/auto-approve",
+        views.internal_auto_approve_view,
+        name="internal-auto-approve",
+    ),
+    path(
+        "requests/<uuid:request_id>/assignable-executors",
+        views.assignable_executors_view,
+        name="request-assignable-executors",
+    ),
+    path(
         "attachments/<uuid:attachment_id>",
         views.attachment_metadata,
         name="attachment-metadata",
@@ -63,6 +81,22 @@ urlpatterns = [
         name="attachment-download",
     ),
     # Decisions & Cancellation
+    path("delegations", views.delegations_view, name="delegations"),
+    path(
+        "delegations/candidates",
+        views.delegation_candidates_view,
+        name="delegation-candidates",
+    ),
+    path(
+        "delegations/<uuid:delegation_id>/revoke",
+        views.delegation_revoke_view,
+        name="delegation-revoke",
+    ),
+    path(
+        "requests/<uuid:request_id>/ai-approval/revoke",
+        views.revoke_ai_approval_view,
+        name="request-ai-approval-revoke",
+    ),
     path(
         "requests/<uuid:request_id>/approval-decisions",
         views.approval_decision,
@@ -135,6 +169,27 @@ urlpatterns = [
         name="ops-outbox-replay",
     ),
     # Policy & Config Release
+    path(
+        "policies/ai-rules",
+        policy_views.publish_ai_policy_rules,
+        name="policy-ai-rules",
+    ),
+    path(
+        "policies/ai-rules/<uuid:version_id>/activate",
+        policy_views.activate_ai_policy_version,
+        name="policy-ai-rules-activate",
+    ),
+    path("announcements", announcement_views.announcements_view, name="announcements"),
+    path(
+        "announcements/<uuid:announcement_id>/read",
+        announcement_views.announcement_read_view,
+        name="announcement-read",
+    ),
+    path(
+        "internal/ai-policy/active",
+        policy_views.internal_active_ai_policy,
+        name="internal-ai-policy-active",
+    ),
     path("config-releases", views.config_releases_view, name="config-releases"),
     path(
         "config-releases/status",
@@ -174,6 +229,7 @@ urlpatterns = [
         name="notification-mark-read-alias",
     ),
     path("reports/requests", views.reports_requests_view, name="reports-requests"),
+    path("reports/team", views.team_report_view, name="reports-team"),
     path(
         "requests/<uuid:request_id>/audit",
         views.request_audit_view,

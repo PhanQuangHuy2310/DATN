@@ -1,0 +1,12 @@
+# OCR stack, installed in its own cached Docker layer (see Dockerfile).
+# PaddleOCR 3.x (05/11/2026, audit S7): the former paddlepaddle 2.6.2 /
+# protobuf 3.20.2 stack carried published CVEs. Exact versions
+# below were resolved and pip-audit clean on python:3.11-slim.
+numpy==1.26.4
+paddlepaddle==3.3.1
+paddleocr==3.7.0
+paddlex==3.7.2
+protobuf==5.29.6
+opencv-contrib-python==4.10.0.84
+shapely==2.2.0
+pyclipper==1.4.0

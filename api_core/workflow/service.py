@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import html
 import re
 import unicodedata
@@ -14,6 +16,7 @@ from psycopg.types.json import Jsonb
 
 from api_core.audit import canonical_sha256
 from api_core.authn.models import Actor
+from api_core.catalog.integrations import unavailable_notice
 from api_core.catalog.plan_catalog import resolve_five_level_metadata
 from api_core.domain import (
     PayloadValidationError,
@@ -22,10 +25,20 @@ from api_core.domain import (
     validate_payload,
 )
 from api_core.domain.routing import RoutingError, extract_amount_vnd
+from api_core.integrations import requests as external
 from api_core.workflow.constants import (
+    ERR_ASSIGNEE_INVALID,
     ERR_REQUEST_NOT_FOUND,
     ERR_STATE_CONFLICT,
     ERR_VERSION_CONFLICT,
+)
+from api_core.workflow.errors import CommandError
+from api_core.workflow.leave_sync import record_approved_leave
+from api_core.workflow.resource_allocation import (
+    ResourceUnavailable,
+    allocate,
+    check_request,
+    need_for,
 )
 
 SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
@@ -40,20 +53,18 @@ SQL_INSERT_OUTBOX_EVENT = """
             VALUES (%s,%s,%s,%s)
             """
 HTML_TAG = re.compile(r"<[^>]+>")
-
-
-class CommandError(ValueError):
-    def __init__(
-        self,
-        code: str,
-        *,
-        status: int = 400,
-        fields: dict[str, list[str]] | None = None,
-    ):
-        super().__init__(code)
-        self.code = code
-        self.status = status
-        self.fields = fields
+# Administrative identities are system-only (see require_actor): they can never
+# be routed or reassigned business work, or that work could not be decided.
+SQL_NOT_ADMINISTRATIVE = """
+          AND NOT EXISTS (
+            SELECT 1 FROM eas.role_membership adm
+            WHERE adm.user_id = u.id
+              AND adm.role IN ('OPS_ADMIN', 'POLICY_ADMIN', 'AUDITOR')
+              AND adm.revoked_at IS NULL
+              AND adm.valid_from <= statement_timestamp()
+              AND (adm.valid_to IS NULL OR adm.valid_to > statement_timestamp())
+          )
+"""
 
 
 @dataclass(frozen=True)
@@ -111,8 +122,8 @@ def _is_actor_valid_for_role(
     department_id: str,
     type_id: str,
 ) -> bool:
-    cursor.execute(
-        """
+    cursor.execute(  # NOSONAR python:S2077 - SQL_NOT_ADMINISTRATIVE is a constant fragment
+        f"""
         SELECT EXISTS (
           SELECT 1 FROM eas.app_user u
           JOIN eas.role_membership rm ON rm.user_id = u.id
@@ -122,11 +133,17 @@ def _is_actor_valid_for_role(
             AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
             AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = %s)
             AND (rm.type_scope = 'ALL' OR rm.type_id = %s)
+            {SQL_NOT_ADMINISTRATIVE}
         )
         """,
         [actor_id, role, department_id, type_id],
     )
     return bool(cursor.fetchone()[0])
+
+
+def _db_now(cursor) -> datetime:
+    cursor.execute("SELECT clock_timestamp()")
+    return cursor.fetchone()[0]
 
 
 def _append_request_audit(
@@ -271,6 +288,54 @@ def _append_admin_audit(
     return event_id
 
 
+def record_system_change(
+    cursor,
+    *,
+    actor_id: str | None,
+    change_type: str,
+    system_version: str,
+    title: str,
+    description: str,
+    correlation_id: str,
+    change_scope: str = "PATCH",
+    old_value: dict[str, Any] | None = None,
+    new_value: dict[str, Any] | None = None,
+    action: str | None = None,
+    target_type: str = "system_version",
+    target_id: str | None = None,
+    extra_details: dict[str, Any] | None = None,
+) -> str:
+    """Human-readable system change log, stored in the hash-chained admin_event.
+
+    Replaces the old eas.system_versions_changelog table (schema v2): the admin
+    "system versions" screen reads admin_event rows whose details carry
+    ``change_type``.
+    """
+    title = title.strip()
+    reason = title if len(title) >= 10 else f"Thay đổi hệ thống: {title}"
+    details = {
+        "change_type": change_type,
+        "change_scope": change_scope,
+        "system_version": system_version,
+        "title": title,
+        "description": description,
+        "old_value": old_value,
+        "new_value": new_value,
+        **(extra_details or {}),
+    }
+    return _append_admin_audit(
+        cursor,
+        actor_id=actor_id,
+        actor_kind="HUMAN" if actor_id else "SYSTEM",
+        action=action or f"SYSTEM_CHANGE_{change_type}",
+        target_type=target_type,
+        target_id=target_id or system_version,
+        details=details,
+        reason=reason[:2000],
+        correlation_id=correlation_id,
+    )
+
+
 def _execute_idempotent(
     *,
     actor_id: str,
@@ -382,6 +447,15 @@ def _validate_create_draft_input(
     return type_code, origin_request_id, clean_title
 
 
+def _assert_integration_available(type_code: str, category: str | None) -> None:
+    """Server-side circuit breaker: a disabled integration closes its request types."""
+    notice = unavailable_notice(type_code, category)
+    if notice:
+        raise CommandError(
+            "INTEGRATION_UNAVAILABLE", status=409, fields={"type_code": [notice]}
+        )
+
+
 def create_draft(
     *,
     actor: Actor,
@@ -403,7 +477,7 @@ def create_draft(
 
         cursor.execute(
             """
-            SELECT rt.id::text,cr.id::text
+            SELECT rt.id::text,cr.id::text,rt.category
             FROM eas.request_type rt
             JOIN eas.config_release cr ON cr.id=rt.active_release_id
             WHERE rt.code=%s AND rt.is_active AND cr.state='PUBLISHED'
@@ -415,7 +489,8 @@ def create_draft(
         configured = cursor.fetchone()
         if not configured:
             raise CommandError("REQUEST_TYPE_NOT_CONFIGURED", status=409)
-        type_id, release_id = configured
+        type_id, release_id, category = configured
+        _assert_integration_available(type_code, category)
         _authorize(
             cursor,
             actor_id=actor.id,
@@ -424,23 +499,20 @@ def create_draft(
             type_id=type_id,
         )
         request_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = _db_now(cursor)
         draft_payload = {"title": clean_title} if clean_title else None
-        risk_w, app_lvl = resolve_five_level_metadata(type_code)
         cursor.execute(
             """
-            INSERT INTO eas.request(id,requester_id,type_id,draft_release_id,draft_payload,origin_request_id,risk_weight,approval_level)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING code
+            INSERT INTO eas.request(id,requester_id,type_id,draft_release_id,draft_payload,origin_request_id)
+            VALUES (%s,%s,%s,%s,%s,%s) RETURNING code
             """,
             [
                 request_id,
                 actor.id,
                 type_id,
                 release_id,
-                Jsonb(draft_payload) if draft_payload else None,
+                Jsonb(draft_payload or {}),
                 origin_request_id,
-                risk_w,
-                app_lvl,
             ],
         )
         code = cursor.fetchone()[0]
@@ -518,7 +590,7 @@ def _validate_update_draft_input(
     if amount_vnd is not None and (
         isinstance(amount_vnd, bool)
         or not isinstance(amount_vnd, int)
-        or amount_vnd <= 0
+        or not (0 < amount_vnd <= 999_999_999_999)
     ):
         raise CommandError("INVALID_AMOUNT", status=422)
 
@@ -681,13 +753,15 @@ def update_draft(
                 merged_payload, existing_amount_vnd, allow_zero=False
             )
         )
+        if final_amount_vnd is not None and final_amount_vnd > 999_999_999_999:
+            raise CommandError("INVALID_AMOUNT", status=422)
         if type_code in {"LEAVE", "ACCESS"} and final_amount_vnd is not None:
             raise CommandError("AMOUNT_NOT_ALLOWED", status=422)
 
         if attachment_ids is not None:
             _sync_draft_attachments(cursor, request_id, actor.id, attachment_ids)
 
-        now = datetime.now(timezone.utc)
+        now = _db_now(cursor)
         cursor.execute(
             """
             UPDATE eas.request
@@ -840,7 +914,7 @@ def report_execution_issue(
         _validate_execution_issue_state(kind, status, attempt_state)
 
         issue_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = _db_now(cursor)
         cursor.execute(
             """
             INSERT INTO eas.execution_issue(id, request_id, attempt_id, actor_id, kind, reason, created_at)
@@ -977,6 +1051,24 @@ def _validate_submit_input(
     )
 
 
+def _type_risk_weight(cursor, type_id: str, type_code: str) -> int:
+    """Risk weight in force for a submission.
+
+    One source of truth: ``eas.request_type.risk_weight`` (edited only by
+    POLICY_ADMIN, audited). The static catalogue JSON is only a fallback for a
+    row that is missing. The value is snapshotted into the revision, so later
+    edits never change how an already submitted request was treated.
+    """
+    cursor.execute(
+        "SELECT risk_weight, approval_level FROM eas.request_type WHERE id=%s",
+        [type_id],
+    )
+    row = cursor.fetchone()
+    db_risk, db_level = row if row else (None, None)
+    risk, _ = resolve_five_level_metadata(type_code, db_risk, db_level)
+    return risk
+
+
 def _fetch_submit_config(
     cursor, type_code: str, viewed_release_id: str | None
 ) -> tuple[
@@ -985,7 +1077,7 @@ def _fetch_submit_config(
     cursor.execute(
         """
         SELECT rt.id::text,rt.lifecycle,cr.id::text,cr.form_schema,
-               cr.route_rules,cr.actor_bindings,cr.sla_profile
+               cr.route_rules,cr.actor_bindings,cr.sla_profile,rt.category
         FROM eas.request_type rt
         JOIN eas.config_release cr ON cr.id=rt.active_release_id
         WHERE rt.code=%s AND rt.is_active AND cr.state='PUBLISHED'
@@ -997,12 +1089,90 @@ def _fetch_submit_config(
     config = cursor.fetchone()
     if not config:
         raise CommandError("REQUEST_TYPE_NOT_CONFIGURED", status=409)
-    type_id, lifecycle, release_id, form, rules, bindings, sla = config
+    type_id, lifecycle, release_id, form, rules, bindings, sla, category = config
+    _assert_integration_available(type_code, category)
 
     if viewed_release_id is not None and viewed_release_id != release_id:
         raise CommandError("CONFIG_CHANGED", status=409)
 
     return type_id, lifecycle, release_id, form, rules, bindings, sla
+
+
+def _eligible_sod_superiors(cursor, *, requester_id: str, department_id: str,
+                            type_id: str) -> tuple[tuple[str, ...], tuple[tuple[str, str], ...]]:
+    """Nearest authorized manager-chain approvers (one SELECT, no mutation).
+
+    Fail closed for inactive accounts, admin-role holders and out-of-scope
+    grants; a missing or cyclic manager chain never grants new permissions.
+    """
+    cursor.execute(
+        """
+        WITH RECURSIVE supervisors (id, manager_id, depth, visited) AS (
+          SELECT m.id, m.manager_id, 1, ARRAY[u.id, m.id]
+          FROM eas.app_user u JOIN eas.app_user m ON m.id = u.manager_id
+          WHERE u.id = %s AND m.id <> u.id
+          UNION ALL
+          SELECT m.id, m.manager_id, s.depth + 1, s.visited || m.id
+          FROM supervisors s JOIN eas.app_user m ON m.id = s.manager_id
+          WHERE s.depth < 20 AND NOT m.id = ANY(s.visited)
+        )
+        SELECT s.id::text, u.is_active,
+          EXISTS (
+            SELECT 1 FROM eas.role_membership rm
+            WHERE rm.user_id = s.id AND rm.role = 'APPROVER'
+              AND rm.revoked_at IS NULL
+              AND rm.valid_from <= statement_timestamp()
+              AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+              AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = %s)
+              AND (rm.type_scope = 'ALL' OR rm.type_id = %s)
+          ) AS may_approve,
+          EXISTS (
+            SELECT 1 FROM eas.role_membership adm
+            WHERE adm.user_id = s.id
+              AND adm.role IN ('OPS_ADMIN', 'POLICY_ADMIN', 'AUDITOR')
+              AND adm.revoked_at IS NULL
+              AND adm.valid_from <= statement_timestamp()
+              AND (adm.valid_to IS NULL OR adm.valid_to > statement_timestamp())
+          ) AS is_admin
+        FROM supervisors s JOIN eas.app_user u ON u.id = s.id
+        ORDER BY s.depth
+        """,
+        [requester_id, department_id, type_id],
+    )
+    valid: list[str] = []
+    skipped: list[tuple[str, str]] = []
+    for candidate_id, active, allowed, is_admin in cursor.fetchall():
+        if not active:
+            skipped.append((candidate_id, "INACTIVE"))
+        elif is_admin:
+            skipped.append((candidate_id, "ADMIN_PORTAL_ONLY"))
+        elif not allowed:
+            skipped.append((candidate_id, "APPROVER_SCOPE_MISSING"))
+        else:
+            valid.append(candidate_id)
+    return tuple(valid), tuple(skipped)
+
+
+def _resolve_route_with_sod(cursor, *, rules, bindings, actor, manager_id,
+                            type_id, normalized, amount):
+    args = dict(
+        route_rules=rules, actor_bindings=bindings,
+        department_id=actor.department_id, requester_id=actor.id,
+        manager_id=manager_id, amount_vnd=amount, payload=normalized,
+    )
+    try:
+        return resolve_route(**args)
+    except RoutingError as exc:
+        if str(exc) != "Requester cannot approve own request":
+            raise
+    candidates, skipped = _eligible_sod_superiors(
+        cursor, requester_id=actor.id,
+        department_id=actor.department_id, type_id=type_id,
+    )
+    if not candidates:
+        raise RoutingError("ROUTE_SOD_ESCALATION_UNRESOLVED")
+    decision = resolve_route(**args, eligible_superiors=candidates)
+    return replace(decision, sod_skipped=(*skipped, *decision.sod_skipped))
 
 
 def _resolve_and_verify_route_actors(
@@ -1016,54 +1186,55 @@ def _resolve_and_verify_route_actors(
     amount: int | None,
 ):
     try:
-        decision = resolve_route(
-            route_rules=rules,
-            actor_bindings=bindings,
-            department_id=actor.department_id,
-            requester_id=actor.id,
-            manager_id=manager_id,
-            amount_vnd=amount,
-            payload=normalized,
+        decision = _resolve_route_with_sod(
+            cursor, rules=rules, bindings=bindings, actor=actor,
+            manager_id=manager_id, type_id=type_id,
+            normalized=normalized, amount=amount,
         )
     except RoutingError as exc:
-        # Unresolved role bindings are a configuration conflict, not a 500.
-        # No draft is submitted or workflow instance created.
+        if str(exc) == "ROUTE_SOD_ESCALATION_UNRESOLVED":
+            raise CommandError("ROUTE_SOD_ESCALATION_UNRESOLVED", status=409) from exc
         raise CommandError("ROUTE_CONFIGURATION_INVALID", status=409) from exc
     routed_actors = set(decision.approver_ids)
     if decision.executor_id:
         routed_actors.add(decision.executor_id)
     if decision.acceptor_id:
         routed_actors.add(decision.acceptor_id)
-    cursor.execute(
-        "SELECT count(*) FROM eas.app_user WHERE is_active AND id=ANY(%s::uuid[])",
+    cursor.execute(  # NOSONAR python:S2077 - SQL_NOT_ADMINISTRATIVE is a constant fragment
+        f"""
+        SELECT count(*) FROM eas.app_user u
+        WHERE u.is_active AND u.id = ANY(%s::uuid[])
+        {SQL_NOT_ADMINISTRATIVE}
+        """,
         [list(routed_actors)],
     )
     if cursor.fetchone()[0] != len(routed_actors):
         raise CommandError("ROUTE_ACTOR_INACTIVE", status=409)
-    for approver_id in decision.approver_ids:
-        _authorize(
-            cursor,
-            actor_id=approver_id,
-            role="APPROVER",
-            department_id=actor.department_id,
-            type_id=type_id,
-        )
+    # One batch query replaces up to seven separate Supabase round trips.
+    # Preserve exactly the same role, department, type and temporal predicates
+    # as _authorize; the user-active/admin check above remains mandatory.
+    required_grants = {(uid, "APPROVER") for uid in decision.approver_ids}
     if decision.executor_id:
-        _authorize(
-            cursor,
-            actor_id=decision.executor_id,
-            role="EXECUTOR",
-            department_id=actor.department_id,
-            type_id=type_id,
-        )
+        required_grants.add((decision.executor_id, "EXECUTOR"))
     if decision.acceptor_id:
-        _authorize(
-            cursor,
-            actor_id=decision.acceptor_id,
-            role="ACCEPTOR",
-            department_id=actor.department_id,
-            type_id=type_id,
-        )
+        required_grants.add((decision.acceptor_id, "ACCEPTOR"))
+    cursor.execute(
+        """
+        SELECT DISTINCT rm.user_id::text, rm.role::text
+        FROM eas.role_membership rm
+        WHERE rm.user_id = ANY(%s::uuid[])
+          AND rm.role IN ('APPROVER', 'EXECUTOR', 'ACCEPTOR')
+          AND rm.revoked_at IS NULL
+          AND rm.valid_from <= statement_timestamp()
+          AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+          AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = %s)
+          AND (rm.type_scope = 'ALL' OR rm.type_id = %s)
+        """,
+        [sorted(routed_actors), actor.department_id, type_id],
+    )
+    granted = {(str(uid), role) for uid, role in cursor.fetchall()}
+    if not required_grants.issubset(granted):
+        raise CommandError("FORBIDDEN", status=403)
     return decision
 
 
@@ -1192,13 +1363,17 @@ def _create_submission_workflow(
     risk_weight: int = 3,
     approval_level: int = 1,
 ) -> str:
+    # risk_weight / approval_level are snapshotted on the revision only (schema
+    # v2): the instance belongs to exactly one revision, so a copy here would be
+    # redundant. The parameters stay for call-site compatibility.
+    del risk_weight, approval_level
     instance_id = str(uuid4())
     cursor.execute(
         """
         INSERT INTO eas.workflow_instance(
           id,request_id,revision_id,matched_rule_id,resolved_route,lifecycle,
-          planned_executor_id,acceptor_id,risk_weight,approval_level
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+          planned_executor_id,acceptor_id
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
         """,
         [
             instance_id,
@@ -1209,8 +1384,6 @@ def _create_submission_workflow(
             lifecycle,
             decision.executor_id,
             decision.acceptor_id,
-            risk_weight,
-            approval_level,
         ],
     )
     participants: list[tuple[str, str]] = [(actor_id, "REQUESTER")]
@@ -1323,6 +1496,31 @@ def submit_request(
             department_id=actor.department_id,
             type_id=type_id,
         )
+        # Circuit Breaker check: verify if the request's API/domain is disabled
+        cursor.execute(
+            """
+            SELECT m.source_system, m.api_name
+            FROM eas.mock_apis m
+            WHERE m.is_enabled = false
+              AND (
+                lower(m.domain_key) = (
+                    SELECT lower(category) FROM eas.request_type WHERE code = %s
+                )
+                OR (lower(m.domain_key) = 'assets' AND (SELECT lower(category) FROM eas.request_type WHERE code = %s) = 'asset')
+                OR (lower(m.domain_key) = 'facilities' AND (SELECT lower(category) FROM eas.request_type WHERE code = %s) = 'facility')
+                OR (lower(m.domain_key) = 'travel' AND %s = 'BUSINESS_TRIP')
+              )
+            LIMIT 1
+            """,
+            [type_code, type_code, type_code, type_code],
+        )
+        disabled_api_row = cursor.fetchone()
+        if disabled_api_row:
+            src_name = disabled_api_row[0] or disabled_api_row[1]
+            raise CommandError(
+                f"Yêu cầu này hiện không thể gửi do kết nối API [{src_name}] đang bị tạm ngắt bởi Quản trị viên.",
+                status=503,
+            )
         try:
             normalized = validate_payload(
                 type_code=type_code,
@@ -1340,6 +1538,22 @@ def submit_request(
         ):
             raise CommandError("DEPARTMENT_SCOPE_VIOLATION", status=403)
         amount = extract_amount_vnd(normalized, allow_zero=False)
+        if amount is not None and amount > 999_999_999_999:
+            raise CommandError("INVALID_AMOUNT", status=422)
+        # Codes picked from external catalogues, leave balance, budget.
+        external.validate_submit(
+            cursor,
+            type_code=type_code,
+            payload=normalized,
+            amount=amount,
+            requester_id=actor.id,
+        )
+        need = need_for(type_code, normalized)
+        if need:
+            # Rooms, vehicles, equipment: refuse early when nothing is free.
+            problem = check_request(cursor, need=need, requester_id=actor.id)
+            if problem:
+                raise CommandError(problem, status=409)
         decision = _resolve_and_verify_route_actors(
             cursor=cursor,
             rules=rules,
@@ -1355,7 +1569,7 @@ def submit_request(
             cursor, existing_request_id, attachment_ids, type_code, form
         )
 
-        now = datetime.now(timezone.utc)
+        now = _db_now(cursor)
         request_id, request_code, draft_version = _upsert_submission_request(
             cursor=cursor,
             actor=actor,
@@ -1367,12 +1581,13 @@ def submit_request(
             release_id=release_id,
         )
 
+        # Read the risk weight first: each query must be fetched before the next.
+        eff_risk_w = _type_risk_weight(cursor, type_id, type_code)
+        eff_app_lvl = max(1, min(5, len(decision.approver_ids)))
         cursor.execute(
             "SELECT coalesce(max(revision_no),0)+1 FROM eas.request_revision WHERE request_id=%s",
             [request_id],
         )
-        eff_risk_w, _ = resolve_five_level_metadata(type_code)
-        eff_app_lvl = max(1, min(5, len(decision.approver_ids)))
         revision_no = cursor.fetchone()[0]
         revision_id = str(uuid4())
         cursor.execute(
@@ -1412,12 +1627,20 @@ def submit_request(
             risk_weight=eff_risk_w,
             approval_level=eff_app_lvl,
         )
+        _substitute_approver(
+            cursor,
+            step_id=first_step_id,
+            request_id=request_id,
+            requester_id=actor.id,
+            department_id=actor.department_id,
+            type_id=type_id,
+            correlation_id=correlation_id,
+        )
 
         cursor.execute(
             """
             UPDATE eas.request SET status='PENDING_APPROVAL',current_revision_id=%s,
               draft_payload=%s,draft_amount_vnd=%s,draft_release_id=%s,
-              risk_weight=%s,approval_level=%s,
               lock_version=lock_version+1,updated_at=%s
             WHERE id=%s
             """,
@@ -1426,12 +1649,30 @@ def submit_request(
                 Jsonb(normalized),
                 amount,
                 release_id,
-                eff_risk_w,
-                eff_app_lvl,
                 now,
                 request_id,
             ],
         )
+        for step, original_id, replacement_id in decision.sod_escalations:
+            _append_request_audit(
+                cursor,
+                request_id=request_id,
+                actor_id=actor.id,
+                action="APPROVER_ESCALATED_SOD",
+                target_type="request",
+                target_id=request_id,
+                details={
+                    "step_no": step,
+                    "original_assignee_id": original_id,
+                    "replacement_assignee_id": replacement_id,
+                    "skipped_candidates": [
+                        {"id": uid, "reason": reason}
+                        for uid, reason in decision.sod_skipped
+                    ],
+                },
+                correlation_id=correlation_id,
+                occurred_at=now,
+            )
         _append_request_audit(
             cursor,
             request_id=request_id,
@@ -1443,6 +1684,11 @@ def submit_request(
                 "revision_id": revision_id,
                 "release_id": release_id,
                 "matched_rule_id": decision.matched_rule_id,
+                # SoD escalations / top-level fallbacks applied by the router.
+                "route_adjustments": [
+                    {k: v for k, v in item.items() if k != "step_index"}
+                    for item in decision.adjustments
+                ],
             },
             correlation_id=correlation_id,
             occurred_at=now,
@@ -1483,9 +1729,21 @@ def submit_request(
 def _validate_approval_decision_input(
     body: dict[str, Any],
 ) -> tuple[str, str | None, int]:
-    if set(body) != {"outcome", "reason", "expected_version"}:
+    keys = set(body)
+    if (
+        not {"outcome", "reason", "expected_version"}
+        <= keys
+        <= {
+            "outcome",
+            "reason",
+            "expected_version",
+            "executor_id",
+        }
+    ):
         raise CommandError("INVALID_DECISION")
     outcome = body.get("outcome")
+    if "executor_id" in body and outcome != "APPROVE":
+        raise CommandError("INVALID_DECISION")
     reason = body.get("reason")
     expected_version = body.get("expected_version")
     if outcome not in {"APPROVE", "REJECT", "NEEDS_INFO"}:
@@ -1501,6 +1759,284 @@ def _validate_approval_decision_input(
     return outcome, reason, expected_version
 
 
+def _table_readable(cursor, relation: str) -> bool:
+    """Optional tables (later migrations) are used only once they exist.
+
+    Checks schema USAGE first: to_regclass() raises "permission denied for
+    schema" (aborting the transaction) instead of returning NULL when the role
+    cannot use the schema. CASE keeps the
+    evaluation order.
+    """
+    cursor.execute(
+        """
+        SELECT CASE
+          WHEN NOT EXISTS (
+            SELECT 1 FROM pg_namespace n
+            WHERE n.nspname = split_part(%s, '.', 1)
+              AND has_schema_privilege(n.oid, 'USAGE')
+          ) THEN false
+          WHEN to_regclass(%s) IS NULL THEN false
+          ELSE has_table_privilege(to_regclass(%s), 'SELECT')
+        END
+        """,
+        [relation, relation, relation],
+    )
+    row = cursor.fetchone()
+    return bool(row and row[0])
+
+
+# Attendance is derived, not read from an HRM feed (owner's rule): an employee
+# is away only while an APPROVED leave / business-trip record covers the moment
+# (eas.user_leave_and_trips, written by leave_sync when such a request is
+# approved). Otherwise they count as working 08:00-12:00 / 13:30-17:30
+# (eas.get_user_working_status, migration 16).
+SQL_AWAY_NOW = """
+    EXISTS (
+      SELECT 1 FROM eas.user_leave_and_trips l
+      WHERE l.user_id = u.id AND l.approval_status = 'APPROVED'
+        AND l.start_time <= statement_timestamp() AND l.end_time > statement_timestamp()
+    )
+"""
+
+
+def _away_type(cursor, user_id: str) -> str | None:
+    """Leave type covering now (leave wins over a business trip), else None."""
+    if not _table_readable(cursor, "eas.user_leave_and_trips"):
+        return None
+    cursor.execute(
+        """
+        SELECT l.type FROM eas.user_leave_and_trips l
+        WHERE l.user_id = %s AND l.approval_status = 'APPROVED'
+          AND l.start_time <= statement_timestamp() AND l.end_time > statement_timestamp()
+        ORDER BY l.type = 'BUSINESS_TRIP', l.created_at DESC
+        LIMIT 1
+        """,
+        [user_id],
+    )
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+def _absence_status(cursor, user_id: str) -> str | None:
+    """Is the approver away now?
+
+    Approved leave counts. A business trip does not (decision D2): approvers
+    keep deciding on the road from the web or mobile portal.
+    """
+    away = _away_type(cursor, user_id)
+    return "LEAVE" if away and away != "BUSINESS_TRIP" else None
+
+
+def _eligible_approver(
+    cursor,
+    *,
+    candidate_id: str | None,
+    instance_id: str,
+    requester_id: str | None,
+    department_id: str,
+    type_id: str,
+) -> bool:
+    if not candidate_id or candidate_id == requester_id:
+        return False
+    cursor.execute(
+        "SELECT 1 FROM eas.approval_step WHERE instance_id=%s AND assignee_id=%s",
+        [instance_id, candidate_id],
+    )
+    if cursor.fetchone():
+        return False  # SoD: one person cannot hold two steps of a route
+    return _is_actor_valid_for_role(
+        cursor,
+        actor_id=candidate_id,
+        role="APPROVER",
+        department_id=department_id,
+        type_id=type_id,
+    )
+
+
+def _substitute_approver(
+    cursor,
+    *,
+    step_id: str,
+    request_id: str,
+    requester_id: str | None,
+    department_id: str,
+    type_id: str,
+    correlation_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Hand an activated step to the approver's delegate, or (approver absent
+    and no delegate) to the approver's direct manager. Returns the change."""
+    cursor.execute(
+        "SELECT instance_id::text, assignee_id::text FROM eas.approval_step WHERE id=%s",
+        [step_id],
+    )
+    row = cursor.fetchone()
+    if not row:
+        return None
+    instance_id, assignee_id = row
+    eligibility = {
+        "instance_id": instance_id,
+        "requester_id": requester_id,
+        "department_id": department_id,
+        "type_id": type_id,
+    }
+    candidate = reason = None
+    if _table_readable(cursor, "eas.approval_delegation"):
+        cursor.execute(
+            """
+            SELECT delegate_id::text FROM eas.approval_delegation
+            WHERE delegator_id=%s AND revoked_at IS NULL
+              AND starts_at <= statement_timestamp() AND ends_at > statement_timestamp()
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            [assignee_id],
+        )
+        delegate = cursor.fetchone()
+        if delegate and _eligible_approver(
+            cursor, candidate_id=delegate[0], **eligibility
+        ):
+            candidate, reason = delegate[0], "DELEGATED"
+    if candidate is None:
+        status = _absence_status(cursor, assignee_id)
+        if status == "LEAVE":
+            cursor.execute(
+                "SELECT manager_id::text FROM eas.app_user WHERE id=%s", [assignee_id]
+            )
+            manager = cursor.fetchone()
+            if manager and _eligible_approver(
+                cursor, candidate_id=manager[0], **eligibility
+            ):
+                candidate, reason = manager[0], f"APPROVER_{status}_ESCALATED"
+    if candidate is None:
+        return None
+    cursor.execute(
+        "UPDATE eas.approval_step SET assignee_id=%s WHERE id=%s AND state IN ('ACTIVE','WAITING')",
+        [candidate, step_id],
+    )
+    cursor.execute(
+        """
+        INSERT INTO eas.request_participant(request_id,user_id,joined_as)
+        VALUES (%s,%s,'APPROVER') ON CONFLICT (request_id, user_id) DO NOTHING
+        """,
+        [request_id, candidate],
+    )
+    change = {
+        "step_id": step_id,
+        "original_assignee_id": assignee_id,
+        "assignee_id": candidate,
+        "reason": reason,
+    }
+    _append_request_audit(
+        cursor,
+        request_id=request_id,
+        actor_id=None,
+        actor_kind="SYSTEM",
+        action="APPROVER_SUBSTITUTED",
+        target_type="approval_step",
+        target_id=step_id,
+        details=change,
+        correlation_id=correlation_id or str(uuid4()),
+    )
+    return change
+
+
+def _pick_present_executor(
+    cursor,
+    *,
+    planned_executor_id: str,
+    instance_id: str,
+    requester_id: str,
+    acceptor_id: str | None,
+    department_id: str,
+    type_id: str,
+) -> tuple[str, str | None]:
+    """Return (executor, substitution reason).
+
+    An executor on approved leave or a business trip cannot do the work, so a
+    present colleague with the EXECUTOR role in the same department takes it.
+    """
+    away = _away_type(cursor, planned_executor_id)
+    if not away:
+        return planned_executor_id, None
+    cursor.execute(  # NOSONAR python:S2077 - SQL_AWAY_NOW is a constant fragment
+        """
+        SELECT u.id::text
+        FROM eas.app_user u
+        WHERE u.is_active
+          AND u.department_id = (SELECT department_id FROM eas.app_user WHERE id = %s)
+          AND u.id <> ALL(%s::uuid[])
+          AND NOT """
+        + SQL_AWAY_NOW
+        + """
+          AND NOT EXISTS (
+            SELECT 1 FROM eas.approval_step s
+            WHERE s.instance_id = %s AND s.assignee_id = u.id
+          )
+          AND EXISTS (
+            SELECT 1 FROM eas.role_membership rm
+            WHERE rm.user_id = u.id AND rm.role = 'EXECUTOR'
+              AND rm.revoked_at IS NULL
+              AND rm.valid_from <= statement_timestamp()
+              AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+              AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = %s)
+              AND (rm.type_scope = 'ALL' OR rm.type_id = %s)
+          )
+        ORDER BY (
+          SELECT count(*) FROM eas.execution_attempt ea
+          WHERE ea.executor_id = u.id AND ea.state IN ('READY', 'RUNNING')
+        ), u.id
+        LIMIT 1
+        """,
+        [
+            planned_executor_id,
+            [x for x in (planned_executor_id, requester_id, acceptor_id) if x],
+            instance_id,
+            department_id,
+            type_id,
+        ],
+    )
+    substitute = cursor.fetchone()
+    if not substitute:
+        return planned_executor_id, "NO_PRESENT_SUBSTITUTE"
+    return substitute[0], f"PLANNED_EXECUTOR_{away}"
+
+
+def _validate_assigned_executor(
+    cursor,
+    *,
+    approver_id: str,
+    candidate_id: object,
+    instance_id: str,
+    requester_id: str,
+    acceptor_id: str | None,
+    department_id: str,
+    type_id: str,
+) -> str:
+    """The final approver may hand the work down to one direct report."""
+    candidate_id = _canonical_uuid(candidate_id, "INVALID_EXECUTOR")
+    if candidate_id in {requester_id, acceptor_id, approver_id}:
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
+    cursor.execute(
+        """
+        SELECT 1 FROM eas.app_user
+        WHERE id = %s AND manager_id = %s AND is_active
+          AND NOT EXISTS (
+            SELECT 1 FROM eas.approval_step
+            WHERE instance_id = %s AND assignee_id = %s
+          )
+        """,
+        [candidate_id, approver_id, instance_id, candidate_id],
+    )
+    if not cursor.fetchone() or not _is_actor_valid_for_role(
+        cursor,
+        actor_id=candidate_id,
+        role="EXECUTOR",
+        department_id=department_id,
+        type_id=type_id,
+    ):
+        raise CommandError(ERR_ASSIGNEE_INVALID, status=422)
+    return candidate_id
+
+
 def _handle_approval_approved(
     cursor,
     request_id: str,
@@ -1512,6 +2048,12 @@ def _handle_approval_approved(
     acceptor_id: str | None,
     sla: dict[str, Any],
     now: datetime,
+    *,
+    approver_id: str | None = None,
+    requester_id: str | None = None,
+    assigned_executor_id: str | None = None,
+    assignment: dict[str, Any] | None = None,
+    allocation: dict[str, Any] | None = None,
 ) -> tuple[str, datetime | None, datetime | None, str | None]:
     cursor.execute(
         """
@@ -1522,8 +2064,21 @@ def _handle_approval_approved(
         [instance_id],
     )
     next_step = cursor.fetchone()
+    if assigned_executor_id is not None and (next_step or lifecycle == "A"):
+        # Work can only be handed down once the last approval is given.
+        raise CommandError("EXECUTOR_ASSIGNMENT_NOT_ALLOWED", status=409)
     if next_step:
         next_step_id, next_assignee_id = next_step
+        substitution = _substitute_approver(
+            cursor,
+            step_id=next_step_id,
+            request_id=request_id,
+            requester_id=requester_id,
+            department_id=department_id,
+            type_id=type_id,
+        )
+        if substitution:
+            next_assignee_id = substitution["assignee_id"]
         if not _is_actor_valid_for_role(
             cursor,
             actor_id=next_assignee_id,
@@ -1545,7 +2100,91 @@ def _handle_approval_approved(
         )
         return "PENDING_APPROVAL", None, None, next_step_id
 
+    # Last approval: rooms / vehicles / equipment are held now, first come first
+    # served (board may take back an employee's allocation). Nothing free: the
+    # request is rejected automatically instead of approved.
+    cursor.execute(
+        """
+        SELECT rt.code, v.payload, v.amount_vnd FROM eas.request r
+        JOIN eas.request_type rt ON rt.id = r.type_id
+        JOIN eas.request_revision v ON v.id = r.current_revision_id
+        WHERE r.id = %s
+        """,
+        [request_id],
+    )
+    approved = cursor.fetchone() if requester_id else None
+    type_code, payload, amount = approved or (None, None, None)
+    payload = payload if isinstance(payload, dict) else {}
+    need = need_for(type_code, payload) if type_code else None
+    if need:
+        try:
+            with transaction.atomic():
+                held = allocate(
+                    cursor,
+                    request_id=request_id,
+                    requester_id=requester_id,
+                    need=need,
+                    now=now,
+                )
+        except ResourceUnavailable:
+            if allocation is not None:
+                allocation["unavailable"] = need.code
+            status = _handle_approval_rejected_or_needs_info(
+                cursor, request_id, instance_id, "REJECT", now
+            )
+            return status, None, None, None
+        if allocation is not None:
+            allocation.update(held)
+    if type_code:
+        # Leave usage (HRM) and budget commitment (ERP); idempotent per request.
+        external_writes = external.on_final_approval(
+            cursor,
+            request_id=request_id,
+            type_code=type_code,
+            payload=payload,
+            amount=amount,
+            requester_id=requester_id,
+        )
+        if external_writes and allocation is not None:
+            allocation.update(external_writes)
+
     if lifecycle in {"B", "C"}:
+        planned_executor_id = executor_id
+        if assigned_executor_id is not None:
+            executor_id = _validate_assigned_executor(
+                cursor,
+                approver_id=approver_id,
+                candidate_id=assigned_executor_id,
+                instance_id=instance_id,
+                requester_id=requester_id,
+                acceptor_id=acceptor_id,
+                department_id=department_id,
+                type_id=type_id,
+            )
+            reason = "ASSIGNED_BY_APPROVER"
+        else:
+            executor_id, reason = _pick_present_executor(
+                cursor,
+                planned_executor_id=executor_id,
+                instance_id=instance_id,
+                requester_id=requester_id,
+                acceptor_id=acceptor_id,
+                department_id=department_id,
+                type_id=type_id,
+            )
+        if executor_id != planned_executor_id:
+            cursor.execute(
+                "UPDATE eas.workflow_instance SET planned_executor_id=%s WHERE id=%s",
+                [executor_id, instance_id],
+            )
+        if reason and assignment is not None:
+            assignment.update(
+                {
+                    "planned_executor_id": planned_executor_id,
+                    "executor_id": executor_id,
+                    "reason": reason,
+                }
+            )
         if not _is_actor_valid_for_role(
             cursor,
             actor_id=executor_id,
@@ -1608,19 +2247,6 @@ def _handle_approval_rejected_or_needs_info(
     outcome: str,
     now: datetime,
 ) -> str:
-    if outcome == "NEEDS_INFO":
-        cursor.execute(
-            """
-            INSERT INTO eas.draft_attachment(request_id, attachment_id, added_by)
-            SELECT r.id, ra.attachment_id, r.requester_id
-            FROM eas.request r
-            JOIN eas.revision_attachment ra ON ra.revision_id = r.current_revision_id AND ra.request_id = r.id
-            JOIN eas.attachment a ON a.id = ra.attachment_id AND a.request_id = r.id
-            WHERE r.id = %s AND a.scan_state = 'CLEAN' AND a.deleted_at IS NULL
-            ON CONFLICT (request_id, attachment_id) DO NOTHING
-            """,
-            [request_id],
-        )
     next_status = "REJECTED" if outcome == "REJECT" else "NEEDS_INFO"
     instance_state = "REJECTED" if outcome == "REJECT" else "SUPERSEDED"
     cursor.execute(
@@ -1654,7 +2280,7 @@ def decide_approval(
             """
             SELECT r.status,r.lock_version,r.type_id::text,v.department_id::text,
                    i.id::text,i.lifecycle,i.planned_executor_id::text,i.acceptor_id::text,
-                   cr.sla_profile
+                   cr.sla_profile,r.requester_id::text
             FROM eas.request r
             JOIN eas.request_revision v ON v.id=r.current_revision_id
             JOIN eas.workflow_instance i ON i.revision_id=v.id AND i.state='ACTIVE'
@@ -1677,6 +2303,7 @@ def decide_approval(
             executor_id,
             acceptor_id,
             sla,
+            requester_id,
         ) = current
         if status != "PENDING_APPROVAL":
             raise CommandError(ERR_STATE_CONFLICT, status=409)
@@ -1704,7 +2331,7 @@ def decide_approval(
             department_id=department_id,
             type_id=type_id,
         )
-        now = datetime.now(timezone.utc)
+        now = _db_now(cursor)
         cursor.execute(
             """
             INSERT INTO eas.approval_decision(request_id,step_id,actor_id,outcome,reason,decided_at)
@@ -1731,6 +2358,8 @@ def decide_approval(
             [now, request_id],
         )
 
+        assignment: dict[str, Any] = {}
+        allocation: dict[str, Any] = {}
         if outcome == "APPROVE":
             (
                 next_status,
@@ -1748,6 +2377,11 @@ def decide_approval(
                 acceptor_id=acceptor_id,
                 sla=sla,
                 now=now,
+                approver_id=actor.id,
+                requester_id=requester_id,
+                assigned_executor_id=body.get("executor_id"),
+                assignment=assignment,
+                allocation=allocation,
             )
         else:
             next_status = _handle_approval_rejected_or_needs_info(
@@ -1765,6 +2399,22 @@ def decide_approval(
             """,
             [next_status, now, approved_at, completed_at, request_id],
         )
+        if outcome == "NEEDS_INFO":
+            cursor.execute(
+                """
+                INSERT INTO eas.draft_attachment(request_id, attachment_id, added_by)
+                SELECT r.id, ra.attachment_id, r.requester_id
+                FROM eas.request r
+                JOIN eas.revision_attachment ra ON ra.revision_id = r.current_revision_id AND ra.request_id = r.id
+                JOIN eas.attachment a ON a.id = ra.attachment_id AND a.request_id = r.id
+                WHERE r.id = %s AND a.scan_state = 'CLEAN' AND a.deleted_at IS NULL
+                ON CONFLICT (request_id, attachment_id) DO NOTHING
+                """,
+                [request_id],
+            )
+        if approved_at is not None:
+            # Fully approved leave/trip: show it in the employee's working status.
+            record_approved_leave(cursor, request_id, actor.display_name)
         _append_request_audit(
             cursor,
             request_id=request_id,
@@ -1777,12 +2427,16 @@ def decide_approval(
                 "step_no": step_no,
                 "next_status": next_status,
                 **({"reason": reason} if reason else {}),
+                **({"executor_assignment": assignment} if assignment else {}),
+                **({"resource_allocation": allocation} if allocation else {}),
             },
             correlation_id=correlation_id,
             occurred_at=now,
         )
         if next_step_id:
             event_type = "APPROVAL_REQUESTED"
+        elif outcome == "APPROVE" and next_status == "REJECTED":
+            event_type = "RESOURCE_UNAVAILABLE"
         elif outcome == "APPROVE" and lifecycle in {"B", "C"}:
             event_type = "EXECUTION_READY"
         else:
@@ -1815,6 +2469,71 @@ def decide_approval(
         command_body=body,
         operation=operation,
     )
+
+
+def list_assignable_executors(*, actor: Actor, request_id: str) -> dict[str, Any]:
+    """Direct reports the final approver may hand the work down to."""
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT i.id::text, i.lifecycle, v.department_id::text, r.type_id::text,
+                   r.requester_id::text, i.acceptor_id::text, i.planned_executor_id::text,
+                   (SELECT count(*) FROM eas.approval_step w
+                    WHERE w.instance_id=i.id AND w.state='WAITING')
+            FROM eas.request r
+            JOIN eas.request_revision v ON v.id=r.current_revision_id
+            JOIN eas.workflow_instance i ON i.revision_id=v.id AND i.state='ACTIVE'
+            JOIN eas.approval_step s ON s.instance_id=i.id AND s.state='ACTIVE'
+            WHERE r.id=%s AND r.status='PENDING_APPROVAL' AND s.assignee_id=%s
+            """,
+            [request_id, actor.id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise CommandError("FORBIDDEN", status=403)
+        (
+            instance_id,
+            lifecycle,
+            department_id,
+            type_id,
+            requester,
+            acceptor,
+            planned,
+            waiting,
+        ) = row
+        if lifecycle == "A" or waiting:
+            return {"items": [], "planned_executor_id": planned}
+        cursor.execute(
+            """
+            SELECT u.id::text, u.display_name
+            FROM eas.app_user u
+            WHERE u.manager_id=%s AND u.is_active
+              AND u.id <> ALL(%s::uuid[])
+              AND NOT EXISTS (
+                SELECT 1 FROM eas.approval_step s
+                WHERE s.instance_id=%s AND s.assignee_id=u.id
+              )
+              AND EXISTS (
+                SELECT 1 FROM eas.role_membership rm
+                WHERE rm.user_id=u.id AND rm.role='EXECUTOR' AND rm.revoked_at IS NULL
+                  AND rm.valid_from <= statement_timestamp()
+                  AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                  AND (rm.scope_kind='GLOBAL' OR rm.department_id=%s)
+                  AND (rm.type_scope='ALL' OR rm.type_id=%s)
+              )
+            ORDER BY u.display_name
+            """,
+            [
+                actor.id,
+                [x for x in (requester, acceptor) if x],
+                instance_id,
+                department_id,
+                type_id,
+            ],
+        )
+        items = [{"id": r[0], "display_name": r[1]} for r in cursor.fetchall()]
+    return {"items": items, "planned_executor_id": planned}
 
 
 def start_execution(
@@ -1873,7 +2592,7 @@ def start_execution(
             department_id=department_id,
             type_id=type_id,
         )
-        now = datetime.now(timezone.utc)
+        now = _db_now(cursor)
         cursor.execute(
             "UPDATE eas.execution_attempt SET state='RUNNING',started_at=%s WHERE id=%s",
             [now, attempt_id],
@@ -1973,6 +2692,9 @@ def _apply_execution_submission(
             SQL_COMPLETE_WORKFLOW,
             [now, instance_id],
         )
+        # B ends here: close the EXECUTION stage opened at final approval,
+        # otherwise the worker keeps raising overdue alerts on a done request.
+        cursor.execute(SQL_CLOSE_SLA_STAGE, [now, request_id])
         return "COMPLETED", now
     elif lifecycle == "C":
         cursor.execute(
@@ -2082,7 +2804,7 @@ def submit_execution(
         )
         if not 1 <= cursor.fetchone()[0] <= 5:
             raise CommandError("EXECUTION_EVIDENCE_REQUIRED", status=409)
-        now = datetime.now(timezone.utc)
+        now = _db_now(cursor)
         next_status, completed_at = _apply_execution_submission(
             cursor=cursor,
             lifecycle=lifecycle,
@@ -2101,6 +2823,27 @@ def submit_execution(
             """,
             [next_status, now, completed_at, request_id],
         )
+        external_writes = {}
+        if next_status == "COMPLETED":
+            cursor.execute(
+                """
+                SELECT rt.code, v.payload, r.requester_id::text FROM eas.request r
+                JOIN eas.request_type rt ON rt.id = r.type_id
+                JOIN eas.request_revision v ON v.id = r.current_revision_id
+                WHERE r.id = %s
+                """,
+                [request_id],
+            )
+            done = cursor.fetchone()
+            if done and isinstance(done[1], dict):
+                # ACCESS: the granted role is recorded in ITSM.
+                external_writes = external.on_completed(
+                    cursor,
+                    request_id=request_id,
+                    type_code=done[0],
+                    payload=done[1],
+                    requester_id=done[2],
+                )
         _append_request_audit(
             cursor,
             request_id=request_id,
@@ -2108,7 +2851,11 @@ def submit_execution(
             action="EXECUTION_RESULT_SUBMITTED",
             target_type="execution_attempt",
             target_id=attempt_id,
-            details={"lifecycle": lifecycle, "external_reference": external_reference},
+            details={
+                "lifecycle": lifecycle,
+                "external_reference": external_reference,
+                **external_writes,
+            },
             correlation_id=correlation_id,
             occurred_at=now,
         )
@@ -2183,6 +2930,30 @@ def _apply_acceptance_decision(
         )
         return "COMPLETED", now, None
 
+    cursor.execute(
+        """
+        SELECT r.requester_id::text, i.acceptor_id::text
+        FROM eas.request r JOIN eas.workflow_instance i ON i.id=%s
+        WHERE r.id=%s
+        """,
+        [instance_id, request_id],
+    )
+    people = cursor.fetchone()
+    executor_id, _reason = _pick_present_executor(
+        cursor,
+        planned_executor_id=planned_executor_id,
+        instance_id=instance_id,
+        requester_id=people[0] if people else None,
+        acceptor_id=people[1] if people else None,
+        department_id=department_id,
+        type_id=type_id,
+    )
+    if executor_id != planned_executor_id:
+        cursor.execute(
+            "UPDATE eas.workflow_instance SET planned_executor_id=%s WHERE id=%s",
+            [executor_id, instance_id],
+        )
+        planned_executor_id = executor_id
     if not _is_actor_valid_for_role(
         cursor,
         actor_id=planned_executor_id,
@@ -2280,7 +3051,7 @@ def decide_acceptance(
             department_id=department_id,
             type_id=type_id,
         )
-        now = datetime.now(timezone.utc)
+        now = _db_now(cursor)
         cursor.execute(
             """
             INSERT INTO eas.acceptance_decision(request_id,attempt_id,actor_id,outcome,reason,decided_at)
@@ -2403,7 +3174,7 @@ def cancel_request(
             raise CommandError(ERR_STATE_CONFLICT, status=409)
         if lock_version != expected_version:
             raise CommandError(ERR_VERSION_CONFLICT, status=409)
-        now = datetime.now(timezone.utc)
+        now = _db_now(cursor)
         if revision_id:
             cursor.execute(
                 """

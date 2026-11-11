@@ -9,7 +9,7 @@ export function PasswordField({ label, name, help, ...props }) {
       <div className="password-control">
         <input id={id} name={name} type={visible ? "text" : "password"} {...props} />
         <button type="button" className="password-toggle" aria-pressed={visible}
-          aria-label={`${visible ? "Ẩn" : "Hiện"} ${label.toLowerCase()}`}
+          aria-label={visible ? "Ẩn ký tự" : "Hiện ký tự"}
           onClick={() => setVisible((v) => !v)}>
           <span aria-hidden="true">{visible ? "◉" : "◎"}</span> {visible ? "Ẩn" : "Hiện"}
         </button>
@@ -27,14 +27,14 @@ export function PageControls({ offset, limit = 20, nextOffset, onPage, onLimit, 
     onPage(next);
     window.requestAnimationFrame(() => {
       const node = targetId ? document.getElementById(targetId) : pageRef.current?.closest("section");
-      (node || document.getElementById("main"))?.scrollIntoView({ behavior: "smooth", block: "start" });
+      (node || document.getElementById("main"))?.scrollIntoView({ behavior: "auto", block: "start" });
     });
   }
   return (
     <nav className="pagination pagination-extended" aria-label={`Phân trang ${title}`} ref={pageRef}>
       <div className="pagination-context"><strong>Trang {page}</strong><span>Hiển thị {count} {title}{count ? ` · Từ ${offset + 1} đến ${offset + count}` : ""}</span></div>
       {onLimit && <label className="page-size">Số dòng / trang <select value={limit} onChange={(e) => { onLimit(Number(e.target.value)); change(0); }}>
-        {[10, 20, 50].map((v) => <option key={v} value={v}>{v}</option>)}
+        {[5, 10, 20, 50].map((v) => <option key={v} value={v}>{v}</option>)}
       </select></label>}
       <div className="page-buttons">
         <button type="button" className="secondary" disabled={offset === 0} onClick={() => change(0)} aria-label="Trang đầu">«</button>

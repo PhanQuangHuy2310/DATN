@@ -60,6 +60,14 @@ def _resolve_internal_secret() -> str:
         secret = os.getenv("EAS_AI_INTERNAL_SECRET") or os.getenv("INTERNAL_API_SECRET")
 
     if not secret or "replace-with-the-same-random-secret" in str(secret):
+        environment = (
+            os.getenv("EAS_ENV", os.getenv("ENVIRONMENT", "development"))
+            .lower()
+            .strip()
+        )
+        if environment == "production":
+            # Fail closed: never fall back to a publicly known secret in production.
+            return ""
         return "eas-local-dev-shared-internal-secret-2026"
     return str(secret).strip()
 
@@ -241,6 +249,8 @@ class AIServiceClient:
         leave_balance_remaining: int = 0,
         room_available: bool | None = None,
         correlation_id: str | None = None,
+        requester_email: str | None = None,
+        room_code: str | None = None,
     ) -> dict:
         """
         Gọi AI /auto-approve/evaluate và trả về:
@@ -261,6 +271,7 @@ class AIServiceClient:
                 ],
                 "auto_approve_note": None,
                 "evaluated_at": "",
+                "fallback_used": True,
             }
 
         payload = {
@@ -274,6 +285,9 @@ class AIServiceClient:
             "days_requested": days_requested,
             "leave_balance_remaining": leave_balance_remaining,
             "room_available": room_available,
+            # Lets the AI look up leave balance / room status in the external systems.
+            "requester_email": requester_email,
+            "room_code": room_code,
         }
 
         try:
@@ -295,7 +309,26 @@ class AIServiceClient:
                 ],
                 "auto_approve_note": None,
                 "evaluated_at": "",
+                "fallback_used": True,
             }
+
+    async def publish_policy_rules(
+        self, document: dict, correlation_id: str | None = None
+    ) -> dict:
+        """Gọi AI /policy/rules; ném RuntimeError nếu AI không nhận bộ luật."""
+        if httpx is None:
+            raise RuntimeError("AI_CLIENT_UNAVAILABLE")
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+                resp = await client.post(
+                    f"{self.base_url}/ai/policy/rules",
+                    json=document,
+                    headers=self._get_headers(correlation_id),
+                )
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as e:
+            raise RuntimeError("AI_POLICY_UNAVAILABLE") from e
 
     async def summarize_request(
         self,
@@ -334,6 +367,7 @@ class AIServiceClient:
                 "key_points": [],
                 "sentiment": "normal",
                 "tokens_used": 0,
+                "fallback_used": True,
             }
 
         try:
@@ -352,6 +386,7 @@ class AIServiceClient:
                 "key_points": [],
                 "sentiment": "normal",
                 "tokens_used": 0,
+                "fallback_used": True,
             }
 
     async def extract_ocr_from_url(
@@ -466,19 +501,21 @@ class SyncAIServiceClient:
         self._async_client = AIServiceClient()
 
     def _run(self, coro):
+        # A coroutine can be awaited only once, so never "retry" it here; the
+        # async methods already convert transport failures into fallbacks.
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Trong context async (Celery, ASGI) — dùng asyncio.ensure_future
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, coro)
-                    return future.result(timeout=35)
-            else:
-                return loop.run_until_complete(coro)
+            loop = asyncio.get_running_loop()
         except RuntimeError:
-            return asyncio.run(coro)
+            loop = None
+
+        if loop is not None and loop.is_running():
+            # Trong context async (Celery, ASGI) — dùng ThreadPoolExecutor
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result(timeout=TIMEOUT + 5)
+        return asyncio.run(coro)
 
     def classify_request(
         self,
@@ -497,6 +534,9 @@ class SyncAIServiceClient:
 
     def evaluate_auto_approve(self, **kwargs) -> dict:
         return self._run(self._async_client.evaluate_auto_approve(**kwargs))
+
+    def publish_policy_rules(self, **kwargs) -> dict:
+        return self._run(self._async_client.publish_policy_rules(**kwargs))
 
     def summarize_request(self, **kwargs) -> dict:
         return self._run(self._async_client.summarize_request(**kwargs))

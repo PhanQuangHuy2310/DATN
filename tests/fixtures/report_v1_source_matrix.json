@@ -1,0 +1,285 @@
+{
+  "source": {
+    "filename": "Report_DATN_CNTT_Nhom07_v1.0.docx",
+    "sha256": "856124e211b20bac408dcdac45249779dd2483384226a7a855069220655f8cbd",
+    "note": "Trích xuất đúng nội dung bảng từ báo cáo, không đồng nhất với tính năng đã triển khai."
+  },
+  "scope": {
+    "request_type_count_target": 16,
+    "lifecycle_templates": [
+      "A",
+      "B",
+      "C"
+    ],
+    "org_departments_target": 8,
+    "core_uses_case_rows": 16,
+    "roles_count": 7,
+    "ai_capability_groups": 5
+  },
+  "use_cases": [
+    {
+      "code": "UC01",
+      "name": "Đăng nhập và quản lý phiên",
+      "primary_actor": "Mọi tác nhân",
+      "description": "Xác thực danh tính, cấp phát phiên làm việc an toàn, phòng chống brute-force và thu hồi phiên khi đăng xuất."
+    },
+    {
+      "code": "UC02",
+      "name": "Quản lý và ban hành quy chế",
+      "primary_actor": "POLICY_ADMIN",
+      "description": "Soạn thảo, kiểm tra tính hợp lệ và ban hành phiên bản quy chế mới (Release Versioning) nguyên tử."
+    },
+    {
+      "code": "UC03",
+      "name": "Soạn nháp và đính kèm tệp",
+      "primary_actor": "REQUESTER",
+      "description": "Tạo lập bản nháp yêu cầu, tải tệp đính kèm lên vùng lưu trữ an toàn và quét kiểm tra mã độc."
+    },
+    {
+      "code": "UC04",
+      "name": "Gửi yêu cầu lần đầu (Submit)",
+      "primary_actor": "REQUESTER",
+      "description": "Gửi hồ sơ vào luồng phê duyệt; hệ thống tự động kiểm tra quy định, snapshot cấu hình và định tuyến cấp duyệt."
+    },
+    {
+      "code": "UC05",
+      "name": "Xem hồ sơ và chứng từ kiểm toán",
+      "primary_actor": "Mọi tác nhân",
+      "description": "Tra cứu chi tiết hồ sơ theo phân quyền phạm vi (Scoped Access), chống rò rỉ dữ liệu qua IDOR."
+    },
+    {
+      "code": "UC06",
+      "name": "Ra quyết định phê duyệt",
+      "primary_actor": "APPROVER",
+      "description": "Cấp quản lý đưa ra quyết định Chấp thuận, Từ chối hoặc Yêu cầu bổ sung kèm nhận xét và chứng từ đối chiếu."
+    },
+    {
+      "code": "UC07",
+      "name": "Bổ sung và nộp lại (Resubmit)",
+      "primary_actor": "REQUESTER",
+      "description": "Người đề xuất cập nhật các thông tin thiếu theo yêu cầu và nộp lại hồ sơ để tiếp tục quy trình duyệt."
+    },
+    {
+      "code": "UC08",
+      "name": "Rút lại yêu cầu (Withdraw)",
+      "primary_actor": "REQUESTER",
+      "description": "Cho phép người đề xuất hủy yêu cầu khi hồ sơ chưa được duyệt xong hoàn toàn."
+    },
+    {
+      "code": "UC09",
+      "name": "Điều chuyển người xử lý (Reassign)",
+      "primary_actor": "OPS_ADMIN",
+      "description": "Điều phối lại người duyệt hoặc người thực thi khi nhân sự vắng mặt, bảo toàn lịch sử truy vết."
+    },
+    {
+      "code": "UC10",
+      "name": "Tiếp nhận công việc (Claim)",
+      "primary_actor": "EXECUTOR",
+      "description": "Cán bộ chuyên môn tiếp nhận hồ sơ đã được duyệt đầy đủ vào hàng đợi xử lý cá nhân."
+    },
+    {
+      "code": "UC11",
+      "name": "Báo cáo tiến độ và nộp kết quả",
+      "primary_actor": "EXECUTOR",
+      "description": "Thực thi công việc thực tế, báo vướng mắc hoặc nộp biên bản nghiệm thu/chứng từ hoàn thành."
+    },
+    {
+      "code": "UC12",
+      "name": "Nghiệm thu và xác nhận bàn giao",
+      "primary_actor": "ACCEPTOR",
+      "description": "Kiểm tra kết quả bàn giao thực tế từ Executor để xác nhận hoàn tất đơn hoặc yêu cầu làm lại (Rework)."
+    },
+    {
+      "code": "UC13",
+      "name": "Đọc và quản lý thông báo",
+      "primary_actor": "Mọi tác nhân",
+      "description": "Nhận và đọc thông báo về tiến độ xử lý hồ sơ, cập nhật trạng thái đã đọc."
+    },
+    {
+      "code": "UC14",
+      "name": "Giám sát thời hạn và giao việc SLA",
+      "primary_actor": "SYSTEM_WORKER",
+      "description": "Tiến trình tự động theo dõi hạn mức cam kết thời gian, gửi cảnh báo quá hạn tới cấp quản lý."
+    },
+    {
+      "code": "UC15",
+      "name": "Truy vết và xuất báo cáo kiểm toán",
+      "primary_actor": "AUDITOR, Admin",
+      "description": "Đối soát chuỗi băm kiểm toán SHA-256, kiểm tra tính toàn vẹn và xuất báo cáo tuân thủ."
+    },
+    {
+      "code": "UC17",
+      "name": "Đồng bộ danh tính và phân quyền",
+      "primary_actor": "OPS_ADMIN",
+      "description": "Đồng bộ thông tin nhân sự, phòng ban và gán nhóm quyền vai trò (Role Membership)."
+    }
+  ],
+  "rbac": [
+    {
+      "function": "Tạo nháp & Nộp đơn (UC03, UC04)",
+      "REQUESTER": "Cho phép",
+      "APPROVER": "Từ chối",
+      "EXECUTOR": "Từ chối",
+      "ACCEPTOR": "Từ chối",
+      "POLICY_ADMIN": "Từ chối",
+      "OPS_ADMIN": "Từ chối",
+      "AUDITOR": "Từ chối"
+    },
+    {
+      "function": "Xem chi tiết hồ sơ (UC05)",
+      "REQUESTER": "Chỉ đơn mình",
+      "APPROVER": "Đơn cần duyệt",
+      "EXECUTOR": "Đơn được giao",
+      "ACCEPTOR": "Đơn nghiệm thu",
+      "POLICY_ADMIN": "Tất cả",
+      "OPS_ADMIN": "Tất cả",
+      "AUDITOR": "Tất cả"
+    },
+    {
+      "function": "Phê duyệt / Từ chối (UC06)",
+      "REQUESTER": "Từ chối",
+      "APPROVER": "Cho phép",
+      "EXECUTOR": "Từ chối",
+      "ACCEPTOR": "Từ chối",
+      "POLICY_ADMIN": "Từ chối",
+      "OPS_ADMIN": "Từ chối",
+      "AUDITOR": "Từ chối"
+    },
+    {
+      "function": "Bổ sung / Rút đơn (UC07, UC08)",
+      "REQUESTER": "Cho phép",
+      "APPROVER": "Từ chối",
+      "EXECUTOR": "Từ chối",
+      "ACCEPTOR": "Từ chối",
+      "POLICY_ADMIN": "Từ chối",
+      "OPS_ADMIN": "Từ chối",
+      "AUDITOR": "Từ chối"
+    },
+    {
+      "function": "Tiếp nhận & Thực thi (UC10, UC11)",
+      "REQUESTER": "Từ chối",
+      "APPROVER": "Từ chối",
+      "EXECUTOR": "Cho phép",
+      "ACCEPTOR": "Từ chối",
+      "POLICY_ADMIN": "Từ chối",
+      "OPS_ADMIN": "Từ chối",
+      "AUDITOR": "Từ chối"
+    },
+    {
+      "function": "Nghiệm thu kết quả (UC12)",
+      "REQUESTER": "Từ chối",
+      "APPROVER": "Từ chối",
+      "EXECUTOR": "Từ chối",
+      "ACCEPTOR": "Cho phép",
+      "POLICY_ADMIN": "Từ chối",
+      "OPS_ADMIN": "Từ chối",
+      "AUDITOR": "Từ chối"
+    },
+    {
+      "function": "Cấu hình quy chế & Mẫu đơn (UC02)",
+      "REQUESTER": "Từ chối",
+      "APPROVER": "Từ chối",
+      "EXECUTOR": "Từ chối",
+      "ACCEPTOR": "Từ chối",
+      "POLICY_ADMIN": "Cho phép",
+      "OPS_ADMIN": "Từ chối",
+      "AUDITOR": "Từ chối"
+    },
+    {
+      "function": "Điều chuyển người xử lý (UC09)",
+      "REQUESTER": "Từ chối",
+      "APPROVER": "Từ chối",
+      "EXECUTOR": "Từ chối",
+      "ACCEPTOR": "Từ chối",
+      "POLICY_ADMIN": "Từ chối",
+      "OPS_ADMIN": "Cho phép",
+      "AUDITOR": "Từ chối"
+    },
+    {
+      "function": "Tra cứu sổ cái kiểm toán (UC15)",
+      "REQUESTER": "Từ chối",
+      "APPROVER": "Từ chối",
+      "EXECUTOR": "Từ chối",
+      "ACCEPTOR": "Từ chối",
+      "POLICY_ADMIN": "Từ chối",
+      "OPS_ADMIN": "Xem nhật ký",
+      "AUDITOR": "Kiểm tra băm"
+    }
+  ],
+  "business_rules": [
+    {
+      "id": "R01",
+      "request_types": "Nghỉ phép (Leave)",
+      "when": "Số ngày nghỉ <= 2 ngày VÀ Risk Score <= 2",
+      "action": "AI Auto-Approval tức thời; 0 cấp duyệt"
+    },
+    {
+      "id": "R02",
+      "request_types": "Nghỉ phép (Leave)",
+      "when": "Số ngày nghỉ > 2 ngày HOẶC Risk Score > 2",
+      "action": "Định tuyến 1 cấp: Trưởng phòng phê duyệt"
+    },
+    {
+      "id": "R03",
+      "request_types": "Mua sắm / Chi tiêu",
+      "when": "Tổng tiền < 5.000.000 VNĐ",
+      "action": "Định tuyến 1 cấp: Trưởng bộ phận duyệt"
+    },
+    {
+      "id": "R04",
+      "request_types": "Mua sắm / Chi tiêu",
+      "when": "5.000.000 VNĐ <= Tổng tiền <= 50.000.000 VNĐ",
+      "action": "Định tuyến 2 cấp: Trưởng bộ phận -> Kế toán trưởng"
+    },
+    {
+      "id": "R05",
+      "request_types": "Mua sắm / Chi tiêu",
+      "when": "Tổng tiền > 50.000.000 VNĐ",
+      "action": "Định tuyến 3 cấp: Trưởng bộ phận -> Kế toán -> CEO"
+    },
+    {
+      "id": "R06",
+      "request_types": "Cấp quyền CNTT",
+      "when": "Quyền Quản trị viên (Admin/Root Privilege)",
+      "action": "Bắt buộc 2 cấp: Trưởng phòng IT -> Giám đốc An ninh TT (CISO)"
+    },
+    {
+      "id": "R07",
+      "request_types": "Mọi loại yêu cầu",
+      "when": "Requester trùng với người duyệt được phân công",
+      "action": "Kích hoạt SoD Guard: Tự động chuyển cấp duyệt lên cấp trên trực tiếp"
+    }
+  ],
+  "sla_thresholds": [
+    {
+      "threshold": "0% - 79% SLA",
+      "state": "IN_TARGET",
+      "action": "Ghi nhận đồng hồ đếm ngược thời gian xử lý",
+      "audience": "Không gửi cảnh báo"
+    },
+    {
+      "threshold": "80% - 99% SLA",
+      "state": "WARNING",
+      "action": "Gửi thông báo nhắc nhở tiến độ (Friendly Reminder)",
+      "audience": "Người được phân công xử lý bước"
+    },
+    {
+      "threshold": "100% - 150% SLA",
+      "state": "ESCALATED_L1",
+      "action": "Cảnh báo quá hạn, ghi nhận vi phạm vào nhật ký SLA",
+      "audience": "Người xử lý bước + Trưởng bộ phận"
+    },
+    {
+      "threshold": "> 150% SLA",
+      "state": "ESCALATED_L2",
+      "action": "Báo động đỏ chậm trễ nghiêm trọng, đề xuất điều chuyển",
+      "audience": "Ban Giám đốc + Quản trị vận hành (Ops Admin)"
+    },
+    {
+      "threshold": "Hoàn thành",
+      "state": "RESOLVED",
+      "action": "Dừng đồng hồ, tính độ lệch thời gian (Variance Hours)",
+      "audience": "Lưu vết KPI kiểm toán nội bộ"
+    }
+  ]
+}

@@ -10,6 +10,8 @@ _SECRET_PATTERNS = (
     re.compile(r"(?i)((?:password|secret|token|api[_-]?key)\s*[:=]\s*)[^\s,;]+"),
     re.compile(r"sb_secret_[A-Za-z0-9_-]+"),
     re.compile(r"postgres(?:ql)?://[^\s]+"),
+    re.compile(r"\b(?:\d{4}[-\s]?){3}\d{4}\b"),
+    re.compile(r"\b0\d{11}\b"),
 )
 
 

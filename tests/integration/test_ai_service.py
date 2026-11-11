@@ -29,6 +29,7 @@ try:
     import fastapi  # noqa: F401
     import loguru  # noqa: F401
     import pydantic  # noqa: F401
+    import pydantic_settings  # noqa: F401
 
     HAS_ROUTER_DEPS = True
 except (ImportError, ModuleNotFoundError):
@@ -87,76 +88,61 @@ class TestAIModelArtifacts(unittest.TestCase):
             self.assertIn("features_file", registry[domain])
 
 
-class TestMockDataSnapshots(unittest.TestCase):
-    """Kiểm tra 8 snapshot mock data trong data/mock/."""
+class TestExternalSystemContext(unittest.TestCase):
+    """AI reads the external systems through their API, never from snapshots."""
 
-    def setUp(self):
-        self.mock_dir = os.path.join(AI_SERVICE_DIR, "data", "mock")
-
-    def test_manifest_and_all_8_schemas_exist(self):
-        manifest_path = os.path.join(self.mock_dir, "_manifest.json")
-        self.assertTrue(os.path.exists(manifest_path), "Thiếu _manifest.json")
-
-        with open(manifest_path, "r", encoding="utf-8") as f:
-            manifest = json.load(f)
-
-        expected_schemas = [
-            "mock_hr",
-            "mock_assets",
-            "mock_facilities",
-            "mock_crm",
-            "mock_procurement",
-            "mock_it",
-            "mock_finance",
-            "mock_travel",
-        ]
-        total_records = 0
-        for schema in expected_schemas:
-            self.assertIn(schema, manifest.get("schemas", {}))
-            schema_file = os.path.join(self.mock_dir, f"{schema}.json")
-            self.assertTrue(os.path.exists(schema_file), f"Thiếu file {schema}.json")
-
-            with open(schema_file, "r", encoding="utf-8") as sf:
-                data = json.load(sf)
-                self.assertEqual(data.get("schema"), schema)
-                total_records += data.get("meta", {}).get("total_records", 0)
-
-        self.assertGreater(total_records, 100, "Tổng số bản ghi mock phải > 100")
+    def test_no_snapshot_copies_remain(self):
+        self.assertFalse(
+            os.path.exists(os.path.join(AI_SERVICE_DIR, "data", "mock")),
+            "Bản chụp JSON của hệ thống ngoài phải được xoá (docs/TICH_HOP_HE_THONG_NGOAI.md)",
+        )
 
     @unittest.skipUnless(
         HAS_ROUTER_DEPS,
         "Router dependencies (fastapi, pydantic, loguru) are required for mock_context lookup test",
     )
-    def test_mock_context_lookups(self):
+    def test_lookups_call_the_mock_systems_api(self):
+        from unittest.mock import MagicMock, patch
+
         try:
-            from routers.mock_context import (
-                lookup_department_budget,
-                lookup_facility_available,
-                lookup_leave_balance,
-            )
+            from routers import mock_context
         except ImportError:
-            from ai_service.routers.mock_context import (
-                lookup_department_budget,
-                lookup_facility_available,
-                lookup_leave_balance,
+            from ai_service.routers import mock_context
+
+        def fake_get(url, params=None, headers=None, timeout=None):
+            self.assertIn("X-Integration-Secret", headers)
+            body = {
+                "hr/employees": {
+                    "items": [
+                        {
+                            "employee_code": "E0001",
+                            "display_name": "An",
+                            "work_email": "an@eas.com",
+                        }
+                    ]
+                },
+                "hr/leave-balances": {
+                    "items": [{"leave_type": "ANNUAL", "remaining_days": 9}]
+                },
+                "facilities/resources": {
+                    "items": [{"code": "MR-HCM-01", "status": "AVAILABLE"}]
+                },
+                "finance/budgets": {
+                    "fiscal_year": 2026,
+                    "approved_minor": 100,
+                    "committed_minor": 10,
+                    "available_minor": 50,
+                },
+            }[url.split("/mock-api/v1/")[1]]
+            return MagicMock(status_code=200, json=lambda: body)
+
+        mock_context._cache.clear()
+        with patch.object(mock_context.httpx, "get", side_effect=fake_get):
+            self.assertEqual(mock_context.lookup_leave_balance("E0001"), 9)
+            self.assertTrue(mock_context.lookup_facility_available("MR-HCM-01"))
+            self.assertEqual(
+                mock_context.lookup_department_budget("TECH")["remaining_amount"], 50
             )
-
-        balance = lookup_leave_balance("E0001", "ANNUAL")
-        self.assertIsNotNone(balance)
-        self.assertGreater(balance, 0)
-
-        facility = lookup_facility_available("MR-HCM-01")
-        self.assertIsNotNone(facility)
-        self.assertTrue(facility)
-
-        budget_dept = lookup_department_budget("IT")
-        self.assertIsNotNone(budget_dept)
-        self.assertIn("allocated_amount", budget_dept)
-        self.assertEqual(budget_dept["allocated_amount"], 1_000_000_000)
-
-        budget_cc = lookup_department_budget("CC-210")
-        self.assertIsNotNone(budget_cc)
-        self.assertEqual(budget_cc["allocated_amount"], 1_000_000_000)
 
     @unittest.skipUnless(
         HAS_ROUTER_DEPS,
@@ -211,6 +197,10 @@ class TestMockDataSnapshots(unittest.TestCase):
             "file:///etc/passwd",
             "ftp://fileserver/invoice.png",
             "http://metadata.google.internal/computeMetadata/v1/",
+            "http://100.64.0.1/carrier-grade-nat",
+            "http://0.0.0.0:8001/health",
+            "http://[::ffff:127.0.0.1]/mapped-loopback",
+            "http://[::1]/ipv6-loopback",
         ]
         for url in blocked_urls:
             with self.subTest(url=url), self.assertRaises(HTTPException):
@@ -334,6 +324,23 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
 class TestAIServiceClientFallback(unittest.TestCase):
     """Kiểm tra khả năng chịu lỗi (fault-tolerance) của ai_client."""
 
+    def setUp(self):
+        # Simulate an unreachable AI service at the HTTP layer: instant and
+        # deterministic, whether or not an AI service is running locally
+        # (a refused localhost connection takes ~3 s on Windows).
+        try:
+            import httpx
+        except ImportError:
+            return
+        from unittest.mock import patch
+
+        def refuse(*_args, **_kwargs):
+            raise httpx.ConnectError("AI service offline (simulated)")
+
+        patcher = patch.object(httpx.AsyncClient, "send", side_effect=refuse)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     @staticmethod
     def _get_client():
         try:
@@ -377,6 +384,28 @@ class TestAIServiceClientFallback(unittest.TestCase):
         self.assertIn("predicted_request_type", res)
         self.assertIn("predicted_department", res)
         self.assertTrue(res.get("fallback_used", False))
+
+
+class TestPromptSanitization(unittest.TestCase):
+    """Kiểm tra che chắn PII và Secret trước khi gửi LLM (ISO 27001 / SOC 2 Privacy)."""
+
+    def test_sanitize_prompt_text_masks_sensitive_data(self):
+        try:
+            from ai_service.sanitizer import sanitize_prompt_text
+        except ImportError:
+            from sanitizer import sanitize_prompt_text
+
+        raw = (
+            "Thanh toan the 4111 2222 3333 4444 cho khach hang co CCCD 012345678901 "
+            "kem Bearer ya29.a0AfH6SMD_very_secret_oauth_token_here va api_key='sk-test-secret-12345'"
+        )
+        cleaned = sanitize_prompt_text(raw)
+        self.assertNotIn("4111 2222 3333 4444", cleaned)
+        self.assertNotIn("012345678901", cleaned)
+        self.assertNotIn("ya29.a0AfH6SMD_very_secret_oauth_token_here", cleaned)
+        self.assertIn("[REDACTED_PAN]", cleaned)
+        self.assertIn("[REDACTED_ID]", cleaned)
+        self.assertIn("[REDACTED_SECRET]", cleaned)
 
 
 if __name__ == "__main__":

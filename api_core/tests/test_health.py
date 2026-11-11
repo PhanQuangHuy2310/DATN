@@ -2,8 +2,12 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
 
+from api_core.health.schema_contract import (
+    REQUIRED_EAS_TABLES,
+    has_required_eas_tables,
+)
 from api_core.health.views import (
-    EXPECTED_MOCK_RELATIONS,
+    database_readiness,
     assess_mock_sources,
     assess_request_types,
     assess_runtime_role,
@@ -11,17 +15,26 @@ from api_core.health.views import (
 )
 
 
+class SchemaContractTests(SimpleTestCase):
+    def test_password_reset_requests_are_required_for_api_readiness(self):
+        without_reset_table = REQUIRED_EAS_TABLES - {"password_reset_request"}
+        self.assertFalse(has_required_eas_tables(without_reset_table))
+        self.assertTrue(has_required_eas_tables(REQUIRED_EAS_TABLES))
+
+
 class ReadinessLogicTests(SimpleTestCase):
     def test_mock_source_readiness_requires_every_relation_and_migration(self):
-        rows = [(name, True) for name in EXPECTED_MOCK_RELATIONS]
-        self.assertTrue(all(assess_mock_sources(rows, {"001", "002", "003"}).values()))
+        ok = {"001", "002", "003", "005"}
+        self.assertTrue(all(assess_mock_sources(True, ok, False).values()))
         self.assertFalse(
-            assess_mock_sources(rows[:-1], {"001", "002", "003"})[
-                "mock_source_contract_complete"
-            ]
+            assess_mock_sources(False, ok, False)["mock_systems_api_reachable"]
         )
         self.assertFalse(
-            assess_mock_sources(rows, {"001"})["mock_source_migrations_current"]
+            assess_mock_sources(True, {"001"}, False)["mock_source_migrations_current"]
+        )
+        # EAS must reach external systems only through their API.
+        self.assertFalse(
+            assess_mock_sources(True, ok, True)["eas_role_has_no_mock_table_access"]
         )
 
     def test_superuser_with_nonstandard_name_is_rejected_by_capability(self):
@@ -72,6 +85,26 @@ class HealthEndpointTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
 
+    @patch("api_core.health.views.connection")
+    def test_db_endpoint_only_checks_connectivity(self, db):
+        cursor = db.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = (1,)
+        response = self.client.get("/health/db")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok", "database": True})
+        cursor.execute.assert_called_once_with("SELECT 1")
+
+    @patch("api_core.health.views.connection")
+    def test_db_endpoint_returns_safe_failure_without_secrets(self, db):
+        from django.db import OperationalError
+
+        db.cursor.side_effect = OperationalError("password=private-database-secret")
+        response = self.client.get("/health/db")
+        self.assertEqual(response.status_code, 503)
+        self.assertIs(response.json()["database"], False)
+        self.assertEqual(response["Retry-After"], "5")
+        self.assertNotIn(b"private-database-secret", response.content)
+
     @patch(
         "api_core.health.views.database_readiness",
         return_value=(True, {"database": True}, {"unconfigured_active_type_count": 7}),
@@ -97,6 +130,51 @@ class HealthEndpointTests(SimpleTestCase):
         self.assertEqual(response.json()["status"], "not_ready")
 
 
+class DatabaseIndicatorTests(SimpleTestCase):
+    @override_settings(
+        EAS_REQUIRE_MOCK_SOURCES=False,
+        EAS_REQUIRE_ACTIVE_RELEASES=True,
+        EAS_REQUIRE_FULL_CATALOG_READY=False,
+        EAS_ALLOW_ADMIN_DB=False,
+    )
+    @patch("api_core.health.views.connection")
+    def test_successful_database_checks_expose_connection_status(self, db):
+        from api_core.health.schema_contract import REQUIRED_EAS_TABLES
+
+        cursor = db.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = (
+            False, False, False, False, True, False, False, False
+        )
+        cursor.fetchall.side_effect = [
+            [(name,) for name in REQUIRED_EAS_TABLES],
+            [("LEAVE", "A", True), ("ACCESS", "B", True), ("EQUIPMENT", "C", True)],
+        ]
+        is_ready, checks, _catalog = database_readiness()
+        self.assertTrue(is_ready)
+        self.assertIs(checks["database"], True)
+
+    @override_settings(
+        EAS_REQUIRE_MOCK_SOURCES=False,
+        EAS_REQUIRE_ACTIVE_RELEASES=True,
+        EAS_REQUIRE_FULL_CATALOG_READY=False,
+        EAS_ALLOW_ADMIN_DB=False,
+    )
+    @patch("api_core.health.views.connection")
+    def test_other_readiness_failure_does_not_mean_db_is_down(self, db):
+        cursor = db.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = (
+            False, False, False, False, False, False, False, False
+        )
+        cursor.fetchall.side_effect = [
+            [],
+            [("LEAVE", "A", True), ("ACCESS", "B", True), ("EQUIPMENT", "C", True)],
+        ]
+        is_ready, checks, _catalog = database_readiness()
+        self.assertFalse(is_ready)
+        self.assertIs(checks["database"], True)
+        self.assertIs(checks["runtime_role_is_api_only"], False)
+
+
 class OptionalCatalogReadinessTests(SimpleTestCase):
     def test_optional_types_do_not_break_p0_gates(self):
         rows = [
@@ -115,3 +193,14 @@ class OptionalCatalogReadinessTests(SimpleTestCase):
         rows = [("LEAVE", "A", True), ("ACCESS", "B", False), ("EQUIPMENT", "C", True)]
         result = assess_request_types(rows, require_active_releases=True)
         self.assertFalse(result["p0_active_types_configured"])
+
+
+class JsonErrorHandlerTests(SimpleTestCase):
+    """vibe-check #15: unknown routes answer with a generic JSON error, never
+    the framework HTML page."""
+
+    def test_unknown_route_returns_generic_json_404(self):
+        response = self.client.get("/definitely-not-a-route")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"]["code"], "RESOURCE_NOT_FOUND")
+        self.assertNotIn(b"<html", response.content.lower())

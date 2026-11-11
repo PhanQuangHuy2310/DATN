@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from uuid import uuid4
 
+from django.conf import settings
 from django.db import connection, transaction
 from django.utils import timezone
 from psycopg.types.json import Jsonb
 
 from api_core.workflow.service import _append_admin_audit, _append_request_audit
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -29,6 +33,14 @@ def retry_delay(attempts: int) -> timedelta:
 
 
 SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
+RESOURCE_LABELS = {
+    "RESOURCE_PREEMPTED": (
+        "Yêu cầu mượn của bạn đã bị thu hồi vì Ban Giám đốc cần sử dụng trong cùng thời gian"
+    ),
+    "RESOURCE_UNAVAILABLE": (
+        "Yêu cầu mượn của bạn bị từ chối tự động: tài nguyên đã được cấp cho người duyệt trước"
+    ),
+}
 
 
 def safe_error_code(value: object) -> str:
@@ -93,6 +105,29 @@ def claim_outbox(*, batch_size: int = 20, lease_seconds: int = 60) -> list[Outbo
 
 
 def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
+    if item.event_type in {"SLA_REMINDER", "SLA_BREACH"}:
+        # Notify the *current assignee*, not only the original requester.
+        # A stage's responsible user may change when OPS reassigns work.
+        cursor.execute(
+            """
+            SELECT CASE WHEN s.kind='APPROVAL' THEN ap.assignee_id::text
+                        WHEN s.kind='EXECUTION' THEN ex.executor_id::text
+                        ELSE wi.acceptor_id::text END
+            FROM eas.sla_stage s
+            LEFT JOIN eas.approval_step ap ON ap.id=s.approval_step_id
+            LEFT JOIN eas.execution_attempt ex ON ex.id=s.attempt_id
+            LEFT JOIN eas.workflow_instance wi ON wi.id=ex.instance_id
+            WHERE s.id=%s AND s.request_id=%s
+            """,
+            [item.payload.get("stage_id"), item.request_id],
+        )
+        row = cursor.fetchone()
+        label = (
+            "Công việc được phân công đã quá hạn, vui lòng xử lý"
+            if item.event_type == "SLA_BREACH"
+            else "Công việc được phân công đang đến hạn xử lý"
+        )
+        return [(row[0], label)] if row and row[0] else []
     if item.event_type == "APPROVAL_REQUESTED":
         cursor.execute(
             "SELECT assignee_id::text FROM eas.approval_step WHERE id=%s",
@@ -115,7 +150,9 @@ def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
             "SELECT requester_id::text FROM eas.request WHERE id=%s",
             [item.request_id],
         )
-        label = "Yêu cầu của bạn vừa được cập nhật"
+        label = RESOURCE_LABELS.get(
+            item.event_type, "Yêu cầu của bạn vừa được cập nhật"
+        )
     row = cursor.fetchone()
     return [(row[0], label)] if row and row[0] else []
 
@@ -134,6 +171,8 @@ def acknowledge_outbox(item: OutboxItem) -> None:
         if lease != ("PROCESSING", item.lease_token, True):
             raise RuntimeError("OUTBOX_LEASE_LOST")
         for recipient_id, label in _recipients(cursor, item):
+            if recipient_id == settings.EAS_AI_SYSTEM_USER_ID:
+                continue  # the AI account already decided; nobody reads its inbox
             cursor.execute(
                 """
                 SELECT u.is_active,
@@ -209,9 +248,29 @@ def fail_outbox(item: OutboxItem, error: object) -> None:
             raise RuntimeError("OUTBOX_LEASE_LOST")
 
 
+def request_ai_auto_approval(request_id: str) -> bool:
+    """Ask the API (which owns approval writes) to let the AI decide the step."""
+    import httpx
+
+    try:
+        response = httpx.post(
+            f"{settings.EAS_API_INTERNAL_URL}/api/v1/internal/requests/{request_id}/auto-approve",
+            headers={"X-Internal-Secret": settings.EAS_WORKER_INTERNAL_SECRET},
+            timeout=settings.EAS_AI_TIMEOUT_SECONDS + 5,
+        )
+        response.raise_for_status()
+        return bool(response.json().get("approved"))
+    except (httpx.HTTPError, ValueError):
+        # Auto-approval is optional: the human approver is still notified.
+        logger.warning("AI auto-approve unavailable for %s", request_id)
+        return False
+
+
 def run_outbox_batch(*, batch_size: int = 20) -> int:
     items = claim_outbox(batch_size=batch_size)
     for item in items:
+        if item.event_type == "APPROVAL_REQUESTED" and item.request_id:
+            request_ai_auto_approval(item.request_id)
         try:
             acknowledge_outbox(item)
         except Exception as exc:  # noqa: BLE001 - every delivery failure must release the lease
@@ -230,9 +289,13 @@ def process_sla_batch(*, batch_size: int = 100) -> int:
             """
             SELECT s.id::text,s.request_id::text,s.started_at,s.due_at,s.breached_at
             FROM eas.sla_stage s
-            WHERE s.closed_at IS NULL AND (
-              (s.breached_at IS NULL AND s.due_at <= %s) OR
-              (%s >= s.started_at + (s.due_at-s.started_at)/2)
+            WHERE s.closed_at IS NULL AND s.breached_at IS NULL AND (
+              (s.due_at <= %s AND NOT EXISTS (
+                  SELECT 1 FROM eas.sla_alert al WHERE al.stage_id=s.id AND al.kind='BREACH'
+              )) OR
+              (%s >= s.started_at + (s.due_at-s.started_at)/2 AND NOT EXISTS (
+                  SELECT 1 FROM eas.sla_alert al WHERE al.stage_id=s.id AND al.kind='REMINDER'
+              ))
             )
             ORDER BY s.due_at,s.id
             FOR UPDATE SKIP LOCKED LIMIT %s
@@ -292,3 +355,53 @@ def process_sla_batch(*, batch_size: int = 100) -> int:
             created += 1
 
     return created
+
+
+def process_resource_batch() -> int:
+    """Borrowing periods that ended go back to stock; orphan bookings are cancelled.
+
+    Talks to the external asset / facility systems over their API only.
+    """
+    from api_core.workflow.errors import CommandError
+    from api_core.workflow.resource_allocation import release_expired
+
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute(SQL_LOCK_SECURITY)
+            return len(release_expired(cursor, now=timezone.now()))
+    except CommandError:
+        # External systems down or switched off: try again next round.
+        logger.warning("resource_release_skipped_integration_unavailable")
+        return 0
+
+
+def process_idempotency_cleanup(*, batch_size: int = 500) -> int:
+    """Housekeeping of eas.idempotency_record (audit S8f), following guard_idempotency:
+    the stored response is cleared once expired, the row is deleted after its
+    tombstone period. Returns the number of rows touched.
+    """
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE eas.idempotency_record SET response_body = NULL
+            WHERE id IN (
+              SELECT id FROM eas.idempotency_record
+              WHERE response_body IS NOT NULL AND expires_at < clock_timestamp()
+              LIMIT %s
+            )
+            """,
+            [batch_size],
+        )
+        cleared = cursor.rowcount
+        cursor.execute(
+            """
+            DELETE FROM eas.idempotency_record
+            WHERE id IN (
+              SELECT id FROM eas.idempotency_record
+              WHERE tombstone_until < clock_timestamp()
+              LIMIT %s
+            )
+            """,
+            [batch_size],
+        )
+        return cleared + cursor.rowcount

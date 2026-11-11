@@ -11,10 +11,12 @@ import json
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "docs" / "REPORT_V1_SOURCE_MATRIX.json"
+FALLBACK_SOURCE = ROOT / "tests" / "fixtures" / "report_v1_source_matrix.json"
 
 
 def check() -> dict:
-    matrix = json.loads(SOURCE.read_text(encoding="utf-8"))
+    source_path = SOURCE if SOURCE.exists() else FALLBACK_SOURCE
+    matrix = json.loads(source_path.read_text(encoding="utf-8"))
     def present(relative):
         return (ROOT / relative).is_file()
     def contains(relative, literal):
@@ -49,11 +51,11 @@ def live_database_checks():
     try:
         import psycopg
         from connect_database import load_environment, database_url
-        load_environment(ROOT / ".env.database")
+        load_environment(ROOT / ".env")
         url = database_url()
     except Exception:
         # Do not stringify errors: some DB exception text contains DSN and host.
-        return {"status":"SKIPPED", "reason":"Missing psycopg or database environment; install the project venv and configure .env.database."}
+        return {"status":"SKIPPED", "reason":"Missing psycopg or database environment; install the project venv and configure .env."}
     try:
         with psycopg.connect(url,connect_timeout=8,prepare_threshold=None,
                              options="-c statement_timeout=8000 -c lock_timeout=2000") as conn:
@@ -81,7 +83,7 @@ def live_database_checks():
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--json",action="store_true")
-    parser.add_argument("--live-db",action="store_true",help="Connect to Supabase in READ ONLY mode using .env.database")
+    parser.add_argument("--live-db",action="store_true",help="Connect to Supabase in READ ONLY mode using .env")
     args=parser.parse_args()
     result=check()
     if args.live_db:

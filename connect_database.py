@@ -103,7 +103,7 @@ def worker_database_url(environ=None):
         )
 
     if not raw:
-        raise ConfigurationError("Thieu cau hinh EAS_WORKER_DATABASE_URL trong .env.worker.")
+        raise ConfigurationError("Thiếu EAS_WORKER_DATABASE_URL trong .env chung.")
 
     if has_placeholder:
         raise ConfigurationError(
@@ -213,7 +213,7 @@ def main(argv=None):
         description="Ket noi PostgreSQL/Supabase cho EAS; khong in mat khau."
     )
     parser.add_argument(
-        "--env-file", type=Path, default=Path(__file__).with_name(".env.database")
+        "--env-file", type=Path, default=Path(__file__).with_name(".env")
     )
     parser.add_argument(
         "--runserver",
@@ -223,7 +223,8 @@ def main(argv=None):
     parser.add_argument("--bind", default="127.0.0.1:8000")
     args = parser.parse_args(argv)
     try:
-        load_environment(args.env_file)
+        from project_env import load_project_env
+        load_project_env(args.env_file)
         url = database_url()
         if args.runserver:
             if os.environ.get("EAS_ENV", "").lower() == "test":

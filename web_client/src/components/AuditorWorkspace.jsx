@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api.js";
-import { date, types } from "../domain.js";
+import { errorText, date, types } from "../domain.js";
 import { Badge, Data, ResourceState, useResource } from "./ui.jsx";
 import { PageControls } from "./ux.jsx";
 
@@ -24,16 +24,16 @@ export default function AuditorWorkspace({ onOpen }) {
       const result = await api(`/api/v1/requests/${id}/audit/verify`);
       setChecked({ id, result });
     } catch (err) {
-      setError(err.message || "Không thể kiểm tra chuỗi audit.");
+      setError(errorText(err));
     }
   }
   return (
     <>
       <header className="page-heading">
         <div>
-          <p className="eyebrow">AUDITOR · UC05 / UC15</p>
+          <p className="eyebrow">KIỂM TOÁN HỆ THỐNG</p>
           <h1>Tra cứu và xác minh kiểm toán</h1>
-          <p className="muted">Chế độ chỉ đọc; danh sách được Backend giới hạn theo vai trò, loại hồ sơ và phòng ban có hiệu lực.</p>
+          <p className="muted">Chế độ chỉ đọc. Danh sách được giới hạn theo vai trò, loại hồ sơ và phòng ban bạn được phân quyền.</p>
         </div>
       </header>
       <section className="panel audit-scope-banner" aria-label="Nguyên tắc kiểm toán">

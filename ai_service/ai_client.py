@@ -60,6 +60,14 @@ def _resolve_internal_secret() -> str:
         secret = os.getenv("EAS_AI_INTERNAL_SECRET") or os.getenv("INTERNAL_API_SECRET")
 
     if not secret or "replace-with-the-same-random-secret" in str(secret):
+        environment = (
+            os.getenv("EAS_ENV", os.getenv("ENVIRONMENT", "development"))
+            .lower()
+            .strip()
+        )
+        if environment == "production":
+            # Fail closed: never fall back to a publicly known secret in production.
+            return ""
         return "eas-local-dev-shared-internal-secret-2026"
     return str(secret).strip()
 
@@ -472,17 +480,21 @@ class SyncAIServiceClient:
 
     def _run(self, coro):
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Trong context async (Celery, ASGI) — dùng asyncio.ensure_future
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop is not None and loop.is_running():
+                # Trong context async (Celery, ASGI) — dùng ThreadPoolExecutor
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     future = pool.submit(asyncio.run, coro)
                     return future.result(timeout=35)
             else:
-                return loop.run_until_complete(coro)
-        except RuntimeError:
+                return asyncio.run(coro)
+        except Exception:  # noqa: BLE001
             return asyncio.run(coro)
 
     def classify_request(

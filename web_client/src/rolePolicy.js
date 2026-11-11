@@ -2,16 +2,57 @@
  * Authorization always remains enforced on the Django API with role + scope + SoD.
  */
 export const ROLE_NAVIGATION = Object.freeze({
-  REQUESTER: ["home", "mine", "history", "notifications", "profile"],
-  APPROVER: ["home", "approval", "history", "notifications", "profile"],
-  EXECUTOR: ["home", "execution", "history", "notifications", "profile"],
-  ACCEPTOR: ["home", "acceptance", "history", "notifications", "profile"],
-  POLICY_ADMIN: ["home", "policy", "plan-catalog", "notifications", "profile"],
-  OPS_ADMIN: ["home", "ops", "identity", "api-admin", "plan-catalog", "notifications", "profile"],
-  AUDITOR: ["home", "audit", "events", "notifications", "profile"],
+<<<<<<< HEAD
+  REQUESTER: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "notifications", "profile"],
+  APPROVER: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "org-client", "approval", "team", "team-employees", "notifications", "profile"],
+  EXECUTOR: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
+  ACCEPTOR: ["home", "requests", "regulations-view", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
+=======
+  STAFF: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "execution", "acceptance", "notifications", "profile"],
+  TEAM_LEAD: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  MANAGER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  VICE_DIRECTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  DIRECTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "acceptance", "team", "team-employees", "notifications", "profile"],
+  REQUESTER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "notifications", "profile"],
+  APPROVER: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "approval", "team", "team-employees", "notifications", "profile"],
+  EXECUTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "execution", "notifications", "profile"],
+  ACCEPTOR: ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "org-client", "acceptance", "notifications", "profile"],
+>>>>>>> origin/main
+  POLICY_ADMIN: ["home", "flow-diagrams", "ai-process", "policy", "ai-policy", "ai-rules", "release-workspace", "plan-catalog", "notifications", "profile"],
+  OPS_ADMIN: ["home", "flow-diagrams", "ai-process", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "plan-catalog", "notifications", "profile"],
+  AUDITOR: ["home", "flow-diagrams", "ai-process", "audit", "events", "team", "team-employees", "notifications", "profile"],
 });
 
-const NAV_ORDER = ["home", "mine", "approval", "execution", "acceptance", "history", "policy", "plan-catalog", "ops", "identity", "api-admin", "audit", "events", "notifications", "profile"];
+const NAV_ORDER = ["home", "requests", "people", "regulations-view", "flow-diagrams", "ai-process", "mine", "org-client", "approval", "execution", "acceptance", "team", "team-employees", "history", "policy", "ai-policy", "ai-rules", "release-workspace", "plan-catalog", "ops", "sla", "system", "identity", "users", "departments", "permissions", "request-catalog", "org-chart", "api-admin", "audit", "events", "notifications", "profile"];
+
+export const ADMIN_ROLES = Object.freeze(["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"]);
+<<<<<<< HEAD
+/** Administrator accounts use only the system portal even if old workflow
+ * memberships are still present. Real authorization is enforced by Django. */
+export function canUsePortal(roles = [], portal = "client") {
+  const isAdmin = roles.some((role) => ADMIN_ROLES.includes(role));
+  if (portal === "admin") return isAdmin;
+  return !isAdmin;
+=======
+const WORKFLOW_DUTY_ROLES = ["APPROVER", "EXECUTOR"];
+
+/** Admin portal: any admin role. Employee portal: everyone except pure admins;
+ * an admin who also approves or executes keeps access to process requests. */
+// Pure system administration roles. AUDITOR is an employee duty (audit
+// lookup, admin event log) and works in the employee portal (M3).
+const SYSTEM_ADMIN_ROLES = ["OPS_ADMIN", "POLICY_ADMIN"];
+
+export function canUsePortal(roles = [], portal = "client") {
+  const isAdmin = roles.some((role) => ADMIN_ROLES.includes(role));
+  if (portal === "admin") return isAdmin;
+  const isSystemAdmin = roles.some((role) => SYSTEM_ADMIN_ROLES.includes(role));
+  return (
+    !isSystemAdmin ||
+    roles.includes("AUDITOR") ||
+    roles.some((role) => WORKFLOW_DUTY_ROLES.includes(role))
+  );
+>>>>>>> origin/main
+}
 
 export function visiblePages(roles = [], capabilities = {}) {
   const enabled = new Set(["home", "notifications", "profile"]);
@@ -19,7 +60,7 @@ export function visiblePages(roles = [], capabilities = {}) {
     for (const page of ROLE_NAVIGATION[role] || []) enabled.add(page);
   }
   // UC17: identity management is restricted to GLOBAL + ALL OPS admins.
-  if (!capabilities.identity_manage) { enabled.delete("identity"); enabled.delete("api-admin"); }
+  if (!capabilities.identity_manage) { enabled.delete("identity"); enabled.delete("users"); enabled.delete("departments"); enabled.delete("sla"); enabled.delete("permissions"); enabled.delete("request-catalog"); enabled.delete("org-chart"); enabled.delete("api-admin"); }
   return NAV_ORDER.filter((page) => enabled.has(page));
 }
 
@@ -35,6 +76,7 @@ export const ROLE_TASKS = Object.freeze([
   { role: "POLICY_ADMIN", title: "Phiên bản chính sách", description: "Soạn, kiểm tra và công bố cấu hình có kiểm soát", page: "policy", uc: "UC02", icon: "⚙" },
   { role: "OPS_ADMIN", title: "Điều phối vận hành", description: "Điều chuyển, giám sát SLA và khôi phục outbox", page: "ops", uc: "UC09 · UC14", icon: "⇄" },
   { role: "OPS_ADMIN", title: "Danh tính & phân quyền", description: "Quản lý tổ chức và role theo phạm vi được cấp", page: "identity", uc: "UC17", icon: "◎" },
+  { role: "OPS_ADMIN", title: "Sơ đồ tổ chức", description: "Trực quan hóa cơ cấu ban giám đốc và 7 phòng ban", page: "org-chart", uc: "Sơ đồ tổ chức", icon: "🏛" },
   { role: "OPS_ADMIN", title: "Quản lý API & ma trận quyền", description: "Đối chiếu endpoint, quyền truy cập và trạng thái API", page: "api-admin", uc: "UC17 · API v1", icon: "⌘" },
   { role: "AUDITOR", title: "Tra cứu kiểm toán", description: "Đọc hồ sơ được cấp phạm vi và xác minh chuỗi audit", page: "audit", uc: "UC05 · UC15", icon: "⌕" },
   { role: "AUDITOR", title: "Nhật ký quản trị", description: "Kiểm tra sự kiện vận hành, bất biến và phân trang", page: "events", uc: "UC15", icon: "≡" },
@@ -42,5 +84,22 @@ export const ROLE_TASKS = Object.freeze([
 
 export function roleTasks(roles = [], capabilities = {}) {
   const granted = new Set(roles);
-  return ROLE_TASKS.filter((task) => granted.has(task.role) && (!["identity", "api-admin"].includes(task.page) || capabilities.identity_manage));
+  return ROLE_TASKS.filter((task) => granted.has(task.role) && (!["identity", "org-chart", "api-admin"].includes(task.page) || capabilities.identity_manage));
+}
+
+/** A colleague-directory UI is available only to the user's direct manager
+ * in the same department. APPROVER by itself is NOT a manager grant.
+ * Database APIs must independently enforce the same scope for security.
+ */
+export function canBrowseDepartmentRoster(user, departments = []) {
+  if (!user?.id || !user?.department_id || !Array.isArray(departments)) return false;
+  return departments.some((department) =>
+    String(department.id) === String(user.department_id) &&
+    Array.isArray(department.employees) &&
+    department.employees.some((employee) =>
+      String(employee.manager_id || "") === String(user.id) &&
+      String(employee.id) !== String(user.id) &&
+      String(employee.department_id || department.id) === String(user.department_id)
+    )
+  );
 }

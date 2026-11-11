@@ -2,7 +2,7 @@ import hmac
 import os
 from collections.abc import Callable
 from datetime import datetime, timezone
-from functools import wraps
+from functools import lru_cache, wraps
 from uuid import UUID, uuid4
 
 from django.conf import settings
@@ -36,16 +36,35 @@ def verify_user_password(password: str, password_hash: str) -> bool:
         password_hash in SEED_PLACEHOLDER_HASHES
         or password_hash.startswith("!UNUSABLE_DEMO_")
     ):
-        fallback_pwd = os.getenv("EAS_DEV_DEFAULT_PASSWORD", "Admin@123456")
-        return hmac.compare_digest(password, fallback_pwd)
+        # Seed accounts only, development only: seed placeholders only open
+        # when EAS_DEV_DEFAULT_PASSWORD is set locally (never committed).
+        fallback_pwd = os.getenv("EAS_DEV_DEFAULT_PASSWORD", "")
+        return bool(fallback_pwd) and hmac.compare_digest(password, fallback_pwd)
     return False
+
+
+@lru_cache(maxsize=1)
+def _timing_equalizer_hash() -> str:
+    return make_password(uuid4().hex, hasher="argon2")
+
+
+def verify_login_password(user: AuthUser | None, password: str) -> bool:
+    """Check a login attempt in constant work whether or not the account exists.
+
+    Unknown or inactive accounts still pay one Argon2 verification, so response
+    time does not reveal which employee emails are registered.
+    """
+    if user is None or not user.is_active:
+        check_password(password, _timing_equalizer_hash())
+        return False
+    return verify_user_password(password, user.password_hash)
 
 
 class PasswordChangeError(ValueError):
     pass
 
 
-def validate_new_password(password: object, username: str) -> str:
+def validate_new_password(password: object, email: str) -> str:
     if not isinstance(password, str) or not 15 <= len(password) <= 128:
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
     # SRS v2 NFR-Security: exclude passwords from a minimal weak-password
@@ -57,7 +76,7 @@ def validate_new_password(password: object, username: str) -> str:
         CommonPasswordValidator().validate(password)
     except ValidationError:
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION") from None
-    if username.lower() in password.lower():
+    if email.split("@", 1)[0].lower() in password.lower():
         raise PasswordChangeError("PASSWORD_POLICY_VIOLATION")
     required = (
         any(char.islower() for char in password),
@@ -73,7 +92,7 @@ def validate_new_password(password: object, username: str) -> str:
 def change_password(
     *, actor: Actor, current_password: object, new_password: object, correlation_id: str
 ) -> int:
-    new_password = validate_new_password(new_password, actor.username)
+    new_password = validate_new_password(new_password, actor.email)
     now = datetime.now(timezone.utc)
     with transaction.atomic(), connection.cursor() as cursor:
         cursor.execute("SELECT eas.lock_security(true)")
@@ -158,16 +177,19 @@ def change_password(
     return new_version
 
 
-def find_user(username: str) -> AuthUser | None:
+def find_user(email: str) -> AuthUser | None:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id::text, username, display_name, department_id::text,
+            SELECT id::text, email, display_name, department_id::text,
                    password_hash, auth_version, is_active, must_change_password
             FROM eas.app_user
-            WHERE username = %s
+            WHERE email = %s
+              -- System accounts (ai.system@eas.com, migration 08) never sign in,
+              -- whatever their password hash holds.
+              AND NOT COALESCE((to_jsonb(app_user) ->> 'is_system_account')::boolean, false)
             """,
-            [username],
+            [email],
         )
         row = cursor.fetchone()
     return AuthUser(*row) if row else None
@@ -200,46 +222,41 @@ def load_actor_from_session(request: HttpRequest) -> Actor | None:
     idle_key = f"eas:idle:{session_id}"
     if cache.get(idle_key) != active_session:
         return None
+    # One round trip: each query to the Supabase pooler costs ~300ms.
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT id::text, username, display_name, department_id::text,
-                   auth_version, must_change_password
-            FROM eas.app_user
-            WHERE id = %s AND is_active AND auth_version = %s
+            SELECT u.id::text, u.email, u.display_name, u.department_id::text,
+                   u.auth_version, u.must_change_password,
+                   ARRAY(
+                     SELECT DISTINCT rm.role::text
+                     FROM eas.role_membership rm
+                     WHERE rm.user_id = u.id
+                       AND rm.revoked_at IS NULL
+                       AND rm.valid_from <= statement_timestamp()
+                       AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+                   )
+            FROM eas.app_user u
+            WHERE u.id = %s AND u.is_active AND u.auth_version = %s
             """,
             [user_id, auth_version],
         )
         user = cursor.fetchone()
-        if not user:
-            return None
-        if (
-            active_session is None
-            and getattr(settings, "ENVIRONMENT", "") == "development"
-        ):
-            cache.set(
-                f"eas:session:{session_id}",
-                expected_marker,
-                timeout=getattr(settings, "SESSION_COOKIE_AGE", 28800),
-            )
-        cursor.execute(
-            """
-            SELECT DISTINCT role
-            FROM eas.role_membership
-            WHERE user_id = %s
-              AND revoked_at IS NULL
-              AND valid_from <= statement_timestamp()
-              AND (valid_to IS NULL OR valid_to > statement_timestamp())
-            """,
-            [user_id],
+    if not user:
+        return None
+    if active_session is None and getattr(settings, "ENVIRONMENT", "") == "development":
+        cache.set(
+            f"eas:session:{session_id}",
+            expected_marker,
+            timeout=getattr(settings, "SESSION_COOKIE_AGE", 28800),
         )
-        roles = frozenset(row[0] for row in cursor.fetchall())
+    roles = frozenset(user[6] or ())
     # Sliding 30-minute inactivity window, but the original 8-hour absolute
     # session key is NEVER refreshed here. Logout/password reset still revoke.
     cache.set(idle_key, active_session, timeout=settings.EAS_SESSION_IDLE_SECONDS)
     return Actor(
         id=user[0],
-        username=user[1],
+        email=user[1],
         display_name=user[2],
         department_id=user[3],
         auth_version=user[4],
@@ -252,7 +269,10 @@ def require_actor(*required_roles: str) -> Callable:
     def decorator(view: Callable) -> Callable:
         @wraps(view)
         def wrapped(request: HttpRequest, *args, **kwargs) -> HttpResponse:
-            actor = load_actor_from_session(request)
+            # Nested decorated views (e.g. request_list_or_create -> request_list)
+            # reuse the actor loaded by the outer decorator in this request
+            # instead of paying another DB round trip; role checks still run.
+            actor = getattr(request, "actor", None) or load_actor_from_session(request)
             if actor is None:
                 request.session.flush()
                 if request.headers.get("X-Auth-Optional") == "1" and request.path in {
@@ -276,6 +296,16 @@ def require_actor(*required_roles: str) -> Callable:
                 return api_error(request, "PASSWORD_CHANGE_REQUIRED", status=403)
             if required_roles and not actor.roles.intersection(required_roles):
                 return api_error(request, "FORBIDDEN", status=403)
+            # Administrative identities are system-only even if historic grants
+            # also include REQUESTER/APPROVER/EXECUTOR/ACCEPTOR. Enforce on API.
+            operational = {"REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR"}
+            administrator = {"OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"}
+            if (
+                required_roles
+                and set(required_roles).issubset(operational)
+                and actor.roles.intersection(administrator)
+            ):
+                return api_error(request, "ADMIN_PORTAL_ONLY", status=403)
             from api_core.maintenance import (
                 MAINTENANCE_MSG_USER,
                 get_maintenance_info,

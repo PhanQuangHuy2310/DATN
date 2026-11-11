@@ -18,7 +18,7 @@ class Command(BaseCommand):
     help = "Audited administrative user account lifecycle management (disable, enable, reset-password)."
 
     def add_arguments(self, parser):
-        parser.add_argument("--user", required=True, help="Target username.")
+        parser.add_argument("--user", required=True, help="Target employee email.")
         parser.add_argument(
             "--mode",
             required=True,
@@ -33,12 +33,12 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        username = options["user"].strip()
+        email = options["user"].strip().lower()
         mode = options["mode"]
         operator = options["operator"].strip()
         approval = options["approval"].strip()
 
-        if not username or not operator or not approval:
+        if not email or not operator or not approval:
             self.stderr.write(
                 "ERROR: --user, --operator, and --approval must be non-empty."
             )
@@ -48,7 +48,7 @@ class Command(BaseCommand):
         if mode == "reset-password":
             temp_password = os.getenv("EAS_TEMP_PASSWORD", "")
             try:
-                validate_new_password(temp_password, username)
+                validate_new_password(temp_password, email)
             except PasswordChangeError:
                 self.stderr.write(
                     "ERROR: EAS_TEMP_PASSWORD must meet the 15–128 character SRS password policy."
@@ -64,21 +64,21 @@ class Command(BaseCommand):
                 """
                 SELECT id::text, department_id::text, is_active, auth_version
                 FROM eas.app_user
-                WHERE username = %s
+                WHERE email = %s
                 FOR UPDATE
                 """,
-                [username],
+                [email],
             )
             row = cursor.fetchone()
             if not row:
-                self.stderr.write(f"ERROR: User '{username}' not found.")
+                self.stderr.write(f"ERROR: User '{email}' not found.")
                 sys.exit(2)
 
             user_id, dept_id, _is_active, auth_version = row
             new_auth_version = auth_version + 1
 
             cursor.execute(
-                "SELECT id::text FROM eas.app_user WHERE username = %s OR id::text = %s",
+                "SELECT id::text FROM eas.app_user WHERE email = %s OR id::text = %s",
                 [operator, operator],
             )
             op_row = cursor.fetchone()
@@ -131,7 +131,7 @@ class Command(BaseCommand):
                 department_id=dept_id,
                 reason=approval,
                 details={
-                    "username": username,
+                    "email": email,
                     "mode": mode,
                     "auth_version": new_auth_version,
                 },
@@ -141,5 +141,5 @@ class Command(BaseCommand):
         with contextlib.suppress(Exception):
             cache.delete(f"eas:session:{user_id}")
 
-        self.stdout.write(f"User '{username}' successfully updated with mode '{mode}'.")
+        self.stdout.write(f"User '{email}' successfully updated with mode '{mode}'.")
         sys.exit(0)

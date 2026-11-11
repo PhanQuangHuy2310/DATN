@@ -30,14 +30,14 @@ AI Service là microservice thông minh chạy bằng **FastAPI** (port `8001`),
 ## 🤖 2. 5 Chức Năng AI Chính
 
 ### 2.1. Smart Request Classifier (`POST /ai/classify/request`)
-- **Mô hình**: TF-IDF Vectorizer + CalibratedClassifier (SGD/Logistic Regression).
+- **Mô hình**: TF-IDF Vectorizer + Logistic Regression.
 - **Đầu vào**: `title` (tiêu đề), `description` (nội dung tiếng Việt tự nhiên).
 - **Đầu ra**: 
   - `predicted_request_type`: 1 trong 16 loại yêu cầu (`leave_annual`, `contract_payment`, `equipment_new`,...).
   - `predicted_department`: Phòng ban xử lý (`hr`, `it`, `finance`, `marketing`, `sales`, `operations`, `legal`).
   - `predicted_template`: Biểu mẫu quy trình (`A`: đơn giản, `B`: 2 bước, `C`: 3 bên).
   - Độ tin cậy (`confidence`) và gợi ý quy trình (`workflow_suggestion`).
-- **Hiệu năng**: Độ chính xác phân loại > 98%, thời gian suy luận < 15ms.
+- **Hiệu năng**: Xem báo cáo huấn luyện trên tập giữ riêng trong `models/model_metadata.json`. Điểm từ dữ liệu tổng hợp không chứng minh độ chính xác trên yêu cầu thật; cần đánh giá thêm bằng dữ liệu người dùng gán nhãn độc lập.
 
 ### 2.2. Risk & Fraud Scoring (`POST /ai/risk/score`)
 - **Mô hình**: Ensemble đa tầng 4 mô hình **XGBoost** (`hist` tree method).
@@ -113,49 +113,44 @@ ai_service/
 │
 └── training/                   # Bộ công cụ huấn luyện mô hình
     ├── data/                       # Dataset huấn luyện
-    │   ├── enterprise_requests_dataset_large.csv  # 100K mẫu NLP
+    │   ├── enterprise_requests_dataset_large.csv  # Dữ liệu NLP tổng hợp
     │   ├── eapproval_risk_10000.csv               # 10K mẫu Risk
     │   └── partitions/                            # 1.75 triệu mẫu Big Data
     ├── generate_enterprise_requests.py # Sinh dữ liệu mẫu doanh nghiệp
     ├── enterprise_bigdata_generator.py # Sinh partition Big Data 1.75M dòng
-    ├── train_nlp_classifier.py         # Huấn luyện mô hình NLP tiếng Việt
-    ├── train_risk_model.py             # Huấn luyện mô hình XGBoost Master
-    ├── train_domain_models.py          # Huấn luyện 3 mô hình XGBoost Domain
-    ├── train_bigdata_models.py         # Huấn luyện trên 1.75M mẫu
+    ├── train_all_models.py             # Huấn luyện toàn bộ NLP và risk models
+    ├── train_nlp_classifier.py         # Pipeline cũ; ưu tiên train_all_models.py
+    ├── train_risk_model.py             # Pipeline cũ; ưu tiên train_all_models.py
+    ├── train_domain_models.py          # Pipeline cũ; ưu tiên train_all_models.py
+    ├── train_bigdata_models.py         # Pipeline cũ; ưu tiên train_all_models.py
     ├── inspect_models.py               # Kiểm tra feature importance & tham số
     ├── test_inference.py               # Test suy luận đa domain
-    └── run_training_pipeline.py        # Chạy toàn bộ pipeline tự động
+    └── run_training_pipeline.py        # Pipeline cũ; ưu tiên train_all_models.py
 ```
 
 ---
 
-## 🎓 4. Hướng Dẫn Huấn Luyện Lại Mô Hình (Training Pipelines)
+## 🎓 4. Hướng Dẫn Huấn Luyện Lại Toàn Bộ Mô Hình
 
-### 4.1. Chạy Toàn Bộ Pipeline Tự Động:
-```bash
-cd ai_service
-python training/run_training_pipeline.py
+Tạo môi trường Python 3.11 từ thư mục gốc repo, cài dependencies AI, rồi chạy pipeline thống nhất:
+
+```powershell
+py -3.11 -m venv ai_service\.venv-ai
+ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-local.txt
+# Cài đặt thêm PaddleOCR để chạy nhận dạng hóa đơn tiếng Việt cục bộ (PP-OCRv6):
+ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-paddle.txt
+ai_service\.venv-ai\Scripts\python.exe ai_service\training\train_all_models.py
 ```
 
-### 4.2. Huấn Luyện Mô Hình NLP Phân Loại Tiếng Việt:
-```bash
-python training/train_nlp_classifier.py
-```
-*Kết quả:* Tạo ra 4 file `.pkl` và 1 file `.json` tại thư mục `models/` cùng báo cáo độ chính xác `training/data/nlp_evaluation_report.txt` (độ chính xác > 98%).
+Pipeline huấn luyện ba bộ phân loại NLP và bốn mô hình rủi ro (master, Finance, HR, IT) **lần lượt** để giới hạn tải RAM. Mặc định XGBoost dùng tối đa 4 threads; có thể điều chỉnh bằng `--threads 2`. Việc chia train/validation/test giữ các tiêu đề đã chuẩn hóa trong cùng một nhóm để tránh cùng một yêu cầu lặp xuất hiện ở cả train và test. Các model cũ chỉ được thay sau khi tất cả tác vụ huấn luyện hoàn tất thành công.
 
-### 4.3. Huấn Luyện Mô Hình XGBoost Đa Miền (Finance, HR, IT, Master):
-```bash
-python training/train_domain_models.py
-```
-*Kết quả:* Tạo ra `risk_model_finance.pkl`, `risk_model_hr.pkl`, `risk_model_it.pkl` với thuật toán `hist` tối ưu cho dữ liệu bảng lớn.
+Kết quả metrics và phạm vi đánh giá nằm trong `models/model_metadata.json`. Bộ dữ liệu hiện có là dữ liệu **tổng hợp**; accuracy/F1 chỉ mô tả khả năng khớp bộ dữ liệu đó, không phải tỷ lệ đúng trong vận hành thực. Không nên dùng điểm đó làm căn cứ tự động phê duyệt; cần tập test thực tế, độc lập, có nhãn do chuyên gia xác nhận.
 
-### 4.4. Kiểm Tra Tham Số & Test Suy Luận (Inference):
-```bash
-# Kiểm tra kích thước và Top 5 feature quan trọng nhất
-python training/inspect_models.py
+### 4.1. Kiểm Tra Tham Số & Test Suy Luận (Inference):
+```powershell
+ai_service\.venv-ai\Scripts\python.exe ai_service\training\inspect_models.py
 
-# Test thử nghiệm 7 tình huống thực tế
-python training/test_inference.py
+ai_service\.venv-ai\Scripts\python.exe ai_service\training\test_inference.py
 ```
 
 ---

@@ -11,7 +11,7 @@ WORKDIR /app
 COPY api_core/requirements.txt /tmp/requirements.txt
 RUN python -m pip install --disable-pip-version-check --requirement /tmp/requirements.txt
 
-COPY manage.py /app/manage.py
+COPY manage.py project_env.py /app/
 COPY api_core /app/api_core
 
 USER eas

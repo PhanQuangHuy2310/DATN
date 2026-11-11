@@ -6,6 +6,7 @@
 **/.env.*
 !**/.env.example
 !**/.env*.example
+.dart_tool/
 
 # Python
 __pycache__/
@@ -32,7 +33,7 @@ coverage/
 *.sqlite3
 staticfiles/
 media/
-changelogs/**/*.log
+.local_storage/
 
 # IDE and OS
 .idea/
@@ -45,8 +46,20 @@ supabase/.temp/
 
 # Generated validation/render output
 .mermaid-validation/
+/docs/rendered/
+/docs/images/
+/docs/*.svg
+/docs/*.png
+/docs/*.webp
+/docs/DATN_EAS_*
+/docs/XU_LY_CAC_NOTE_NGOAI_TRU_ANH.*
+/Noi_Dung_Mo_Dau_DATN_EAS.docx
+/tài liệu/
+/Thông tin về dự án/
+/ai_service/data/enterprise_synthetic_dataset*.csv
 
 # Non-software documentation, diagrams, reports & scratch scripts
+scratch/
 Thiết kế/
 SƠ ĐỒ/
 Sơ đồ bản mới nhất/
@@ -62,6 +75,8 @@ plantuml.jar
 # AI Generated Training Big Data (>100MB, exceeds GitHub limit)
 ai_service/training/data/partitions/
 ai_service/training/data/enterprise_requests_dataset_large.csv
+ai_service/models/.training-staging-*/
+ai_service/models/.training-backup-*/
 
 
 # Diagnostic logs (may contain sensitive traces)
@@ -69,3 +84,5 @@ logs/
 *.log
 .cspell.json
 
+# Runtime AI policy rules written by /ai/policy/rules
+ai_service/data/active_enterprise_policy.json

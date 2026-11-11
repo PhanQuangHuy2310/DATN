@@ -20,25 +20,20 @@ from api_core.http import correlation_id
 log = logging.getLogger("eas.database")
 from redis.exceptions import RedisError
 
-EXPECTED_MOCK_RELATIONS = {
-    "mock_hr.department",
-    "mock_hr.employee_directory",
-    "mock_hr.leave_balance",
-    "mock_assets.asset_catalog",
-    "mock_assets.asset_loan",
-    "mock_facilities.resource_catalog",
-    "mock_crm.customer_directory",
-    "mock_crm.contract",
-    "mock_procurement.supplier_directory",
-    "mock_procurement.catalog_item",
-    "mock_it.application_catalog",
-    "mock_it.access_role",
-    "mock_it.service_catalog",
-    "mock_finance.cost_center_budget",
-    "mock_finance.expense_category",
-    "mock_travel.travel_policy",
-    "mock_travel.travel_option",
-}
+from api_core.integrations import client
+from api_core.workflow.errors import CommandError
+
+MOCK_SCHEMAS = (
+    "mock_hr",
+    "mock_assets",
+    "mock_facilities",
+    "mock_crm",
+    "mock_procurement",
+    "mock_it",
+    "mock_finance",
+    "mock_travel",
+)
+REQUIRED_MOCK_MIGRATIONS = {"001", "002", "003", "005"}
 
 
 def assess_runtime_role(
@@ -76,12 +71,13 @@ def assess_runtime_role(
 
 
 def assess_mock_sources(
-    rows: list[tuple[str, bool]], versions: set[str]
+    reachable: bool, versions: set[str], eas_reads_mock: bool
 ) -> dict[str, bool]:
-    available = {name for name, can_read in rows if can_read}
+    """External systems answer over their API; EAS itself cannot read their tables."""
     return {
-        "mock_source_contract_complete": available == EXPECTED_MOCK_RELATIONS,
-        "mock_source_migrations_current": {"001", "002", "003"}.issubset(versions),
+        "mock_systems_api_reachable": reachable,
+        "mock_source_migrations_current": REQUIRED_MOCK_MIGRATIONS.issubset(versions),
+        "eas_role_has_no_mock_table_access": not eas_reads_mock,
     }
 
 
@@ -140,7 +136,7 @@ def database_readiness() -> tuple[bool, dict[str, object], dict[str, object]]:
             WHERE n.nspname = 'eas' AND c.relkind IN ('r', 'p')
             """
         )
-        checks["schema_has_30_tables"] = has_required_eas_tables(
+        checks["schema_has_required_tables"] = has_required_eas_tables(
             {row[0] for row in cursor.fetchall()}
         )
 
@@ -179,20 +175,23 @@ def database_readiness() -> tuple[bool, dict[str, object], dict[str, object]]:
         if settings.EAS_REQUIRE_MOCK_SOURCES:
             cursor.execute(
                 """
-                SELECT relation_name,
-                       to_regclass(relation_name) IS NOT NULL
-                       AND has_table_privilege(current_user,relation_name,'SELECT')
-                FROM unnest(%s::text[]) AS relation_name
-                ORDER BY relation_name
+                SELECT bool_or(has_schema_privilege(current_user, n.oid, 'USAGE'))
+                FROM pg_namespace n WHERE n.nspname = ANY(%s)
                 """,
-                [sorted(EXPECTED_MOCK_RELATIONS)],
+                [list(MOCK_SCHEMAS)],
             )
-            mock_rows = cursor.fetchall()
-            cursor.execute("SELECT version FROM mock_hr.schema_migration")
-            checks.update(
-                assess_mock_sources(mock_rows, {row[0] for row in cursor.fetchall()})
-            )
+            eas_reads_mock = bool(cursor.fetchone()[0])
+            try:
+                versions = set(client.get("health", "health")["schema_versions"])
+                reachable = True
+            except CommandError:
+                versions, reachable = set(), False
+            checks.update(assess_mock_sources(reachable, versions, eas_reads_mock))
 
+    # SQL completed successfully. Database connectivity is independent of the
+    # additional readiness gates (RBAC role, P0 releases, Redis, Storage, etc.).
+    # Always include an explicit connection check for the health dashboard.
+    checks["database"] = True
     return all(bool(value) for value in checks.values()), checks, catalog
 
 
@@ -204,7 +203,46 @@ def live(request):
 
 
 @require_GET
+def database_connection(request):
+    """Minimal PostgreSQL connectivity probe, independent of full readiness.
+
+    Only reports a coarse failure category; never returns DSNs or SQL text.
+    This endpoint MUST NOT be used as a substitute for /health/ready.
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            connected = cursor.fetchone() == (1,)
+    except DatabaseError as exc:
+        request_id = correlation_id(request)
+        category = failure_category(exc)
+        log.error(
+            "Database connectivity probe failure: category=%s SQLSTATE=%s correlation_id=%s",
+            category, sqlstate(exc), request_id,
+            extra={"correlation_id": request_id},
+        )
+        response = JsonResponse({"status": "not_ready", "database": False,
+                                 "reason": category}, status=503)
+        response["Retry-After"] = "5"
+        return response
+    return JsonResponse({"status": "ok" if connected else "not_ready",
+                         "database": connected}, status=200 if connected else 503)
+
+
+@require_GET
 def ready(request):
+    env = getattr(settings, "ENVIRONMENT", "development")
+    cache_ttl = (
+        0 if env == "test" else int(getattr(settings, "EAS_HEALTH_CACHE_SECONDS", 5))
+    )
+    payload_cache_key = "eas:health:ready_payload"
+    if cache_ttl > 0:
+        try:
+            cached = cache.get(payload_cache_key)
+            if cached and isinstance(cached, dict):
+                return JsonResponse(cached["body"], status=cached["status"])
+        except (RedisError, OSError, TypeError, ValueError) as exc:
+            log.debug("Health cache read failed: %s", exc)
     try:
         is_ready, checks, catalog = database_readiness()
     except DatabaseError as exc:
@@ -227,19 +265,27 @@ def ready(request):
             status=503,
         )
     try:
-        cache_key = "eas:health:ready"
-        cache.set(cache_key, "ok", timeout=5)
-        checks["shared_security_cache"] = cache.get(cache_key) == "ok"
+        probe_cache_key = "eas:health:ready"
+        cache.set(probe_cache_key, "ok", timeout=5)
+        checks["shared_security_cache"] = cache.get(probe_cache_key) == "ok"
     except (RedisError, OSError):
         checks["shared_security_cache"] = False
     checks.update(storage_readiness())
     is_ready = is_ready and all(bool(value) for value in checks.values())
-    return JsonResponse(
-        {
-            "status": "ready" if is_ready else "not_ready",
-            "service": "eas-api",
-            "checks": checks,
-            "catalog": catalog,
-        },
-        status=200 if is_ready else 503,
-    )
+    status_code = 200 if is_ready else 503
+    body = {
+        "status": "ready" if is_ready else "not_ready",
+        "service": "eas-api",
+        "checks": checks,
+        "catalog": catalog,
+    }
+    if cache_ttl > 0 and is_ready:
+        try:
+            cache.set(
+                payload_cache_key,
+                {"body": body, "status": status_code},
+                timeout=cache_ttl,
+            )
+        except (RedisError, OSError, TypeError, ValueError) as exc:
+            log.debug("Health cache write failed: %s", exc)
+    return JsonResponse(body, status=status_code)

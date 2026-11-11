@@ -1,16 +1,24 @@
 from __future__ import annotations
 
+import hmac
+import logging
+import secrets
+import smtplib
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db import DatabaseError, connection
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.core.validators import validate_email
+from django.db import DatabaseError, connection, transaction
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
+from api_core.middleware import client_ip
 
 from .login_throttle import (
     clear_account_failures,
@@ -24,8 +32,29 @@ from .service import (
     find_user,
     load_actor_from_session,
     require_actor,
-    verify_user_password,
+    verify_login_password,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _email_recipients(recipients: list[str]) -> list[str]:
+    test_recipient = settings.EAS_EMAIL_TEST_RECIPIENT
+    return [test_recipient] if test_recipient else recipients
+
+
+def _normalized_login_email(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    email = value.strip().lower()
+    accepted_domains = {settings.EAS_LOGIN_EMAIL_DOMAIN, "eas.com"}
+    if not any(email.endswith(f"@{domain}") for domain in accepted_domains):
+        return None
+    try:
+        validate_email(email)
+    except ValidationError:
+        return None
+    return email
 
 
 @ensure_csrf_cookie
@@ -34,18 +63,24 @@ def csrf(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"status": "ok", "correlation_id": correlation_id(request)})
 
 
-def _parse_credentials(request: HttpRequest) -> tuple[str, str] | JsonResponse:
+def _parse_credentials(
+    request: HttpRequest,
+) -> tuple[str, str, str | None] | JsonResponse:
     try:
         body = parse_json_object(request, max_bytes=8 * 1024)
     except JsonBodyError as exc:
         return api_error(request, str(exc), status=400)
-    if set(body) != {"username", "password"}:
+    valid_keys = {"email", "password", "portal"}
+    if not (
+        {"email", "password"}.issubset(set(body)) and set(body).issubset(valid_keys)
+    ):
         return api_error(request, "INVALID_CREDENTIALS", status=401)
-    username = body.get("username")
+    email = _normalized_login_email(body.get("email"))
     password = body.get("password")
-    if not isinstance(username, str) or not isinstance(password, str):
+    portal = body.get("portal") if isinstance(body.get("portal"), str) else None
+    if email is None or not isinstance(password, str):
         return api_error(request, "INVALID_CREDENTIALS", status=401)
-    return username.strip().lower(), password
+    return email, password, portal
 
 
 def _check_maintenance_login(
@@ -108,14 +143,99 @@ def _establish_user_session(request: HttpRequest, user) -> None:
     )
 
 
+<<<<<<< HEAD
+ADMIN_PORTAL_ROLES = ("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
+
+
+def _has_active_admin_role(user_id: str) -> bool:
+    """Portal identity is based on active role grants, never a hard-coded email.
+
+    Login checks this *after* validating the password, so the portal response
+    cannot be used to enumerate privileged accounts. API authorization remains
+    responsible for enforcing roles and scope for every action.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1 FROM eas.role_membership
+                WHERE user_id = %s
+                  AND role IN ('OPS_ADMIN', 'POLICY_ADMIN', 'AUDITOR')
+                  AND revoked_at IS NULL
+                  AND valid_from <= statement_timestamp()
+                  AND (valid_to IS NULL OR valid_to > statement_timestamp())
+            )
+            """,
+            [user_id],
+        )
+        row = cursor.fetchone()
+    return bool(row and row[0])
+=======
+def _resolve_request_portal(
+    request: HttpRequest, body_portal: str | None = None
+) -> str | None:
+    """Resolve portal ('admin' or 'client') from explicit header/body or Origin/Referer/Host."""
+    explicit = (
+        (request.headers.get("X-EAS-Portal") or body_portal or "").strip().lower()
+    )
+    if explicit in {"admin", "client"}:
+        return explicit
+    candidates = (
+        request.headers.get("Origin") or "",
+        request.headers.get("Referer") or "",
+        request.headers.get("Host") or "",
+        request.META.get("HTTP_HOST") or "",
+    )
+    for raw in candidates:
+        lowered = raw.lower()
+        if ":8081" in lowered or ":5174" in lowered:
+            return "admin"
+        if ":8080" in lowered or ":5173" in lowered:
+            return "client"
+    return None
+>>>>>>> origin/main
+
+
 @require_POST
 def login(request: HttpRequest) -> JsonResponse:
     parsed = _parse_credentials(request)
     if isinstance(parsed, JsonResponse):
         return parsed
-    username, password = parsed
+    email, password, portal_body = parsed
+<<<<<<< HEAD
+    header_portal = request.headers.get("X-EAS-Portal")
+    if header_portal and portal_body and header_portal != portal_body:
+        return api_error(request, "INVALID_PORTAL", status=400)
+    portal = header_portal or portal_body
+    if portal not in (None, "client", "admin"):
+        return api_error(request, "INVALID_PORTAL", status=400)
+=======
+    portal = _resolve_request_portal(request, portal_body)
+    if portal == "admin" and email != "admin@eas.com":
+        return api_error(
+            request,
+            "ACCESS_DENIED",
+            status=403,
+            fields={
+                "portal": [
+                    "Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị. Vui lòng đăng nhập tại Cổng Nhân viên."
+                ]
+            },
+        )
+    if portal == "client" and email == "admin@eas.com":
+        return api_error(
+            request,
+            "ACCESS_DENIED",
+            status=403,
+            fields={
+                "portal": [
+                    "Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên. Vui lòng sử dụng Cổng Quản trị."
+                ]
+            },
+        )
+>>>>>>> origin/main
 
-    keys = throttle_keys(username, request.META.get("REMOTE_ADDR", "unknown"))
+    keys = throttle_keys(email, client_ip(request))
     if is_throttled(
         cache,
         keys,
@@ -129,15 +249,19 @@ def login(request: HttpRequest) -> JsonResponse:
             headers={"Retry-After": str(settings.EAS_LOGIN_WINDOW_SECONDS)},
         )
 
-    user = find_user(username)
-    valid = bool(
-        user and user.is_active and verify_user_password(password, user.password_hash)
-    )
-    if not valid:
+    user = find_user(email)
+    if not verify_login_password(user, password):
         register_login_failure(
             cache, keys, window_seconds=settings.EAS_LOGIN_WINDOW_SECONDS
         )
         return api_error(request, "INVALID_CREDENTIALS", status=401)
+
+    # Authorize the destination portal *before* creating a session. Admin
+    # identities are system-only, including legacy accounts with REQUESTER.
+    if portal in ("client", "admin"):
+        has_admin_role = _has_active_admin_role(user.id)
+        if (portal == "admin") != has_admin_role:
+            return api_error(request, "ACCESS_DENIED", status=403)
 
     m_err, m_payload = _check_maintenance_login(request, user.id)
     if m_err:
@@ -149,7 +273,7 @@ def login(request: HttpRequest) -> JsonResponse:
     payload = {
         "user": {
             "id": user.id,
-            "username": user.username,
+            "email": user.email,
             "display_name": user.display_name,
             "must_change_password": user.must_change_password,
         },
@@ -158,6 +282,393 @@ def login(request: HttpRequest) -> JsonResponse:
     if m_payload:
         payload["maintenance"] = m_payload
     return JsonResponse(payload)
+
+
+def _password_reset_request_key(email: str) -> str:
+    digest = hmac.new(
+        settings.SECRET_KEY.encode(), email.encode(), "sha256"
+    ).hexdigest()
+    return f"eas:password-reset-request:{digest}"
+
+
+def _temporary_password(email: str) -> str:
+    import string
+
+    from .service import validate_new_password
+
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*_-+="
+    for _ in range(10):
+        password = "".join(secrets.choice(alphabet) for _ in range(28))
+        try:
+            validate_new_password(password, email)
+            return password
+        except PasswordChangeError:
+            continue
+    raise RuntimeError("Unable to generate a valid temporary password.")
+
+
+def _global_ops_admin(request: HttpRequest) -> bool:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """SELECT EXISTS (
+                 SELECT 1 FROM eas.role_membership
+                 WHERE user_id=%s AND role='OPS_ADMIN'
+                   AND scope_kind='GLOBAL' AND type_scope='ALL'
+                   AND revoked_at IS NULL
+                   AND valid_from <= statement_timestamp()
+                   AND (valid_to IS NULL OR valid_to > statement_timestamp())
+               )""",
+            [request.actor.id],
+        )
+        return bool(cursor.fetchone()[0])
+
+
+def _password_reset_admin_emails(cursor) -> list[str]:
+    cursor.execute(
+        """SELECT DISTINCT u.email
+           FROM eas.app_user u
+           JOIN eas.role_membership rm ON rm.user_id=u.id
+           WHERE u.is_active AND rm.role='OPS_ADMIN'
+             AND rm.scope_kind='GLOBAL' AND rm.type_scope='ALL'
+             AND rm.revoked_at IS NULL
+             AND rm.valid_from <= statement_timestamp()
+             AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+           ORDER BY u.email"""
+    )
+    return [row[0] for row in cursor.fetchall()]
+
+
+@require_POST
+def password_reset_request(request: HttpRequest) -> JsonResponse:
+    try:
+        body = parse_json_object(request, max_bytes=8 * 1024)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    email = _normalized_login_email(body.get("email"))
+    if email is None:
+        return api_error(request, "INVALID_EMAIL", status=400)
+    smtp_configured = bool(settings.EMAIL_HOST and settings.DEFAULT_FROM_EMAIL)
+    if not smtp_configured and getattr(
+        settings, "EAS_REQUIRE_EMAIL_DELIVERY", settings.ENVIRONMENT == "test"
+    ):
+        return api_error(request, "EMAIL_DELIVERY_UNAVAILABLE", status=503)
+
+    throttle_key = _password_reset_request_key(email)
+    cooldown_key = f"{throttle_key}:cooldown"
+    ip_digest = hmac.new(
+        settings.SECRET_KEY.encode(),
+        (client_ip(request).strip() or "unknown").encode(),
+        "sha256",
+    ).hexdigest()
+    ip_key = f"eas:password-reset:ip:{ip_digest}"
+    if not cache.add(ip_key, 1, timeout=3600):
+        try:
+            if cache.incr(ip_key) > 20:
+                return JsonResponse(
+                    {
+                        "status": "accepted",
+                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                    },
+                    status=202,
+                )
+        except ValueError:
+            cache.add(ip_key, 1, timeout=3600)
+    if not cache.add(cooldown_key, "1", timeout=300):
+        return JsonResponse(
+            {
+                "status": "accepted",
+                "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+            },
+            status=202,
+        )
+
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT id::text, display_name FROM eas.app_user WHERE email=%s AND is_active",
+                [email],
+            )
+            user = cursor.fetchone()
+            if not user:
+                return JsonResponse(
+                    {
+                        "status": "accepted",
+                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                    },
+                    status=202,
+                )
+            cursor.execute(
+                """UPDATE eas.password_reset_request
+                   SET status='EXPIRED', resolved_at=statement_timestamp()
+                   WHERE user_id=%s AND status='PENDING'
+                     AND expires_at <= statement_timestamp()""",
+                [user[0]],
+            )
+            cursor.execute(
+                """SELECT id::text FROM eas.password_reset_request
+                   WHERE user_id=%s AND status='PENDING'
+                     AND expires_at > statement_timestamp()
+                   FOR UPDATE""",
+                [user[0]],
+            )
+            existing = cursor.fetchone()
+            if existing:
+                request_id = existing[0]
+            else:
+                cursor.execute(
+                    """INSERT INTO eas.password_reset_request
+                       (user_id, requested_email, expires_at)
+                       VALUES (%s,%s,statement_timestamp()+interval '24 hours')
+                       ON CONFLICT (user_id) WHERE status='PENDING' DO NOTHING
+                       RETURNING id::text""",
+                    [user[0], email],
+                )
+                created = cursor.fetchone()
+                if created:
+                    request_id = created[0]
+                else:
+                    cursor.execute(
+                        """SELECT id::text FROM eas.password_reset_request
+                           WHERE user_id=%s AND status='PENDING'
+                             AND expires_at > statement_timestamp()""",
+                        [user[0]],
+                    )
+                    pending = cursor.fetchone()
+                    if not pending:
+                        raise DatabaseError(
+                            "Password reset request conflict was not recoverable."
+                        )
+                    request_id = pending[0]
+            admin_emails = _password_reset_admin_emails(cursor)
+            if not admin_emails:
+                logger.error(
+                    "password_reset_admin_unavailable",
+                    extra={"correlation_id": correlation_id(request)},
+                )
+                return JsonResponse(
+                    {
+                        "status": "accepted",
+                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                    },
+                    status=202,
+                )
+        if not smtp_configured:
+            logger.info(
+                "password_reset_queued_without_smtp",
+                extra={
+                    "correlation_id": correlation_id(request),
+                    "request_id": request_id,
+                },
+            )
+            return JsonResponse(
+                {
+                    "status": "accepted",
+                    "delivery": "admin_queue",
+                    "message": (
+                        "Yêu cầu đặt lại mật khẩu đã được ghi nhận vào hàng đợi quản trị. "
+                        "Do hệ thống chưa cấu hình máy chủ gửi thư (SMTP), vui lòng liên hệ "
+                        "Quản trị viên hệ thống để được xác minh và cấp mật khẩu tạm thời."
+                    ),
+                },
+                status=202,
+            )
+        try:
+            send_mail(
+                subject="Yêu cầu xác nhận đặt lại mật khẩu EAS",
+                message=(
+                    f"Nhân viên {user[1]} ({email}) đã yêu cầu đặt lại mật khẩu.\n"
+                    "Hãy đăng nhập cổng quản trị EAS, mở Danh tính & phân quyền "
+                    "và xác minh danh tính trước khi phê duyệt.\n"
+                    f"Mã yêu cầu: {request_id}\n"
+                    "Không trả lời email này để gửi mật khẩu."
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=_email_recipients(admin_emails),
+                fail_silently=False,
+            )
+        except (OSError, smtplib.SMTPException) as exc:
+            cache.delete(cooldown_key)
+            logger.error(
+                "password_reset_admin_notification_failed",
+                extra={
+                    "correlation_id": correlation_id(request),
+                    "error_type": type(exc).__name__,
+                },
+            )
+            return JsonResponse(
+                {
+                    "status": "accepted",
+                    "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                },
+                status=202,
+            )
+    except DatabaseError:
+        cache.delete(cooldown_key)
+        raise
+
+    return JsonResponse(
+        {
+            "status": "accepted",
+            "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+        },
+        status=202,
+    )
+
+
+@require_GET
+@require_actor("OPS_ADMIN")
+def password_reset_requests(request: HttpRequest) -> JsonResponse:
+    if not _global_ops_admin(request):
+        return api_error(request, "FORBIDDEN", status=403)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT eas.lock_security(false)")
+        cursor.execute(
+            """SELECT pr.id::text, u.email, u.display_name, d.name,
+                      pr.requested_at, pr.expires_at
+               FROM eas.password_reset_request pr
+               JOIN eas.app_user u ON u.id=pr.user_id
+               JOIN eas.department d ON d.id=u.department_id
+               WHERE pr.status='PENDING'
+                 AND pr.expires_at > statement_timestamp()
+               ORDER BY pr.requested_at, pr.id"""
+        )
+        rows = cursor.fetchall()
+    return JsonResponse(
+        {
+            "items": [
+                {
+                    "id": row[0],
+                    "email": row[1],
+                    "display_name": row[2],
+                    "department": row[3],
+                    "requested_at": row[4].isoformat(),
+                    "expires_at": row[5].isoformat(),
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@require_POST
+@require_actor("OPS_ADMIN")
+def password_reset_approve(request: HttpRequest, request_id: str) -> JsonResponse:
+    if not _global_ops_admin(request):
+        return api_error(request, "FORBIDDEN", status=403)
+    try:
+        body = parse_json_object(request, max_bytes=8 * 1024)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    reason = body.get("reason")
+    if (
+        set(body) != {"reason"}
+        or not isinstance(reason, str)
+        or not 10 <= len(reason.strip()) <= 2000
+    ):
+        return api_error(request, "RESET_APPROVAL_REASON_REQUIRED", status=400)
+
+    from django.contrib.auth.hashers import make_password
+    from django.db import transaction
+
+    from api_core.workflow.service import _append_admin_audit
+
+    temporary_password = None
+    target_email = ""
+    target_name = ""
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute("SELECT eas.lock_security(true)")
+        cursor.execute(
+            """SELECT pr.user_id::text, pr.requested_email, u.email,
+                      u.display_name, u.department_id::text, u.auth_version
+               FROM eas.password_reset_request pr
+               JOIN eas.app_user u ON u.id=pr.user_id
+               WHERE pr.id=%s AND pr.status='PENDING'
+                 AND pr.expires_at > statement_timestamp()
+                 AND u.is_active
+               FOR UPDATE OF pr,u""",
+            [request_id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            return api_error(request, "RESET_REQUEST_NOT_FOUND_OR_EXPIRED", status=404)
+        (
+            user_id,
+            requested_email,
+            target_email,
+            target_name,
+            department_id,
+            auth_version,
+        ) = row
+        if request.actor.id == user_id:
+            return api_error(request, "CANNOT_APPROVE_OWN_RESET", status=403)
+        if target_email != requested_email:
+            return api_error(request, "RESET_REQUEST_EMAIL_CHANGED", status=409)
+        temporary_password = _temporary_password(target_email)
+        new_version = auth_version + 1
+        cursor.execute(
+            """UPDATE eas.app_user
+               SET password_hash=%s, auth_version=%s, must_change_password=true
+               WHERE id=%s""",
+            [make_password(temporary_password, hasher="argon2"), new_version, user_id],
+        )
+        cursor.execute(
+            """UPDATE eas.password_reset_request
+               SET status='APPROVED', resolved_at=statement_timestamp(),
+                   resolved_by=%s, resolution_reason=%s
+               WHERE id=%s""",
+            [request.actor.id, reason.strip(), request_id],
+        )
+        cursor.execute(
+            "UPDATE eas.security_epoch SET version=version+1,updated_at=statement_timestamp() WHERE id=1"
+        )
+        _append_admin_audit(
+            cursor,
+            actor_id=request.actor.id,
+            actor_kind="HUMAN",
+            action="PASSWORD_RESET_APPROVED",
+            target_type="app_user",
+            target_id=user_id,
+            department_id=department_id,
+            details={"request_id": request_id, "auth_version": new_version},
+            reason=reason.strip(),
+            correlation_id=correlation_id(request),
+        )
+
+    try:
+        send_mail(
+            subject="Mật khẩu tạm thời cho tài khoản EAS",
+            message=(
+                f"Xin chào {target_name},\n\n"
+                "Yêu cầu đặt lại mật khẩu của bạn đã được quản trị viên xác nhận.\n"
+                f"Mật khẩu tạm thời: {temporary_password}\n\n"
+                "Đăng nhập bằng email nhân viên và mật khẩu tạm này. Hệ thống sẽ "
+                "bắt buộc bạn đổi mật khẩu riêng ngay sau khi đăng nhập.\n"
+                "Nếu bạn không yêu cầu thay đổi, hãy liên hệ quản trị viên."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=_email_recipients([target_email]),
+            fail_silently=False,
+        )
+    except (OSError, smtplib.SMTPException) as exc:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute("SELECT eas.lock_security(true)")
+            cursor.execute(
+                """UPDATE eas.password_reset_request
+                   SET status='PENDING', resolved_at=NULL, resolved_by=NULL
+                   WHERE id=%s AND status='APPROVED'""",
+                [request_id],
+            )
+        logger.error(
+            "password_reset_temporary_password_delivery_failed",
+            extra={
+                "correlation_id": correlation_id(request),
+                "request_id": request_id,
+                "error_type": type(exc).__name__,
+            },
+        )
+        return api_error(request, "PASSWORD_RESET_DELIVERY_FAILED", status=503)
+
+    return JsonResponse({"status": "approved", "email": target_email})
 
 
 @require_POST
@@ -177,6 +688,256 @@ def logout(request: HttpRequest) -> JsonResponse:
     )
 
 
+def _is_valid_uuid(val: Any) -> bool:
+    if not val:
+        return False
+    try:
+        UUID(str(val))
+        return True
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
+JOB_TITLES = (
+    ("OPS_ADMIN", "Quản trị hệ thống"),
+    ("POLICY_ADMIN", "Quản trị chính sách"),
+    ("DIRECTOR", "Giám đốc"),
+    ("VICE_DIRECTOR", "Phó giám đốc"),
+    ("MANAGER", "Trưởng phòng"),
+    ("TEAM_LEAD", "Trưởng nhóm"),
+    ("STAFF", "Nhân viên"),
+    ("AUDITOR", "Kiểm toán viên"),
+    ("APPROVER", "Người phê duyệt"),
+    ("EXECUTOR", "Người thực hiện"),
+)
+# REQUESTER/ACCEPTOR are held by every employee, so they read "Nhân viên".
+
+
+def _job_title(roles) -> str:
+    """Most senior role, shown as the job title in the header."""
+    return next((title for role, title in JOB_TITLES if role in roles), "Nhân viên")
+
+
+def _get_actor_permissions(actor: Any) -> dict[str, Any]:
+    modules_list = []
+    by_module: dict[str, dict[str, bool]] = {}
+
+    # Module permissions are keyed by eas.app_user (migration 2026-11-03_01:
+    # role_module_permission + user_permissions). The legacy eas.users table
+    # was quarantined, so the actor id is passed directly.
+    user_uuid = actor.id if _is_valid_uuid(getattr(actor, "id", None)) else None
+    try:
+        with connection.cursor() as cursor:
+            if user_uuid:
+                cursor.execute(
+                    """SELECT module_code, module_name, group_name, route_path, icon_name,
+                              target_app, can_view, can_create, can_update, can_delete,
+                              show_on_sidebar, permission_source
+                       FROM eas.get_effective_user_permissions(%s::uuid)""",
+                    [user_uuid],
+                )
+                for r in cursor.fetchall():
+                    mod_data = {
+                        "module_code": r[0],
+                        "module_name": r[1],
+                        "group_name": r[2],
+                        "route_path": r[3],
+                        "icon_name": r[4],
+                        "target_app": r[5],
+                        "can_view": bool(r[6]),
+                        "can_create": bool(r[7]),
+                        "can_update": bool(r[8]),
+                        "can_delete": bool(r[9]),
+                        "show_on_sidebar": bool(r[10]),
+                        "permission_source": r[11],
+                    }
+                    modules_list.append(mod_data)
+                    by_module[r[0]] = {
+                        "can_view": mod_data["can_view"],
+                        "can_create": mod_data["can_create"],
+                        "can_update": mod_data["can_update"],
+                        "can_delete": mod_data["can_delete"],
+                    }
+    except DatabaseError as exc:
+        logger.warning(
+            "Error fetching effective permissions for actor %s: %s",
+            getattr(actor, "email", ""),
+            exc,
+        )
+
+    # A database without role defaults (e.g. before the migration ran) yields
+    # rows that grant nothing; fall back to the role-derived matrix below.
+    if modules_list:
+        return {"modules": modules_list, "by_module": by_module}
+    modules_list, by_module = [], {}
+
+    actor_roles = getattr(actor, "roles", frozenset())
+    is_admin = bool({"OPS_ADMIN", "POLICY_ADMIN", "ADMIN"}.intersection(actor_roles))
+    is_auditor = "AUDITOR" in actor_roles
+    is_manager = bool(
+        {"APPROVER", "TEAM_LEAD", "MANAGER", "VICE_DIRECTOR", "DIRECTOR"}.intersection(
+            actor_roles
+        )
+    )
+
+    STANDARD_MODULES = [
+        (
+            "dashboard",
+            "Tổng quan",
+            "Giám sát",
+            "/dashboard",
+            "LayoutDashboard",
+            "BOTH",
+            True,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "requests_workflows",
+            "Yêu cầu & Quy trình",
+            "Luồng công việc",
+            "/requests-workflows",
+            "GitPullRequest",
+            "BOTH",
+            True,
+            True,
+            is_admin or is_manager,
+            is_admin,
+        ),
+        (
+            "org_chart",
+            "Sơ đồ công ty",
+            "Tổ chức & Nhân sự",
+            "/org-chart",
+            "Network",
+            "BOTH",
+            True,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "users",
+            "Người dùng",
+            "Tổ chức & Nhân sự",
+            "/users",
+            "Users",
+            "ADMIN",
+            is_admin,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "permissions",
+            "Phân quyền",
+            "Tổ chức & Nhân sự",
+            "/permissions",
+            "ShieldCheck",
+            "ADMIN",
+            is_admin,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "regulations",
+            "Quy định",
+            "Tri thức & AI",
+            "/regulations",
+            "BookOpenCheck",
+            "BOTH",
+            True,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin,
+        ),
+        (
+            "ai_engine",
+            "Quản trị AI",
+            "Tri thức & AI",
+            "/ai-engine",
+            "BrainCircuit",
+            "ADMIN",
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin or "POLICY_ADMIN" in actor_roles,
+            is_admin,
+        ),
+        (
+            "api_management",
+            "Quản lý API",
+            "Hệ thống & Tích hợp",
+            "/api-management",
+            "Webhook",
+            "ADMIN",
+            is_admin,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+        (
+            "system_versions",
+            "Phiên bản hệ thống",
+            "Hệ thống & Tích hợp",
+            "/system-versions",
+            "History",
+            "ADMIN",
+            is_admin or is_auditor,
+            is_admin,
+            is_admin,
+            is_admin,
+        ),
+    ]
+
+    for (
+        code,
+        name,
+        grp,
+        route,
+        icon,
+        target,
+        can_v,
+        can_c,
+        can_u,
+        can_d,
+    ) in STANDARD_MODULES:
+        show_sb = can_v or can_c or can_u or can_d
+        m_item = {
+            "module_code": code,
+            "module_name": name,
+            "group_name": grp,
+            "route_path": route,
+            "icon_name": icon,
+            "target_app": target,
+            "can_view": can_v,
+            "can_create": can_c,
+            "can_update": can_u,
+            "can_delete": can_d,
+            "show_on_sidebar": show_sb,
+            "permission_source": "ROLE_FALLBACK",
+        }
+        modules_list.append(m_item)
+        by_module[code] = {
+            "can_view": can_v,
+            "can_create": can_c,
+            "can_update": can_u,
+            "can_delete": can_d,
+        }
+
+    return {"modules": modules_list, "by_module": by_module}
+
+
+@require_GET
+@require_actor()
+def permissions_me(request: HttpRequest) -> JsonResponse:
+    perms = _get_actor_permissions(request.actor)
+    return JsonResponse(
+        {"permissions": perms, "correlation_id": correlation_id(request)}
+    )
+
+
 @require_GET
 @require_actor()
 def me(request: HttpRequest) -> JsonResponse:
@@ -190,38 +951,78 @@ def me(request: HttpRequest) -> JsonResponse:
     actor = request.actor
     m_info = get_maintenance_info()
     is_admin = is_admin_actor(actor)
+    portal = _resolve_request_portal(request)
+    if portal == "admin" and actor.email != "admin@eas.com" and not is_admin:
+        return api_error(
+            request,
+            "ACCESS_DENIED",
+            status=403,
+            message="Tài khoản nhân viên không được phép truy cập Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).",
+        )
+    if portal == "client" and actor.email == "admin@eas.com":
+        return api_error(
+            request,
+            "ACCESS_DENIED",
+            status=403,
+            message="Tài khoản Quản trị viên không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).",
+        )
 
     # UC17 can only be operated by GLOBAL / ALL OPS membership; mere
     # OPS_ADMIN membership is not enough. Backend administration APIs still
     # perform their own authorization checks on every operation.
     can_manage_identity = False
+    profile: dict[str, Any] = {}
     try:
         with connection.cursor() as cursor:
+            # One round trip: identity capability + profile shown in the header & profile page.
             cursor.execute(
                 """SELECT EXISTS (
                       SELECT 1 FROM eas.role_membership rm
-                      WHERE rm.user_id = %s AND rm.role = 'OPS_ADMIN'
+                      WHERE rm.user_id = u.id AND rm.role = 'OPS_ADMIN'
                         AND rm.revoked_at IS NULL
                         AND rm.valid_from <= statement_timestamp()
                         AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
                         AND rm.scope_kind = 'GLOBAL' AND rm.type_scope = 'ALL'
-                   )""",
+                   ), u.employee_code, d.code, d.name,
+                   ws.status_code, ws.status_label, ws.detail_reason,
+                   u.manager_id::text, m.display_name
+                   FROM eas.app_user u
+                   LEFT JOIN eas.department d ON d.id = u.department_id
+                   LEFT JOIN eas.app_user m ON m.id = u.manager_id
+                   LEFT JOIN LATERAL eas.get_user_working_status(u.id, now()) ws ON true
+                   WHERE u.id = %s""",
                 [actor.id],
             )
             row = cursor.fetchone()
             can_manage_identity = bool(row[0]) if row else False
+            if row and len(row) >= 7:
+                profile = {
+                    "employee_code": row[1],
+                    "department_code": row[2],
+                    "department_name": row[3],
+                    "working_status": {
+                        "code": row[4] or "DANG_LAM",
+                        "label": row[5] or "Đang làm",
+                        "detail": row[6] or "",
+                    },
+                    "manager_id": row[7] if len(row) > 7 else None,
+                    "manager_name": row[8] if len(row) > 8 else None,
+                }
     except (DatabaseError, AttributeError):
         can_manage_identity = False
 
     payload = {
         "user": {
             "id": actor.id,
-            "username": actor.username,
+            "email": actor.email,
             "display_name": actor.display_name,
             "department_id": actor.department_id,
             "roles": sorted(actor.roles),
+            "job_title": _job_title(actor.roles),
+            **profile,
             "capabilities": {"identity_manage": can_manage_identity},
             "must_change_password": actor.must_change_password,
+            "permissions": _get_actor_permissions(actor),
         },
         "correlation_id": correlation_id(request),
     }
@@ -261,6 +1062,21 @@ def password(request: HttpRequest) -> JsonResponse:
     allowed_keys = {"current_password", "old_password", "new_password"}
     if not set(body).issubset(allowed_keys):
         return api_error(request, "INVALID_PASSWORD_CHANGE", status=400)
+    # A stolen session must not become an oracle for guessing the current
+    # password: reuse the login account+IP budget for wrong current passwords.
+    keys = throttle_keys(actor.email, client_ip(request))
+    if is_throttled(
+        cache,
+        keys,
+        account_limit=settings.EAS_LOGIN_MAX_ATTEMPTS,
+        ip_limit=getattr(settings, "EAS_LOGIN_MAX_IP_ATTEMPTS", 30),
+    ):
+        return api_error(
+            request,
+            "PASSWORD_CHANGE_RATE_LIMITED",
+            status=429,
+            headers={"Retry-After": str(settings.EAS_LOGIN_WINDOW_SECONDS)},
+        )
     try:
         new_version = change_password(
             actor=actor,
@@ -270,8 +1086,13 @@ def password(request: HttpRequest) -> JsonResponse:
         )
     except PasswordChangeError as exc:
         code = str(exc)
-        status = 401 if code == "INVALID_CURRENT_PASSWORD" else 400
-        return api_error(request, code, status=status)
+        if code == "INVALID_CURRENT_PASSWORD":
+            register_login_failure(
+                cache, keys, window_seconds=settings.EAS_LOGIN_WINDOW_SECONDS
+            )
+            return api_error(request, code, status=401)
+        return api_error(request, code, status=400)
+    clear_account_failures(cache, keys)
     request.session["auth_version"] = new_version
     session_id = request.session.get("session_id")
     if not isinstance(session_id, str):

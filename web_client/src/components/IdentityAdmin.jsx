@@ -1,7 +1,11 @@
+import { CATALOG_GROUPS, CATEGORY_LABELS } from "../catalogV2.js";
+import Icon from "./Icon.jsx";
+import { notifyPermissionsChanged } from "../sessionRefresh.js";
 import { useEffect, useState } from "react";
 import { PasswordField, PageControls } from "./ux.jsx";
 import { roles, date } from "../domain.js";
-import { ActionForm, Data, Modal, Reason, ResourceState, command, useResource } from "./ui.jsx";
+import RolePermissionMatrix from "./RolePermissionMatrix.jsx";
+import { ActionForm, Modal, Reason, ResourceState, command, useResource } from "./ui.jsx";
 
 const entities = {
   users: "Người dùng",
@@ -21,7 +25,7 @@ function LookupSelect({ kind, label, name, value, optional = false, excludeId = 
   const items = (res.data?.items || []).filter((x) => x.id !== excludeId);
   const hasCurrent = items.some((x) => x.id === current);
   function title(item) {
-    if (kind === "users") return `${item.display_name} (${item.username})`;
+    if (kind === "users") return `${item.display_name} (${item.email})`;
     return `${item.code || item.name} ${item.name && item.code ? "· " + item.name : ""}`;
   }
   return <div className="lookup-select">
@@ -44,7 +48,7 @@ function Active({ value }) {
   </select></label>;
 }
 
-function MembershipEditor({ record }) {
+function MembershipEditor({ record, initialRole = "REQUESTER" }) {
   const [scope, setScope] = useState(record?.scope_kind || "DEPARTMENT");
   const [typeScope, setTypeScope] = useState(record?.type_scope || "ALL");
   return <>
@@ -52,8 +56,8 @@ function MembershipEditor({ record }) {
     {record ? <p className="muted">Người nhận quyền: <code>{record.user_id}</code> (không thay đổi sau khi cấp)</p> :
       <LookupSelect kind="users" name="user_id" label="Người dùng được cấp quyền" />}
     <label>Vai trò
-      <select name="role" defaultValue={record?.role || "REQUESTER"}>
-        {Object.entries(roles).map(([k, v]) => <option key={k} value={k}>{v} ({k})</option>)}
+      <select name="role" defaultValue={record?.role || initialRole}>
+        {Object.entries(roles).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
       </select>
     </label>
     <div className="form-grid">
@@ -73,15 +77,15 @@ function MembershipEditor({ record }) {
       <label>Hiệu lực từ (ISO 8601 có múi giờ)<input name="valid_from" defaultValue={record?.valid_from || new Date().toISOString()} required /></label>
       <label>Hiệu lực đến (có thể để trống)<input name="valid_to" defaultValue={record?.valid_to || ""} placeholder="2027-01-01T00:00:00+07:00" /></label>
     </div>
-    <p className="muted">Khi thu hồi hoặc đổi quyền, session cũ được vô hiệu hóa theo auth_version và security_epoch. Không xóa lịch sử quyết định.</p>
+    <p className="muted">Khi thu hồi hoặc thay đổi quyền, phiên đăng nhập cũ không còn hợp lệ. Lịch sử quyết định vẫn được giữ lại.</p>
   </>;
 }
 
-function Editor({ kind, record }) {
-  if (kind === "memberships") return <MembershipEditor record={record} />;
+function Editor({ kind, record, initialRole }) {
+  if (kind === "memberships") return <MembershipEditor record={record} initialRole={initialRole} />;
   if (kind === "users") return <>
     <div className="form-grid">
-      <label>Tên đăng nhập<input name="username" autoComplete="off" defaultValue={record?.username || ""} required maxLength={150} /></label>
+      <label>Email nhân viên<input name="email" type="email" autoComplete="email" defaultValue={record?.email || ""} placeholder="Email nhân viên" required maxLength={254} /></label>
       <label>Họ tên<input name="display_name" defaultValue={record?.display_name || ""} required maxLength={150} /></label>
       <LookupSelect kind="departments" name="department_id" label="Phòng ban" value={record?.department_id} />
       <LookupSelect kind="users" name="manager_id" label="Người quản lý trực tiếp" value={record?.manager_id} optional excludeId={record?.id} />
@@ -108,14 +112,8 @@ function Editor({ kind, record }) {
     <div className="form-grid">
       <label>Tên loại yêu cầu<input name="name" defaultValue={record?.name || ""} placeholder="Ví dụ: Cấp phát laptop" maxLength={150} required /></label>
       <label>Nhóm nghiệp vụ
-        <select name="category" defaultValue={record?.category || "GENERAL"} required>
-          <option value="HR">HR — Nhân sự</option>
-          <option value="FINANCE">FINANCE — Tài chính</option>
-          <option value="PROCUREMENT">PROCUREMENT — Mua sắm</option>
-          <option value="IT">IT — Công nghệ thông tin</option>
-          <option value="FACILITY">FACILITY — Cơ sở vật chất</option>
-          <option value="ASSET">ASSET — Tài sản</option>
-          <option value="GENERAL">GENERAL — Chung</option>
+        <select name="category" defaultValue={record?.category || "WORK"} required>
+          {CATALOG_GROUPS.map((group) => <option key={group.code} value={group.code}>{group.code} — {group.label}</option>)}
         </select>
       </label>
     </div>
@@ -126,7 +124,7 @@ function Editor({ kind, record }) {
     </div>
     <Active value={record?.is_active ?? false}/>
     {!record && <p className="muted">Loại mới được đăng ký ở trạng thái Ngừng hoạt động. Chỉ kích hoạt sau khi Policy Admin công bố release hợp lệ.</p>}
-    <p className="muted">Việc tạo thêm loại chỉ khả dụng khi quản trị CSDL đã áp dụng migration mở rộng và bật EAS_ALLOW_REPORT_CATALOG_EXPANSION. Loại mới phải được Policy Admin công bố bản cấu hình và cấp quyền REQUESTER trước khi sử dụng.</p>
+    <p className="muted">Tạo loại mới cần được bật trong cấu hình triển khai. Loại mới phải được công bố quy chế và cấp quyền sử dụng trước khi nhân viên có thể gửi yêu cầu.</p>
   </>;
 }
 
@@ -164,11 +162,16 @@ function MembershipOverview({ items = [] }) {
 function UserDetail({ kind, item }) {
   const resource = useResource(`/api/v1/admin/${kind}/${item.id}`);
   return <ResourceState resource={resource}>
-    <div className="identity-detail-card"><Data value={resource.data?.item || item}/></div>
+    <div className="identity-detail-card"><h3>{item.display_name || item.name || roles[item.role] || "Chi tiết"}</h3>
+      <dl className="data-list"><div><dt>Trạng thái</dt><dd>{item.is_active === false ? "Ngừng hoạt động" : "Đang hoạt động"}</dd></div>
+      {item.username && <div><dt>Tên đăng nhập</dt><dd>{item.username}</dd></div>}
+      {item.description && <div><dt>Mô tả</dt><dd>{item.description}</dd></div>}
+      {item.valid_from && <div><dt>Ngày hiệu lực</dt><dd>{date(item.valid_from)}</dd></div>}
+      </dl></div>
     {kind === "users" && <><h3>Quyền đã cấp và phạm vi hiệu lực</h3>
       <div className="identity-membership-table-wrap"><table className="identity-membership-table"><thead><tr><th>Vai trò</th><th>Phạm vi phòng ban</th><th>Loại yêu cầu</th><th>Trạng thái</th></tr></thead><tbody>
         {(resource.data?.item?.memberships || []).map((m) => <tr key={m.id}><td><strong>{roles[m.role] || m.role}</strong></td>
-          <td>{m.scope_kind}{m.department_id ? ` / ${m.department_id}` : ""}</td><td>{m.type_scope}{m.type_id ? ` / ${m.type_id}` : ""}</td>
+          <td>{m.scope_kind === "GLOBAL" ? "Toàn tổ chức" : "Theo phòng ban"}</td><td>{m.type_scope === "ALL" ? "Mọi loại" : "Loại được chọn"}</td>
           <td><span className={`identity-membership-status ${membershipState(m)}`}>{membershipStates.find((state) => state.key === membershipState(m))?.label}</span></td></tr>)}
       </tbody></table>
         {!resource.data?.item?.memberships?.length && <p className="muted">Chưa có role membership.</p>}
@@ -177,13 +180,54 @@ function UserDetail({ kind, item }) {
   </ResourceState>;
 }
 
-export default function IdentityAdmin() {
-  const [kind, setKind] = useState("users");
+function PasswordResetApprovals({ onNotice }) {
+  const [selected, setSelected] = useState(null);
+  const resource = useResource("/api/v1/auth/password-reset/requests");
+  return <>
+    <section className="panel" aria-label="Yêu cầu đặt lại mật khẩu cần xác minh">
+      <div className="section-head">
+        <div><h2>Yêu cầu đặt lại mật khẩu</h2>
+          <p className="muted">Xác minh danh tính qua kênh độc lập trước khi duyệt. Mật khẩu tạm được tạo ngẫu nhiên, gửi riêng đến email nhân viên và buộc đổi khi đăng nhập.</p>
+        </div>
+        <button type="button" className="secondary" onClick={resource.reload}>Làm mới</button>
+      </div>
+      <ResourceState resource={resource}>
+        <div className="table-wrap"><table className="responsive-records">
+          <thead><tr><th>Nhân viên</th><th>Email</th><th>Phòng ban</th><th>Thời điểm gửi</th><th>Thao tác</th></tr></thead>
+          <tbody>{(resource.data?.items || []).map((item) => <tr key={item.id}>
+            <td data-label="Nhân viên">{item.display_name}</td>
+            <td data-label="Email">{item.email}</td>
+            <td data-label="Phòng ban">{item.department}</td>
+            <td data-label="Thời điểm gửi">{date(item.requested_at)}</td>
+            <td data-label="Thao tác"><button type="button" onClick={() => setSelected(item)}>Xác minh & cấp mật khẩu tạm</button></td>
+          </tr>)}</tbody>
+        </table></div>
+        {!resource.data?.items?.length && <p className="empty">Không có yêu cầu đang chờ xử lý.</p>}
+      </ResourceState>
+    </section>
+    {selected && <Modal title={`Xác nhận đặt lại mật khẩu · ${selected.email}`} onClose={() => setSelected(null)}>
+      <p className="muted">Chỉ tiếp tục sau khi đã xác minh người yêu cầu qua một kênh độc lập. Thao tác sẽ vô hiệu hóa phiên đăng nhập hiện tại và gửi mật khẩu tạm một lần.</p>
+      <ActionForm submitLabel="Phê duyệt và gửi mật khẩu tạm" onSubmit={async (values) => {
+        await command(`auth/password-reset/requests/${selected.id}/approve`, {reason: values.reason});
+        setSelected(null);
+        onNotice(`Đã phê duyệt yêu cầu của ${selected.email}; mật khẩu tạm đã được gửi qua email.`);
+        resource.reload();
+      }}>
+        <Reason />
+      </ActionForm>
+    </Modal>}
+  </>;
+}
+
+export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users" }) {
+  const [kind, setKind] = useState(initialKind);
+  const [selectedRole, setSelectedRole] = useState("");
   const [offset, setOffset] = useState(0);
   const [limit, setLimit] = useState(20);
   const [modal, setModal] = useState(null);
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
+  const [showSystem, setShowSystem] = useState(false);
   const [debounced, setDebounced] = useState("");
   const [status, setStatus] = useState("");
   const [role, setRole] = useState("");
@@ -192,6 +236,7 @@ export default function IdentityAdmin() {
   if (debounced) params.set("q", debounced);
   if (status) params.set(kind === "memberships" ? "state" : "active", status);
   if (role && ["users", "memberships"].includes(kind)) params.set("role", role);
+  if (showSystem && ["users", "memberships"].includes(kind)) params.set("include_system", "true");
   const r = useResource(`/api/v1/admin/${kind}?${params}`);
   const total = r.data?.total ?? 0;
   async function save(v) {
@@ -202,26 +247,37 @@ export default function IdentityAdmin() {
     if (!body.password) delete body.password;
     if (modal.record) body.expected_revision = modal.record.revision;
     await command(`admin/${kind}${modal.record ? "/" + modal.record.id : ""}`, body, modal.record ? "PATCH" : "POST");
+    if (kind === "memberships" || kind === "users") notifyPermissionsChanged();
     setModal(null);
     setNotice("Đã lưu thay đổi. Quản trị được ghi vào audit và cập nhật security_epoch.");
     setOffset(0);
     r.reload();
   }
   function switchKind(k) {
-    setKind(k); setOffset(0); setSearch(""); setDebounced(""); setStatus(""); setRole(""); setModal(null); setNotice("");
+    setKind(k); setOffset(0); setSearch(""); setDebounced(""); setStatus(""); setRole(""); setSelectedRole(""); setModal(null); setNotice("");
   }
   return <>
-    <div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ DANH TÍNH / UC17</p><h1>Người dùng & ma trận phân quyền</h1><p className="muted">Quản trị tài khoản, quan hệ quản lý, phòng ban, vai trò có thời hạn và phạm vi áp dụng; không xóa user có dữ liệu lịch sử.</p></div>
-      <button type="button" onClick={() => setModal({mode: "edit", record: null})}>+ {kind === "users" ? "Tạo người dùng" : kind === "memberships" ? "Cấp quyền" : kind === "request-types" ? "Tạo loại yêu cầu" : "Thêm phòng ban"}</button>
+    <div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ DANH TÍNH</p><h1>{kind === "users" ? "Quản lý người dùng" : kind === "memberships" ? "Vai trò & phân quyền" : kind === "request-types" ? "Danh mục yêu cầu" : "Quản lý phòng ban"}</h1><p className="muted">Thực hiện thêm, sửa hoặc vô hiệu hóa với lý do và nhật ký kiểm toán. Không xóa dữ liệu hồ sơ đã phát sinh.</p></div>
+      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        {onNavigateOrgChart && (
+          <button type="button" className="secondary" onClick={onNavigateOrgChart}>
+            <Icon name="building" size={14} /> Sơ đồ tổ chức
+          </button>
+        )}
+        <button type="button" aria-label="+ Thêm mới" onClick={() => setModal({mode: "edit", record: null})}>+ {({ users: "Tạo người dùng", memberships: "Cấp quyền", "request-types": "Tạo loại yêu cầu" })[kind] || "Thêm mới"}</button>
+      </div>
     </div>
     {kind === "request-types" && <output className="muted">Báo cáo v1.0 đặt mục tiêu 16 loại yêu cầu. Hệ thống hiện có {total} loại theo bộ lọc đang chọn; loại mới cần được cấp quyền, cấu hình và công bố trước khi tạo hồ sơ.</output>}
-    <div className="identity-explain" role="note"><strong>Bảo mật UC17:</strong> chỉ OPS_ADMIN với role membership <code>GLOBAL + ALL</code> mới được gọi API quản lý. Không suy quyền từ chức danh; mọi hành động cần lý do, idempotency và audit; không tự cấp/sửa role của chính mình.</div>
+    <div className="identity-explain" role="note"><strong>Quản lý an toàn:</strong> Chỉ quản trị viên có quyền tương ứng mới được thay đổi tài khoản và vai trò. Mọi thao tác đều được đối soát chính sách và lưu vết tự động vào nhật ký kiểm toán hệ thống.</div>
+      {kind === "users" && <PasswordResetApprovals onNotice={setNotice} />}
+    {kind === "memberships" && <RolePermissionMatrix onSelectRole={value=>{setSelectedRole(value);setRole(value);setOffset(0);}}/>}
+    {selectedRole && kind === "memberships" && <div className="panel identity-role-actions"><strong>Đang chọn: {roles[selectedRole]}</strong><button type="button" onClick={()=>setModal({mode:"create",record:null})}>Cấp vai trò cho nhân viên</button><button type="button" className="secondary" onClick={()=>{setSelectedRole("");setRole("");}}>Bỏ lọc</button></div>}
     <div className="tabs" aria-label="Mục quản trị danh tính">{Object.entries(entities).map(([k, v]) => <button type="button" className={kind === k ? "active" : "secondary"} key={k} onClick={() => switchKind(k)}>{v}</button>)}</div>
     {notice && <output className="success">{notice}</output>}
     <section className="panel identity-filter-panel" aria-label="Lọc dữ liệu">
       <div className="identity-filter-grid">
         <label>Tìm kiếm {entities[kind].toLowerCase()}
-          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={kind === "users" ? "Tên đăng nhập hoặc họ tên" : kind === "memberships" ? "Tên role hoặc UUID user" : "Mã hoặc tên"} maxLength={100}/>
+          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={kind === "users" ? "Tên đăng nhập hoặc họ tên" : kind === "memberships" ? "Vai trò hoặc người dùng" : "Tên hoặc mã loại yêu cầu"} maxLength={100}/>
         </label>
         <label>Trạng thái<select value={status} onChange={(e) => { setStatus(e.target.value); setOffset(0); }}>
           <option value="">Tất cả trạng thái</option>
@@ -230,18 +286,19 @@ export default function IdentityAdmin() {
         {["users", "memberships"].includes(kind) && <label>Vai trò<select value={role} onChange={(e) => { setRole(e.target.value); setOffset(0); }}>
           <option value="">Mọi vai trò</option>{Object.entries(roles).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </select></label>}
+        {["users", "memberships"].includes(kind) && <label className="identity-system-toggle"><input type="checkbox" checked={showSystem} onChange={(e) => { setShowSystem(e.target.checked); setOffset(0); }} /> Hiện tài khoản hệ thống</label>}
         <div className="identity-filter-reset"><button className="secondary" type="button" onClick={() => { setSearch(""); setStatus(""); setRole(""); setOffset(0); }}>Đặt lại bộ lọc</button></div>
       </div>
     </section>
-    <section className="panel" id="identity-results"><div className="section-head identity-result-head"><div><h2>Danh sách {entities[kind].toLowerCase()}</h2><p className="muted">{total} bản ghi theo bộ lọc hiện tại · Phân trang trực tiếp trên PostgreSQL.</p></div></div>
+    <section className="panel" id="identity-results"><div className="section-head identity-result-head"><div><h2>Danh sách {entities[kind].toLowerCase()}</h2><p className="muted">{total} bản ghi theo bộ lọc hiện tại.</p></div></div>
       <ResourceState resource={r}>
         {kind === "memberships" && <MembershipOverview items={r.data?.items || []}/>}
         <div className="table-wrap"><table className="responsive-records identity-table"><thead><tr><th>Thông tin</th><th>Phòng ban / scope</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
           {r.data?.items?.map((item) => <tr key={item.id}>
-            <td data-label="Thông tin"><div className="identity-primary"><span className="identity-avatar" aria-hidden="true">{(item.display_name || item.name || item.role || item.code || "E").slice(0, 1).toLocaleUpperCase("vi")}</span><span><strong>{item.display_name || item.name || roles[item.role] || item.code || "—"}</strong><small>{item.username || item.code || item.user_id || item.role || ""}</small>{kind === "request-types" && <small>{item.category} · Mẫu {item.lifecycle} · Trọng số Cấp {item.risk_weight || 3}/5 · Duyệt {item.approval_level || 1}/5 cấp · {item.description || "Chưa có mô tả"}</small>}<small className="identity-id">ID {item.id}</small></span></div></td>
-            <td data-label="Phạm vi"><small>{item.scope_kind ? `${item.scope_kind} · ${item.type_scope}` : item.department_id ? `Phòng: ${item.department_id}` : "—"}</small></td>
+            <td data-label="Thông tin"><div className="identity-primary"><span className="identity-avatar" aria-hidden="true">{(item.display_name || item.name || item.role || item.code || "E").slice(0, 1).toLocaleUpperCase("vi")}</span><span><strong>{item.display_name || item.name || roles[item.role] || item.code || "—"}{item.is_system_account && <span className="badge"> Hệ thống</span>}</strong><small>{item.email || (kind === "memberships" ? roles[item.role] || "Đã cấp quyền" : "")}</small>{kind === "request-types" && <small>{CATEGORY_LABELS[item.category] || "Nghiệp vụ"} · Vòng đời {item.lifecycle} · Mức rủi ro {item.risk_weight || 3}/5 · Duyệt {item.approval_level || 1}/5 cấp · {item.description || "Chưa có mô tả"}</small>}</span></div></td>
+            <td data-label="Phạm vi"><small>{item.scope_kind ? `${item.scope_kind === "GLOBAL" ? "Toàn tổ chức" : "Theo phòng ban"} · ${item.type_scope === "ALL" ? "Mọi loại yêu cầu" : "Loại yêu cầu cụ thể"}` : item.department_id ? "Theo phòng ban đã chọn" : "—"}</small></td>
             <td data-label="Trạng thái"><span className={`identity-status ${kind === "memberships" ? (item.revoked_at ? "off" : item.valid_to && new Date(item.valid_to) <= new Date() ? "off" : new Date(item.valid_from) > new Date() ? "future" : "on") : item.is_active ? "on" : "off"}`}>{kind === "memberships" ? item.revoked_at ? "Đã thu hồi" : item.valid_to && new Date(item.valid_to) <= new Date() ? "Hết hiệu lực" : new Date(item.valid_from) > new Date() ? "Chưa hiệu lực" : "Đang hiệu lực" : item.is_active ? "Hoạt động" : "Ngừng hoạt động"}</span></td>
-            <td data-label="Thao tác"><div className="actions"><button type="button" className="secondary" onClick={() => setModal({mode:"view",record:item})}>Chi tiết</button><button type="button" className="secondary" disabled={!!item.revoked_at} onClick={() => setModal({mode:"edit",record:item})}>Sửa</button><button type="button" className="danger" disabled={kind === "memberships" ? !!item.revoked_at : !item.is_active} onClick={() => setModal({mode:"delete",record:item})}>{kind === "memberships" ? "Thu hồi" : "Vô hiệu hóa"}</button></div></td>
+            <td data-label="Thao tác"><div className="actions"><button type="button" className="secondary" onClick={() => setModal({mode:"view",record:item})}>Chi tiết</button><button type="button" className="secondary" disabled={!!item.revoked_at || item.is_system_account} title={item.is_system_account ? "Tài khoản hệ thống không sửa được" : undefined} onClick={() => setModal({mode:"edit",record:item})}>Sửa</button><button type="button" className="danger" disabled={item.is_system_account || (kind === "memberships" ? !!item.revoked_at : !item.is_active)} onClick={() => setModal({mode:"delete",record:item})}>{kind === "memberships" ? "Thu hồi" : "Vô hiệu hóa"}</button></div></td>
           </tr>)}
         </tbody></table></div>
         {!r.data?.items?.length && <p className="empty">Không có dữ liệu phù hợp. Bạn có thể đổi bộ lọc hoặc thêm mới.</p>}
@@ -252,9 +309,10 @@ export default function IdentityAdmin() {
       {modal.mode === "view" ? <><UserDetail kind={kind} item={modal.record}/>{modal.record.valid_to && <p>Hiệu lực đến: {date(modal.record.valid_to)}</p>}</> :
         <ActionForm onSubmit={modal.mode === "delete" ? async (v) => {
           await command(`admin/${kind}/${modal.record.id}`, {reason:v.reason, expected_revision:modal.record.revision}, "DELETE");
+          if (kind === "memberships" || kind === "users") notifyPermissionsChanged();
           setModal(null); setNotice("Đã vô hiệu hóa hoặc thu hồi. Lịch sử vẫn được giữ lại."); r.reload();
         } : save} danger={modal.mode === "delete"}>
-          {modal.mode === "delete" ? <p>Không xóa dữ liệu nghiệp vụ. Khi vô hiệu user hoặc thu hồi role, các phiên đăng nhập cũ sẽ không còn hợp lệ.</p> : <Editor kind={kind} record={modal.record}/>}
+          {modal.mode === "delete" ? <p>Không xóa dữ liệu nghiệp vụ. Khi vô hiệu user hoặc thu hồi role, các phiên đăng nhập cũ sẽ không còn hợp lệ.</p> : <Editor kind={kind} record={modal.record} initialRole={selectedRole || "REQUESTER"}/>}
           <Reason />
         </ActionForm>}
     </Modal>}

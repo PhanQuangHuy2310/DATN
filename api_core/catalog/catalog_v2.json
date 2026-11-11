@@ -1,0 +1,2989 @@
+{
+ "schema_version": 1,
+ "origin": "Danh mục 10 nhóm đã duyệt 2026-11-01 (58 loại dùng: 45 giữ, 13 mới; 8 loại ngưng)",
+ "groups": [
+  {
+   "code": "ABSENCE",
+   "label": "Vắng mặt",
+   "description": "Không có mặt tại nơi làm việc trong một khoảng giờ hoặc ngày"
+  },
+  {
+   "code": "WORKTIME",
+   "label": "Chấm công & giờ làm",
+   "description": "Sửa hoặc bổ sung giờ công, làm thêm giờ"
+  },
+  {
+   "code": "BORROW",
+   "label": "Mượn & đặt chỗ",
+   "description": "Dùng tạm có thời hạn, hết hạn trả lại"
+  },
+  {
+   "code": "PROVISION",
+   "label": "Cấp phát & quyền truy cập",
+   "description": "Được cấp hẳn tài sản hoặc quyền để làm việc, hoặc thu hồi"
+  },
+  {
+   "code": "PAYMENT",
+   "label": "Tạm ứng & thanh toán",
+   "description": "Tiền chi ra hoặc hoàn lại"
+  },
+  {
+   "code": "PROCUREMENT",
+   "label": "Mua sắm & ngân sách",
+   "description": "Mua mới hoặc thay đổi ngân sách"
+  },
+  {
+   "code": "PEOPLE",
+   "label": "Nhân sự & chế độ",
+   "description": "Quyết định về một nhân sự trong vòng đời làm việc"
+  },
+  {
+   "code": "SUPPORT",
+   "label": "Hỗ trợ & sự cố",
+   "description": "Có thứ đang hỏng hoặc gặp sự cố cần xử lý"
+  },
+  {
+   "code": "WORK",
+   "label": "Công việc & dự án",
+   "description": "Giao hoặc khởi tạo một đầu việc có kế hoạch"
+  },
+  {
+   "code": "LEGAL",
+   "label": "Văn bản & pháp chế",
+   "description": "Văn bản ràng buộc pháp lý cần thẩm định hoặc ký"
+  },
+  {
+   "code": "SALES",
+   "label": "Kinh doanh & marketing",
+   "description": "Chính sách bán hàng và quảng bá"
+  },
+  {
+   "code": "ASSET",
+   "label": "Kho & tài sản cố định",
+   "description": "Thay đổi vị trí hoặc trạng thái tài sản công ty"
+  }
+ ],
+ "items": [
+  {
+   "code": "ADVANCE_LARGE",
+   "name": "Tạm ứng dự án lớn (>50tr)",
+   "category": "PAYMENT",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 3,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "ADVANCE_LARGE-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_FINANCE",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 72,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Kế toán → Giám đốc ⇒ thực hiện: FINANCE",
+   "new": false
+  },
+  {
+   "code": "ADVANCE_MEDIUM",
+   "name": "Tạm ứng chi phí (10-50tr)",
+   "category": "PAYMENT",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "ADVANCE_MEDIUM-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_FINANCE",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 48,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Kế toán ⇒ thực hiện: FINANCE",
+   "new": false
+  },
+  {
+   "code": "ADVANCE_SMALL",
+   "name": "Tạm ứng chi phí (<10tr)",
+   "category": "PAYMENT",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "ADVANCE_SMALL-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_FINANCE",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Kế toán ⇒ thực hiện: FINANCE",
+   "new": false
+  },
+  {
+   "code": "BUDGET_REALLOCATION",
+   "name": "Điều chuyển & bổ sung ngân sách liên bộ phận",
+   "category": "PROCUREMENT",
+   "status": "ACTIVE",
+   "risk_weight": 5,
+   "approval_level": 5,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "BUDGET_REALLOCATION-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "PROJECT_MANAGER",
+       "OPERATIONS_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "acceptor": "REQUESTER",
+    "executor": "EXECUTOR_FINANCE",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 72,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → PM → Vận hành → Kế toán → Giám đốc ⇒ thực hiện: FINANCE ⇒ nghiệm thu: Người tạo",
+   "new": false
+  },
+  {
+   "code": "EQUIPMENT",
+   "name": "Mua sắm thiết bị / tài sản",
+   "category": "PROCUREMENT",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "EQ-HIGH",
+      "when": {
+       "amount_gt": 50000000
+      },
+      "priority": 10,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     },
+     {
+      "id": "EQ-MID",
+      "when": {
+       "amount_gte": 10000000
+      },
+      "priority": 20,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE"
+      ]
+     },
+     {
+      "id": "EQ-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": "REQUESTER",
+    "executor": "EXECUTOR_ASSET",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 72,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp (khi amount_gt 50000000: QL trực tiếp → Kế toán → Giám đốc) (khi amount_gte 10000000: QL trực tiếp → Kế toán) ⇒ thực hiện: ASSET ⇒ nghiệm thu: Người tạo",
+   "new": false
+  },
+  {
+   "code": "EXPENSE_CLAIM",
+   "name": "Thanh toán chi phí",
+   "category": "PAYMENT",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "EXPENSE_GT_20M",
+      "when": {
+       "amount_gt": 20000000
+      },
+      "priority": 10,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     },
+     {
+      "id": "EXPENSE_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Kế toán (khi amount_gt 20000000: QL trực tiếp → Kế toán → Giám đốc)",
+   "new": false
+  },
+  {
+   "code": "PURCHASE_REQUEST",
+   "name": "Đề nghị mua sắm",
+   "category": "PROCUREMENT",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "PURCHASE_HIGH",
+      "when": {
+       "amount_gt": 50000000
+      },
+      "priority": 10,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     },
+     {
+      "id": "PURCHASE_MEDIUM",
+      "when": {
+       "amount_gte": 5000000
+      },
+      "priority": 20,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE"
+      ]
+     },
+     {
+      "id": "PURCHASE_LOW",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_PROCUREMENT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp (khi amount_gt 50000000: QL trực tiếp → Kế toán → Giám đốc) (khi amount_gte 5000000: QL trực tiếp → Kế toán) ⇒ thực hiện: PROCUREMENT",
+   "new": false
+  },
+  {
+   "code": "REFUND_COMPENSATION",
+   "name": "Hoàn tiền / Đền bù",
+   "category": "PAYMENT",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 1,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "REFUND_COMPENSATION_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "REIMBURSEMENT",
+   "name": "Quyết toán tạm ứng",
+   "category": "PAYMENT",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "REIMBURSEMENT-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_FINANCE",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 48,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Kế toán ⇒ thực hiện: FINANCE",
+   "new": false
+  },
+  {
+   "code": "SAAS_LICENSE_BUY",
+   "name": "Mua bản quyền phần mềm mới",
+   "category": "PROCUREMENT",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "SAAS_LICENSE_BUY-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "IT_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": "DIRECT_MANAGER",
+    "executor": "EXECUTOR_PROCUREMENT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 72,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → IT → Kế toán ⇒ thực hiện: PROCUREMENT ⇒ nghiệm thu: QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "SALARY_ADVANCE",
+   "name": "Ứng lương",
+   "category": "PAYMENT",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_FINANCE",
+    "acceptor": null
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": null
+   },
+   "approval_route": "QL trực tiếp → Kế toán ⇒ thực hiện: FINANCE",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "amount_vnd": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100000000
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000
+     }
+    },
+    "required": [
+     "title",
+     "amount_vnd",
+     "reason"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "amount_vnd": "Số tiền ứng (VNĐ)",
+    "reason": "Lý do"
+   }
+  },
+  {
+   "code": "SUPPLIER_ONBOARDING",
+   "name": "Thẩm định & phê duyệt nhà cung cấp mới",
+   "category": "PROCUREMENT",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "SUPPLIER_ONBOARDING-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "PROCUREMENT_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_PROCUREMENT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 36,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → TP Mua sắm → Kế toán ⇒ thực hiện: PROCUREMENT",
+   "new": false
+  },
+  {
+   "code": "TAX_INVOICE_ISSUE",
+   "name": "Phát hành / điều chỉnh hóa đơn VAT",
+   "category": "PAYMENT",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "TAX_INVOICE_ISSUE-DEFAULT",
+      "default": true,
+      "approvers": [
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_FINANCE",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 16,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "Kế toán ⇒ thực hiện: FINANCE",
+   "new": false
+  },
+  {
+   "code": "VENDOR_PAYMENT",
+   "name": "Thanh toán Hợp đồng Vendor",
+   "category": "PAYMENT",
+   "status": "ACTIVE",
+   "risk_weight": 5,
+   "approval_level": 3,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "VENDOR_PAYMENT-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "acceptor": "DIRECT_MANAGER",
+    "executor": "EXECUTOR_FINANCE",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 72,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Kế toán → Giám đốc ⇒ thực hiện: FINANCE ⇒ nghiệm thu: QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "ACCESS",
+   "name": "Cấp tài khoản & quyền truy cập",
+   "category": "PROVISION",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "AC-PROD",
+      "when": {
+       "app_code_in": [
+        "PRODUCTION_DB",
+        "AWS_CONSOLE",
+        "ERP_SAP"
+       ]
+      },
+      "priority": 10,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "DIRECTOR"
+      ]
+     },
+     {
+      "id": "AC-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_IT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp (khi app_code_in ['PRODUCTION_DB', 'AWS_CONSOLE', 'ERP_SAP']: QL trực tiếp → Giám đốc) ⇒ thực hiện: IT",
+   "new": false
+  },
+  {
+   "code": "LAPTOP_PROVISION",
+   "name": "Cấp máy tính / thiết bị làm việc",
+   "category": "PROVISION",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 1,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "LAPTOP_PROVISION_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": "REQUESTER",
+    "executor": "EXECUTOR_IT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp ⇒ thực hiện: IT ⇒ nghiệm thu: Người tạo",
+   "new": false
+  },
+  {
+   "code": "OFFICE_SUPPLIES",
+   "name": "Cấp văn phòng phẩm",
+   "category": "PROVISION",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "OFFICE_SUPPLIES_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_ADMIN",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp ⇒ thực hiện: ADMIN",
+   "new": false
+  },
+  {
+   "code": "RESOURCE_REVOKE",
+   "name": "Thu hồi tài khoản / thiết bị",
+   "category": "PROVISION",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 1,
+   "lifecycle": "C",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_IT",
+    "acceptor": "DIRECT_MANAGER"
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": 24
+   },
+   "approval_route": "QL trực tiếp ⇒ thực hiện: IT ⇒ nghiệm thu: QL trực tiếp",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "employee_name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 150
+     },
+     "resources": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000
+     },
+     "effective_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000
+     }
+    },
+    "required": [
+     "title",
+     "employee_name",
+     "resources",
+     "effective_date",
+     "reason"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "employee_name": "Nhân viên",
+    "resources": "Tài khoản / thiết bị cần thu hồi",
+    "effective_date": "Ngày hiệu lực",
+    "reason": "Lý do"
+   }
+  },
+  {
+   "code": "ACCESS_FACILITY",
+   "name": "Cấp thẻ ra vào",
+   "category": "PROVISION",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "FACILITY_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "OPERATIONS_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_FACILITY",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 12,
+    "schema_version": 1,
+    "execution_hours": 24,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Vận hành ⇒ thực hiện: FACILITY",
+   "new": false
+  },
+  {
+   "code": "EQUIPMENT_BORROW",
+   "name": "Mượn thiết bị / đồ dùng",
+   "category": "BORROW",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "BORROW_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "IT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": "REQUESTER",
+    "executor": "EXECUTOR_ASSET",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 12,
+    "schema_version": 1,
+    "execution_hours": 24,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → IT ⇒ thực hiện: ASSET ⇒ nghiệm thu: Người tạo",
+   "new": false
+  },
+  {
+   "code": "ROOM_BOOKING",
+   "name": "Đặt phòng họp",
+   "category": "BORROW",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "ROOM_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 8,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "VEHICLE_BOOKING",
+   "name": "Mượn xe công vụ",
+   "category": "BORROW",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 1,
+   "lifecycle": "C",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_ADMIN",
+    "acceptor": "REQUESTER"
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": 24
+   },
+   "approval_route": "QL trực tiếp ⇒ thực hiện: ADMIN ⇒ nghiệm thu: Người tạo",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "vehicle_code": {
+      "type": "string",
+      "enum": [
+       "CAR-HCM-01",
+       "CAR-HCM-02",
+       "CAR-HCM-03"
+      ]
+     },
+     "destination": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 200
+     },
+     "start_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "end_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "passengers": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000
+     }
+    },
+    "required": [
+     "title",
+     "vehicle_code",
+     "destination",
+     "start_date",
+     "end_date",
+     "passengers",
+     "reason"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "destination": "Điểm đến",
+    "start_date": "Ngày đi",
+    "end_date": "Ngày về",
+    "passengers": "Số người",
+    "reason": "Mục đích"
+   }
+  },
+  {
+   "code": "VISITOR_SECURITY_PASS",
+   "name": "Thẻ an ninh khách & đối tác ra vào",
+   "category": "PROVISION",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "VISITOR_SECURITY_PASS-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 12,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "CROSS_DEPT_SUPPORT",
+   "name": "Hỗ trợ liên phòng ban",
+   "category": "WORK",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "C",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "OPERATIONS_MANAGER"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_ADMIN",
+    "acceptor": "REQUESTER"
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": 24
+   },
+   "approval_route": "QL trực tiếp → Vận hành ⇒ thực hiện: ADMIN ⇒ nghiệm thu: Người tạo",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "target_department": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 150
+     },
+     "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 4000
+     },
+     "due_date": {
+      "type": "string",
+      "format": "date"
+     }
+    },
+    "required": [
+     "title",
+     "target_department",
+     "description",
+     "due_date"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "target_department": "Phòng ban hỗ trợ",
+    "description": "Nội dung cần hỗ trợ",
+    "due_date": "Hạn hoàn thành"
+   }
+  },
+  {
+   "code": "PROJECT_INITIATION",
+   "name": "Đề xuất khởi tạo dự án",
+   "category": "WORK",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 4,
+   "lifecycle": "C",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "PROJECT_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_TECH",
+    "acceptor": "PROJECT_MANAGER"
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": 24
+   },
+   "approval_route": "QL trực tiếp → PM → Kế toán → Giám đốc ⇒ thực hiện: TECH ⇒ nghiệm thu: PM",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "objective": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 4000
+     },
+     "amount_vnd": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000000000
+     },
+     "start_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "end_date": {
+      "type": "string",
+      "format": "date"
+     }
+    },
+    "required": [
+     "title",
+     "objective",
+     "amount_vnd",
+     "start_date",
+     "end_date"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "objective": "Mục tiêu dự án",
+    "amount_vnd": "Ngân sách dự kiến (VNĐ)",
+    "start_date": "Ngày bắt đầu",
+    "end_date": "Ngày kết thúc"
+   }
+  },
+  {
+   "code": "TASK_REQUEST",
+   "name": "Yêu cầu xử lý công việc",
+   "category": "WORK",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "C",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_ADMIN",
+    "acceptor": "REQUESTER"
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": 24
+   },
+   "approval_route": "QL trực tiếp ⇒ thực hiện: ADMIN ⇒ nghiệm thu: Người tạo",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 4000
+     },
+     "due_date": {
+      "type": "string",
+      "format": "date"
+     }
+    },
+    "required": [
+     "title",
+     "description",
+     "due_date"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "description": "Nội dung công việc",
+    "due_date": "Hạn hoàn thành"
+   }
+  },
+  {
+   "code": "BUSINESS_TRIP",
+   "name": "Đăng ký đi công tác",
+   "category": "ABSENCE",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "TRIP_HIGH_COST",
+      "when": {
+       "amount_gt": 30000000
+      },
+      "priority": 10,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     },
+     {
+      "id": "TRIP_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_ADMIN",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → HR (khi amount_gt 30000000: QL trực tiếp → Kế toán → Giám đốc) ⇒ thực hiện: ADMIN",
+   "new": false
+  },
+  {
+   "code": "DISCIPLINE_REQ",
+   "name": "Đề xuất kỷ luật",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 3,
+   "lifecycle": "B",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_HR",
+    "acceptor": null
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": null
+   },
+   "approval_route": "QL trực tiếp → HR → Giám đốc ⇒ thực hiện: HR",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "employee_name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 150
+     },
+     "violation": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 4000
+     },
+     "proposed_action": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 500
+     }
+    },
+    "required": [
+     "title",
+     "employee_name",
+     "violation",
+     "proposed_action"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "employee_name": "Nhân viên",
+    "violation": "Hành vi vi phạm",
+    "proposed_action": "Hình thức đề xuất"
+   }
+  },
+  {
+   "code": "EMPLOYEE_ONBOARDING",
+   "name": "Tiếp nhận nhân viên mới",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 2,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "EMPLOYEE_ONBOARDING_DEFAULT",
+      "default": true,
+      "approvers": [
+       "HR_MANAGER",
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": "DIRECT_MANAGER",
+    "executor": "EXECUTOR_HR",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "HR → QL trực tiếp ⇒ thực hiện: HR ⇒ nghiệm thu: QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "HR_CERTIFICATE",
+   "name": "Xin giấy xác nhận công tác / thu nhập",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "B",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "HR_MANAGER"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_HR",
+    "acceptor": null
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": null
+   },
+   "approval_route": "HR ⇒ thực hiện: HR",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "certificate_kind": {
+      "type": "string",
+      "enum": [
+       "CONG_TAC",
+       "THU_NHAP",
+       "KHAC"
+      ]
+     },
+     "purpose": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 500
+     }
+    },
+    "required": [
+     "title",
+     "certificate_kind",
+     "purpose"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "certificate_kind": "Loại giấy xác nhận",
+    "purpose": "Mục đích sử dụng"
+   }
+  },
+  {
+   "code": "INTERNAL_TRANSFER",
+   "name": "Điều chuyển nội bộ",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "INTERNAL_TRANSFER-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_HR",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 36,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → HR → Giám đốc ⇒ thực hiện: HR",
+   "new": false
+  },
+  {
+   "code": "PROMOTION_REQ",
+   "name": "Đề xuất thăng chức",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 3,
+   "lifecycle": "B",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_HR",
+    "acceptor": null
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": null
+   },
+   "approval_route": "QL trực tiếp → HR → Giám đốc ⇒ thực hiện: HR",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "employee_name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 150
+     },
+     "current_position": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 150
+     },
+     "proposed_position": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 150
+     },
+     "effective_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000
+     }
+    },
+    "required": [
+     "title",
+     "employee_name",
+     "current_position",
+     "proposed_position",
+     "effective_date",
+     "reason"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "employee_name": "Nhân viên",
+    "current_position": "Chức danh hiện tại",
+    "proposed_position": "Chức danh đề xuất",
+    "effective_date": "Ngày hiệu lực",
+    "reason": "Thành tích / lý do"
+   }
+  },
+  {
+   "code": "RECRUITMENT_REQ",
+   "name": "Yêu cầu tuyển dụng nhân sự",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 4,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "RECRUITMENT_REQ-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "acceptor": "DIRECT_MANAGER",
+    "executor": "EXECUTOR_HR",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 48,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → HR → Kế toán → Giám đốc ⇒ thực hiện: HR ⇒ nghiệm thu: QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "RESIGNATION",
+   "name": "Thôi việc / Bàn giao",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 3,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "RESIGNATION-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "acceptor": "REQUESTER",
+    "executor": "EXECUTOR_HR",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 168,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → HR → Giám đốc ⇒ thực hiện: HR ⇒ nghiệm thu: Người tạo",
+   "new": false
+  },
+  {
+   "code": "REWARD_REQ",
+   "name": "Đề xuất khen thưởng",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "B",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "REWARD_LARGE",
+      "priority": 10,
+      "when": {
+       "amount_gt": 10000000
+      },
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER",
+       "DIRECTOR"
+      ]
+     },
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_FINANCE",
+    "acceptor": null
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": null
+   },
+   "approval_route": "QL trực tiếp → HR (khi amount_gt 10000000: QL trực tiếp → HR → Giám đốc) ⇒ thực hiện: FINANCE",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "employee_name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 150
+     },
+     "amount_vnd": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 500000000
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000
+     }
+    },
+    "required": [
+     "title",
+     "employee_name",
+     "amount_vnd",
+     "reason"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "employee_name": "Nhân viên / tập thể",
+    "amount_vnd": "Mức thưởng (VNĐ)",
+    "reason": "Thành tích"
+   }
+  },
+  {
+   "code": "SALARY_ADJUSTMENT",
+   "name": "Điều chỉnh lương",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 5,
+   "approval_level": 4,
+   "lifecycle": "B",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_HR",
+    "acceptor": null
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": null
+   },
+   "approval_route": "QL trực tiếp → HR → Kế toán → Giám đốc ⇒ thực hiện: HR",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "employee_name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 150
+     },
+     "amount_vnd": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000
+     },
+     "effective_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000
+     }
+    },
+    "required": [
+     "title",
+     "employee_name",
+     "amount_vnd",
+     "effective_date",
+     "reason"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "employee_name": "Nhân viên",
+    "amount_vnd": "Mức lương đề xuất (VNĐ/tháng)",
+    "effective_date": "Ngày hiệu lực",
+    "reason": "Lý do"
+   }
+  },
+  {
+   "code": "TRAINING_COURSE",
+   "name": "Đăng ký đào tạo & chứng chỉ nghề nghiệp",
+   "category": "PEOPLE",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "TRAINING_COURSE-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_HR",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → HR ⇒ thực hiện: HR",
+   "new": false
+  },
+  {
+   "code": "ATTENDANCE_ADJUSTMENT",
+   "name": "Điều chỉnh chấm công",
+   "category": "ABSENCE",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "ATTENDANCE_ADJUSTMENT_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "LEAVE",
+   "name": "Nghỉ phép",
+   "category": "ABSENCE",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 2,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "LV-LONG",
+      "when": {
+       "days_gt": 2
+      },
+      "priority": 10,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "DIRECTOR"
+      ]
+     },
+     {
+      "id": "LV-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp (khi days_gt 2: QL trực tiếp → Giám đốc)",
+   "new": false
+  },
+  {
+   "code": "LEAVE_SPECIAL",
+   "name": "Nghỉ phép đặc biệt",
+   "category": "ABSENCE",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 3,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "LEAVE_SPECIAL_LONG",
+      "when": {
+       "days_gt": 3
+      },
+      "priority": 10,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER",
+       "DIRECTOR"
+      ]
+     },
+     {
+      "id": "LEAVE_SPECIAL_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "HR_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → HR (khi days_gt 3: QL trực tiếp → HR → Giám đốc)",
+   "new": false
+  },
+  {
+   "code": "OVERTIME_REQ",
+   "name": "Đăng ký làm thêm giờ (OT)",
+   "category": "WORKTIME",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 1,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "OVERTIME_REQ-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_HR",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp ⇒ thực hiện: HR",
+   "new": false
+  },
+  {
+   "code": "WFH_REQ",
+   "name": "Làm việc từ xa (WFH)",
+   "category": "ABSENCE",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "WFH_REQ-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 12,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "DATA_UAT_EXPORT",
+   "name": "Trích xuất dữ liệu / UAT",
+   "category": "WORK",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "DATA_UAT_EXPORT_DEFAULT",
+      "default": true,
+      "approvers": [
+       "IT_MANAGER",
+       "SECURITY"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_TECH",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "IT → Bảo mật ⇒ thực hiện: TECH",
+   "new": false
+  },
+  {
+   "code": "FEATURE_RELEASE",
+   "name": "Feature Request / Release",
+   "category": "WORK",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 2,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "FEATURE_RELEASE_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "IT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": "PROJECT_MANAGER",
+    "executor": "EXECUTOR_TECH",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → IT ⇒ thực hiện: TECH ⇒ nghiệm thu: PM",
+   "new": false
+  },
+  {
+   "code": "IT_SUPPORT",
+   "name": "Yêu cầu hỗ trợ IT",
+   "category": "SUPPORT",
+   "status": "ACTIVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "IT_SUPPORT_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_IT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 8,
+    "schema_version": 1,
+    "execution_hours": 24,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp ⇒ thực hiện: IT",
+   "new": false
+  },
+  {
+   "code": "PROD_DATA_ACCESS",
+   "name": "Cấp quyền Dữ liệu nhạy cảm/Server",
+   "category": "PROVISION",
+   "status": "ACTIVE",
+   "risk_weight": 5,
+   "approval_level": 3,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "PROD_DATA_ACCESS-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "SECURITY",
+       "CTO"
+      ]
+     }
+    ],
+    "acceptor": "CTO",
+    "executor": "EXECUTOR_IT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Bảo mật → CTO ⇒ thực hiện: IT ⇒ nghiệm thu: CTO",
+   "new": false
+  },
+  {
+   "code": "SECURITY_INCIDENT_HOTFIX",
+   "name": "Khắc phục sự cố bảo mật & Hotfix khẩn cấp",
+   "category": "SUPPORT",
+   "status": "ACTIVE",
+   "risk_weight": 5,
+   "approval_level": 5,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "SECURITY_INCIDENT_HOTFIX-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "IT_MANAGER",
+       "SECURITY",
+       "CISO",
+       "CTO"
+      ]
+     }
+    ],
+    "acceptor": "CTO",
+    "executor": "EXECUTOR_TECH",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 12,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → IT → Bảo mật → CISO → CTO ⇒ thực hiện: TECH ⇒ nghiệm thu: CTO",
+   "new": false
+  },
+  {
+   "code": "SERVER_FIREWALL",
+   "name": "Cấp Server / Firewall",
+   "category": "PROVISION",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "SERVER_FIREWALL_DEFAULT",
+      "default": true,
+      "approvers": [
+       "IT_MANAGER",
+       "SECURITY",
+       "CTO"
+      ]
+     }
+    ],
+    "acceptor": "CTO",
+    "executor": "EXECUTOR_IT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "IT → Bảo mật → CTO ⇒ thực hiện: IT ⇒ nghiệm thu: CTO",
+   "new": false
+  },
+  {
+   "code": "CONTRACT_APPROVAL",
+   "name": "Duyệt hợp đồng",
+   "category": "LEGAL",
+   "status": "ACTIVE",
+   "risk_weight": 5,
+   "approval_level": 3,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "CONTRACT_APPROVAL_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE",
+       "LEGAL"
+      ]
+     }
+    ],
+    "acceptor": "LEGAL",
+    "executor": "EXECUTOR_FINANCE",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Kế toán → Pháp chế ⇒ thực hiện: FINANCE ⇒ nghiệm thu: Pháp chế",
+   "new": false
+  },
+  {
+   "code": "DOCUMENT_SEAL",
+   "name": "Đóng dấu / ký văn bản",
+   "category": "LEGAL",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "LEGAL"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_ADMIN",
+    "acceptor": null
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": null
+   },
+   "approval_route": "QL trực tiếp → Pháp chế ⇒ thực hiện: ADMIN",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "document_name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200
+     },
+     "copies": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+     },
+     "reason": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000
+     }
+    },
+    "required": [
+     "title",
+     "document_name",
+     "copies",
+     "reason"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "document_name": "Tên văn bản",
+    "copies": "Số bản",
+    "reason": "Mục đích"
+   }
+  },
+  {
+   "code": "NDA_PRIVACY_CLEARANCE",
+   "name": "Thẩm định NDA & chia sẻ dữ liệu đối tác",
+   "category": "LEGAL",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "NDA_PRIVACY_CLEARANCE-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "LEGAL"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_LEGAL",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Pháp chế ⇒ thực hiện: LEGAL",
+   "new": false
+  },
+  {
+   "code": "POLICY_ISSUANCE",
+   "name": "Ban hành quy chế nội bộ",
+   "category": "LEGAL",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 3,
+   "lifecycle": "B",
+   "route_rules": {
+    "schema_version": 1,
+    "rules": [
+     {
+      "id": "DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "LEGAL",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "executor": "EXECUTOR_LEGAL",
+    "acceptor": null
+   },
+   "sla_profile": {
+    "schema_version": 1,
+    "clock": "CALENDAR_UTC",
+    "reminder_fraction": 0.5,
+    "approval_hours": 24,
+    "execution_hours": 48,
+    "acceptance_hours": null
+   },
+   "approval_route": "QL trực tiếp → Pháp chế → Giám đốc ⇒ thực hiện: LEGAL",
+   "new": true,
+   "form_schema": {
+    "schema_version": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 150
+     },
+     "policy_title": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 200
+     },
+     "scope": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 500
+     },
+     "effective_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "summary": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 4000
+     }
+    },
+    "required": [
+     "title",
+     "policy_title",
+     "scope",
+     "effective_date",
+     "summary"
+    ]
+   },
+   "field_labels": {
+    "title": "Tiêu đề",
+    "policy_title": "Tên quy chế",
+    "scope": "Phạm vi áp dụng",
+    "effective_date": "Ngày hiệu lực",
+    "summary": "Nội dung tóm tắt"
+   }
+  },
+  {
+   "code": "FLASH_SALE_VOUCHER",
+   "name": "Flash Sale / Voucher",
+   "category": "SALES",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "FLASH_SALE_VOUCHER_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_MARKETING",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Kế toán ⇒ thực hiện: MARKETING",
+   "new": false
+  },
+  {
+   "code": "MARKETING_CAMPAIGN",
+   "name": "Ngân sách chiến dịch Marketing & Sự kiện",
+   "category": "SALES",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 4,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "MARKETING_CAMPAIGN-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "MARKETING_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "acceptor": "REQUESTER",
+    "executor": "EXECUTOR_MARKETING",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 48,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Marketing → Kế toán → Giám đốc ⇒ thực hiện: MARKETING ⇒ nghiệm thu: Người tạo",
+   "new": false
+  },
+  {
+   "code": "SPECIAL_DISCOUNT",
+   "name": "Phê duyệt chiết khấu thương mại đặc biệt",
+   "category": "SALES",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 3,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "SPECIAL_DISCOUNT-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "MARKETING_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Marketing → Kế toán",
+   "new": false
+  },
+  {
+   "code": "ASSET_DISPOSAL",
+   "name": "Thanh lý & hủy tài sản cố định",
+   "category": "ASSET",
+   "status": "ACTIVE",
+   "risk_weight": 4,
+   "approval_level": 4,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "ASSET_DISPOSAL-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "WAREHOUSE_MANAGER",
+       "FINANCE",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "acceptor": "DIRECT_MANAGER",
+    "executor": "EXECUTOR_ASSET",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 48,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Kho → Kế toán → Giám đốc ⇒ thực hiện: ASSET ⇒ nghiệm thu: QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "FACILITY_REPAIR",
+   "name": "Sửa chữa sự cố văn phòng",
+   "category": "SUPPORT",
+   "status": "ACTIVE",
+   "risk_weight": 2,
+   "approval_level": 1,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "FACILITY_REPAIR-DEFAULT",
+      "default": true,
+      "approvers": [
+       "OPERATIONS_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": "DIRECT_MANAGER",
+    "executor": "EXECUTOR_FACILITY",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 12,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "Vận hành ⇒ thực hiện: FACILITY ⇒ nghiệm thu: QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "WAREHOUSE_TRANSFER",
+   "name": "Luân chuyển kho",
+   "category": "ASSET",
+   "status": "ACTIVE",
+   "risk_weight": 3,
+   "approval_level": 1,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "WAREHOUSE_TRANSFER_DEFAULT",
+      "default": true,
+      "approvers": [
+       "WAREHOUSE_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_WAREHOUSE",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "Kho ⇒ thực hiện: WAREHOUSE",
+   "new": false
+  },
+  {
+   "code": "ASSET_PURCHASE",
+   "name": "Mua sắm tài sản phòng ban",
+   "category": "PROCUREMENT",
+   "status": "DEPRECATED",
+   "merged_into": "EQUIPMENT",
+   "risk_weight": 4,
+   "approval_level": 3,
+   "lifecycle": "C",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "ASSET_PURCHASE-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "PROCUREMENT_MANAGER",
+       "FINANCE"
+      ]
+     }
+    ],
+    "acceptor": "DIRECT_MANAGER",
+    "executor": "EXECUTOR_PROCUREMENT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 120,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": 24,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → TP Mua sắm → Kế toán ⇒ thực hiện: PROCUREMENT ⇒ nghiệm thu: QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "SOFTWARE_ACCESS",
+   "name": "Cấp tài khoản / VPN",
+   "category": "PROVISION",
+   "status": "DEPRECATED",
+   "merged_into": "ACCESS",
+   "risk_weight": 2,
+   "approval_level": 2,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "SOFTWARE_ACCESS_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "IT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_IT",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → IT ⇒ thực hiện: IT",
+   "new": false
+  },
+  {
+   "code": "ROOM_STUDIO",
+   "name": "Mượn phòng họp / Studio",
+   "category": "BORROW",
+   "status": "DEPRECATED",
+   "merged_into": "ROOM_BOOKING",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "ROOM_STUDIO_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "ROOM_VEHICLE",
+   "name": "Mượn phòng họp / Xe công vụ",
+   "category": "BORROW",
+   "status": "DEPRECATED",
+   "merged_into": "ROOM_BOOKING",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "ROOM_VEHICLE-DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_ADMIN",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 1,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp ⇒ thực hiện: ADMIN",
+   "new": false
+  },
+  {
+   "code": "LEAVE_ANNUAL",
+   "name": "Nghỉ phép dưới 3 ngày",
+   "category": "ABSENCE",
+   "status": "DEPRECATED",
+   "merged_into": "LEAVE",
+   "risk_weight": 1,
+   "approval_level": 1,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "LEAVE_ANNUAL_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "LEAVE_LONG",
+   "name": "Nghỉ phép từ 3 ngày",
+   "category": "ABSENCE",
+   "status": "DEPRECATED",
+   "merged_into": "LEAVE",
+   "risk_weight": 3,
+   "approval_level": 2,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "LEAVE_LONG_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER",
+       "DIRECTOR"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp → Giám đốc",
+   "new": false
+  },
+  {
+   "code": "OVERTIME_APPROVAL",
+   "name": "Đăng ký làm thêm giờ (OT)",
+   "category": "WORKTIME",
+   "status": "DEPRECATED",
+   "merged_into": "OVERTIME_REQ",
+   "risk_weight": 2,
+   "approval_level": 1,
+   "lifecycle": "A",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "OVERTIME_APPROVAL_DEFAULT",
+      "default": true,
+      "approvers": [
+       "DIRECT_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": null,
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": null,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "QL trực tiếp",
+   "new": false
+  },
+  {
+   "code": "FACILITY_MAINTENANCE",
+   "name": "Sửa chữa cơ sở vật chất",
+   "category": "SUPPORT",
+   "status": "DEPRECATED",
+   "merged_into": "FACILITY_REPAIR",
+   "risk_weight": 2,
+   "approval_level": 1,
+   "lifecycle": "B",
+   "route_rules": {
+    "rules": [
+     {
+      "id": "FACILITY_MAINTENANCE_DEFAULT",
+      "default": true,
+      "approvers": [
+       "OPERATIONS_MANAGER"
+      ]
+     }
+    ],
+    "acceptor": null,
+    "executor": "EXECUTOR_FACILITY",
+    "schema_version": 1
+   },
+   "sla_profile": {
+    "clock": "CALENDAR_UTC",
+    "approval_hours": 24,
+    "schema_version": 1,
+    "execution_hours": 48,
+    "acceptance_hours": null,
+    "reminder_fraction": 0.5
+   },
+   "approval_route": "Vận hành ⇒ thực hiện: FACILITY",
+   "new": false
+  }
+ ]
+}

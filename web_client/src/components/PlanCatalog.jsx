@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api.js";
+import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { errorText, riskLevels, approvalLevels, typeLevels } from "../domain.js";
+import { CATEGORY_LABELS } from "../catalogV2.js";
 
 const perPage = 8;
 
@@ -16,6 +18,7 @@ const useResource = (url) => {
 };
 
 function getCatalogModeLabel(mode) {
+  if (mode === "catalog") return "danh mục 10 nhóm";
   if (mode === "business") return "theo bảng chọn";
   if (mode === "enterprise") return "Quản trị 5 Cấp";
   return "từ plan.docx";
@@ -25,18 +28,30 @@ export default function PlanCatalog() {
   const source = useResource("/api/v1/meta/plan-request-types");
   const deployed = useResource("/api/v1/request-types");
   const [filter,setFilter] = useState("");
-  const [catalogMode,setCatalogMode] = useState("business");
+  const [catalogMode,setCatalogMode] = useState("catalog");
   const [group,setGroup] = useState("Tất cả");
   const [releaseFilter,setReleaseFilter] = useState("all");
   const [levelFilter,setLevelFilter] = useState("all");
   const [page,setPage] = useState(0);
   const [selected,setSelected] = useState(null);
+  const [detailTab,setDetailTab] = useState("spec");
   const [notice,setNotice] = useState("");
   const detailRef = useRef(null);
   const listRef = useRef(null);
   function goPage(next) { setPage(next); requestAnimationFrame(() => listRef.current?.scrollIntoView({behavior:"smooth",block:"start"})); }
   const available = useMemo(() => new Map((deployed.data?.items || []).map(x=>[x.code,x])),[deployed.data]);
   const pool = useMemo(() => {
+    if (catalogMode === "catalog") {
+      return (source.data?.catalog_v2?.items || [])
+        .filter((item) => item.status === "ACTIVE")
+        .map((item) => ({
+          ...item,
+          category: CATEGORY_LABELS[item.category] || item.category,
+          executor: item.route_rules?.executor || null,
+          acceptor: item.route_rules?.acceptor || null,
+          sla_hours: item.sla_profile?.approval_hours,
+        }));
+    }
     if (catalogMode === "business") return source.data?.approval_menu?.types || [];
     if (catalogMode === "enterprise") return source.data?.enterprise_items || [];
     return source.data?.items || [];
@@ -54,6 +69,7 @@ export default function PlanCatalog() {
   const pageItems = list.slice(page*perPage,(page+1)*perPage);
   function open(type) {
     setSelected(type);
+    setDetailTab("spec");
     setNotice("");
     requestAnimationFrame(()=>detailRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
   }
@@ -80,6 +96,8 @@ export default function PlanCatalog() {
     </section>
     <section className="panel" ref={listRef}>
       <div className="actions" aria-label="Chọn bộ danh mục">
+        <button type="button" className={catalogMode === "catalog" ? "" : "secondary"}
+          onClick={()=>{setCatalogMode("catalog");setGroup("Tất cả");setReleaseFilter("all");setLevelFilter("all");setPage(0);setSelected(null);}}>Danh mục 10 nhóm (58 loại)</button>
         <button type="button" className={catalogMode === "business" ? "" : "secondary"}
           onClick={()=>{setCatalogMode("business");setGroup("Tất cả");setReleaseFilter("all");setLevelFilter("all");setPage(0);setSelected(null);}}>Bảng chọn yêu cầu của nhân viên (18 mã)</button>
         <button type="button" className={catalogMode === "plan" ? "" : "secondary"}
@@ -153,6 +171,11 @@ export default function PlanCatalog() {
         </div>
         <button type="button" className="secondary" onClick={()=>setSelected(null)}>Đóng</button>
       </div>
+      <div className="tabs" aria-label="Nội dung loại yêu cầu">
+        <button type="button" className={detailTab === "spec" ? "active" : "secondary"} onClick={() => setDetailTab("spec")}>Thông tin quy trình</button>
+        <button type="button" className={detailTab === "diagram" ? "active" : "secondary"} onClick={() => setDetailTab("diagram")}>Sơ đồ luồng</button>
+      </div>
+      {detailTab === "spec" && <>
       <div className="plan-detail-grid">
         <div><h3>Luồng phê duyệt (1–5 cấp)</h3><p>{selected.approval_route || "Được xác định từ bản quy chế đã công bố"}</p></div>
         <div><h3>Người thực hiện</h3><p>{selected.executor || (selected.lifecycle === "A" ? "Không cần" : "Được gán khi gửi")}</p></div>
@@ -166,6 +189,8 @@ export default function PlanCatalog() {
       <button type="button" onClick={copySchema}>Sao chép JSON Schema</button>
       {notice && <output className="success">{notice}</output>}
       <details><summary>JSON Schema để cấu hình biểu mẫu</summary><pre className="plan-code">{JSON.stringify(selected.form_schema,null,2)}</pre></details>
+      </>}
+      {detailTab === "diagram" && <WorkflowDiagrams lifecycle={selected.lifecycle} embedded />}
     </section>}
   </>;
 }

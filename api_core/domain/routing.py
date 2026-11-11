@@ -87,6 +87,11 @@ def extract_amount_vnd(
     return None
 
 
+# Optional department binding used when the requester has no direct manager
+# (top of the organisation chart). Without it the DIRECT_MANAGER step is skipped.
+TOP_LEVEL_SLOT = "TOP_LEVEL_APPROVER"
+
+
 @dataclass(frozen=True)
 class RouteDecision:
     matched_rule_id: str
@@ -94,15 +99,30 @@ class RouteDecision:
     approver_ids: tuple[str, ...]
     executor_id: str | None
     acceptor_id: str | None
+    # Preserve both contracts: SoD audit events and route adjustments.
+    sod_escalations: tuple[tuple[int, str, str], ...] = ()
+    sod_skipped: tuple[tuple[str, str], ...] = ()
+    adjustments: tuple[dict[str, object], ...] = ()
 
     @property
     def resolved_route(self) -> list[dict[str, object]]:
-        return [
-            {"step_no": index, "assignee_id": actor_id, "resolver": slot}
-            for index, (slot, actor_id) in enumerate(
-                zip(self.approver_slots, self.approver_ids), start=1
-            )
-        ]
+        notes = {
+            a["step_index"]: a["reason"]
+            for a in self.adjustments
+            if a.get("step_index") is not None
+        }
+        escalated = {step for step, _, _ in self.sod_escalations}
+        route = []
+        for index, (slot, actor_id) in enumerate(
+            zip(self.approver_slots, self.approver_ids), start=1
+        ):
+            item = {"step_no": index, "assignee_id": actor_id, "resolver": slot}
+            if index in notes:
+                item["adjusted"] = notes[index]
+            if index in escalated:
+                item["sod_escalated"] = True
+            route.append(item)
+        return route
 
 
 def _uuid(value: object, label: str) -> str:
@@ -241,6 +261,101 @@ def _validate_route_rules_structure(
     return defaults[0], conditional
 
 
+def _slot_actor(
+    slot: str, manager: str | None, department_bindings: dict[str, Any]
+) -> tuple[str | None, str | None]:
+    """(actor, adjustment reason) for one approver slot."""
+    if slot != "DIRECT_MANAGER":
+        return _uuid(department_bindings.get(slot), slot), None
+    if manager is not None:
+        return _uuid(manager, slot), None
+    fallback = department_bindings.get(TOP_LEVEL_SLOT)
+    if fallback:
+        return _uuid(fallback, TOP_LEVEL_SLOT), "TOP_LEVEL_FALLBACK"
+    return None, "TOP_LEVEL_SKIPPED"
+
+
+def _escalate_self_approval(
+    requester: str, manager: str | None
+) -> tuple[str | None, str]:
+    """A slot that resolves to the requester goes to the requester's manager."""
+    escalated = _uuid(manager, "DIRECT_MANAGER") if manager else None
+    if escalated and escalated != requester:
+        return escalated, "SOD_ESCALATED"
+    return None, "SOD_SKIPPED"
+
+
+def _resolve_approvers(
+    slots: list[str],
+    *,
+    requester: str,
+    manager: str | None,
+    department_bindings: dict[str, Any],
+    eligible_superiors: tuple[str, ...] = (),
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[dict[str, object], ...]]:
+    """Map approver slots to people without blocking legitimate requesters.
+
+    * No direct manager (top of the chart): use the department's
+      TOP_LEVEL_APPROVER binding, otherwise skip that step.
+    * A functional slot resolving to the requester (e.g. the finance head asks
+      for a payment): escalate to the requester's own manager (SoD).
+    * A person never appears twice in one route: the later step is skipped.
+
+    The requester never approves; an empty route is a configuration error.
+    """
+    out_slots: list[str] = []
+    out_ids: list[str] = []
+    adjustments: list[dict[str, object]] = []
+    # Reserve named approvers before selecting an escalation candidate so
+    # escalation cannot silently take a later approval step's identity.
+    reserved = {
+        actor for slot in slots
+        for actor, _ in [_slot_actor(slot, manager, department_bindings)]
+        if actor is not None and actor != requester
+    }
+    for rule_step, slot in enumerate(slots, start=1):
+        actor, reason = _slot_actor(slot, manager, department_bindings)
+        if actor == requester:
+            if eligible_superiors:
+                replacement = next(
+                    (candidate for raw in eligible_superiors
+                     if (candidate := _uuid(raw, "Eligible superior")) != requester
+                     and candidate not in reserved and candidate not in out_ids),
+                    None,
+                )
+                if replacement is None:
+                    raise RoutingError("ROUTE_SOD_ESCALATION_UNRESOLVED")
+                actor, reason = replacement, "SOD_ESCALATED"
+            else:
+                # Without an independently validated superior, the existing
+                # manager can replace the requester only if they are not
+                # already committed to a different approval level. Silently
+                # skipping this slot would shorten a required approval chain.
+                # The workflow service catches this error and verifies a
+                # higher-level candidate before resolving the route again.
+                actor, reason = _escalate_self_approval(requester, manager)
+                if actor is None or actor in reserved or actor in out_ids:
+                    raise RoutingError("Requester cannot approve own request")
+        if actor is not None and actor in out_ids:
+            actor, reason = None, "DUPLICATE_SKIPPED"
+        if actor is not None:
+            out_slots.append(slot)
+            out_ids.append(actor)
+        if reason:
+            adjustments.append(
+                {
+                    "rule_step": rule_step,
+                    "slot": slot,
+                    "reason": reason,
+                    "assignee_id": actor,
+                    "step_index": len(out_ids) if actor is not None else None,
+                }
+            )
+    if not out_ids:
+        raise RoutingError("No approver available for this requester")
+    return tuple(out_slots), tuple(out_ids), tuple(adjustments)
+
+
 def _validate_resolved_actors(
     requester: str,
     approvers: tuple[str, ...],
@@ -268,6 +383,7 @@ def resolve_route(
     manager_id: str | None,
     amount_vnd: int | None = None,
     payload: dict[str, Any] | None = None,
+    eligible_superiors: tuple[str, ...] = (),
 ) -> RouteDecision:
     if (
         route_rules.get("schema_version") != 1
@@ -315,22 +431,39 @@ def resolve_route(
         if slot == "REQUESTER":
             return _uuid(requester_id, slot)
         if slot == "DIRECT_MANAGER":
-            if manager_id is None:
-                raise RoutingError("Requester has no direct manager")
-            return _uuid(manager_id, slot)
+            if manager_id is not None:
+                return _uuid(manager_id, slot)
+            # Top of the chart accepting delivered work: the configured
+            # top-level approver, otherwise the requester (still != executor).
+            fallback = department_bindings.get(TOP_LEVEL_SLOT)
+            return _uuid(fallback or requester_id, slot)
         return _uuid(department_bindings.get(slot), slot)
 
-    approvers = tuple(actor_for(slot) for slot in slots)
     requester = _uuid(requester_id, "REQUESTER")
+    approver_slots, approvers, adjustments = _resolve_approvers(
+        list(slots),
+        requester=requester,
+        manager=manager_id,
+        department_bindings=department_bindings,
+        eligible_superiors=eligible_superiors,
+    )
     executor = actor_for(executor_slot)
     acceptor = actor_for(acceptor_slot)
 
+    # Expose a stable SoD trail for workflow audits and the existing UI.
+    escalations = tuple(
+        (int(item["step_index"]), requester, str(item["assignee_id"]))
+        for item in adjustments
+        if item["reason"] == "SOD_ESCALATED" and item["step_index"] is not None
+    )
     _validate_resolved_actors(requester, approvers, executor, acceptor)
 
     return RouteDecision(
         matched_rule_id=rule_id,
-        approver_slots=tuple(slots),
+        approver_slots=approver_slots,
         approver_ids=approvers,
         executor_id=executor,
         acceptor_id=acceptor,
+        sod_escalations=escalations,
+        adjustments=adjustments,
     )

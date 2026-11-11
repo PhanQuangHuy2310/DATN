@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from django.core.cache import cache
-from django.db import connection
+from django.db import DatabaseError, connection
+
+log = logging.getLogger(__name__)
 
 CACHE_KEY_MAINTENANCE = "eas:system:maintenance"
 ADMIN_ROLES = frozenset({"POLICY_ADMIN", "OPS_ADMIN"})
@@ -16,8 +19,91 @@ MAINTENANCE_MSG_ADMIN_ACTIVE = "Hệ thống đang trong quá trình cập nhậ
 MAINTENANCE_MSG_ADMIN_COMPLETED = "Hệ thống đã cập nhật xong quy định mới. Các tài khoản người dùng đã có thể sử dụng bình thường với phiên bản mới nhất."
 
 
+LEGACY_CACHE_KEY = "eas:ai:legacy-lock"
+
+
+def _legacy_lock_state() -> dict[str, Any] | None:
+    """Pre-migration-12 databases: the boolean flag in eas.ai_system_state."""
+    cached = cache.get(LEGACY_CACHE_KEY)
+    if cached is not None:
+        return cached or None
+    state: dict[str, Any] = {}
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT client_maintenance_lock, sync_status, current_step_label,
+                       target_regulation_version, progress_percent
+                FROM eas.ai_system_state
+                WHERE id = 1
+                """
+            )
+            row = cursor.fetchone()
+    except DatabaseError as exc:
+        err_text = str(exc).lower()
+        if "no such table" in err_text or "does not exist" in err_text:
+            log.debug("ai_system_state_unavailable_in_test_db")
+        else:
+            log.warning("ai_system_state_unavailable", exc_info=True)
+        row = None
+    if row and row[0] is True:
+        state = {
+            "status": row[1] or "LEARNING",
+            "step_label": row[2] or "",
+            "target_version": str(row[3] or "1.0"),
+            "progress": int(row[4] or 0),
+        }
+    cache.set(LEGACY_CACHE_KEY, state, timeout=3)
+    return state or None
+
+
+def get_ai_maintenance_state() -> dict[str, Any] | None:
+    """Open AI learning job (migration 12), else the legacy lock flag.
+
+    Both reads are cached for a few seconds, so the per-request maintenance
+    check does not add a database round trip to every API call.
+    """
+    from api_core.workflow.ai_learning import jobs_table_ready, open_job_state
+
+    if not jobs_table_ready():
+        return _legacy_lock_state()
+    job = open_job_state()
+    if not job:
+        return None
+    return {
+        "status": "SYNCING" if job["status"] == "QUEUED" else job["status"],
+        "step_label": job["step_label"],
+        "target_version": job["target_version"],
+        "progress": job["progress"],
+    }
+
+
 def get_maintenance_info() -> dict[str, Any]:
-    """Retrieve current system maintenance state from shared cache."""
+    """Retrieve current system maintenance state from shared cache and ai_system_state."""
+    ai_state = get_ai_maintenance_state()
+    if ai_state:
+        target_v = ai_state["target_version"]
+        if not target_v.startswith("v"):
+            target_v = f"v{target_v}"
+        step_lbl = ai_state["step_label"] or "Đang đồng bộ..."
+        msg = (
+            f"Hệ thống đang cập nhật quy định mới (Phiên bản {target_v} - Đang ở bước: {step_lbl}). "
+            f"Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật hoàn tất."
+        )
+        return {
+            "active": True,
+            "status": ai_state["status"],
+            "message": msg,
+            "admin_message": f"Hệ thống đang huấn luyện AI ({ai_state['progress']}%). Quản trị viên vẫn truy cập bình thường.",
+            "started_at": None,
+            "completed_at": None,
+            "release_id": target_v,
+            "updated_by": "ai_service",
+            "progress_percent": ai_state["progress"],
+            "target_version": target_v,
+            "step_label": step_lbl,
+        }
+
     data = cache.get(CACHE_KEY_MAINTENANCE)
     if not data or not isinstance(data, dict):
         return {

@@ -1,10 +1,6 @@
 # 🧪 Enterprise Approval System — Test Suite
 
-Thư mục này chứa các bài kiểm thử Tích hợp (Integration Tests) và Đầu-cuối (E2E Tests) cho toàn bộ hệ sinh thái EAS:
-- **API Gateway (Nginx)**: Phân phối và bảo mật luồng dữ liệu
-- **API Core (Django)**: Nghiệp vụ phê duyệt chính và tích hợp AI Client
-- **AI Service (FastAPI)**: 5 dịch vụ AI thông minh và dữ liệu snapshot mock
-- **Database (PostgreSQL)**: Schema chính `eas` và 8 schema `mock_*`
+Các bài kiểm thử độc lập được giữ thành từng file theo chức năng, cùng nằm trong một thư mục để dễ chạy và bảo trì. Bộ này gồm kiểm thử business, readiness, contract, regression và tích hợp AI; test Django của ứng dụng vẫn nằm trong `api_core/tests/`.
 
 ---
 
@@ -12,12 +8,15 @@ Thư mục này chứa các bài kiểm thử Tích hợp (Integration Tests) v�
 
 ```
 tests/
-├── run_tests.py                    # Script tự động chạy toàn bộ test suite
-├── README.md                       # ← Tài liệu này
-├── integration/                    # Kiểm thử tích hợp giữa các thành phần
-│   ├── __init__.py
-│   └── test_ai_service.py          # Kiểm thử Model, Mock Data, Suy luận & Fallback
-└── fixtures/                       # Dữ liệu mẫu phục vụ kiểm thử
+├── run_tests.py                 # Phát hiện và chạy mọi test_*.py bên dưới
+├── README.md
+├── fixtures/                    # SQL/JSON fixtures dùng riêng cho tests
+├── integration/
+│   └── test_ai_service.py       # Kiểm thử tích hợp AI Service và client
+├── test_*_catalog.py            # Catalog, readiness và policy
+├── test_*_contract.py           # Schema, API payload và frontend contract
+├── test_*_regression.py         # Regression query và giao diện
+└── test_connection.py           # Kiểm thử cấu hình/kết nối giả lập
 ```
 
 ---
@@ -28,11 +27,14 @@ tests/
 ```bash
 python tests/run_tests.py
 ```
+Lệnh này chạy các test độc lập trong `tests/`, kể cả các suite business, report, readiness và connection đã được gom về đây. Test Django được chạy riêng bằng `python manage.py test`.
 
 ### 2. Chạy Riêng Lẻ Test Tích Hợp AI Service & Client:
 ```bash
 python -m unittest tests/integration/test_ai_service.py
 ```
+
+Mỗi file `test_*.py` vẫn có thể chạy độc lập bằng `python -m unittest tests.<tên_module>`.
 
 ---
 

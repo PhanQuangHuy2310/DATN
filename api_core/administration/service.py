@@ -10,27 +10,28 @@ from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import connection, transaction
 
 from api_core.audit import canonical_sha256
 from api_core.authn.service import PasswordChangeError, validate_new_password
+from api_core.catalog.plan_catalog import CATALOG_V2_GROUPS
 from api_core.workflow.service import (
     CommandError,
     _append_admin_audit,
     _execute_idempotent,
 )
 
-REQUEST_TYPE_CATEGORIES = {
-    "HR",
-    "IT",
-    "FACILITY",
-    "PROCUREMENT",
-    "ASSET",
-    "FINANCE",
-    "GENERAL",
-}
+# Must match eas.request_type_category_valid (migration 09).
+REQUEST_TYPE_CATEGORIES = set(CATALOG_V2_GROUPS)
 
 ROLES = {
+    "STAFF",
+    "TEAM_LEAD",
+    "MANAGER",
+    "VICE_DIRECTOR",
+    "DIRECTOR",
     "REQUESTER",
     "APPROVER",
     "EXECUTOR",
@@ -45,7 +46,7 @@ TABLES = {
         "app_user",
         (
             "id",
-            "username",
+            "email",
             "display_name",
             "department_id",
             "manager_id",
@@ -149,6 +150,18 @@ def serialize(columns, row):
     return value
 
 
+def system_account_sql(alias: str) -> str:
+    """True for system accounts (eas.app_user.is_system_account, migration 08).
+
+    Read through to_jsonb so the query also works before migration 08; the AI
+    account id from settings is always treated as a system account.
+    """
+    return (
+        f"(COALESCE((to_jsonb({alias})->>'is_system_account')::boolean, false)"
+        f" OR {alias}.id = %s::uuid)"
+    )
+
+
 def _validate_filter_query(kind, query):
     q = str(query.get("q", "")).strip()
     if len(q) > 100:
@@ -174,13 +187,31 @@ def _validate_filter_query(kind, query):
         kind != "memberships" or state not in {"ACTIVE", "REVOKED", "EXPIRED", "FUTURE"}
     ):
         raise CommandError("INVALID_FILTER", status=422)
-    return q, role, active, user_id, dept_id, state
+    include_system = query.get("include_system", "")
+    if include_system not in ("", "true", "false") or (
+        include_system and kind not in {"users", "memberships"}
+    ):
+        raise CommandError("INVALID_FILTER", status=422)
+    return q, role, active, user_id, dept_id, state, include_system == "true"
 
 
 def _list_filters(kind, query):
     """Parameterize values; only fields from a fixed allowlist reach SQL."""
-    q, role, active, user_id, department_id, state = _validate_filter_query(kind, query)
+    q, role, active, user_id, department_id, state, include_system = (
+        _validate_filter_query(kind, query)
+    )
     clauses, params = [], []
+    # System accounts (EAS AI) are hidden unless explicitly requested.
+    if kind == "users" and not include_system:
+        clauses.append("NOT " + system_account_sql("t"))
+        params.append(settings.EAS_AI_SYSTEM_USER_ID)
+    if kind == "memberships" and not include_system:
+        clauses.append(
+            "NOT EXISTS (SELECT 1 FROM eas.app_user su WHERE su.id = t.user_id AND "
+            + system_account_sql("su")
+            + ")"
+        )
+        params.append(settings.EAS_AI_SYSTEM_USER_ID)
     state_sql = {
         "REVOKED": "t.revoked_at IS NOT NULL",
         "ACTIVE": "t.revoked_at IS NULL AND t.valid_from<=statement_timestamp() AND (t.valid_to IS NULL OR t.valid_to>statement_timestamp())",
@@ -190,15 +221,19 @@ def _list_filters(kind, query):
     if state in state_sql:
         clauses.append(state_sql[state])
     searchable = {
-        "users": ("username", "display_name"),
+        "users": ("email", "display_name"),
         "departments": ("code", "name"),
         "request-types": ("code", "name", "category", "description"),
         "memberships": ("role", "user_id::text"),
     }
     if q:
         cols = searchable[kind]
-        clauses.append("(" + " OR ".join(f"t.{col} ILIKE %s" for col in cols) + ")")
-        params.extend([f"%{q}%"] * len(cols))
+        # Escape LIKE wildcards: user text is matched literally.
+        literal = q.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        clauses.append(
+            "(" + " OR ".join(f"t.{col} ILIKE %s ESCAPE '\\'" for col in cols) + ")"
+        )
+        params.extend([f"%{literal}%"] * len(cols))
     if active:
         clauses.append("t.is_active=%s")
         params.append(active == "true")
@@ -233,8 +268,12 @@ def list_records(actor, kind, query):
         raise CommandError("INVALID_PAGINATION", status=400) from None
     where, params = _list_filters(kind, query)
     fields = ",".join("t." + field for field in columns)
+    select_params = []
+    if kind == "users":
+        fields += "," + system_account_sql("t")
+        select_params.append(settings.EAS_AI_SYSTEM_USER_ID)
     order = {
-        "users": "t.username,t.id",
+        "users": "t.email,t.id",
         "departments": "t.code,t.id",
         "memberships": "t.role,t.id",
         "request-types": "t.code,t.id",
@@ -246,10 +285,18 @@ def list_records(actor, kind, query):
         c.execute(count_sql, params)  # NOSONAR python:S2077
         total = int(c.fetchone()[0])
         select_sql = f"SELECT {fields} FROM eas.{table} t{where} ORDER BY {order} LIMIT %s OFFSET %s"  # NOSONAR python:S2077
-        c.execute(select_sql, params + [limit, offset])  # NOSONAR python:S2077
+        c.execute(  # NOSONAR python:S2077
+            select_sql, select_params + params + [limit, offset]
+        )
         rows = c.fetchall()
     return {
-        "items": [serialize(columns, r) for r in rows],
+        "items": [
+            # The flag is display-only: the revision hash covers the real columns.
+            {**serialize(columns, r[:-1]), "is_system_account": bool(r[-1])}
+            if kind == "users"
+            else serialize(columns, r)
+            for r in rows
+        ],
         "total": total,
         "limit": limit,
         "offset": offset,
@@ -257,40 +304,26 @@ def list_records(actor, kind, query):
     }
 
 
+# Built from TABLES so the column order always matches serialize(columns, row).
 SELECT_BY_ID_SQL = {
-    "users": (
-        "SELECT id,username,display_name,work_email,job_title,department_id,"
-        "is_active,created_at,updated_at FROM eas.app_user WHERE id=%s"
-    ),
-    "departments": (
-        "SELECT id,code,name,parent_id,is_active,created_at,updated_at "
-        "FROM eas.department WHERE id=%s"
-    ),
-    "request-types": (
-        "SELECT id,code,name,category,lifecycle,description,risk_weight,"
-        "approval_level,is_active,created_at,updated_at FROM eas.request_type WHERE id=%s"
-    ),
-    "memberships": (
-        "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,"
-        "valid_from,valid_to,revoked_at,created_at,updated_at FROM eas.role_membership WHERE id=%s"
-    ),
+    kind: f"SELECT {','.join(columns)} FROM eas.{table} WHERE id=%s"
+    for kind, (table, columns) in TABLES.items()
 }
 
 SELECT_FOR_UPDATE_SQL = {k: v + " FOR UPDATE" for k, v in SELECT_BY_ID_SQL.items()}
 
 USER_MEMBERSHIPS_SQL = (
-    "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,"
-    "valid_from,valid_to,revoked_at,created_at,updated_at FROM eas.role_membership "
-    "WHERE user_id=%s ORDER BY role,id"
+    "SELECT id,user_id,role,scope_kind,department_id,type_scope,type_id,valid_from,valid_to,revoked_at "
+    "FROM eas.role_membership WHERE user_id=%s ORDER BY role,id"
 )
 
 
-def read_record(actor, kind, record_id):
+def read_record(actor, kind, record_id, authorizer=None):
     _, columns = TABLES[kind]
     record_id = uid(record_id, "id")
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(false)")
-        authorize(c, actor)
+        (authorizer or authorize)(c, actor)
         c.execute(SELECT_BY_ID_SQL[kind], [record_id])
         row = c.fetchone()
         if not row:
@@ -298,7 +331,7 @@ def read_record(actor, kind, record_id):
         item = serialize(columns, row)
         if kind == "users":
             member_columns = TABLES["memberships"][1]
-            c.execute(USER_MEMBERSHIPS_SQL, [record_id])
+            c.execute(USER_MEMBERSHIPS_SQL, [record_id])  # NOSONAR python:S2077
             item["memberships"] = [serialize(member_columns, r) for r in c.fetchall()]
     return {"item": item}
 
@@ -306,7 +339,7 @@ def read_record(actor, kind, record_id):
 def validate(kind, body, old=None):
     allowed = {"reason", "expected_revision"} | {
         "users": {
-            "username",
+            "email",
             "display_name",
             "department_id",
             "manager_id",
@@ -355,16 +388,22 @@ def validate(kind, body, old=None):
     if kind == "users":
         v = {
             **v,
-            "username": text(v.get("username"), "username").lower(),
+            "email": text(v.get("email"), "email", 254).lower(),
             "display_name": text(v.get("display_name"), "display_name"),
             "department_id": uid(v.get("department_id"), "department_id"),
             "manager_id": uid(v.get("manager_id"), "manager_id", True),
             "is_active": boolean(v.get("is_active", True)),
         }
+        try:
+            validate_email(v["email"])
+        except ValidationError:
+            raise CommandError("INVALID_EMAIL", status=422) from None
+        if not v["email"].endswith(f"@{settings.EAS_LOGIN_EMAIL_DOMAIN}"):
+            raise CommandError("INVALID_EMAIL_DOMAIN", status=422)
         if not old or body.get("password"):
             try:
                 v["password_hash"] = make_password(
-                    validate_new_password(body.get("password"), v["username"]),
+                    validate_new_password(body.get("password"), v["email"]),
                     hasher="argon2",
                 )
             except PasswordChangeError:
@@ -459,13 +498,25 @@ def active_reference(c, table, id):
         raise CommandError("REFERENCE_INACTIVE_OR_MISSING", status=422)
 
 
+# Hierarchies that check_cycle may walk. Fixed identifiers only: never built
+# from request data.
+_HIERARCHIES = {
+    ("department", "parent_id"): ("eas.department", "parent_id"),
+    ("app_user", "manager_id"): ("eas.app_user", "manager_id"),
+}
+
+
 def check_cycle(c, table, parent_field, id, parent):
+    """Reject a parent that is the row itself or one of its descendants."""
     if not parent:
         return
-    c.execute(
-        """WITH RECURSIVE chain AS (
-       SELECT id,parent_id FROM eas.department WHERE id=%s
-       UNION SELECT t.id,t.parent_id FROM eas.department t JOIN chain p ON t.id=p.parent_id
+    if str(parent) == str(id):
+        raise CommandError("HIERARCHY_CYCLE", status=422)
+    relation, column = _HIERARCHIES[(table, parent_field)]
+    c.execute(  # NOSONAR python:S2077 - identifiers come from _HIERARCHIES
+        f"""WITH RECURSIVE chain AS (
+       SELECT id,{column} AS parent FROM {relation} WHERE id=%s
+       UNION SELECT t.id,t.{column} FROM {relation} t JOIN chain p ON t.id=p.parent
     ) SELECT 1 FROM chain WHERE id=%s LIMIT 1""",
         [parent, id],
     )
@@ -473,7 +524,20 @@ def check_cycle(c, table, parent_field, id, parent):
         raise CommandError("HIERARCHY_CYCLE", status=422)
 
 
-def mutate(actor, kind, record_id, body, method, key, correlation_id):
+def _assert_not_system_account(c, user_id):
+    """System accounts (EAS AI) cannot be edited, disabled or re-permissioned."""
+    c.execute(  # NOSONAR python:S2077
+        f"SELECT {system_account_sql('t')} FROM eas.app_user t WHERE t.id=%s",
+        [settings.EAS_AI_SYSTEM_USER_ID, user_id],
+    )
+    row = c.fetchone()
+    if row and row[0] is True:
+        raise CommandError("SYSTEM_ACCOUNT_LOCKED", status=403)
+
+
+def mutate(actor, kind, record_id, body, method, key, correlation_id, authorizer=None):
+    """authorizer(cursor, actor) raises CommandError; default: global OPS_ADMIN."""
+    authorizer = authorizer or authorize
     table, columns = TABLES[kind]
     if (
         method == "POST"
@@ -506,6 +570,8 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 v["is_active"] = False
         else:
             v = validate(kind, body, old)
+        if kind in {"users", "memberships"}:
+            _assert_not_system_account(c, id if kind == "users" else v["user_id"])
         if kind == "users":
             if id == actor.id:
                 raise CommandError("SELF_ADMIN_CHANGE_FORBIDDEN", status=403)
@@ -549,7 +615,7 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
                 active_reference(c, "request_type", v.get("type_id"))
         fields = {
             "users": [
-                "username",
+                "email",
                 "display_name",
                 "department_id",
                 "manager_id",
@@ -603,7 +669,9 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
         else:
             upd_sql = f"UPDATE eas.{table} SET {','.join(f + '=%s' for f in fields)} WHERE id=%s"  # NOSONAR python:S2077
             c.execute(upd_sql, [v[f] for f in fields] + [id])  # NOSONAR python:S2077
-        if kind == "memberships":
+        # Roles are re-read from the database on every request, so grants and
+        # edits apply immediately; only a revocation ends existing sessions.
+        if kind == "memberships" and method == "DELETE":
             c.execute(
                 "UPDATE eas.app_user SET auth_version=auth_version+1 WHERE id=%s",
                 [v["user_id"]],
@@ -632,7 +700,7 @@ def mutate(actor, kind, record_id, body, method, key, correlation_id):
     # Acquire exclusive lock BEFORE the shared-lock idempotency helper to avoid lock upgrade races.
     with transaction.atomic(), connection.cursor() as c:
         c.execute("SELECT eas.lock_security(true)")
-        authorize(c, actor)
+        authorizer(c, actor)
         return _execute_idempotent(
             actor_id=actor.id,
             scope=f"admin:{kind}:{method}:{record_id or 'new'}",

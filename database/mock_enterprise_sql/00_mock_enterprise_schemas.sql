@@ -405,10 +405,27 @@ ALTER DEFAULT PRIVILEGES FOR ROLE eas_migration IN SCHEMA mock_it REVOKE EXECUTE
 ALTER DEFAULT PRIVILEGES FOR ROLE eas_migration IN SCHEMA mock_finance REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES FOR ROLE eas_migration IN SCHEMA mock_travel REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 
+-- Defense in depth: RLS on every mock table, read-only for granted roles.
+DO $rls$
+DECLARE t record;
+BEGIN
+  FOR t IN
+    SELECT schemaname, tablename FROM pg_tables
+    WHERE schemaname IN ('mock_hr','mock_assets','mock_facilities','mock_crm',
+                         'mock_procurement','mock_it','mock_finance','mock_travel')
+  LOOP
+    EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', t.schemaname, t.tablename);
+    EXECUTE format('CREATE POLICY api_read ON %I.%I FOR SELECT TO eas_api USING (true)', t.schemaname, t.tablename);
+    EXECUTE format('CREATE POLICY backup_read ON %I.%I FOR SELECT TO eas_backup USING (true)', t.schemaname, t.tablename);
+  END LOOP;
+END
+$rls$;
+
 INSERT INTO mock_hr.schema_migration(version,description)
 VALUES
   ('001','Temporal allocation integrity guards'),
   ('002','Least-privilege function defaults'),
-  ('003','Runtime readiness contract grant');
+  ('003','Runtime readiness contract grant'),
+  ('004','Row level security on mock source tables');
 
 COMMIT;

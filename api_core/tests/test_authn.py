@@ -1,4 +1,6 @@
 import json
+import os
+from typing import ClassVar
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -8,15 +10,39 @@ from django.test import Client, SimpleTestCase, override_settings
 
 from api_core.authn.models import Actor, AuthUser
 from api_core.authn.service import PasswordChangeError, validate_new_password
+from api_core.authn.views import _email_recipients, _normalized_login_email
 
 
 @override_settings(EAS_LOGIN_MAX_ATTEMPTS=2, EAS_LOGIN_WINDOW_SECONDS=60)
 class AuthenticationEndpointTests(SimpleTestCase):
+    databases: ClassVar[set[str]] = {"default"}
+
+    @override_settings(EAS_EMAIL_TEST_RECIPIENT="")
+    def test_email_recipients_use_actual_recipients_by_default(self):
+        self.assertEqual(_email_recipients(["employee@eas.com"]), ["employee@eas.com"])
+
+    @override_settings(EAS_EMAIL_TEST_RECIPIENT="test-inbox@gmail.com")
+    def test_email_recipients_can_be_redirected_for_local_testing(self):
+        self.assertEqual(
+            _email_recipients(["employee@eas.com"]), ["test-inbox@gmail.com"]
+        )
+
+    @override_settings(EAS_LOGIN_EMAIL_DOMAIN="gmail.com")
+    def test_login_email_domain_can_be_configured_for_gmail_aliases(self):
+        self.assertEqual(
+            _normalized_login_email(" Tester+demo@gmail.com "),
+            "tester+demo@gmail.com",
+        )
+        self.assertEqual(
+            _normalized_login_email(" employee@eas.com "), "employee@eas.com"
+        )
+        self.assertIsNone(_normalized_login_email("employee@example.org"))
+
     def setUp(self):
         cache.clear()
         self.user = AuthUser(
             id=str(uuid4()),
-            username="employee",
+            email="employee@eas.com",
             display_name="Employee",
             department_id=str(uuid4()),
             password_hash=make_password("Correct-Horse-2026", hasher="pbkdf2_sha256"),
@@ -31,7 +57,7 @@ class AuthenticationEndpointTests(SimpleTestCase):
         response = self.client.post(
             "/api/v1/auth/login",
             data=json.dumps(
-                {"username": " Employee ", "password": "Correct-Horse-2026"}
+                {"email": " Employee@EAS.com ", "password": "Correct-Horse-2026"}
             ),
             content_type="application/json",
         )
@@ -46,27 +72,122 @@ class AuthenticationEndpointTests(SimpleTestCase):
         find_user.return_value = None
         invalid = self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps({"username": "unknown", "password": "wrong"}),
+            data=json.dumps({"email": "unknown@eas.com", "password": "wrong"}),
             content_type="application/json",
         )
         self.assertEqual(invalid.status_code, 401)
         self.assertEqual(invalid.json()["error"]["code"], "INVALID_CREDENTIALS")
+
+    @patch("api_core.authn.views._has_active_admin_role", return_value=True)
+    @patch("api_core.authn.views.find_user")
+    def test_admin_portal_uses_grants_not_email(self, find_user, is_admin):
+        find_user.return_value = self.user
+        response = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({
+                "email": self.user.email, "password": "Correct-Horse-2026",
+                "portal": "admin",
+            }),
+            content_type="application/json",
+            HTTP_X_EAS_PORTAL="admin",
+        )
+        self.assertEqual(response.status_code, 200)
+        is_admin.assert_called_once_with(self.user.id)
+        self.assertEqual(self.client.session["user_id"], self.user.id)
+
+    @patch("api_core.authn.views._has_active_admin_role", return_value=True)
+    @patch("api_core.authn.views.find_user")
+    def test_legacy_admin_requester_grant_cannot_login_client(self, find_user, _is_admin):
+        find_user.return_value = self.user
+        response = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({
+                "email": self.user.email, "password": "Correct-Horse-2026",
+                "portal": "client",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["error"]["code"], "ACCESS_DENIED")
+        self.assertNotIn("user_id", self.client.session)
+
+    @patch("api_core.authn.views._has_active_admin_role", return_value=False)
+    @patch("api_core.authn.views.find_user")
+    def test_employee_is_not_allowed_to_login_admin_portal(self, find_user, _is_admin):
+        find_user.return_value = self.user
+        response = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({
+                "email": self.user.email, "password": "Correct-Horse-2026",
+                "portal": "admin",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn("user_id", self.client.session)
+
+    @patch("api_core.authn.views.find_user")
+    def test_portal_header_and_body_mismatch_fails_before_login(self, find_user):
+        response = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({
+                "email": self.user.email, "password": "Correct-Horse-2026",
+                "portal": "client",
+            }),
+            content_type="application/json",
+            HTTP_X_EAS_PORTAL="admin",
+        )
+        self.assertEqual(response.status_code, 400)
+        find_user.assert_not_called()
 
     @patch("api_core.authn.views.find_user", return_value=None)
     def test_login_rate_limit_returns_retry_after(self, _find_user):
         for _ in range(2):
             self.client.post(
                 "/api/v1/auth/login",
-                data=json.dumps({"username": "employee", "password": "wrong"}),
+                data=json.dumps({"email": "employee@eas.com", "password": "wrong"}),
                 content_type="application/json",
             )
         limited = self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps({"username": "employee", "password": "wrong"}),
+            data=json.dumps({"email": "employee@eas.com", "password": "wrong"}),
             content_type="application/json",
         )
         self.assertEqual(limited.status_code, 429)
         self.assertEqual(limited.headers["Retry-After"], "60")
+
+    @override_settings(
+        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+        EAS_LOGIN_MAX_IP_ATTEMPTS=2,
+        EAS_LOGIN_MAX_ATTEMPTS=10,
+    )
+    @patch("api_core.authn.views.find_user", return_value=None)
+    def test_login_rate_limit_uses_client_ip_behind_trusted_proxy(self, _find_user):
+        for _ in range(2):
+            self.client.post(
+                "/api/v1/auth/login",
+                data=json.dumps({"email": "user1@eas.com", "password": "wrong"}),
+                content_type="application/json",
+                REMOTE_ADDR="10.0.0.1",
+                HTTP_X_FORWARDED_FOR="198.51.100.1",
+            )
+        throttled_ip1 = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({"email": "user1@eas.com", "password": "wrong"}),
+            content_type="application/json",
+            REMOTE_ADDR="10.0.0.1",
+            HTTP_X_FORWARDED_FOR="198.51.100.1",
+        )
+        self.assertEqual(throttled_ip1.status_code, 429)
+
+        different_ip = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps({"email": "user2@eas.com", "password": "wrong"}),
+            content_type="application/json",
+            REMOTE_ADDR="10.0.0.1",
+            HTTP_X_FORWARDED_FOR="198.51.100.2",
+        )
+        self.assertEqual(different_ip.status_code, 401)
 
     def test_login_requires_csrf_in_real_client_mode(self):
         client = Client(enforce_csrf_checks=True)
@@ -86,12 +207,139 @@ class AuthenticationEndpointTests(SimpleTestCase):
         )
         self.assertEqual(accepted_by_csrf.status_code, 401)
 
+    @override_settings(
+        EMAIL_HOST="smtp.test",
+        DEFAULT_FROM_EMAIL="EAS Support <mailer@eas.com>",
+        # A developer .env may redirect mail to one inbox; assert real recipients.
+        EAS_EMAIL_TEST_RECIPIENT="",
+    )
+    @patch("api_core.authn.views.send_mail")
+    @patch("api_core.authn.views.connection")
+    def test_password_reset_request_is_queued_and_notifies_global_admins(
+        self, connection, send_mail
+    ):
+        cursor = connection.cursor.return_value.__enter__.return_value
+        cursor.fetchone.side_effect = [
+            (self.user.id, self.user.display_name),
+            None,
+            ("reset-id",),
+        ]
+        cursor.fetchall.return_value = [("ops@eas.com",)]
+        requested = self.client.post(
+            "/api/v1/auth/password-reset/request",
+            data=json.dumps({"email": "EMPLOYEE@EAS.COM"}),
+            content_type="application/json",
+        )
+        self.assertEqual(requested.status_code, 202)
+        send_mail.assert_called_once()
+        self.assertTrue(
+            any(
+                "INSERT INTO eas.password_reset_request" in call.args[0]
+                for call in cursor.execute.call_args_list
+            )
+        )
+        self.assertEqual(send_mail.call_args.kwargs["recipient_list"], ["ops@eas.com"])
+        self.assertIn(self.user.email, send_mail.call_args.kwargs["message"])
+
+    @override_settings(
+        EMAIL_HOST="smtp.test",
+        DEFAULT_FROM_EMAIL="EAS Support <mailer@eas.com>",
+        # A developer .env may redirect mail to one inbox; assert real recipients.
+        EAS_EMAIL_TEST_RECIPIENT="",
+    )
+    @patch("api_core.authn.views.send_mail")
+    @patch("api_core.authn.views.connection")
+    @patch("api_core.authn.service.load_actor_from_session")
+    @patch("api_core.workflow.service._append_admin_audit")
+    def test_global_admin_approval_sends_random_temporary_password_and_forces_change(
+        self, _append_audit, load_actor, connection, send_mail
+    ):
+        admin = Actor(
+            id=str(uuid4()),
+            email="ops@eas.com",
+            display_name="System admin",
+            department_id=self.user.department_id,
+            auth_version=1,
+            roles=frozenset({"OPS_ADMIN"}),
+            must_change_password=False,
+        )
+        load_actor.return_value = admin
+        cursor = connection.cursor.return_value.__enter__.return_value
+        cursor.fetchone.side_effect = [
+            (True,),
+            (
+                self.user.id,
+                self.user.email,
+                self.user.email,
+                self.user.display_name,
+                self.user.department_id,
+                self.user.auth_version,
+            ),
+        ]
+        reset_id = str(uuid4())
+        approved = self.client.post(
+            f"/api/v1/auth/password-reset/requests/{reset_id}/approve",
+            data=json.dumps({"reason": "Identity verified through the HR desk."}),
+            content_type="application/json",
+        )
+        self.assertEqual(approved.status_code, 200)
+        self.assertEqual(approved.json()["status"], "approved")
+        self.assertEqual(
+            send_mail.call_args.kwargs["recipient_list"], [self.user.email]
+        )
+        temporary_password = (
+            send_mail.call_args.kwargs["message"]
+            .split("Mật khẩu tạm thời: ", 1)[1]
+            .splitlines()[0]
+        )
+        self.assertNotEqual(temporary_password, "Password@123456")
+        self.assertEqual(
+            validate_new_password(temporary_password, self.user.email),
+            temporary_password,
+        )
+        self.assertTrue(
+            any(
+                "must_change_password=true" in call.args[0]
+                for call in cursor.execute.call_args_list
+            )
+        )
+
+    @patch("api_core.authn.views.connection")
+    @patch("api_core.authn.service.load_actor_from_session")
+    def test_scoped_ops_admin_cannot_review_password_reset_requests(
+        self, load_actor, connection
+    ):
+        load_actor.return_value = Actor(
+            id=str(uuid4()),
+            email="scoped-ops@eas.com",
+            display_name="Scoped admin",
+            department_id=self.user.department_id,
+            auth_version=1,
+            roles=frozenset({"OPS_ADMIN"}),
+            must_change_password=False,
+        )
+        connection.cursor.return_value.__enter__.return_value.fetchone.return_value = (
+            False,
+        )
+        response = self.client.get("/api/v1/auth/password-reset/requests")
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["error"]["code"], "FORBIDDEN")
+
+    @override_settings(EMAIL_HOST="", DEFAULT_FROM_EMAIL="")
+    def test_password_reset_fails_when_mail_delivery_is_not_configured(self):
+        response = self.client.post(
+            "/api/v1/auth/password-reset/request",
+            data=json.dumps({"email": "employee@eas.com"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 503)
+
     @patch("api_core.authn.views.connection")
     @patch("api_core.authn.service.load_actor_from_session")
     def test_me_returns_only_current_authorized_actor(self, load_actor, connection):
         load_actor.return_value = Actor(
             id=self.user.id,
-            username=self.user.username,
+            email=self.user.email,
             display_name=self.user.display_name,
             department_id=self.user.department_id,
             auth_version=3,
@@ -118,7 +366,9 @@ class AuthenticationEndpointTests(SimpleTestCase):
         find_user.return_value = self.user
         self.client.post(
             "/api/v1/auth/login",
-            data=json.dumps({"username": "employee", "password": "Correct-Horse-2026"}),
+            data=json.dumps(
+                {"email": "employee@eas.com", "password": "Correct-Horse-2026"}
+            ),
             content_type="application/json",
         )
         session_id = self.client.session["session_id"]
@@ -138,7 +388,7 @@ class AuthenticationEndpointTests(SimpleTestCase):
             "/api/v1/auth/login",
             data=json.dumps(
                 {
-                    "username": "employee",
+                    "email": "employee@eas.com",
                     "password": "Correct-Horse-2026",
                 }
             ),
@@ -147,7 +397,7 @@ class AuthenticationEndpointTests(SimpleTestCase):
         session_id = self.client.session["session_id"]
         conn.cursor.return_value.__enter__.return_value.fetchone.return_value = (
             self.user.id,
-            self.user.username,
+            self.user.email,
             self.user.display_name,
             self.user.department_id,
             3,
@@ -161,7 +411,7 @@ class AuthenticationEndpointTests(SimpleTestCase):
         response = self.client.get("/api/v1/auth/me")
         self.assertEqual(response.status_code, 401)
 
-    def test_password_policy_rejects_weak_or_username_derived_values(self):
+    def test_password_policy_rejects_weak_or_email_localpart_derived_values(self):
         for invalid in (
             "short",
             "Abcdefgh1234!",
@@ -170,8 +420,149 @@ class AuthenticationEndpointTests(SimpleTestCase):
             "Password123456!A",
         ):
             with self.subTest(password=invalid), self.assertRaises(PasswordChangeError):
-                validate_new_password(invalid, "employee")
+                validate_new_password(invalid, "employee@eas.com")
         self.assertEqual(
-            validate_new_password("Different-Strong-123!", "employee"),
+            validate_new_password("Different-Strong-123!", "employee@eas.com"),
             "Different-Strong-123!",
         )
+
+
+@override_settings(
+    EAS_LOGIN_MAX_ATTEMPTS=2, EAS_LOGIN_MAX_IP_ATTEMPTS=30, EAS_LOGIN_WINDOW_SECONDS=60
+)
+class CredentialHardeningTests(SimpleTestCase):
+    """vibe-check #1/#10/#16: no source-code default password, constant-work
+    login checks and a throttled current-password oracle."""
+
+    databases: ClassVar[set[str]] = {"default"}
+
+    def setUp(self):
+        cache.clear()
+        self.actor = Actor(
+            id=str(uuid4()),
+            email="employee@eas.com",
+            display_name="Employee",
+            department_id=str(uuid4()),
+            auth_version=1,
+            roles=frozenset({"REQUESTER"}),
+            must_change_password=False,
+        )
+
+    @override_settings(ENVIRONMENT="development")
+    def test_seed_fallback_requires_explicit_dev_password(self):
+        from api_core.authn.service import SEED_PLACEHOLDER_HASHES, verify_user_password
+
+        seed_hash = next(iter(SEED_PLACEHOLDER_HASHES))
+        with patch.dict("os.environ", {}, clear=False) as env:
+            env.pop("EAS_DEV_DEFAULT_PASSWORD", None)
+            self.assertFalse(verify_user_password("Admin@123456", seed_hash))
+        with patch.dict(
+            "os.environ", {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pw-2026!"}
+        ):
+            self.assertTrue(verify_user_password("Local-Only-Pw-2026!", seed_hash))
+            self.assertFalse(verify_user_password("Admin@123456", seed_hash))
+
+    @override_settings(ENVIRONMENT="production")
+    def test_seed_fallback_never_applies_outside_development(self):
+        from api_core.authn.service import SEED_PLACEHOLDER_HASHES, verify_user_password
+
+        seed_hash = next(iter(SEED_PLACEHOLDER_HASHES))
+        with patch.dict(
+            "os.environ", {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pw-2026!"}
+        ):
+            self.assertFalse(verify_user_password("Local-Only-Pw-2026!", seed_hash))
+
+    def test_unknown_account_still_pays_one_password_hash(self):
+        from api_core.authn import service
+
+        with patch.object(service, "check_password", return_value=False) as check:
+            self.assertFalse(service.verify_login_password(None, "whatever"))
+        check.assert_called_once()
+
+    @patch("api_core.authn.views.change_password")
+    @patch("api_core.authn.views.load_actor_from_session")
+    def test_wrong_current_password_is_rate_limited(self, load_actor, change):
+        load_actor.return_value = self.actor
+        change.side_effect = PasswordChangeError("INVALID_CURRENT_PASSWORD")
+        body = json.dumps(
+            {"current_password": "guess", "new_password": "New-Strong-Pass-2026!"}
+        )
+        statuses = [
+            self.client.post(
+                "/api/v1/auth/password", data=body, content_type="application/json"
+            ).status_code
+            for _ in range(3)
+        ]
+        self.assertEqual(statuses, [401, 401, 429])
+        self.assertEqual(change.call_count, 2)
+
+
+class SeedPlaceholderPasswordTests(SimpleTestCase):
+    """Seed placeholder hashes never accept a built-in default password."""
+
+    placeholder = "!UNUSABLE_DEMO_REQUESTER"
+
+    @override_settings(ENVIRONMENT="development")
+    def test_no_default_password_without_env(self):
+        from api_core.authn.service import verify_user_password
+
+        with patch.dict(os.environ, {"EAS_DEV_DEFAULT_PASSWORD": ""}):
+            self.assertFalse(verify_user_password("Admin@123456", self.placeholder))
+            self.assertFalse(verify_user_password("", self.placeholder))
+
+    @override_settings(ENVIRONMENT="development")
+    def test_placeholder_opens_only_with_local_env_password(self):
+        from api_core.authn.service import verify_user_password
+
+        with patch.dict(
+            os.environ, {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pass-2026"}
+        ):
+            self.assertTrue(
+                verify_user_password("Local-Only-Pass-2026", self.placeholder)
+            )
+            self.assertFalse(verify_user_password("Admin@123456", self.placeholder))
+
+    @override_settings(ENVIRONMENT="production")
+    def test_placeholder_never_opens_outside_development(self):
+        from api_core.authn.service import verify_user_password
+
+        with patch.dict(
+            os.environ, {"EAS_DEV_DEFAULT_PASSWORD": "Local-Only-Pass-2026"}
+        ):
+            self.assertFalse(
+                verify_user_password("Local-Only-Pass-2026", self.placeholder)
+            )
+
+
+class SeedPasswordScriptTests(SimpleTestCase):
+    def test_script_has_no_password_and_forces_change(self):
+        from pathlib import Path
+
+        script = (
+            Path(__file__).resolve().parents[2] / "fix_seed_passwords_local.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("Admin@123456", script)
+        self.assertNotIn("pbkdf2_sha256$600000$eas_seed_2026", script)
+        self.assertIn("must_change_password = TRUE", script)
+        self.assertIn('os.getenv("EAS_SEED_PASSWORD"', script)
+
+
+class NoDefaultPasswordTests(SimpleTestCase):
+    """Demo/seed accounts must never accept a built-in password (README_VI.md)."""
+
+    @override_settings(ENVIRONMENT="development")
+    def test_disabled_and_placeholder_hashes_reject_former_default(self):
+        from api_core.authn.service import verify_user_password
+
+        for disabled in (
+            "!UNUSABLE_DEMO_REQUESTER",
+            "pbkdf2_sha256$600000$seed$TempHashForDevOnly00000000000000000000000000000=",
+        ):
+            self.assertFalse(verify_user_password("Admin@123456", disabled), disabled)
+
+    def test_real_hash_still_verifies(self):
+        from api_core.authn.service import verify_user_password
+
+        hashed = make_password("Correct-horse-battery-9")
+        self.assertTrue(verify_user_password("Correct-horse-battery-9", hashed))
+        self.assertFalse(verify_user_password("wrong", hashed))

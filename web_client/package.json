@@ -8,17 +8,21 @@
     "build": "vite build",
     "lint": "eslint src vite.config.js",
     "preview": "vite preview --host 0.0.0.0",
+    "playwright:install": "playwright install --with-deps chromium",
     "e2e": "playwright test",
     "test": "node --test e2e/*.test.mjs",
-    "test:ui": "playwright test --config playwright.ui.config.js"
+    "test:ui": "playwright test --config playwright.ui.config.js",
+    "test:portal": "playwright test --config playwright.portal.config.js",
+    "test:live": "node e2e/live_browser_test.mjs",
+    "test:sweep": "playwright test -c playwright.sweep.config.js"
   },
   "dependencies": {
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
-    "@playwright/test": "^1.64.0",
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.0",
     "@vitejs/plugin-react": "6.1.2",
     "eslint": "9.39.5",
     "eslint-plugin-jsx-a11y": "6.10.2",

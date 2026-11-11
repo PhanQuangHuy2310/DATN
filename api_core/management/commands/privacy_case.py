@@ -45,7 +45,7 @@ class Command(BaseCommand):
             cursor.execute(
                 """
                 SELECT p.id::text, p.subject_user_id::text, p.case_type, p.status,
-                       u.username, u.display_name
+                       u.email, u.display_name
                 FROM eas.privacy_case p
                 JOIN eas.app_user u ON u.id = p.subject_user_id
                 WHERE p.id = %s

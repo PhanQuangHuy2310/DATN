@@ -22,7 +22,7 @@ def _evaluate_type_status(got, life: str) -> str:
     return 'ĐÃ CÔNG BỐ'
 
 def main() -> int:
-    load_environment(ROOT / '.env.database')
+    load_environment(ROOT / '.env')
     try:
         import psycopg
     except ImportError:

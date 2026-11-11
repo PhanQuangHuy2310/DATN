@@ -32,43 +32,51 @@ def list_notifications(actor: Actor, query_params: dict[str, str]) -> dict[str, 
 
     unread_only = query_params.get("unread") in ("true", "1")
 
+    # One PostgreSQL round trip instead of separate COUNT and SELECT calls.
+    # LEFT JOIN LATERAL guarantees one result row (and the unread count) even
+    # when the requested page is empty or offset exceeds the final page.
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT COUNT(*) FROM eas.notification WHERE recipient_id = %s AND read_at IS NULL",
-            [actor.id],
-        )
-        unread_count = cursor.fetchone()[0]
-
-        cursor.execute(
             """
-            SELECT id::text, event_id::text, request_id::text, label, read_at, created_at
-            FROM eas.notification
-            WHERE recipient_id = %s
-              AND (%s::boolean IS FALSE OR read_at IS NULL)
-            ORDER BY created_at DESC, id DESC
-            LIMIT %s OFFSET %s
+            WITH unread AS (
+              SELECT COUNT(*) AS unread_count FROM eas.notification
+              WHERE recipient_id = %s AND read_at IS NULL
+            )
+            SELECT unread.unread_count, n.id::text, n.event_id::text,
+                   n.request_id::text, n.label, n.read_at, n.created_at
+            FROM unread
+            LEFT JOIN LATERAL (
+              SELECT id, event_id, request_id, label, read_at, created_at
+              FROM eas.notification
+              WHERE recipient_id = %s
+                AND (%s::boolean IS FALSE OR read_at IS NULL)
+              ORDER BY created_at DESC, id DESC
+              LIMIT %s OFFSET %s
+            ) n ON TRUE
             """,
-            [actor.id, unread_only, limit + 1, offset],
+            [actor.id, actor.id, unread_only, limit + 1, offset],
         )
         rows = cursor.fetchall()
 
+    unread_count = rows[0][0] if rows else 0
+    valid_rows = [row for row in rows if row[1] is not None]
     items = [
         {
-            "id": row[0],
-            "event_id": row[1],
-            "request_id": row[2],
-            "label": row[3],
-            "read_at": row[4].isoformat() if row[4] else None,
-            "created_at": row[5].isoformat(),
+            "id": row[1],
+            "event_id": row[2],
+            "request_id": row[3],
+            "label": row[4],
+            "read_at": row[5].isoformat() if row[5] else None,
+            "created_at": row[6].isoformat(),
         }
-        for row in rows[:limit]
+        for row in valid_rows[:limit]
     ]
-
     return {
         "items": items,
         "unread_count": unread_count,
-        "next_offset": offset + limit if len(rows) > limit else None,
+        "next_offset": offset + limit if len(valid_rows) > limit else None,
     }
+
 
 
 def mark_notification_read(actor: Actor, notification_id: str) -> dict[str, Any]:
@@ -132,6 +140,10 @@ def get_request_metrics_report(
     if duration.total_seconds() > 366 * 86400:
         raise CommandError("PERIOD_INVALID", status=422)
 
+    scope = (query_params.get("scope") or "").strip() or None
+    if scope not in (None, "mine"):
+        raise CommandError("INVALID_SCOPE", status=422)
+
     type_code_filter = (query_params.get("type_code") or "").strip() or None
     dept_filter = (query_params.get("department_id") or "").strip() or None
 
@@ -143,16 +155,30 @@ def get_request_metrics_report(
             raise CommandError("INVALID_DEPARTMENT_ID", status=400)
 
     sql = """
-        SELECT r.id::text, r.status, r.current_revision_id, r.approved_at
+        SELECT rt.code, rt.name, r.status,
+               COUNT(*)::integer AS total,
+               COUNT(*) FILTER (WHERE r.current_revision_id IS NOT NULL)::integer AS submitted,
+               COUNT(*) FILTER (WHERE r.approved_at IS NOT NULL)::integer AS approved,
+               SUM(EXTRACT(EPOCH FROM (r.completed_at - fs.first_submitted)))
+                 FILTER (WHERE r.status = 'COMPLETED' AND fs.first_submitted IS NOT NULL),
+               COUNT(*) FILTER (WHERE r.status = 'COMPLETED' AND fs.first_submitted IS NOT NULL)::integer,
+               SUM(EXTRACT(EPOCH FROM (r.approved_at - fs.first_submitted)))
+                 FILTER (WHERE r.approved_at IS NOT NULL AND fs.first_submitted IS NOT NULL),
+               COUNT(*) FILTER (WHERE r.approved_at IS NOT NULL AND fs.first_submitted IS NOT NULL)::integer
         FROM eas.request r
         JOIN eas.request_type rt ON rt.id = r.type_id
         JOIN eas.app_user u ON u.id = r.requester_id
         LEFT JOIN eas.request_revision v ON v.id = r.current_revision_id
+        LEFT JOIN LATERAL (
+          SELECT min(fr.submitted_at) AS first_submitted
+          FROM eas.request_revision fr WHERE fr.request_id = r.id
+        ) fs ON true
         WHERE r.status != 'DRAFT'
           AND r.created_at >= %s
           AND r.created_at <= %s
           AND (%s::text IS NULL OR rt.code = %s)
           AND (%s::uuid IS NULL OR COALESCE(v.department_id, u.department_id) = %s::uuid)
+          AND (%s::text IS NULL OR (%s::text = 'mine' AND r.requester_id = %s::uuid))
           AND (
             (r.requester_id = %s)
             OR (
@@ -175,7 +201,7 @@ def get_request_metrics_report(
               )
             )
           )
-        LIMIT 100000
+        GROUP BY rt.code, rt.name, r.status
     """
     params = [
         dt_from,
@@ -184,24 +210,40 @@ def get_request_metrics_report(
         type_code_filter,
         dept_uuid,
         dept_uuid,
+        scope,
+        scope,
+        actor.id,
         actor.id,
         actor.id,
         actor.id,
     ]
 
     with connection.cursor() as cursor:
-        # NOSONAR python:S2077 - query parameterized with psycopg placeholders
-        cursor.execute(sql, params)
+        cursor.execute(  # NOSONAR python:S2077 - query parameterized with psycopg placeholders
+            sql, params
+        )
         rows = cursor.fetchall()
 
-    submitted = sum(1 for row in rows if row[2] is not None)
-    approved = sum(1 for row in rows if row[3] is not None)
-    completed = sum(1 for row in rows if row[1] == "COMPLETED")
+    submitted = sum(row[4] for row in rows)
+    approved = sum(row[5] for row in rows)
+    completed = sum(row[3] for row in rows if row[2] == "COMPLETED")
+
+    # Durations are measured from the first submission (not draft creation)
+    # to final completion / final approval, summed in SQL per group.
+    durations = [0.0, 0, 0.0, 0]
+    for row in rows:
+        for index, value in enumerate(row[6:10]):
+            durations[index] += float(value or 0)
+
+    def average_hours(total_seconds: float, count: float) -> float | None:
+        return round(total_seconds / count / 3600, 1) if count else None
 
     by_status: dict[str, int] = {}
-    for row in rows:
-        st = row[1]
-        by_status[st] = by_status.get(st, 0) + 1
+    by_type: dict[str, dict[str, object]] = {}
+    for code, name, status, count, _sub, _app, *_durations in rows:
+        by_status[status] = by_status.get(status, 0) + count
+        item = by_type.setdefault(code, {"code": code, "name": name, "count": 0})
+        item["count"] += count
 
     approved_rate = round(approved / submitted, 4) if submitted > 0 else None
     completed_rate = round(completed / submitted, 4) if submitted > 0 else None
@@ -214,7 +256,12 @@ def get_request_metrics_report(
             "completed": completed,
             "approved_rate": approved_rate,
             "completed_rate": completed_rate,
+            "avg_completion_hours": average_hours(durations[0], durations[1]),
+            "avg_approval_hours": average_hours(durations[2], durations[3]),
             "by_status": by_status,
+            "top_types": sorted(
+                by_type.values(), key=lambda item: (-item["count"], item["name"])
+            )[:10],
         }
     }
 
@@ -258,36 +305,56 @@ def get_request_audit_events(actor: Actor, request_id: str) -> dict[str, Any]:
 
         cursor.execute(
             """
-            SELECT id::text, request_id::text, seq, actor_id::text, actor_kind,
-                   action, target_type, target_id::text, details, correlation_id::text,
-                   occurred_at, hash_version, prev_hash, hash
-            FROM eas.audit_event
-            WHERE request_id = %s
-            ORDER BY seq ASC
+            SELECT e.id::text, e.request_id::text, e.seq, e.actor_id::text, e.actor_kind,
+                   e.action, e.target_type, e.target_id::text, e.details, e.correlation_id::text,
+                   e.occurred_at, e.hash_version, e.prev_hash, e.hash,
+                   au.display_name
+            FROM eas.audit_event e
+            LEFT JOIN eas.app_user au ON au.id = e.actor_id
+            WHERE e.request_id = %s
+            ORDER BY e.seq ASC
             """,
             [norm_id],
         )
         rows = cursor.fetchall()
 
-    items = [
-        {
+    is_auditor = "AUDITOR" in actor.roles
+    items = []
+    for row in rows:
+        raw_details = row[8] if isinstance(row[8], dict) else {}
+        safe_details = (
+            raw_details
+            if is_auditor
+            else {
+                k: v
+                for k, v in raw_details.items()
+                if k not in {"client_ip", "ip", "user_agent", "session_id"}
+            }
+        )
+        actor_name = (
+            row[14]
+            if len(row) > 14 and row[14]
+            else ("Hệ thống tự động" if row[4] != "USER" else None)
+        )
+        item: dict[str, Any] = {
             "id": row[0],
             "request_id": row[1],
             "seq": row[2],
-            "actor_id": row[3],
+            "actor_id": row[3] if is_auditor else None,
             "actor_kind": row[4],
+            "actor_name": actor_name,
             "action": row[5],
             "target_type": row[6],
-            "target_id": row[7],
-            "details": row[8],
-            "correlation_id": row[9],
+            "target_id": row[7] if is_auditor else None,
+            "details": safe_details,
             "occurred_at": row[10].isoformat(),
-            "hash_version": row[11],
-            "prev_hash": row[12],
-            "hash": row[13],
         }
-        for row in rows
-    ]
+        if is_auditor:
+            item["correlation_id"] = row[9]
+            item["hash_version"] = row[11]
+            item["prev_hash"] = row[12]
+            item["hash"] = row[13]
+        items.append(item)
     return {"items": items}
 
 
@@ -300,22 +367,12 @@ def list_admin_events(actor: Actor, query_params: dict[str, str]) -> dict[str, A
     if not 1 <= limit <= 100 or not 0 <= offset <= 10_000:
         raise CommandError("INVALID_PAGINATION", status=400)
 
+    # Role gate: the view's @require_actor(...) already enforces an active
+    # AUDITOR/POLICY_ADMIN/OPS_ADMIN membership (actor.roles uses the same
+    # validity predicate); the query below scopes rows to that membership.
+    if not actor.roles.intersection({"AUDITOR", "POLICY_ADMIN", "OPS_ADMIN"}):
+        raise CommandError("FORBIDDEN", status=403)
     with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT EXISTS (
-              SELECT 1 FROM eas.role_membership
-              WHERE user_id = %s AND role IN ('AUDITOR', 'POLICY_ADMIN', 'OPS_ADMIN')
-                AND revoked_at IS NULL
-                AND valid_from <= statement_timestamp()
-                AND (valid_to IS NULL OR valid_to > statement_timestamp())
-            )
-            """,
-            [actor.id],
-        )
-        if not cursor.fetchone()[0]:
-            raise CommandError("FORBIDDEN", status=403)
-
         cursor.execute(
             """
             SELECT e.id::text, e.seq, e.actor_id::text, e.actor_kind, e.action,

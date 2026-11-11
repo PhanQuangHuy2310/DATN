@@ -52,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
           const SizedBox(height: 12),
           const Text('Enterprise Approval System', textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 32),
-          TextField(controller: username, decoration: const InputDecoration(labelText: 'Tên đăng nhập', border: OutlineInputBorder()),
+          TextField(controller: username, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
             autofillHints: const [AutofillHints.username]),
           const SizedBox(height: 12),
           TextField(controller: password, obscureText: obscure, onSubmitted: (_) => submit(),
@@ -64,8 +64,7 @@ class _LoginPageState extends State<LoginPage> {
           if (error != null) Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           FilledButton(onPressed: busy ? null : submit, child: Text(busy ? 'Đang đăng nhập…' : 'Đăng nhập')),
         ],
-      )))))))
-  );
+      )))))));
 }
 
 class PasswordPage extends StatefulWidget {

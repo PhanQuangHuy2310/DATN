@@ -10,8 +10,14 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from .plan_constraints import plan_business_errors
-from .routing import ACCEPTOR_SLOTS, APPROVER_SLOTS, EXECUTOR_SLOTS
+from .routing import (
+    ACCEPTOR_SLOTS,
+    APPROVER_SLOTS,
+    EXECUTOR_SLOTS,
+    MONETARY_PAYLOAD_FIELDS,
+)
 
+MAX_AMOUNT_VND = 999_999_999_999
 SCHEMA_ERROR_KEY = "$schema"
 HTML_TAG = re.compile(r"<[^>]+>")
 SUPPORTED_TYPES = {"integer", "string"}
@@ -149,12 +155,36 @@ def _validate_field_value(
         if isinstance(value, bool) or not isinstance(value, int):
             _add(errors, field, "INTEGER_REQUIRED")
             return None, False
+        max_bound = spec.get("maximum", 2**63 - 1)
+        if field in MONETARY_PAYLOAD_FIELDS:
+            max_bound = min(max_bound, MAX_AMOUNT_VND)
         if value < spec.get("minimum", -(2**63)):
             _add(errors, field, "BELOW_MINIMUM")
-        if value > spec.get("maximum", 2**63 - 1):
+        if value > max_bound:
             _add(errors, field, "ABOVE_MAXIMUM")
         return value, True
     return None, False
+
+
+def _handover_user_exists_in_db(user_id: str) -> bool:
+    """Verify handover user exists in eas.app_user when PostgreSQL is active."""
+    try:
+        from django.db import connection
+
+        if getattr(connection, "vendor", None) != "postgresql":
+            return True
+        with connection.cursor() as cur:
+            cur.execute("SELECT to_regclass('eas.app_user') IS NOT NULL")
+            row = cur.fetchone()
+            if not row or not row[0]:
+                return True
+            cur.execute(
+                "SELECT 1 FROM eas.app_user WHERE id = %s::uuid AND is_active",
+                [user_id],
+            )
+            return cur.fetchone() is not None
+    except Exception:  # noqa: BLE001
+        return True
 
 
 def _validate_leave_rules(
@@ -162,6 +192,7 @@ def _validate_leave_rules(
     requester_id: str,
     today: date | None,
     errors: dict[str, list[str]],
+    user_exists: Any = None,
 ) -> None:
     if "start_date" in normalized and "end_date" in normalized:
         try:
@@ -176,15 +207,27 @@ def _validate_leave_rules(
                 _add(errors, "end_date", "RANGE_EXCEEDS_30_DAYS")
         except ValueError:
             pass
-    if "handover_user_id" in normalized:
-        try:
-            normalized_requester_id = str(UUID(requester_id))
-            if normalized.get("handover_user_id") == normalized_requester_id:
-                _add(errors, "handover_user_id", "REQUESTER_CANNOT_BE_HANDOVER")
-        except (ValueError, TypeError, AttributeError):
-            raise PayloadValidationError(
-                {"requester_id": ["INVALID_INTERNAL_ACTOR_ID"]}
-            ) from None
+    for h_field in ("handover_user_id", "handover_to", "backup_user_id"):
+        if h_field in normalized:
+            raw_h = normalized.get(h_field)
+            try:
+                h_uuid = str(UUID(str(raw_h)))
+                normalized[h_field] = h_uuid
+            except (ValueError, TypeError, AttributeError):
+                _add(errors, h_field, "INVALID_UUID")
+                continue
+            try:
+                normalized_requester_id = str(UUID(requester_id))
+                if h_uuid == normalized_requester_id:
+                    _add(errors, h_field, "REQUESTER_CANNOT_BE_HANDOVER")
+                    continue
+            except (ValueError, TypeError, AttributeError):
+                raise PayloadValidationError(
+                    {"requester_id": ["INVALID_INTERNAL_ACTOR_ID"]}
+                ) from None
+            checker = user_exists or _handover_user_exists_in_db
+            if not checker(h_uuid):
+                _add(errors, h_field, "HANDOVER_USER_NOT_FOUND")
 
 
 def _normalize_payload(
@@ -235,7 +278,12 @@ def validate_payload(
 
     normalized = _normalize_payload(payload, properties, errors)
 
-    if type_code in {"LEAVE", "LEAVE_SPECIAL"}:
+    if (
+        type_code in {"LEAVE", "LEAVE_SPECIAL", "LEAVE_ANNUAL", "LEAVE_LONG"}
+        or "handover_user_id" in normalized
+        or "handover_to" in normalized
+        or "backup_user_id" in normalized
+    ):
         _validate_leave_rules(normalized, requester_id, today, errors)
 
     if type_code in {"LEAVE", "ACCESS"} and "amount_vnd" in normalized:
@@ -277,7 +325,12 @@ def validate_draft_payload(
 
     normalized = _normalize_payload(payload, properties, errors)
 
-    if type_code in {"LEAVE", "LEAVE_SPECIAL"}:
+    if (
+        type_code in {"LEAVE", "LEAVE_SPECIAL", "LEAVE_ANNUAL", "LEAVE_LONG"}
+        or "handover_user_id" in normalized
+        or "handover_to" in normalized
+        or "backup_user_id" in normalized
+    ):
         _validate_leave_rules(normalized, requester_id, today, errors)
 
     if type_code in {"LEAVE", "ACCESS"} and "amount_vnd" in normalized:
