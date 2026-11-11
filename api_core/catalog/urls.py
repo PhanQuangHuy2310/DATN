@@ -4,6 +4,7 @@ from api_core.workflow.views import org_chart_view
 
 from .views import (
     colleague_choices,
+    department_options,
     plan_request_type_blueprints,
     request_type_forms,
     request_types,
@@ -14,5 +15,6 @@ urlpatterns = [
     path("request-type-forms", request_type_forms, name="request-type-forms"),
     path("colleagues", colleague_choices, name="colleagues"),
     path("org-chart", org_chart_view, name="org-chart"),
+    path("departments", department_options, name="department-options"),
     path("plan-request-types", plan_request_type_blueprints, name="plan-request-types"),
 ]

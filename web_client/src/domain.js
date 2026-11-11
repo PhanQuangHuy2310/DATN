@@ -557,6 +557,8 @@ const ERROR_MESSAGES = {
   ASSIGNEE_INVALID: "Người được phân công xử lý không hợp lệ hoặc không thuộc phạm vi phụ trách.",
   ROUTE_ACTOR_INACTIVE: "Một nhân sự trong tuyến duyệt hiện đã ngừng hoạt động. Vui lòng báo Quản trị quy chế cập nhật.",
   ROUTE_CONFIGURATION_INVALID: "Tuyến phê duyệt của loại yêu cầu này chưa đủ người phụ trách hợp lệ. Vui lòng liên hệ bộ phận Quản trị quy chế.",
+  ROUTE_SOD_ESCALATION_UNRESOLVED: "Không tìm thấy người quản lý cấp trên đủ quyền thay thế để tránh tự duyệt. Vui lòng liên hệ quản trị để cập nhật sơ đồ tổ chức và quyền phê duyệt.",
+  INVALID_PORTAL: "Yêu cầu đăng nhập không hợp lệ. Vui lòng tải lại trang và thử lại.",
   REQUEST_TYPE_NOT_CONFIGURED: "Loại yêu cầu này hiện chưa có quy trình phê duyệt được công bố.",
   CATALOG_EXPANSION_DISABLED: "Chức năng mở rộng danh mục hiện đang khóa.",
   ATTACHMENT_REQUIRED: "Loại yêu cầu này bắt buộc đính kèm chứng từ / tài liệu hợp lệ trước khi gửi.",

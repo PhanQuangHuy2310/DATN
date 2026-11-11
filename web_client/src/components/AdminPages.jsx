@@ -654,7 +654,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
 
         <div className="admin-kpi-card card-danger">
           <div className="kpi-top">
-            <span className="kpi-title">Bị từ chối (Rejected)</span>
+            <span className="kpi-title">Bị từ chối</span>
             <div className="kpi-icon-wrap icon-red">❌</div>
           </div>
           <div className="kpi-value text-danger">{kpis.rejected_count}</div>
@@ -1057,15 +1057,15 @@ export function SlaNotificationsPage({ navigate }) {
       action={<button type="button" className="secondary" onClick={diag.reload}>Làm mới</button>} />
     <ResourceState resource={diag}>{d && <>
       <div className="ds-stat-grid" style={{ marginBottom: 16 }}>
-        <StatCard title="Bước đang tính hạn" value={d.sla.open_stages} detail="Phê duyệt, thực hiện, nghiệm thu" />
-        <StatCard title="Đã quá hạn" value={d.sla.overdue_stages} tone={d.sla.overdue_stages ? "danger" : undefined} detail="Cần xử lý hoặc điều chuyển" />
-        <StatCard title="Nhắc hạn 24 giờ qua" value={d.sla.alerts_24h.REMINDER || 0} detail={`Báo quá hạn: ${d.sla.alerts_24h.BREACH || 0}`} />
+        <StatCard title="Bước đang tính hạn" value={d.sla?.open_stages ?? 0} detail="Phê duyệt, thực hiện, nghiệm thu" />
+        <StatCard title="Đã quá hạn" value={d.sla?.overdue_stages ?? 0} tone={d.sla?.overdue_stages ? "danger" : undefined} detail="Cần xử lý hoặc điều chuyển" />
+        <StatCard title="Nhắc hạn 24 giờ qua" value={d.sla?.alerts_24h?.REMINDER || 0} detail={`Báo quá hạn: ${d.sla?.alerts_24h?.BREACH || 0}`} />
         <StatCard title="Thông báo gửi lỗi" value={counts.DEAD || 0} tone={counts.DEAD ? "danger" : undefined} detail="Cần gửi lại thủ công" />
       </div>
       <div className="ds-grid-2">
         <section className="panel"><h2>Hàng đợi thông báo</h2>
           <ul className="ds-health-list">{Object.entries(OUTBOX_STATES).map(([k, v]) => <li key={k}><span>{v}</span><strong>{counts[k] || 0}</strong></li>)}</ul>
-          <p className="muted">Lần gửi gần nhất: {d.outbox.last_sent_at ? date(d.outbox.last_sent_at) : "chưa có"}. {d.worker.backlog_ok ? "Không có thông báo tồn đọng quá 5 phút." : `Có thông báo chờ quá ${Math.round(d.outbox.oldest_pending_seconds / 60)} phút — kiểm tra worker (start_worker_local.cmd).`}</p>
+          <p className="muted">Lần gửi gần nhất: {d.outbox?.last_sent_at ? date(d.outbox.last_sent_at) : "chưa có"}. {typeof d.worker?.backlog_ok !== "boolean" ? "Chưa có dữ liệu worker." : d.worker.backlog_ok ? "Không có thông báo tồn đọng quá 5 phút." : `Có thông báo chờ quá ${Math.round((d.outbox?.oldest_pending_seconds || 0) / 60)} phút — kiểm tra worker (start_worker_local.cmd).`}</p>
         </section>
         <section className="panel"><h2>Quá hạn cần xử lý</h2>
           <p className="muted">Danh sách chi tiết người đang xử lý và hạn nằm ở trang vận hành.</p>
@@ -1073,7 +1073,7 @@ export function SlaNotificationsPage({ navigate }) {
         </section>
       </div>
       <section className="panel" style={{ marginTop: 16 }}><h2>Thông báo gửi thất bại</h2>
-        {d.outbox.dead_events.length ? <div className="table-wrap"><table><thead><tr><th>Loại thông báo</th><th>Hồ sơ</th><th>Số lần thử</th><th>Mã lỗi</th><th>Thời điểm</th><th></th></tr></thead>
+        {d.outbox?.dead_events?.length ? <div className="table-wrap"><table><thead><tr><th>Loại thông báo</th><th>Hồ sơ</th><th>Số lần thử</th><th>Mã lỗi</th><th>Thời điểm</th><th></th></tr></thead>
           <tbody>{d.outbox.dead_events.map((e) => <tr key={e.id}><td>{EVENT_TYPES[e.event_type] || "Thông báo hệ thống"}</td><td>{e.request_code || "—"}</td><td>{e.attempts}{e.replay_count ? ` (đã gửi lại ${e.replay_count})` : ""}</td><td>{e.last_error_code || "—"}</td><td>{date(e.created_at)}</td>
             <td><button type="button" className="secondary" onClick={() => setReplay(e)}>Gửi lại</button></td></tr>)}</tbody></table></div>
           : <EmptyState title="Không có thông báo gửi lỗi" description="Mọi thông báo đã được worker xử lý." />}

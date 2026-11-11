@@ -5,7 +5,7 @@ import os
 import re
 import unicodedata
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
@@ -1102,6 +1102,91 @@ def _fetch_submit_config(
     return type_id, lifecycle, release_id, form, rules, bindings, sla
 
 
+def _eligible_sod_superiors(
+    cursor, *, requester_id: str, department_id: str, type_id: str
+) -> tuple[tuple[str, ...], tuple[tuple[str, str], ...]]:
+    """Nearest authorized manager-chain approvers (one SELECT, no mutation).
+
+    Fail closed for inactive accounts, admin-role holders and out-of-scope
+    grants; a missing or cyclic manager chain never grants new permissions.
+    """
+    cursor.execute(
+        """
+        WITH RECURSIVE supervisors (id, manager_id, depth, visited) AS (
+          SELECT m.id, m.manager_id, 1, ARRAY[u.id, m.id]
+          FROM eas.app_user u JOIN eas.app_user m ON m.id = u.manager_id
+          WHERE u.id = %s AND m.id <> u.id
+          UNION ALL
+          SELECT m.id, m.manager_id, s.depth + 1, s.visited || m.id
+          FROM supervisors s JOIN eas.app_user m ON m.id = s.manager_id
+          WHERE s.depth < 20 AND NOT m.id = ANY(s.visited)
+        )
+        SELECT s.id::text, u.is_active,
+          EXISTS (
+            SELECT 1 FROM eas.role_membership rm
+            WHERE rm.user_id = s.id AND rm.role = 'APPROVER'
+              AND rm.revoked_at IS NULL
+              AND rm.valid_from <= statement_timestamp()
+              AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+              AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = %s)
+              AND (rm.type_scope = 'ALL' OR rm.type_id = %s)
+          ) AS may_approve,
+          EXISTS (
+            SELECT 1 FROM eas.role_membership adm
+            WHERE adm.user_id = s.id
+              AND adm.role IN ('OPS_ADMIN', 'POLICY_ADMIN', 'AUDITOR')
+              AND adm.revoked_at IS NULL
+              AND adm.valid_from <= statement_timestamp()
+              AND (adm.valid_to IS NULL OR adm.valid_to > statement_timestamp())
+          ) AS is_admin
+        FROM supervisors s JOIN eas.app_user u ON u.id = s.id
+        ORDER BY s.depth
+        """,
+        [requester_id, department_id, type_id],
+    )
+    valid: list[str] = []
+    skipped: list[tuple[str, str]] = []
+    for candidate_id, active, allowed, is_admin in cursor.fetchall():
+        if not active:
+            skipped.append((candidate_id, "INACTIVE"))
+        elif is_admin:
+            skipped.append((candidate_id, "ADMIN_PORTAL_ONLY"))
+        elif not allowed:
+            skipped.append((candidate_id, "APPROVER_SCOPE_MISSING"))
+        else:
+            valid.append(candidate_id)
+    return tuple(valid), tuple(skipped)
+
+
+def _resolve_route_with_sod(
+    cursor, *, rules, bindings, actor, manager_id, type_id, normalized, amount
+):
+    args = {
+        "route_rules": rules,
+        "actor_bindings": bindings,
+        "department_id": actor.department_id,
+        "requester_id": actor.id,
+        "manager_id": manager_id,
+        "amount_vnd": amount,
+        "payload": normalized,
+    }
+    try:
+        return resolve_route(**args)
+    except RoutingError as exc:
+        if str(exc) != "Requester cannot approve own request":
+            raise
+    candidates, skipped = _eligible_sod_superiors(
+        cursor,
+        requester_id=actor.id,
+        department_id=actor.department_id,
+        type_id=type_id,
+    )
+    if not candidates:
+        raise RoutingError("ROUTE_SOD_ESCALATION_UNRESOLVED")
+    decision = resolve_route(**args, eligible_superiors=candidates)
+    return replace(decision, sod_skipped=(*skipped, *decision.sod_skipped))
+
+
 def _resolve_and_verify_route_actors(
     cursor,
     rules: dict[str, Any],
@@ -1113,18 +1198,19 @@ def _resolve_and_verify_route_actors(
     amount: int | None,
 ):
     try:
-        decision = resolve_route(
-            route_rules=rules,
-            actor_bindings=bindings,
-            department_id=actor.department_id,
-            requester_id=actor.id,
+        decision = _resolve_route_with_sod(
+            cursor,
+            rules=rules,
+            bindings=bindings,
+            actor=actor,
             manager_id=manager_id,
-            amount_vnd=amount,
-            payload=normalized,
+            type_id=type_id,
+            normalized=normalized,
+            amount=amount,
         )
     except RoutingError as exc:
-        # Unresolved role bindings are a configuration conflict, not a 500.
-        # No draft is submitted or workflow instance created.
+        if str(exc) == "ROUTE_SOD_ESCALATION_UNRESOLVED":
+            raise CommandError("ROUTE_SOD_ESCALATION_UNRESOLVED", status=409) from exc
         raise CommandError("ROUTE_CONFIGURATION_INVALID", status=409) from exc
     routed_actors = set(decision.approver_ids)
     if decision.executor_id:
@@ -1141,30 +1227,31 @@ def _resolve_and_verify_route_actors(
     )
     if cursor.fetchone()[0] != len(routed_actors):
         raise CommandError("ROUTE_ACTOR_INACTIVE", status=409)
-    for approver_id in decision.approver_ids:
-        _authorize(
-            cursor,
-            actor_id=approver_id,
-            role="APPROVER",
-            department_id=actor.department_id,
-            type_id=type_id,
-        )
+    # One batch query replaces up to seven separate Supabase round trips.
+    # Preserve exactly the same role, department, type and temporal predicates
+    # as _authorize; the user-active/admin check above remains mandatory.
+    required_grants = {(uid, "APPROVER") for uid in decision.approver_ids}
     if decision.executor_id:
-        _authorize(
-            cursor,
-            actor_id=decision.executor_id,
-            role="EXECUTOR",
-            department_id=actor.department_id,
-            type_id=type_id,
-        )
+        required_grants.add((decision.executor_id, "EXECUTOR"))
     if decision.acceptor_id:
-        _authorize(
-            cursor,
-            actor_id=decision.acceptor_id,
-            role="ACCEPTOR",
-            department_id=actor.department_id,
-            type_id=type_id,
-        )
+        required_grants.add((decision.acceptor_id, "ACCEPTOR"))
+    cursor.execute(
+        """
+        SELECT DISTINCT rm.user_id::text, rm.role::text
+        FROM eas.role_membership rm
+        WHERE rm.user_id = ANY(%s::uuid[])
+          AND rm.role IN ('APPROVER', 'EXECUTOR', 'ACCEPTOR')
+          AND rm.revoked_at IS NULL
+          AND rm.valid_from <= statement_timestamp()
+          AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+          AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = %s)
+          AND (rm.type_scope = 'ALL' OR rm.type_id = %s)
+        """,
+        [sorted(routed_actors), actor.department_id, type_id],
+    )
+    granted = {(str(uid), role) for uid, role in cursor.fetchall()}
+    if not required_grants.issubset(granted):
+        raise CommandError("FORBIDDEN", status=403)
     return decision
 
 
@@ -1583,6 +1670,26 @@ def submit_request(
                 request_id,
             ],
         )
+        for step, original_id, replacement_id in decision.sod_escalations:
+            _append_request_audit(
+                cursor,
+                request_id=request_id,
+                actor_id=actor.id,
+                action="APPROVER_ESCALATED_SOD",
+                target_type="request",
+                target_id=request_id,
+                details={
+                    "step_no": step,
+                    "original_assignee_id": original_id,
+                    "replacement_assignee_id": replacement_id,
+                    "skipped_candidates": [
+                        {"id": uid, "reason": reason}
+                        for uid, reason in decision.sod_skipped
+                    ],
+                },
+                correlation_id=correlation_id,
+                occurred_at=now,
+            )
         _append_request_audit(
             cursor,
             request_id=request_id,

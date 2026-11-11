@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useApiBase } from "../apiBase.js";
+import { canBrowseDepartmentRoster } from "../rolePolicy.js";
 import { CardGridSkeleton } from "./design.jsx";
 import { useResource, ResourceState } from "./ui.jsx";
 
@@ -25,21 +26,28 @@ export default function OrgChart({ navigate, portal = "client", user }) {
   const treeRes = useResource(`${apiBase}/org-chart-tree`);
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [rosterSearch, setRosterSearch] = useState("");
+  const [searchNotice, setSearchNotice] = useState("");
   const [zoom, setZoom] = useState(1);
-  const canOpenUsers =
-    Boolean(navigate) &&
-    (portal === "admin" || Boolean(user?.permissions?.by_module?.users?.can_view));
+  const canSeeAllRosters =
+    portal === "admin" || Boolean(user?.permissions?.by_module?.users?.can_view);
+  const canOpenUsers = Boolean(navigate) && canSeeAllRosters;
   const usersRoute = portal === "admin" ? "users" : "people";
 
   const summary = treeRes.data?.summary || {
-    total_departments: 8,
-    total_employees: 136,
-    working_count: 135,
+    total_departments: 0,
+    total_employees: 0,
+    working_count: 0,
     leave_count: 0,
-    trip_count: 1,
+    trip_count: 0,
   };
 
   const departments = treeRes.data?.departments || [];
+  // Rosters: admins and users-module viewers see every department; a direct
+  // manager sees only their own department; other employees see structure.
+  const isDepartmentManager = !canSeeAllRosters && canBrowseDepartmentRoster(user, departments);
+  const canOpenDepartment = (dept) =>
+    canSeeAllRosters || (isDepartmentManager && String(dept?.id) === String(user?.department_id));
   const bodDept = departments.find((d) => d.code === "BOD") || departments[0];
   const childDepts = departments.filter((d) => d.code !== "BOD");
 
@@ -48,6 +56,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
     if (!searchTerm.trim()) return false;
     const q = searchTerm.toLowerCase();
     const matchName = dept.name?.toLowerCase().includes(q);
+    if (!canOpenDepartment(dept)) return matchName;
     const matchMgr = dept.manager_name?.toLowerCase().includes(q);
     const matchEmp = (dept.employees || []).some(
       (e) => e.full_name?.toLowerCase().includes(q) || e.email?.toLowerCase().includes(q)
@@ -56,8 +65,28 @@ export default function OrgChart({ navigate, portal = "client", user }) {
   };
 
   const handleOpenRoster = (dept) => {
+    if (!canOpenDepartment(dept)) return;
+    setRosterSearch("");
     setSelectedNode(dept);
   };
+
+  const matchesMember = (member, query) =>
+    [member.full_name, member.email].some((value) => String(value || "").toLocaleLowerCase("vi-VN").includes(query));
+  const handleSearchMembers = () => {
+    if (!isDepartmentManager || !searchTerm.trim()) return;
+    const query = searchTerm.trim().toLocaleLowerCase("vi-VN");
+    const department = departments.find((dept) => canOpenDepartment(dept) &&
+      (dept.employees || []).some((member) => matchesMember(member, query)));
+    if (!department) {
+      setSearchNotice("Không tìm thấy thành viên phù hợp trong phòng ban của bạn.");
+      return;
+    }
+    setSearchNotice("");
+    setRosterSearch(query);
+    setSelectedNode(department);
+  };
+  const rosterMembers = (selectedNode?.employees || []).filter((member) =>
+    !rosterSearch || matchesMember(member, rosterSearch));
 
   return (
     <div className="org-chart-workspace">
@@ -122,16 +151,19 @@ export default function OrgChart({ navigate, portal = "client", user }) {
         </div>
 
         <div className="org-chart-tools">
-          <div className="org-search-wrap">
+          <form className="org-search-wrap" role="search" onSubmit={(e) => { e.preventDefault(); handleSearchMembers(); }}>
             <span className="org-search-icon" aria-hidden="true">🔍</span>
             <input
               type="search"
-              placeholder="Tìm kiếm phòng ban, nhân sự, chức danh..."
+              aria-label="Tìm kiếm trong sơ đồ tổ chức"
+              placeholder={canSeeAllRosters ? "Tìm kiếm phòng ban, nhân sự, chức danh..." : isDepartmentManager ? "Tìm phòng ban hoặc nhân viên phòng bạn…" : "Tìm kiếm phòng ban…"}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setSearchNotice(""); }}
               className="org-search-input"
             />
-          </div>
+            {isDepartmentManager && <button type="submit" className="secondary" disabled={!searchTerm.trim()}>Tìm thành viên</button>}
+            {searchNotice && <span className="muted" role="status">{searchNotice}</span>}
+          </form>
 
           <div className="org-zoom-controls">
             <button type="button" onClick={() => setZoom((z) => Math.max(0.6, z - 0.1))} title="Thu nhỏ">
@@ -165,15 +197,15 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                     borderColor: "#3b82f6",
                     minWidth: "320px",
                     padding: "16px 20px",
-                    cursor: "pointer",
+                    cursor: canOpenDepartment(bodDept) ? "pointer" : "default",
                     boxShadow: "0 8px 24px rgba(37, 99, 235, 0.15)",
                     position: "relative",
                   }}
-                  role="button"
-                  tabIndex={0}
+                  role={canOpenDepartment(bodDept) ? "button" : undefined}
+                  tabIndex={canOpenDepartment(bodDept) ? 0 : undefined}
                   onClick={() => handleOpenRoster(bodDept)}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleOpenRoster(bodDept)}
-                  title="Bấm để xem danh sách nhân sự Ban Giám Đốc"
+                  onKeyDown={(e) => { if (canOpenDepartment(bodDept) && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); handleOpenRoster(bodDept); } }}
+                  title={canOpenDepartment(bodDept) ? "Bấm để xem danh sách nhân sự Ban Giám Đốc" : "Thông tin cơ cấu phòng ban"}
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                     <span style={{ fontSize: "1.2rem" }}>🏛️</span>
@@ -187,9 +219,11 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                   <div style={{ fontSize: "12px", color: "#475569", marginTop: "4px" }}>
                     Tổng Giám Đốc: <strong>{bodDept.manager_name || "Chưa bổ nhiệm"}</strong>
                   </div>
-                  <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
-                    Bấm để xem danh sách Ban Lãnh Đạo →
-                  </div>
+                  {canOpenDepartment(bodDept) && (
+                    <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
+                      Bấm để xem danh sách Ban Lãnh Đạo →
+                    </div>
+                  )}
                 </div>
 
                 {/* Vertical Stem connector down to horizontal bus */}
@@ -265,12 +299,13 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                           width: "100%",
                           minWidth: 0,
                           textAlign: "left",
-                          cursor: "pointer",
+                          cursor: canOpenDepartment(dept) ? "pointer" : "default",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.06)",
                           transition: "all 0.2s ease",
                         }}
                         onClick={() => handleOpenRoster(dept)}
-                        title={`Bấm để xem toàn bộ ${dept.employee_count} nhân viên phòng ${dept.name}`}
+                        aria-disabled={!canOpenDepartment(dept)}
+                        title={canOpenDepartment(dept) ? `Bấm để xem toàn bộ ${dept.employee_count} nhân viên phòng ${dept.name}` : "Thông tin cơ cấu phòng ban"}
                       >
                         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px" }}>
                           <span style={{ fontSize: "1.2rem" }}>{colors.icon}</span>
@@ -311,8 +346,8 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                         </div>
 
                         <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12.5px", color: "#475569" }}>
-                          <span>Xem danh sách</span>
-                          <span>→</span>
+                          <span>{canOpenDepartment(dept) ? "Xem danh sách" : "Cơ cấu phòng ban"}</span>
+                          {canOpenDepartment(dept) && <span>→</span>}
                         </div>
                       </button>
                     </div>
@@ -354,13 +389,13 @@ export default function OrgChart({ navigate, portal = "client", user }) {
             </div>
 
             <div className="org-modal-body" style={{ maxHeight: "420px", overflowY: "auto", padding: "16px 20px" }}>
-              {(!selectedNode.employees || selectedNode.employees.length === 0) ? (
+              {rosterMembers.length === 0 ? (
                 <div className="empty muted" style={{ padding: "32px 0", textAlign: "center" }}>
-                  Hiện chưa có nhân sự nào được phân bổ vào phòng ban này.
+                  {rosterSearch ? "Không có thành viên phù hợp." : "Hiện chưa có nhân sự nào được phân bổ vào phòng ban này."}
                 </div>
               ) : (
                 <div className="org-roster-list" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  {selectedNode.employees.map((u) => {
+                  {rosterMembers.map((u) => {
                     const isLeave = u.working_status_code === "NGHI_LAM";
                     const isTrip = u.working_status_code === "CONG_TAC";
                     const isOffHours = u.working_status_code === "NGOAI_GIO";
@@ -483,7 +518,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
               }}
             >
               <span className="muted" style={{ fontSize: "13px" }}>
-                Tổng cộng: <strong>{selectedNode.employees?.length || 0}</strong> nhân sự
+                {rosterSearch ? "Tìm thấy" : "Tổng cộng"}: <strong>{rosterMembers.length}</strong> nhân sự
               </span>
               {canOpenUsers && (
                 <button

@@ -418,6 +418,52 @@ class AdministrativeIdentityExclusionTests(_DbPatchedTestCase):
             "'OPS_ADMIN', 'POLICY_ADMIN', 'AUDITOR'", cursor.execute.call_args.args[0]
         )
 
+    def test_submit_route_checks_all_approver_grants_in_one_batch(self):
+        from api_core.workflow.service import _resolve_and_verify_route_actors
+
+        actor = _actor("REQUESTER")
+        manager = str(uuid4())
+        cursor = MagicMock()
+        cursor.fetchone.return_value = (1,)  # one active non-admin assignee
+        cursor.fetchall.return_value = [(manager, "APPROVER")]
+        rules = {
+            "schema_version": 1,
+            "rules": [{"id": "D", "default": True, "approvers": ["DIRECT_MANAGER"]}],
+            "executor": None,
+            "acceptor": None,
+        }
+        bindings = {"schema_version": 1, "departments": {actor.department_id: {}}}
+        decision = _resolve_and_verify_route_actors(
+            cursor, rules, bindings, actor, manager, str(uuid4()), {}, None
+        )
+        self.assertEqual(decision.approver_ids, (manager,))
+        self.assertEqual(cursor.execute.call_count, 2)
+        self.assertIn(
+            "SELECT DISTINCT rm.user_id::text", cursor.execute.call_args.args[0]
+        )
+
+    def test_submit_route_rejects_out_of_scope_batch_grant(self):
+        from api_core.workflow.service import _resolve_and_verify_route_actors
+
+        actor = _actor("REQUESTER")
+        manager = str(uuid4())
+        cursor = MagicMock()
+        cursor.fetchone.return_value = (1,)
+        cursor.fetchall.return_value = []  # no matching grant in this department/type
+        rules = {
+            "schema_version": 1,
+            "rules": [{"id": "D", "default": True, "approvers": ["DIRECT_MANAGER"]}],
+            "executor": None,
+            "acceptor": None,
+        }
+        bindings = {"schema_version": 1, "departments": {actor.department_id: {}}}
+        with self.assertRaises(CommandError) as raised:
+            _resolve_and_verify_route_actors(
+                cursor, rules, bindings, actor, manager, str(uuid4()), {}, None
+            )
+        self.assertEqual(raised.exception.code, "FORBIDDEN")
+        self.assertEqual(raised.exception.status, 403)
+
     def test_preview_marks_administrative_actor_unauthorized(self):
         actor = _actor("REQUESTER")
         manager = str(uuid4())

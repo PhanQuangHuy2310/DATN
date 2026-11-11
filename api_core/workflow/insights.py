@@ -16,13 +16,13 @@ from uuid import UUID
 from django.db import connection, transaction
 
 from api_core.authn.models import Actor
-from api_core.domain import resolve_route
 from api_core.domain.routing import RoutingError, extract_amount_vnd
 from api_core.workflow.constants import ERR_REQUEST_NOT_FOUND
 from api_core.workflow.service import (
     SQL_LOCK_SECURITY,
     CommandError,
     _append_request_audit,
+    _resolve_route_with_sod,
 )
 
 # Aliases required by READ_SCOPE_SQL: r=request, v=current revision, u=requester.
@@ -278,23 +278,27 @@ def preview_route(actor: Actor, body: dict[str, Any]) -> dict[str, Any]:
             raise CommandError("REQUEST_TYPE_NOT_CONFIGURED", status=409)
         type_id, lifecycle, release_id, rules, bindings, sla, manager_id = config
         try:
-            decision = resolve_route(
-                route_rules=rules,
-                actor_bindings=bindings,
-                department_id=actor.department_id,
-                requester_id=actor.id,
+            decision = _resolve_route_with_sod(
+                cursor,
+                rules=rules,
+                bindings=bindings,
+                actor=actor,
                 manager_id=manager_id,
-                amount_vnd=amount,
-                payload=payload,
+                type_id=type_id,
+                normalized=payload,
+                amount=amount,
             )
-        except RoutingError:
-            # Same outcome submit would report; nothing is persisted.
+        except RoutingError as exc:
             return {
                 "type_code": type_code,
                 "release_id": release_id,
                 "lifecycle": lifecycle,
                 "resolvable": False,
-                "problem": "ROUTE_CONFIGURATION_INVALID",
+                "problem": (
+                    "ROUTE_SOD_ESCALATION_UNRESOLVED"
+                    if str(exc) == "ROUTE_SOD_ESCALATION_UNRESOLVED"
+                    else "ROUTE_CONFIGURATION_INVALID"
+                ),
                 "steps": [],
             }
 
@@ -351,6 +355,9 @@ def preview_route(actor: Actor, body: dict[str, Any]) -> dict[str, Any]:
                 "assignee_id": user_id,
                 "assignee_name": name,
                 "authorized": authorized,
+                "sod_escalated": bool(
+                    level and any(item[0] == level for item in decision.sod_escalations)
+                ),
             }
 
         steps = [

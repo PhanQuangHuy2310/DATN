@@ -70,3 +70,18 @@ export function roleTasks(roles = [], capabilities = {}) {
   const granted = new Set(roles);
   return ROLE_TASKS.filter((task) => granted.has(task.role) && (!["identity", "org-chart", "api-admin"].includes(task.page) || capabilities.identity_manage));
 }
+
+/** True when the user directly manages someone in their own department.
+ * Only shapes the org-chart roster view; the API enforces real access. */
+export function canBrowseDepartmentRoster(user, departments = []) {
+  if (!user?.id || !user?.department_id || !Array.isArray(departments)) return false;
+  return departments.some((department) =>
+    String(department.id) === String(user.department_id) &&
+    Array.isArray(department.employees) &&
+    department.employees.some((employee) =>
+      String(employee.manager_id || "") === String(user.id) &&
+      String(employee.id) !== String(user.id) &&
+      String(employee.department_id || department.id) === String(user.department_id)
+    )
+  );
+}

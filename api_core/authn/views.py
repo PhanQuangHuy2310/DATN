@@ -167,35 +167,60 @@ def _resolve_request_portal(
     return None
 
 
+SYSTEM_ADMIN_ROLES = frozenset({"OPS_ADMIN", "POLICY_ADMIN"})
+ADMIN_PORTAL_ROLES = SYSTEM_ADMIN_ROLES | {"AUDITOR"}
+# Same rule as web_client rolePolicy.canUsePortal: an AUDITOR (migration 19)
+# or a workflow duty keeps employee-portal access; pure system admins do not.
+CLIENT_KEEP_ROLES = frozenset({"AUDITOR", "APPROVER", "EXECUTOR"})
+PORTAL_DENIED_MESSAGES = {
+    "admin": "Tài khoản này không có quyền quản trị. Vui lòng đăng nhập tại Cổng Nhân viên.",
+    "client": "Tài khoản quản trị hệ thống không dùng Cổng Nhân viên. Vui lòng sử dụng Cổng Quản trị.",
+}
+
+
+def _portal_allowed(roles: frozenset[str], portal: str) -> bool:
+    """Portal access comes from active role grants, never from an email."""
+    if portal == "admin":
+        return bool(roles & ADMIN_PORTAL_ROLES)
+    return not roles & SYSTEM_ADMIN_ROLES or bool(roles & CLIENT_KEEP_ROLES)
+
+
+def _active_roles(user_id: str) -> frozenset[str]:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT role::text FROM eas.role_membership
+            WHERE user_id = %s
+              AND revoked_at IS NULL
+              AND valid_from <= statement_timestamp()
+              AND (valid_to IS NULL OR valid_to > statement_timestamp())
+            """,
+            [user_id],
+        )
+        return frozenset(row[0] for row in cursor.fetchall())
+
+
+def _portal_denied(request: HttpRequest, portal: str) -> JsonResponse:
+    message = PORTAL_DENIED_MESSAGES[portal]
+    return api_error(
+        request,
+        "ACCESS_DENIED",
+        status=403,
+        message=message,
+        fields={"portal": [message]},
+    )
+
+
 @require_POST
 def login(request: HttpRequest) -> JsonResponse:
     parsed = _parse_credentials(request)
     if isinstance(parsed, JsonResponse):
         return parsed
     email, password, portal_body = parsed
+    header_portal = request.headers.get("X-EAS-Portal")
+    if header_portal and portal_body and header_portal != portal_body:
+        return api_error(request, "INVALID_PORTAL", status=400)
     portal = _resolve_request_portal(request, portal_body)
-    if portal == "admin" and email != "admin@eas.com":
-        return api_error(
-            request,
-            "ACCESS_DENIED",
-            status=403,
-            fields={
-                "portal": [
-                    "Tài khoản nhân viên không được phép đăng nhập vào Cổng Quản trị. Vui lòng đăng nhập tại Cổng Nhân viên."
-                ]
-            },
-        )
-    if portal == "client" and email == "admin@eas.com":
-        return api_error(
-            request,
-            "ACCESS_DENIED",
-            status=403,
-            fields={
-                "portal": [
-                    "Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên. Vui lòng sử dụng Cổng Quản trị."
-                ]
-            },
-        )
 
     keys = throttle_keys(email, client_ip(request))
     if is_throttled(
@@ -217,6 +242,11 @@ def login(request: HttpRequest) -> JsonResponse:
             cache, keys, window_seconds=settings.EAS_LOGIN_WINDOW_SECONDS
         )
         return api_error(request, "INVALID_CREDENTIALS", status=401)
+
+    # Checked only after the password, so the answer cannot be used to find
+    # privileged accounts. No session is created for the wrong portal.
+    if portal and not _portal_allowed(_active_roles(user.id), portal):
+        return _portal_denied(request, portal)
 
     m_err, m_payload = _check_maintenance_login(request, user.id)
     if m_err:
@@ -907,20 +937,8 @@ def me(request: HttpRequest) -> JsonResponse:
     m_info = get_maintenance_info()
     is_admin = is_admin_actor(actor)
     portal = _resolve_request_portal(request)
-    if portal == "admin" and actor.email != "admin@eas.com" and not is_admin:
-        return api_error(
-            request,
-            "ACCESS_DENIED",
-            status=403,
-            message="Tài khoản nhân viên không được phép truy cập Cổng Quản trị (8081). Vui lòng sử dụng Cổng Nhân viên (8080).",
-        )
-    if portal == "client" and actor.email == "admin@eas.com":
-        return api_error(
-            request,
-            "ACCESS_DENIED",
-            status=403,
-            message="Tài khoản Quản trị viên không được phép truy cập Cổng Nhân viên (8080). Vui lòng sử dụng Cổng Quản trị (8081).",
-        )
+    if portal and not _portal_allowed(actor.roles, portal):
+        return _portal_denied(request, portal)
 
     # UC17 can only be operated by GLOBAL / ALL OPS membership; mere
     # OPS_ADMIN membership is not enough. Backend administration APIs still

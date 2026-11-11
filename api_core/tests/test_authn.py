@@ -78,6 +78,72 @@ class AuthenticationEndpointTests(SimpleTestCase):
         self.assertEqual(invalid.status_code, 401)
         self.assertEqual(invalid.json()["error"]["code"], "INVALID_CREDENTIALS")
 
+    def _portal_login(self, portal, **headers):
+        return self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps(
+                {
+                    "email": self.user.email,
+                    "password": "Correct-Horse-2026",
+                    "portal": portal,
+                }
+            ),
+            content_type="application/json",
+            **headers,
+        )
+
+    @patch("api_core.authn.views.find_user")
+    def test_portal_access_follows_role_grants_not_email(self, find_user):
+        find_user.return_value = self.user
+        cases = [
+            ({"OPS_ADMIN"}, "admin", 200),
+            ({"OPS_ADMIN"}, "client", 403),
+            ({"OPS_ADMIN", "REQUESTER"}, "client", 403),
+            ({"REQUESTER"}, "admin", 403),
+            ({"REQUESTER"}, "client", 200),
+            # Migration 19: an employee AUDITOR works in both portals.
+            ({"REQUESTER", "AUDITOR"}, "client", 200),
+            ({"REQUESTER", "AUDITOR"}, "admin", 200),
+            ({"POLICY_ADMIN", "APPROVER"}, "client", 200),
+        ]
+        for roles, portal, status in cases:
+            with self.subTest(roles=roles, portal=portal):
+                self.client = Client()
+                with patch(
+                    "api_core.authn.views._active_roles",
+                    return_value=frozenset(roles),
+                ) as active_roles:
+                    response = self._portal_login(portal)
+                self.assertEqual(response.status_code, status)
+                active_roles.assert_called_once_with(self.user.id)
+                if status == 403:
+                    self.assertEqual(response.json()["error"]["code"], "ACCESS_DENIED")
+                    self.assertNotIn("user_id", self.client.session)
+
+    @patch("api_core.authn.views._active_roles")
+    @patch("api_core.authn.views.find_user")
+    def test_portal_is_checked_only_after_the_password(self, find_user, active_roles):
+        find_user.return_value = self.user
+        response = self.client.post(
+            "/api/v1/auth/login",
+            data=json.dumps(
+                {
+                    "email": self.user.email,
+                    "password": "wrong",
+                    "portal": "admin",
+                }
+            ),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 401)
+        active_roles.assert_not_called()
+
+    @patch("api_core.authn.views.find_user")
+    def test_portal_header_and_body_mismatch_fails_before_login(self, find_user):
+        response = self._portal_login("client", HTTP_X_EAS_PORTAL="admin")
+        self.assertEqual(response.status_code, 400)
+        find_user.assert_not_called()
+
     @patch("api_core.authn.views.find_user", return_value=None)
     def test_login_rate_limit_returns_retry_after(self, _find_user):
         for _ in range(2):

@@ -111,7 +111,7 @@ else:
             pool={
                 "min_size": int(os.getenv("EAS_DB_POOL_MIN_SIZE", "2")),
                 "max_size": int(os.getenv("EAS_DB_POOL_MAX_SIZE", "10")),
-                "max_idle": 240,
+                "max_idle": 90,  # under the Supabase pooler idle cutoff
                 "timeout": 15,
             },
             keepalives=1,
