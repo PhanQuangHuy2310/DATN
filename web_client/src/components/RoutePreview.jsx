@@ -6,6 +6,7 @@ const ROLE_LABELS = { APPROVER: "Phê duyệt", EXECUTOR: "Thực hiện", ACCEP
 const PROBLEMS = {
   ROUTE_CONFIGURATION_INVALID: "Chưa xác định được người duyệt cho phòng ban của bạn (ví dụ chưa có quản lý trực tiếp). Hãy liên hệ quản trị trước khi gửi.",
   ROUTE_ACTOR_INACTIVE: "Một người trong tuyến chưa được cấp quyền hoặc đã ngừng hoạt động; yêu cầu sẽ không gửi được cho đến khi quản trị cập nhật.",
+  ROUTE_SOD_ESCALATION_UNRESOLVED: "Không tìm thấy người quản lý cấp trên đủ quyền thay thế để tránh tự duyệt. Hãy liên hệ quản trị để cập nhật sơ đồ tổ chức và quyền phê duyệt.",
 };
 
 function previewPayload(values) {
@@ -60,7 +61,7 @@ export default function RoutePreview({ type, getValues }) {
         {preview.steps.map((step, index) => <li key={`${step.role}-${index}`} className={step.authorized ? "" : "route-step-invalid"}>
           <span className="route-step-tag">{step.level ? `Cấp ${step.level}` : ROLE_LABELS[step.role]}</span>
           <strong>{step.assignee_name || "Chưa xác định"}</strong>
-          <small className="muted">{resolverLabels[step.resolver_code] || ROLE_LABELS[step.role]}{!step.authorized ? " · chưa đủ quyền" : ""}</small>
+          <small className="muted">{resolverLabels[step.resolver_code] || ROLE_LABELS[step.role]}{step.sod_escalated ? " · Đã chuyển cấp để tránh tự duyệt" : ""}{!step.authorized ? " · chưa đủ quyền" : ""}</small>
         </li>)}
       </ol>}
       {preview.sla_hours?.approval && <p className="muted">Thời hạn phê duyệt mỗi cấp: {preview.sla_hours.approval} giờ{preview.sla_hours.execution ? ` · thực hiện ${preview.sla_hours.execution} giờ` : ""}{preview.sla_hours.acceptance ? ` · nghiệm thu ${preview.sla_hours.acceptance} giờ` : ""}.</p>}

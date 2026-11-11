@@ -60,6 +60,11 @@ def parse_database_url(url: str) -> dict[str, object]:
                     os.getenv("EAS_DB_CONNECT_TIMEOUT_SECONDS", "5")
                 ),
                 "prepare_threshold": None,
+                # Keep reused Supabase TLS sockets alive across idle periods.
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 3,
                 "options": f"-c statement_timeout={int(os.getenv('EAS_DB_STATEMENT_TIMEOUT_MS', '20000'))} -c lock_timeout=5000",
             },
         }

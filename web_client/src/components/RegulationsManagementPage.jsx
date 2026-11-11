@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Icon from "./Icon.jsx";
 import { useApiBase } from "../apiBase.js";
 import { usePermission } from "../hooks/usePermission.jsx";
 import { api } from "../api.js";
@@ -35,6 +36,7 @@ export function RegulationsManagementPage() {
   const [viewingRegulation, setViewingRegulation] = useState(null);
   const [deletingRegulation, setDeletingRegulation] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // Form inputs
   const [formCode, setFormCode] = useState("");
@@ -57,11 +59,20 @@ export function RegulationsManagementPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
+<<<<<<< HEAD
+    loadData();
+    // Keep regulations reasonably fresh without calling the endpoint every
+    // 2.5 seconds on idle/background tabs (each call counts toward 429).
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void loadData(true);
+    }, 30000);
+=======
     void loadData();
     // Auto-refresh periodically if AI is currently syncing/learning
     const timer = setInterval(() => {
       void loadData(true);
     }, 2500);
+>>>>>>> origin/main
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -87,14 +98,17 @@ export function RegulationsManagementPage() {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!formTitle.trim() || !formContent.trim()) {
       showToast("Vui lòng nhập đầy đủ tiêu đề và nội dung quy định", "warning");
       return;
     }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const res = await api(`${apiBase}/regulations`, {
         method: "POST",
+        toast: false,
         body: JSON.stringify({
           code: formCode.trim(),
           title: formTitle.trim(),
@@ -108,20 +122,24 @@ export function RegulationsManagementPage() {
     } catch (err) {
       showToast("Lỗi khi thêm quy định: " + errorText(err), "error");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!formTitle.trim() || !formContent.trim()) {
       showToast("Vui lòng nhập đầy đủ tiêu đề và nội dung quy định", "warning");
       return;
     }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const res = await api(`${apiBase}/regulations/${editingRegulation.id}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify({
           title: formTitle.trim(),
           category: formCategory,
@@ -135,16 +153,19 @@ export function RegulationsManagementPage() {
     } catch (err) {
       showToast("Lỗi khi cập nhật quy định: " + errorText(err), "error");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const handleDeleteSubmit = async () => {
-    if (!deletingRegulation) return;
+    if (!deletingRegulation || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const res = await api(`${apiBase}/regulations/${deletingRegulation.id}`, {
         method: "DELETE",
+      toast: false,
       });
       showToast(res.message || "Đã gỡ bỏ quy định và nâng phiên bản lớn!", "success");
       setDeletingRegulation(null);
@@ -152,6 +173,7 @@ export function RegulationsManagementPage() {
     } catch (err) {
       showToast("Lỗi khi xóa quy định: " + errorText(err), "error");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -193,8 +215,8 @@ export function RegulationsManagementPage() {
     <div className="page-container regulations-page">
       <PageHeader
         eyebrow="TRI THỨC & AI"
-        title="Quy định công ty & Semantic Versioning"
-        description="Quản lý bộ quy định nghiệp vụ, tự động đánh số phiên bản Semantic (Major/Minor) và đồng bộ tri thức sang AI Engine."
+        title="Quy định công ty"
+        description="Quản lý bộ quy định nghiệp vụ; mỗi lần thay đổi được đánh số phiên bản và đồng bộ cho dịch vụ AI."
       />
 
       {/* Top Meta Cards */}
@@ -246,7 +268,7 @@ export function RegulationsManagementPage() {
       {/* Live AI Training Alert Banner */}
       {isSyncing && (
         <div className="ai-training-banner">
-          <div className="ai-training-banner-icon">🤖</div>
+          <div className="ai-training-banner-icon"><Icon name="spark" size={14} /></div>
           <div className="ai-training-banner-content">
             <strong>AI Engine đang trong quá trình học và cập nhật quy định ({targetVersion})</strong>
             <p>
@@ -267,7 +289,7 @@ export function RegulationsManagementPage() {
       <div className="regulations-toolbar">
         <div className="regulations-search-group">
           <div className="search-input-wrapper">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><Icon name="search" size={14} /></span>
             <input
               type="text"
               placeholder="Tìm kiếm theo mã, tiêu đề, nội dung quy định..."
@@ -306,7 +328,7 @@ export function RegulationsManagementPage() {
           </div>
         ) : filteredRegulations.length === 0 ? (
           <div className="eas-empty-state">
-            <span className="empty-icon">📋</span>
+            <span className="empty-icon"><Icon name="file" size={14} /></span>
             <p>Không tìm thấy quy định nào phù hợp với bộ lọc.</p>
           </div>
         ) : (
@@ -323,29 +345,29 @@ export function RegulationsManagementPage() {
                     <button
                       type="button"
                       className="btn-action btn-view"
-                      title="Xem chi tiết & Lịch sử phiên bản"
+                      title="Xem chi tiết và lịch sử phiên bản"
                       onClick={() => openViewModal(reg)}
                     >
-                      👁 Xem
+                      <Icon name="eye" size={14} /> Xem
                     </button>
                     {canUpdate && (
                       <button
                         type="button"
                         className="btn-action btn-edit"
-                        title="Chỉnh sửa (Tăng Minor Version)"
+                        title="Chỉnh sửa (tăng phiên bản nhỏ)"
                         onClick={() => openEditModal(reg)}
                       >
-                        ✎ Sửa
+                        <Icon name="edit" size={14} /> Sửa
                       </button>
                     )}
                     {canDelete && (
                       <button
                         type="button"
                         className="btn-action btn-delete"
-                        title="Xóa quy định (Tăng Major Version)"
+                        title="Xóa quy định (tăng phiên bản lớn)"
                         onClick={() => setDeletingRegulation(reg)}
                       >
-                        ✕ Xóa
+                        <Icon name="x" size={16} /> Xóa
                       </button>
                     )}
                   </div>
@@ -356,7 +378,7 @@ export function RegulationsManagementPage() {
 
                 <div className="regulation-card-footer">
                   <span className="reg-updated-at">
-                    🕒 Cập nhật: {reg.updated_at ? new Date(reg.updated_at).toLocaleString("vi-VN") : "Ban đầu"}
+                    <Icon name="clock" size={14} /> Cập nhật: {reg.updated_at ? new Date(reg.updated_at).toLocaleString("vi-VN") : "Ban đầu"}
                   </span>
                   <span className="reg-policy-version-badge">
                     Mã phiên bản: <strong>{reg.version_string ? `v${reg.version_string}` : "v1.0"}</strong>
@@ -370,15 +392,15 @@ export function RegulationsManagementPage() {
 
       {/* Semantic Versioning Rules Card Info */}
       <div className="versioning-rules-notice-box">
-        <div className="notice-icon">💡</div>
+        <div className="notice-icon"><Icon name="info" size={14} /></div>
         <div className="notice-body">
-          <h4>Quy tắc đánh số phiên bản tự động (Semantic Versioning):</h4>
+          <h4>Quy tắc đánh số phiên bản tự động:</h4>
           <ul>
             <li>
-              <strong>Sửa nội dung điều khoản hiện có:</strong> Tự động tăng <strong>Phiên bản nhỏ (Minor Version)</strong> (Ví dụ: từ <code>{activeVersion}</code> lên <code>v{aiState?.global_major_version || 1}.{(aiState?.global_minor_version || 0) + 1}</code>).
+              <strong>Sửa nội dung điều khoản hiện có:</strong> Tự động tăng <strong>Phiên bản nhỏ</strong> (Ví dụ: từ <code>{activeVersion}</code> lên <code>v{aiState?.global_major_version || 1}.{(aiState?.global_minor_version || 0) + 1}</code>).
             </li>
             <li>
-              <strong>Thêm mới hoặc Xóa điều khoản:</strong> Tự động tăng <strong>Phiên bản lớn (Major Version)</strong> (Ví dụ: từ <code>{activeVersion}</code> lên <code>v{(aiState?.global_major_version || 1) + 1}.0</code>).
+              <strong>Thêm mới hoặc Xóa điều khoản:</strong> Tự động tăng <strong>Phiên bản lớn</strong> (Ví dụ: từ <code>{activeVersion}</code> lên <code>v{(aiState?.global_major_version || 1) + 1}.0</code>).
             </li>
             <li>
               <strong>Tự động học AI:</strong> Mọi thao tác Thêm / Sửa / Xóa đều kích hoạt luồng đồng bộ sang AI Service và tạm khóa Web Client trong ít giây cho tới khi hoàn tất.
@@ -396,15 +418,16 @@ export function RegulationsManagementPage() {
               <button
                 type="button"
                 className="eas-modal-close"
-                onClick={() => setShowCreateModal(false)}
+                aria-label="Đóng"
+                onClick={() => !submitting && setShowCreateModal(false)}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 
             <form onSubmit={handleCreateSubmit} className="eas-modal-form">
               <div className="version-bump-alert major">
-                <span className="alert-icon">⚡</span>
+                <span className="alert-icon"><Icon name="bolt" size={14} /></span>
                 <div className="alert-text">
                   <strong>Thao tác này sẽ tăng Major Version:</strong> Hệ thống sẽ nâng phiên bản từ <strong>{activeVersion}</strong> lên <strong>v{(aiState?.global_major_version || 1) + 1}.0</strong> và đẩy AI Service học lại.
                 </div>
@@ -465,7 +488,7 @@ export function RegulationsManagementPage() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => !submitting && setShowCreateModal(false)}
                 >
                   Hủy bỏ
                 </button>
@@ -487,15 +510,16 @@ export function RegulationsManagementPage() {
               <button
                 type="button"
                 className="eas-modal-close"
-                onClick={() => setEditingRegulation(null)}
+                aria-label="Đóng"
+                onClick={() => !submitting && setEditingRegulation(null)}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 
             <form onSubmit={handleEditSubmit} className="eas-modal-form">
               <div className="version-bump-alert minor">
-                <span className="alert-icon">📝</span>
+                <span className="alert-icon"><Icon name="edit" size={14} /></span>
                 <div className="alert-text">
                   <strong>Thao tác chỉnh sửa sẽ tăng Minor Version:</strong> Hệ thống sẽ nâng phiên bản từ <strong>{activeVersion}</strong> lên <strong>v{aiState?.global_major_version || 1}.{(aiState?.global_minor_version || 0) + 1}</strong>.
                 </div>
@@ -550,7 +574,7 @@ export function RegulationsManagementPage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="regulationsmanagementpage-field-530">Tóm tắt nội dung thay đổi (Changelog):</label>
+                <label htmlFor="regulationsmanagementpage-field-530">Tóm tắt nội dung thay đổi:</label>
                 <input id="regulationsmanagementpage-field-530"
                   type="text"
                   className="eas-input"
@@ -564,7 +588,7 @@ export function RegulationsManagementPage() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setEditingRegulation(null)}
+                  onClick={() => !submitting && setEditingRegulation(null)}
                 >
                   Hủy bỏ
                 </button>
@@ -588,15 +612,16 @@ export function RegulationsManagementPage() {
               <button
                 type="button"
                 className="eas-modal-close"
-                onClick={() => setDeletingRegulation(null)}
+                aria-label="Đóng"
+                onClick={() => !submitting && setDeletingRegulation(null)}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 
             <div className="eas-modal-body">
               <div className="version-bump-alert major">
-                <span className="alert-icon">🚨</span>
+                <span className="alert-icon"><Icon name="alert" size={14} /></span>
                 <div className="alert-text">
                   <strong>Xóa điều khoản sẽ tăng Major Version:</strong> Nâng phiên bản hệ thống lên <strong>v{(aiState?.global_major_version || 1) + 1}.0</strong> và đẩy AI Service học lại.
                 </div>
@@ -616,7 +641,7 @@ export function RegulationsManagementPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => setDeletingRegulation(null)}
+                onClick={() => !submitting && setDeletingRegulation(null)}
               >
                 Hủy bỏ
               </button>
@@ -645,9 +670,10 @@ export function RegulationsManagementPage() {
               <button
                 type="button"
                 className="eas-modal-close"
+                aria-label="Đóng"
                 onClick={() => setViewingRegulation(null)}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 

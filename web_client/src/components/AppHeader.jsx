@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import Icon from "./Icon.jsx";
 import { api } from "../api.js";
 import { date, types } from "../domain.js";
 import { Badge, useResource } from "./ui.jsx";
 import { useDebounced } from "./design.jsx";
-import { formatNotificationLabel } from "./NotificationsPage.jsx";
+import { formatNotificationLabel } from "./notificationLabels.js";
 
 function useDismiss(open, setOpen) {
   const ref = useRef(null);
@@ -74,7 +75,7 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
       <label htmlFor="ds-global-search" className="sr-only">
         Tìm nhanh chức năng, tiêu đề đơn, người gửi hoặc mã hồ sơ
       </label>
-      <span aria-hidden="true">⌕</span>
+      <span aria-hidden="true"><Icon name="search" size={16} /></span>
       <input
         id="ds-global-search"
         type="search"

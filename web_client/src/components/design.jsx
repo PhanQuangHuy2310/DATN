@@ -1,5 +1,6 @@
 /** Shared design-system primitives for both portals (see design-system.css). */
 import { useEffect, useRef, useState } from "react";
+import Icon from "./Icon.jsx";
 import { date } from "../domain.js";
 import { ActionForm, Badge } from "./ui.jsx";
 
@@ -170,23 +171,42 @@ export function ConfirmDialog({
   children,
 }) {
   const ref = useRef(null);
+  const pendingRef = useRef(false);
+  const [pending, setPending] = useState(false);
   useEffect(() => {
     const el = ref.current;
     el.showModal();
     return () => el.close();
   }, []);
+  function safeClose() {
+    if (!pendingRef.current) onClose();
+  }
+  async function confirm(values) {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
+    setPending(true);
+    try {
+      const result = await onConfirm(values);
+      if (result === false) throw new Error("Thao tác chưa được xác nhận thành công.");
+      onClose(); // Only navigate/close once the server has confirmed success.
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
+    }
+  }
   const effectiveWarning =
     danger && !warningNote
       ? "Lưu ý: Thao tác này không thể hoàn tác sau khi xác nhận."
       : warningNote;
   return (
-    <dialog ref={ref} onCancel={onClose} aria-label={title} className="ds-confirm">
+    <dialog ref={ref} onCancel={(e) => { if (pendingRef.current) e.preventDefault(); else safeClose(); }} aria-label={title} className="ds-confirm" aria-busy={pending}>
       <div className="section-head">
         <h2>{title}</h2>
         <button
           type="button"
           className="secondary"
-          onClick={onClose}
+          onClick={safeClose}
+          disabled={pending}
           aria-label="Đóng hộp thoại"
         >
           ×
@@ -197,11 +217,11 @@ export function ConfirmDialog({
         submitLabel={confirmLabel}
         danger={danger}
         warningNote={effectiveWarning}
-        onSubmit={onConfirm}
+        onSubmit={confirm}
       >
         {children}
       </ActionForm>
-      <button type="button" className="secondary ds-confirm-cancel" onClick={onClose}>
+      <button type="button" className="secondary ds-confirm-cancel" onClick={safeClose} disabled={pending}>
         Hủy
       </button>
     </dialog>
@@ -216,7 +236,7 @@ export function WorkflowTimeline({ items }) {
         <li key={item.key} className={`ds-timeline-item is-${item.state || "upcoming"}`}>
           <span className="ds-timeline-dot" aria-hidden="true">
             {item.state === "done"
-              ? "✓"
+              ? ""
               : item.state === "failed"
                 ? "!"
                 : item.state === "skipped"
@@ -238,7 +258,7 @@ export function SearchInput({ value, onChange, placeholder, label = "Tìm kiếm
   return (
     <label className="ds-search">
       <span className="sr-only">{label}</span>
-      <span aria-hidden="true">⌕</span>
+      <span aria-hidden="true"><Icon name="search" size={16} /></span>
       <input
         type="search"
         value={value}

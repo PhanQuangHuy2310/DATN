@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import Icon from "./Icon.jsx";
 import { FLOW_DIAGRAMS, relevantDiagrams, resolveLifecycle } from "../flowDiagrams.js";
 import "../workflow-diagrams.css";
 
@@ -45,7 +46,7 @@ function ImageViewer({ diagram, onClose }) {
             <span className="flow-zoom-level" aria-live="polite">{zoom}%</span>
             <button className="secondary" type="button" aria-label="Phóng to" disabled={zoom >= 200} onClick={() => setZoom((n) => Math.min(200, n + 20))}>+</button>
             <a href={diagram.src} download={`EAS-${diagram.id}.webp`} className="flow-download">Tải ảnh</a>
-            <button ref={closeRef} className="secondary" type="button" aria-label="Đóng sơ đồ" onClick={onClose}>✕</button>
+            <button ref={closeRef} className="secondary" type="button" aria-label="Đóng sơ đồ" onClick={onClose}><Icon name="x" size={16} /></button>
           </div>
         </header>
         <div className="flow-lightbox-scroll">
@@ -120,7 +121,7 @@ export default function WorkflowDiagrams({ request = null, lifecycle = null, emb
             <button className="flow-preview-image" type="button" aria-label={`Phóng to ${selected.title}`} onClick={() => setFullscreen(true)}><img src={selected.src} alt={`Sơ đồ ${selected.title}`} /></button>
             <p className="flow-disclaimer">Sơ đồ dùng để tham khảo trình tự xử lý. Trạng thái, số cấp duyệt và quyền thao tác thực tế được xác định từ hồ sơ và quy chế đã công bố.</p>
             <div className="flow-viewer-actions">
-              <button type="button" onClick={() => setFullscreen(true)}>⛶ Xem toàn màn hình</button>
+              <button type="button" onClick={() => setFullscreen(true)}><Icon name="expand" size={14} /> Xem toàn màn hình</button>
               <a className="flow-download" href={selected.src} download={`EAS-${selected.id}.webp`}>↓ Tải ảnh</a>
             </div>
           </aside>}

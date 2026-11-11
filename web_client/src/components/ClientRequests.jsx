@@ -54,7 +54,7 @@ function RequestEntry({ item, onOpen, names }) {
             item.overdue ? "client-request-due overdue" : "client-request-due"
           }
         >
-          {item.overdue ? "⚠ Quá hạn: " : "Hạn xử lý: "}
+          {item.overdue ? "Quá hạn: " : "Hạn xử lý: "}
           {date(item.due_at)}
         </p>
       )}
@@ -82,7 +82,7 @@ export default function ClientRequests({
       ? initialStage
       : stages[0]?.key || "mine",
   );
-  const [mode, setMode] = useState("kanban");
+  const [mode, setMode] = useState("table");
   const [search, setSearch] = useState(initialQuery);
   const [debounced, setDebounced] = useState(initialQuery);
   const [type, setType] = useState("");
@@ -90,7 +90,8 @@ export default function ClientRequests({
   const [status, setStatus] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [sort, setSort] = useState("newest");
+  // Work queues open with the most urgent items first; "Yêu cầu của tôi" by recency.
+  const [sort, setSort] = useState(initialStage === "mine" ? "newest" : "urgent");
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
   const [prevQuery, setPrevQuery] = useState(initialQuery);
@@ -127,8 +128,8 @@ export default function ClientRequests({
     `/api/v1/requests?${params.toString()}&_revision=${revision}`,
   );
   const catalog = useResource("/api/v1/request-types");
-  const orgMeta = useResource("/api/v1/meta/org-chart");
-  const departments = orgMeta.data?.departments || [];
+  const departmentOptions = useResource("/api/v1/meta/departments");
+  const departments = departmentOptions.data?.items || [];
   const names = Object.fromEntries(
     (catalog.data?.items || []).map((item) => [item.code, item.name]),
   );
@@ -136,6 +137,13 @@ export default function ClientRequests({
   const rows = useMemo(() => {
     const items = [...(result.data?.items || [])];
     items.sort((a, b) => {
+      if (sort === "urgent") {
+        // Overdue first, then nearest due date; items without a deadline last.
+        if (Boolean(a.overdue) !== Boolean(b.overdue)) return a.overdue ? -1 : 1;
+        const dueA = Date.parse(a.due_at) || Infinity;
+        const dueB = Date.parse(b.due_at) || Infinity;
+        if (dueA !== dueB) return dueA - dueB;
+      }
       const da =
         Date.parse(
           sort === "oldest"
@@ -204,10 +212,12 @@ export default function ClientRequests({
         ))}
       </nav>
       <ClientFilterSection
+        advanced
+        activeAdvancedCount={Number(Boolean(departmentId)) + Number(Boolean(status)) + Number(Boolean(from)) + Number(Boolean(to)) + Number(sort !== (stage === "mine" ? "newest" : "urgent"))}
         footer={
           <>
-            <small className="muted">
-              {active?.help || "Danh sách hồ sơ theo quyền được cấp"} · Đang hiển thị{" "}
+            <small className="muted client-result-summary" aria-live="polite">
+              {active?.help || "Danh sách hồ sơ theo quyền được cấp"} · Hiển thị{" "}
               <strong>{rows.length}</strong> hồ sơ
             </small>
             <div className="actions">
@@ -333,6 +343,7 @@ export default function ClientRequests({
         <label>
           Sắp xếp
           <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="urgent">Ưu tiên xử lý (quá hạn, sắp đến hạn)</option>
             <option value="newest">Cập nhật mới nhất</option>
             <option value="oldest">Ngày tạo cũ trước</option>
           </select>

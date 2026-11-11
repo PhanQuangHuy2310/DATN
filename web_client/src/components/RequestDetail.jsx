@@ -1,11 +1,12 @@
 import FullHistory from "./FullHistory.jsx";
+import Icon from "./Icon.jsx";
 import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { AiSummary } from "./AiAssist.jsx";
 import { AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
 import { DetailSkeleton, EmptyState, PageTabs, WorkflowTimeline } from "./design.jsx";
 import { requestActionPayload } from "../actionPayload.js";
-import { useState } from "react";
-import { api, API_BASE } from "../api.js";
+import { useRef, useState } from "react";
+import { api, API_BASE, idempotencyKey } from "../api.js";
 import {
   date,
   fields,
@@ -181,7 +182,7 @@ function ActivityLog({ id, userId }) {
             return (
               <li key={event.id} className="ds-timeline-item is-done">
                 <span className="ds-timeline-dot" aria-hidden="true">
-                  ✓
+                  <Icon name="check" size={14} />
                 </span>
                 <div className="ds-timeline-body">
                   <strong>{ACTION_LABELS[event.action] || "Cập nhật trạng thái hồ sơ"}</strong>
@@ -493,10 +494,22 @@ export default function RequestDetail({
     [tab, setTab] = useState(initialTab),
     [action, setAction] = useState(null),
     [verify, setVerify] = useState(null);
+  const actionKeys = useRef(new Map());
+  const uploadedEvidenceRef = useRef(null);
+  const evidenceUploadKeys = useRef(new Map());
+  const [evidenceReceipt, setEvidenceReceipt] = useState(null);
   const r = resource.data?.request,
     p = r ? permissions(user, r) : {};
 
+  function actionKey(suffix) {
+    const key = `${id}:${r?.lock_version}:${action}:${suffix}`;
+    if (!actionKeys.current.has(key)) actionKeys.current.set(key, idempotencyKey());
+    return actionKeys.current.get(key);
+  }
+
   async function done() {
+    uploadedEvidenceRef.current = null;
+    setEvidenceReceipt(null);
     setAction(null);
     resource.reload();
     onChanged();
@@ -519,25 +532,45 @@ export default function RequestDetail({
     await command(
       `requests/${id}/${path}`,
       requestActionPayload(action, r.lock_version, values),
+      "POST",
+      actionKey("decision"),
     );
     await done();
   }
 
   async function execute(values) {
     const file = values.evidence;
-    if (file?.size) {
+    if (!file?.size) throw new Error("Hãy chọn tệp minh chứng PDF, JPG hoặc PNG trước khi nộp kết quả.");
+    if (file.size > 10 * 1024 * 1024) throw new Error("Minh chứng vượt 10 MB. Vui lòng chọn tệp nhỏ hơn.");
+    if (file.name.length > 150) throw new Error("Tên tệp minh chứng quá dài (tối đa 150 ký tự).");
+    if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
+      throw new Error("Chỉ hỗ trợ tệp PDF, JPG hoặc PNG.");
+    }
+    // Persist the receipt across a failed submit. Retrying the same file must
+    // not upload another attachment or create multiple execution records.
+    const fingerprint = [file.name, file.size, file.lastModified, file.type].join(":");
+    if (uploadedEvidenceRef.current?.fingerprint !== fingerprint) {
+      setEvidenceReceipt(null);
       const body = new FormData();
       body.append("file", file);
-      await api(`/api/v1/requests/${id}/execution/attachments`, {
+      if (!evidenceUploadKeys.current.has(fingerprint)) evidenceUploadKeys.current.set(fingerprint, idempotencyKey());
+      const receipt = await api(`/api/v1/requests/${id}/execution/attachments`, {
         method: "POST",
         body,
+        headers: { "Idempotency-Key": evidenceUploadKeys.current.get(fingerprint) },
+        toast: false,
       });
+      if (!receipt?.attachment?.id || receipt.attachment.scan_state !== "CLEAN") {
+        throw new Error("Minh chứng chưa được hệ thống xác nhận an toàn. Không thể hoàn tất cho đến khi tệp được ghi nhận hợp lệ.");
+      }
+      uploadedEvidenceRef.current = { fingerprint, id: receipt.attachment.id };
+      setEvidenceReceipt({ name: file.name, id: receipt.attachment.id });
     }
     await command(`requests/${id}/execution/submit`, {
       expected_version: r.lock_version,
       result_note: values.result_note,
       external_reference: values.external_reference,
-    });
+    }, "POST", actionKey("submit"));
     await done();
   }
 
@@ -545,7 +578,7 @@ export default function RequestDetail({
   const deptDisplay = r?.department_name || r?.progress?.department_name;
 
   return (
-    <section>
+    <section className="request-detail-page">
       <div className="section-head">
         <button type="button" className="secondary" onClick={onBack}>
           ← Quay lại danh sách
@@ -586,14 +619,7 @@ export default function RequestDetail({
             <PageTabs
               label="Nội dung hồ sơ"
               value={tab}
-              onChange={(key) => {
-                setTab(key);
-                window.requestAnimationFrame(() =>
-                  document
-                    .getElementById("request-detail-content")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-                );
-              }}
+              onChange={setTab}
               tabs={[
                 ["info", "Thông tin"],
                 ["progress", "Tiến trình xử lý"],
@@ -762,17 +788,29 @@ export default function RequestDetail({
                         />
                       </label>
                       <label>
-                        Tệp minh chứng kết quả (PDF, JPG, PNG)
+                        Tệp minh chứng kết quả (PDF, JPG, PNG; tối đa 10 MB)
                         <input
                           name="evidence"
                           type="file"
                           accept="application/pdf,image/jpeg,image/png"
+                          required
+                          onChange={() => {
+                            uploadedEvidenceRef.current = null;
+                            setEvidenceReceipt(null);
+                          }}
                         />
                       </label>
-                      <p className="muted">
-                        Cần đính kèm minh chứng hợp lệ trước khi hoàn tất. Nếu tệp đang
-                        được kiểm tra an toàn, vui lòng đợi vài giây rồi nộp lại.
-                      </p>
+                      {evidenceReceipt ? (
+                        <p role="status" className="eas-evidence-confirmed">
+                          Minh chứng “{evidenceReceipt.name}” đã được lưu và kiểm tra an toàn.
+                          Bạn có thể xác nhận lại nếu lần gửi kết quả trước chưa hoàn tất.
+                        </p>
+                      ) : (
+                        <p className="muted">
+                          Hệ thống tải tệp lên, kiểm tra an toàn rồi mới gửi kết quả thực hiện.
+                          Nếu chưa xác nhận được minh chứng, biểu mẫu sẽ giữ nguyên để bạn thử lại.
+                        </p>
+                      )}
                     </>
                   ) : ["reject", "info", "cancel", "rework", "issue", "revokeAi"].includes(
                       action,

@@ -7,6 +7,7 @@ from api_core.health.schema_contract import (
     has_required_eas_tables,
 )
 from api_core.health.views import (
+    database_readiness,
     assess_mock_sources,
     assess_request_types,
     assess_runtime_role,
@@ -84,6 +85,26 @@ class HealthEndpointTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
 
+    @patch("api_core.health.views.connection")
+    def test_db_endpoint_only_checks_connectivity(self, db):
+        cursor = db.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = (1,)
+        response = self.client.get("/health/db")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok", "database": True})
+        cursor.execute.assert_called_once_with("SELECT 1")
+
+    @patch("api_core.health.views.connection")
+    def test_db_endpoint_returns_safe_failure_without_secrets(self, db):
+        from django.db import OperationalError
+
+        db.cursor.side_effect = OperationalError("password=private-database-secret")
+        response = self.client.get("/health/db")
+        self.assertEqual(response.status_code, 503)
+        self.assertIs(response.json()["database"], False)
+        self.assertEqual(response["Retry-After"], "5")
+        self.assertNotIn(b"private-database-secret", response.content)
+
     @patch(
         "api_core.health.views.database_readiness",
         return_value=(True, {"database": True}, {"unconfigured_active_type_count": 7}),
@@ -107,6 +128,51 @@ class HealthEndpointTests(SimpleTestCase):
         response = self.client.get("/health/ready")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["status"], "not_ready")
+
+
+class DatabaseIndicatorTests(SimpleTestCase):
+    @override_settings(
+        EAS_REQUIRE_MOCK_SOURCES=False,
+        EAS_REQUIRE_ACTIVE_RELEASES=True,
+        EAS_REQUIRE_FULL_CATALOG_READY=False,
+        EAS_ALLOW_ADMIN_DB=False,
+    )
+    @patch("api_core.health.views.connection")
+    def test_successful_database_checks_expose_connection_status(self, db):
+        from api_core.health.schema_contract import REQUIRED_EAS_TABLES
+
+        cursor = db.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = (
+            False, False, False, False, True, False, False, False
+        )
+        cursor.fetchall.side_effect = [
+            [(name,) for name in REQUIRED_EAS_TABLES],
+            [("LEAVE", "A", True), ("ACCESS", "B", True), ("EQUIPMENT", "C", True)],
+        ]
+        is_ready, checks, _catalog = database_readiness()
+        self.assertTrue(is_ready)
+        self.assertIs(checks["database"], True)
+
+    @override_settings(
+        EAS_REQUIRE_MOCK_SOURCES=False,
+        EAS_REQUIRE_ACTIVE_RELEASES=True,
+        EAS_REQUIRE_FULL_CATALOG_READY=False,
+        EAS_ALLOW_ADMIN_DB=False,
+    )
+    @patch("api_core.health.views.connection")
+    def test_other_readiness_failure_does_not_mean_db_is_down(self, db):
+        cursor = db.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = (
+            False, False, False, False, False, False, False, False
+        )
+        cursor.fetchall.side_effect = [
+            [],
+            [("LEAVE", "A", True), ("ACCESS", "B", True), ("EQUIPMENT", "C", True)],
+        ]
+        is_ready, checks, _catalog = database_readiness()
+        self.assertFalse(is_ready)
+        self.assertIs(checks["database"], True)
+        self.assertIs(checks["runtime_role_is_api_only"], False)
 
 
 class OptionalCatalogReadinessTests(SimpleTestCase):

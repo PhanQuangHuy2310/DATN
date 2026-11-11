@@ -101,17 +101,14 @@ else:
     # process-wide pool reuses connections across requests and runserver
     # threads. Django forbids pooling together with CONN_MAX_AGE > 0.
     if _db_max_age == 0:
-        # With a pool, CONN_HEALTH_CHECKS pings the DB on every checkout (one
-        # extra ~300ms round trip). TCP keepalives + max_idle retire dead
-        # connections instead; psycopg_pool discards broken ones on return.
-        # ponytail: a connection killed server-side can fail one request (503
-        # + Retry-After); re-enable checks if the pooler drops idle clients.
-        DATABASES["default"]["CONN_HEALTH_CHECKS"] = False
+        # Validate a pooled connection on first use per request.  This costs a
+        # round trip but prevents stale connections after a long idle period.
+        DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
         DATABASES["default"]["OPTIONS"].update(
             pool={
                 "min_size": int(os.getenv("EAS_DB_POOL_MIN_SIZE", "2")),
                 "max_size": int(os.getenv("EAS_DB_POOL_MAX_SIZE", "10")),
-                "max_idle": 240,
+                "max_idle": 90,
                 "timeout": 15,
             },
             keepalives=1,
@@ -301,8 +298,13 @@ EAS_AI_TIMEOUT_SECONDS = float(os.getenv("EAS_AI_TIMEOUT_SECONDS", "5.0"))
 EAS_AI_SYSTEM_USER_ID = os.getenv(
     "EAS_AI_SYSTEM_USER_ID", "00000002-0000-4000-8000-0000000000a1"
 )
+# Human approval is mandatory by default. Two separate operator-controlled
+# opt-ins are needed before any AI decision may finalize a business request.
 EAS_AI_AUTO_APPROVE_ENABLED = (
-    os.getenv("EAS_AI_AUTO_APPROVE_ENABLED", "true").lower() == "true"
+    os.getenv("EAS_AI_AUTO_APPROVE_ENABLED", "false").lower() == "true"
+)
+EAS_AI_AUTO_APPROVAL_POLICY_APPROVED = (
+    os.getenv("EAS_AI_AUTO_APPROVAL_POLICY_APPROVED", "false").lower() == "true"
 )
 EAS_AI_AUTO_APPROVE_MAX_WEIGHT = int(os.getenv("EAS_AI_AUTO_APPROVE_MAX_WEIGHT", "2"))
 # The least-privilege worker cannot write approvals; it asks the API to run

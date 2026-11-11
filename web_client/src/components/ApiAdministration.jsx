@@ -1,5 +1,10 @@
+<<<<<<< HEAD
+import { useState, useEffect, useRef } from "react";
+import Icon from "./Icon.jsx";
+=======
 import { useState, useEffect } from "react";
 import { errorText } from "../domain.js";
+>>>>>>> origin/main
 import { api } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
@@ -15,6 +20,7 @@ export function ApiAdministration() {
   // Circuit breaker confirmation modal
   const [confirmToggleApi, setConfirmToggleApi] = useState(null);
   const [toggling, setToggling] = useState(false);
+  const togglePendingRef = useRef(false);
 
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
@@ -49,17 +55,22 @@ export function ApiAdministration() {
   };
 
   const executeToggle = async (apiItem) => {
+    if (togglePendingRef.current) return;
+    togglePendingRef.current = true;
     setToggling(true);
     try {
       const res = await api(`/api/v1/admin/mock-apis/${apiItem.id}/toggle`, {
         method: "PATCH",
+      toast: false,
       });
+      if (res?.success === false) throw new Error(res?.message || "Máy chủ chưa xác nhận thay đổi.");
       showToast(res.message || "Đã cập nhật trạng thái kết nối API!", "success");
       setConfirmToggleApi(null);
       void loadApis(true);
     } catch (err) {
       showToast("Lỗi khi điều khiển Circuit Breaker: " + errorText(err), "error");
     } finally {
+      togglePendingRef.current = false;
       setToggling(false);
     }
   };
@@ -90,8 +101,8 @@ export function ApiAdministration() {
     <div className="page-container api-admin-page">
       <PageHeader
         eyebrow="HỆ THỐNG"
-        title="Quản lý API & Circuit Breaker"
-        description="Giám sát 8 kết nối API nội bộ (HR, Finance, IT, CRM, Assets, Facilities, Procurement, Travel), xem cấu trúc dữ liệu JSON và điều khiển ngắt mạch kết nối (Circuit Breaker)."
+        title="Quản lý kết nối API"
+        description="Theo dõi các kết nối dữ liệu nội bộ (nhân sự, tài chính, CNTT, tài sản…), xem dữ liệu mẫu và tạm ngắt một kết nối khi hệ thống nguồn gặp sự cố."
       />
 
       {/* Top 3 Meta Cards */}
@@ -102,16 +113,16 @@ export function ApiAdministration() {
             <span className="eas-badge-neutral">{totalApis} Hệ thống</span>
           </div>
           <div className="eas-meta-stat-value">{totalApis} API</div>
-          <div className="eas-meta-stat-sub">Đồng bộ dữ liệu ngữ cảnh với AI Engine</div>
+          <div className="eas-meta-stat-sub">Cung cấp dữ liệu ngữ cảnh cho dịch vụ AI</div>
         </div>
 
         <div className={`eas-meta-stat-card ${circuitBreakerActive ? "warning-border" : "success-border"}`}>
           <div className="eas-meta-stat-header">
-            <span className="eas-meta-stat-label">Trạng thái Circuit Breaker</span>
+            <span className="eas-meta-stat-label">Trạng thái kết nối</span>
             {circuitBreakerActive ? (
-              <span className="eas-badge-danger pulse">ĐÃ KÍCH HOẠT ({disabledCount} BỊ NGẮT)</span>
+              <span className="eas-badge-danger pulse">Đang ngắt {disabledCount} kết nối</span>
             ) : (
-              <span className="eas-badge-success">TẤT CẢ KẾT NỐI HOẠT ĐỘNG (8/8)</span>
+              <span className="eas-badge-success">Tất cả đang hoạt động ({enabledCount}/{totalApis})</span>
             )}
           </div>
           <div className="eas-meta-stat-value">
@@ -136,7 +147,7 @@ export function ApiAdministration() {
           <div className="eas-meta-stat-value">{affectedRequestsCount}</div>
           <div className="eas-meta-stat-sub">
             {affectedRequestsCount > 0
-              ? "Người dùng tại web_client bị khóa nút gửi đối với các mẫu này."
+              ? "Người dùng tạm thời không gửi được các mẫu yêu cầu này."
               : "Tất cả các loại yêu cầu có thể tạo và gửi bình thường."}
           </div>
         </div>
@@ -145,9 +156,9 @@ export function ApiAdministration() {
       {/* Active Circuit Breaker Notice Banner */}
       {circuitBreakerActive && (
         <div className="circuit-breaker-active-banner">
-          <div className="cb-banner-icon">⚡</div>
+          <div className="cb-banner-icon"><Icon name="bolt" size={14} /></div>
           <div className="cb-banner-content">
-            <strong>CẢNH BÁO CIRCUIT BREAKER ĐANG KÍCH HOẠT:</strong>
+            <strong>Có kết nối đang bị ngắt.</strong>
             <p>
               Có <strong>{disabledCount} API</strong> đang bị ngắt kết nối. Toàn bộ <strong>{affectedRequestsCount} mẫu yêu cầu</strong> liên quan đã tự động chuyển sang trạng thái <strong>Tạm ngưng</strong> trên cả Web Client và Web Admin với thông báo rõ ràng cho người dùng.
             </p>
@@ -158,7 +169,7 @@ export function ApiAdministration() {
       {/* Search Toolbar */}
       <div className="api-admin-toolbar">
         <div className="api-search-wrapper">
-          <span className="api-search-icon">🔍</span>
+          <span className="api-search-icon"><Icon name="search" size={14} /></span>
           <input
             type="text"
             className="eas-input"
@@ -168,9 +179,9 @@ export function ApiAdministration() {
           />
         </div>
         <div className="api-status-summary-pills">
-          <span className="status-pill active-pill">🟢 Đang bật: {enabledCount}</span>
+          <span className="status-pill active-pill"><span className="status-dot is-green" aria-hidden="true" />Đang bật: {enabledCount}</span>
           {disabledCount > 0 && (
-            <span className="status-pill disabled-pill">🔴 Đã ngắt: {disabledCount}</span>
+            <span className="status-pill disabled-pill"><span className="status-dot is-red" aria-hidden="true" />Đã ngắt: {disabledCount}</span>
           )}
         </div>
       </div>
@@ -184,7 +195,7 @@ export function ApiAdministration() {
           </div>
         ) : filteredApis.length === 0 ? (
           <div className="eas-empty-state">
-            <span className="empty-icon">🔌</span>
+            <span className="empty-icon"><Icon name="plug" size={14} /></span>
             <p>Không tìm thấy API nào phù hợp.</p>
           </div>
         ) : (
@@ -204,7 +215,7 @@ export function ApiAdministration() {
 
                     {/* Circuit Breaker Toggle Switch */}
                     <div className="circuit-breaker-toggle-wrap">
-                      <label className="cb-switch" title={isEnabled ? "Bấm để ngắt kết nối (Circuit Breaker)" : "Bấm để kích hoạt lại kết nối"} aria-label={isEnabled ? "Bấm để ngắt kết nối (Circuit Breaker)" : "Bấm để kích hoạt lại kết nối"}>
+                      <label className="cb-switch" title={isEnabled ? "Bấm để ngắt kết nối" : "Bấm để kích hoạt lại kết nối"} aria-label={isEnabled ? "Bấm để ngắt kết nối" : "Bấm để kích hoạt lại kết nối"}>
                         <input
                           type="checkbox"
                           checked={isEnabled}
@@ -244,7 +255,7 @@ export function ApiAdministration() {
                             className={`linked-chip ${isEnabled ? "" : "chip-disabled"}`}
                             title={isEnabled ? `Mẫu: ${r.name}` : `[TẠM NGƯNG] ${r.name}`}
                           >
-                            {!isEnabled && <span className="disabled-icon">⚠️ </span>}
+                            {!isEnabled && <span className="disabled-icon"><Icon name="alert" size={14} /> </span>}
                             {r.name}
                           </span>
                         ))
@@ -270,7 +281,7 @@ export function ApiAdministration() {
                       className="btn-action btn-view-payload"
                       onClick={() => setViewingPayload(apiItem)}
                     >
-                      👁 Xem thử JSON Payload
+                      <Icon name="eye" size={14} /> Xem thử JSON Payload
                     </button>
                   </div>
                 </div>
@@ -292,9 +303,10 @@ export function ApiAdministration() {
               <button
                 type="button"
                 className="eas-modal-close"
+                aria-label="Đóng"
                 onClick={() => setViewingPayload(null)}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 
@@ -311,7 +323,7 @@ export function ApiAdministration() {
               </div>
 
               <p className="json-viewer-note">
-                Dữ liệu trên là snapshot mẫu từ <code>ai_service/data/mock/</code> được AI Engine nạp làm ngữ cảnh để chấm điểm rủi ro và xác thực điều kiện phê duyệt.
+                Dữ liệu trên là bản chụp mẫu mà dịch vụ AI dùng làm ngữ cảnh để chấm điểm rủi ro và kiểm tra điều kiện phê duyệt.
               </p>
             </div>
 
@@ -324,7 +336,7 @@ export function ApiAdministration() {
                   showToast("Đã sao chép JSON payload vào bộ nhớ tạm!", "info");
                 }}
               >
-                📋 Sao chép JSON
+                <Icon name="file" size={14} /> Sao chép JSON
               </button>
               <button
                 type="button"
@@ -343,19 +355,20 @@ export function ApiAdministration() {
         <div className="eas-modal-overlay">
           <div className="eas-modal-card danger-modal">
             <div className="eas-modal-header">
-              <h3>Xác nhận Ngắt kết nối API (Circuit Breaker)</h3>
+              <h3>Xác nhận ngắt kết nối API</h3>
               <button
                 type="button"
                 className="eas-modal-close"
-                onClick={() => setConfirmToggleApi(null)}
+                aria-label="Đóng"
+                onClick={() => !toggling && setConfirmToggleApi(null)}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 
             <div className="eas-modal-body">
               <div className="circuit-breaker-warning-box">
-                <span className="cb-warn-icon">⚠️</span>
+                <span className="cb-warn-icon"><Icon name="alert" size={14} /></span>
                 <div className="cb-warn-text">
                   <strong>CẢNH BÁO TẠM NGƯNG YÊU CẦU:</strong>
                   <p>
@@ -384,7 +397,7 @@ export function ApiAdministration() {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => setConfirmToggleApi(null)}
+                onClick={() => !toggling && setConfirmToggleApi(null)}
               >
                 Hủy bỏ
               </button>

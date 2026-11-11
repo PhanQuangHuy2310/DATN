@@ -1,5 +1,10 @@
+<<<<<<< HEAD
+import { useEffect, useMemo, useRef, useState } from "react";
+import Icon from "./Icon.jsx";
+=======
 import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../domain.js";
+>>>>>>> origin/main
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
 import { PermissionGuard } from "./PermissionGuard.jsx";
@@ -17,21 +22,21 @@ const STAGE_LABELS = {
 const CATEGORY_META = {
   A: {
     badge: "badge-success",
-    color: "#16a34a",
+    color: "var(--eas-ok)",
     sla: "4 giờ",
     summary: "Tự động hóa hoàn toàn / Rủi ro thấp",
     condition: "Trọng số >= 80%, AI đối chiếu quy định tự động, không cần phê duyệt thủ công.",
   },
   B: {
     badge: "badge-primary",
-    color: "#2563eb",
+    color: "var(--eas-signal)",
     sla: "24 giờ",
     summary: "Phê duyệt cấp Phòng ban / Rủi ro trung bình",
     condition: "Trọng số 50 - 79%, Trưởng phòng trực tiếp duyệt, có phân công thực hiện và nghiệm thu.",
   },
   C: {
     badge: "badge-warning",
-    color: "#ea580c",
+    color: "var(--eas-warn)",
     sla: "48 giờ",
     summary: "Phê duyệt Đa cấp & Ban Giám Đốc / Trọng yếu",
     condition: "Trọng số < 50%, Ban Giám Đốc & Hội đồng thẩm định duyệt, quản lý ngân sách / rủi ro cao.",
@@ -47,6 +52,15 @@ export default function RequestWorkflowsPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [toast, setToast] = useState(null);
+  const pendingMutations = useRef(new Set());
+  const [pendingKey, setPendingKey] = useState("");
+  async function guardedMutation(key, work) {
+    if (pendingMutations.current.size) return false;
+    pendingMutations.current.add(key);
+    setPendingKey(key);
+    try { return await work(); }
+    finally { pendingMutations.current.delete(key); setPendingKey(""); }
+  }
 
   // Modals state
   const [editingCategory, setEditingCategory] = useState(null);
@@ -85,10 +99,12 @@ export default function RequestWorkflowsPage() {
 
   // Switch category of a template directly in the table
   const handleCategoryChange = async (template, newCategory) => {
+    return guardedMutation("category-change", async () => {
     if (template.category_code === newCategory) return;
     try {
       const res = await api(`${apiBase}/request-templates/${template.id}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify({ category_code: newCategory }),
       });
       if (res.success && res.item) {
@@ -103,14 +119,17 @@ export default function RequestWorkflowsPage() {
     } catch (err) {
       showToast("Lỗi khi chuyển phân loại: " + errorText(err), "error");
     }
+    });
   };
 
   // Update weight directly in the table
   const handleWeightChange = async (template, newWeight) => {
+    return guardedMutation("weight-change", async () => {
     const val = Math.max(0, Math.min(100, parseInt(newWeight, 10) || 0));
     try {
       const res = await api(`${apiBase}/request-templates/${template.id}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify({ automation_weight: val }),
       });
       if (res.success && res.item) {
@@ -122,13 +141,16 @@ export default function RequestWorkflowsPage() {
     } catch (err) {
       showToast("Lỗi lưu trọng số: " + errorText(err), "error");
     }
+    });
   };
 
   // Save standard category workflow steps
   const handleSaveCategory = async (catData) => {
+    return guardedMutation("category-save", async () => {
     try {
       const res = await api(`${apiBase}/workflow-categories/${catData.category_code}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify(catData),
       });
       if (res.success) {
@@ -138,14 +160,21 @@ export default function RequestWorkflowsPage() {
           "success"
         );
         void loadData();
+<<<<<<< HEAD
+        return true;
+=======
+>>>>>>> origin/main
       }
+      throw new Error("Máy chủ chưa xác nhận lưu quy trình.");
     } catch (err) {
       showToast("Lỗi lưu quy trình: " + errorText(err), "error");
     }
+    });
   };
 
   // Save template edit
   const handleSaveTemplate = async (tplData) => {
+    return guardedMutation("template-save", async () => {
     try {
       const isNew = !tplData.id;
       const url = isNew
@@ -155,6 +184,7 @@ export default function RequestWorkflowsPage() {
 
       const res = await api(url, {
         method,
+        toast: false,
         body: JSON.stringify(tplData),
       });
 
@@ -168,17 +198,30 @@ export default function RequestWorkflowsPage() {
           "success"
         );
         void loadData();
+<<<<<<< HEAD
+        return true;
+=======
+>>>>>>> origin/main
       }
+      throw new Error("Máy chủ chưa xác nhận lưu mẫu yêu cầu.");
     } catch (err) {
+<<<<<<< HEAD
+      showToast("Lỗi lưu mẫu: " + err.message, "error");
+      throw err;
+=======
       showToast("Lỗi lưu mẫu: " + errorText(err), "error");
+>>>>>>> origin/main
     }
+    });
   };
 
   // Delete template
   const handleDeleteTemplate = async (template) => {
+    return guardedMutation("template-delete", async () => {
     try {
       const res = await api(`${apiBase}/request-templates/${template.id}`, {
         method: "DELETE",
+      toast: false,
       });
       if (res.success) {
         setDeletingTemplate(null);
@@ -189,10 +232,16 @@ export default function RequestWorkflowsPage() {
           "success"
         );
         void loadData();
+<<<<<<< HEAD
+        return true;
+=======
+>>>>>>> origin/main
       }
+      throw new Error("Máy chủ chưa xác nhận xóa mẫu yêu cầu.");
     } catch (err) {
       showToast("Lỗi xóa mẫu: " + errorText(err), "error");
     }
+    });
   };
 
   // Filtered templates list
@@ -251,7 +300,7 @@ export default function RequestWorkflowsPage() {
       <section className="rw-section">
         <div className="rw-section-header">
           <div>
-            <h2 className="rw-section-title">Khu vực 1: Quy trình chuẩn 3 Phân loại lớn (A, B, C)</h2>
+            <h2 className="rw-section-title">Quy trình chuẩn theo 3 phân loại (A, B, C)</h2>
             <p className="rw-section-desc">
               Mỗi phân loại đại diện cho một cấp độ rủi ro và phương thức phê duyệt. Thay đổi tại đây sẽ tự động lan truyền đến tất cả các mẫu yêu cầu thuộc phân loại đó.
             </p>
@@ -326,7 +375,7 @@ export default function RequestWorkflowsPage() {
       <section className="rw-section" style={{ marginTop: 32 }}>
         <div className="rw-section-header">
           <div>
-            <h2 className="rw-section-title">Khu vực 2: Danh sách các Mẫu Yêu cầu (Form Templates)</h2>
+            <h2 className="rw-section-title">Danh sách mẫu yêu cầu</h2>
             <p className="rw-section-desc">
               Quản lý các biểu mẫu yêu cầu, gán phân loại A/B/C, điều chỉnh thanh trượt trọng số tự động hóa và liên kết API tích hợp.
             </p>
@@ -396,9 +445,15 @@ export default function RequestWorkflowsPage() {
               <thead>
                 <tr>
                   <th>Tên mẫu yêu cầu</th>
+<<<<<<< HEAD
+                  <th>Loại nghiệp vụ</th>
+                  <th style={{ minWidth: 170 }}>Thuộc phân loại</th>
+                  <th style={{ minWidth: 200 }}>Trọng số</th>
+=======
                   <th>Nghiệp vụ</th>
                   <th>Thuộc phân loại</th>
                   <th>Trọng số tự động</th>
+>>>>>>> origin/main
                   <th>API tích hợp</th>
                   <th>Quy trình</th>
                   <th style={{ textAlign: "right" }}>Thao tác</th>
@@ -444,7 +499,7 @@ export default function RequestWorkflowsPage() {
                               <option value="B">Loại B · Phòng ban</option>
                               <option value="C">Loại C · Đa cấp</option>
                             </select>
-                            <span className="rw-auto-sync-hint">⚡ Tự động đổi quy trình</span>
+                            <span className="rw-auto-sync-hint"><Icon name="bolt" size={14} /> Tự động đổi quy trình</span>
                           </div>
                         </td>
 
@@ -483,15 +538,15 @@ export default function RequestWorkflowsPage() {
                             <div>
                               <div
                                 className={`rw-api-badge ${tpl.is_api_enabled === false ? "rw-api-badge-disabled" : ""}`}
-                                style={tpl.is_api_enabled === false ? { background: "#FEF2F2", color: "#DC2626", borderColor: "#FECACA" } : {}}
-                                title={tpl.unavailable_notice || `Hệ thống nguồn: ${tpl.api_source_system || "Mock"}`}
+                                style={tpl.is_api_enabled === false ? { background: "var(--eas-danger-soft)", color: "var(--eas-danger)", borderColor: "var(--eas-danger-soft)" } : {}}
+                                title={tpl.unavailable_notice || `Hệ thống nguồn: ${tpl.api_source_system || "Dữ liệu mô phỏng"}`}
                               >
-                                <span className={`rw-api-dot ${tpl.is_api_enabled === false ? "dot-disabled" : ""}`} style={tpl.is_api_enabled === false ? { background: "#DC2626" } : {}} />
+                                <span className={`rw-api-dot ${tpl.is_api_enabled === false ? "dot-disabled" : ""}`} style={tpl.is_api_enabled === false ? { background: "var(--eas-danger)" } : {}} />
                                 <span className="rw-api-text">{tpl.api_name} {tpl.is_api_enabled === false ? "(Đã ngắt kết nối)" : ""}</span>
                               </div>
                               {tpl.is_api_enabled === false && (
-                                <div className="rw-api-disabled-warning" style={{ fontSize: 11, color: "#DC2626", marginTop: 4, fontWeight: 600 }}>
-                                  ⚠️ Yêu cầu này hiện không thể sử dụng do kết nối API [{tpl.api_source_system || tpl.api_name}] đang bị tắt
+                                <div className="rw-api-disabled-warning" style={{ fontSize: 11, color: "var(--eas-danger)", marginTop: 4, fontWeight: 600 }}>
+                                  <Icon name="alert" size={14} /> Yêu cầu này hiện không thể sử dụng do kết nối API [{tpl.api_source_system || tpl.api_name}] đang bị tắt
                                 </div>
                               )}
                             </div>
@@ -729,8 +784,9 @@ export default function RequestWorkflowsPage() {
                 type="button"
                 className="rw-btn-primary"
                 onClick={() => handleSaveCategory(editingCategory)}
+                disabled={Boolean(pendingKey)}
               >
-                Lưu quy trình chuẩn & Lan truyền
+                {pendingKey === "category-save" ? "Đang lưu…" : "Lưu quy trình chuẩn & Lan truyền"}
               </button>
             </div>
           </div>
@@ -827,6 +883,7 @@ export default function RequestWorkflowsPage() {
                 type="button"
                 className="danger"
                 onClick={() => handleDeleteTemplate(deletingTemplate)}
+                disabled={Boolean(pendingKey)}
               >
                 Xác nhận xóa
               </button>
@@ -853,6 +910,9 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
   });
 
   const [activeTab, setActiveTab] = useState("general");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [formError, setFormError] = useState("");
 
   // When category changes in form, populate recommended weight
   const handleCatSelect = (cat) => {
@@ -905,13 +965,31 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      alert("Vui lòng nhập tên mẫu yêu cầu");
+    if (savingRef.current) return;
+    if (!formData.name.trim() || !formData.code.trim()) {
+      setFormError("Nhập tên và mã mẫu yêu cầu trước khi lưu.");
+      setActiveTab("general");
       return;
     }
-    onSave(formData);
+    if (fields.some((field) => !String(field.label || "").trim())) {
+      setFormError("Mỗi trường biểu mẫu cần có nhãn hiển thị.");
+      setActiveTab("fields");
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
+    setFormError("");
+    try {
+      const result = await onSave({ ...formData, name: formData.name.trim(), code: formData.code.trim() });
+      if (result === false) throw new Error("Thao tác đang xử lý hoặc chưa được xác nhận.");
+    } catch (error) {
+      setFormError(error?.message || "Lưu mẫu thất bại. Vui lòng thử lại.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   };
 
   const fields = formData.form_schema?.fields || [];
@@ -919,9 +997,9 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
   return (
     <Modal
       title={isNew ? "Tạo Mẫu Yêu Cầu Mới" : `Chỉnh sửa Mẫu: ${template.name}`}
-      onClose={onClose}
+      onClose={saving ? () => {} : onClose}
     >
-      <form onSubmit={handleSubmit} className="rw-modal-form">
+      <form onSubmit={handleSubmit} className="rw-modal-form" aria-busy={saving}>
         {/* Modal Tabs */}
         <div className="rw-modal-tabs">
           <button
@@ -1073,12 +1151,12 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
                       onChange={(e) => updateField(idx, "type", e.target.value)}
                       className="rw-input rw-flex-1"
                     >
-                      <option value="text">Văn bản (Text)</option>
-                      <option value="number">Số (Number)</option>
-                      <option value="date">Ngày tháng (Date)</option>
-                      <option value="textarea">Văn bản dài (Textarea)</option>
-                      <option value="select">Lựa chọn (Select)</option>
-                      <option value="file">Đính kèm file (File)</option>
+                      <option value="text">Văn bản ngắn</option>
+                      <option value="number">Số</option>
+                      <option value="date">Ngày tháng</option>
+                      <option value="textarea">Văn bản dài</option>
+                      <option value="select">Danh sách lựa chọn</option>
+                      <option value="file">Tệp đính kèm</option>
                     </select>
                     <label className="rw-checkbox-label">
                       <input
@@ -1103,12 +1181,13 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
           </div>
         )}
 
+        {formError && <p className="error" role="alert">{formError}</p>}
         <div className="rw-modal-footer">
-          <button type="button" className="secondary" onClick={onClose}>
+          <button type="button" className="secondary" disabled={saving} onClick={onClose}>
             Hủy bỏ
           </button>
-          <button type="submit" className="rw-btn-primary">
-            {isNew ? "Tạo mẫu yêu cầu" : "Lưu thay đổi"}
+          <button type="submit" className="rw-btn-primary" disabled={saving}>
+            {saving ? "Đang lưu…" : isNew ? "Tạo mẫu yêu cầu" : "Lưu thay đổi"}
           </button>
         </div>
       </form>

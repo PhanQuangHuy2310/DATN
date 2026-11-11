@@ -161,11 +161,13 @@ class RoutingAdjustmentTests(SimpleTestCase):
         self.assertEqual(decision.resolved_route[0]["adjusted"], "SOD_ESCALATED")
         self.assertNotIn(self.requester, decision.approver_ids)
 
-    def test_escalation_onto_existing_approver_is_not_duplicated(self):
+    def test_escalation_onto_existing_approver_requires_verified_superior(self):
         self.bindings["departments"][self.department]["FINANCE"] = self.requester
-        decision = self.resolve(["DIRECT_MANAGER", "FINANCE", "DIRECTOR"])
-        self.assertEqual(decision.approver_ids, (self.manager, self.director))
-        self.assertEqual(self.reasons(decision), ["DUPLICATE_SKIPPED"])
+        # Duplicating the manager at the FINANCE step must not silently
+        # remove a required approval. The workflow service will fetch
+        # eligible superiors and retry with a distinct approver.
+        with self.assertRaisesRegex(RoutingError, "own request"):
+            self.resolve(["DIRECT_MANAGER", "FINANCE", "DIRECTOR"])
 
     def test_top_level_requester_skips_direct_manager(self):
         decision = self.resolve(["DIRECT_MANAGER", "FINANCE"], manager=None)

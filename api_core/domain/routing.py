@@ -99,7 +99,9 @@ class RouteDecision:
     approver_ids: tuple[str, ...]
     executor_id: str | None
     acceptor_id: str | None
-    # One entry per rule step the router had to change, for the audit trail.
+    # Preserve both contracts: SoD audit events and route adjustments.
+    sod_escalations: tuple[tuple[int, str, str], ...] = ()
+    sod_skipped: tuple[tuple[str, str], ...] = ()
     adjustments: tuple[dict[str, object], ...] = ()
 
     @property
@@ -109,17 +111,16 @@ class RouteDecision:
             for a in self.adjustments
             if a.get("step_index") is not None
         }
-        route: list[dict[str, object]] = []
+        escalated = {step for step, _, _ in self.sod_escalations}
+        route = []
         for index, (slot, actor_id) in enumerate(
             zip(self.approver_slots, self.approver_ids), start=1
         ):
-            item: dict[str, object] = {
-                "step_no": index,
-                "assignee_id": actor_id,
-                "resolver": slot,
-            }
+            item = {"step_no": index, "assignee_id": actor_id, "resolver": slot}
             if index in notes:
                 item["adjusted"] = notes[index]
+            if index in escalated:
+                item["sod_escalated"] = True
             route.append(item)
         return route
 
@@ -290,6 +291,7 @@ def _resolve_approvers(
     requester: str,
     manager: str | None,
     department_bindings: dict[str, Any],
+    eligible_superiors: tuple[str, ...] = (),
 ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[dict[str, object], ...]]:
     """Map approver slots to people without blocking legitimate requesters.
 
@@ -304,10 +306,36 @@ def _resolve_approvers(
     out_slots: list[str] = []
     out_ids: list[str] = []
     adjustments: list[dict[str, object]] = []
+    # Reserve named approvers before selecting an escalation candidate so
+    # escalation cannot silently take a later approval step's identity.
+    reserved = {
+        actor for slot in slots
+        for actor, _ in [_slot_actor(slot, manager, department_bindings)]
+        if actor is not None and actor != requester
+    }
     for rule_step, slot in enumerate(slots, start=1):
         actor, reason = _slot_actor(slot, manager, department_bindings)
         if actor == requester:
-            actor, reason = _escalate_self_approval(requester, manager)
+            if eligible_superiors:
+                replacement = next(
+                    (candidate for raw in eligible_superiors
+                     if (candidate := _uuid(raw, "Eligible superior")) != requester
+                     and candidate not in reserved and candidate not in out_ids),
+                    None,
+                )
+                if replacement is None:
+                    raise RoutingError("ROUTE_SOD_ESCALATION_UNRESOLVED")
+                actor, reason = replacement, "SOD_ESCALATED"
+            else:
+                # Without an independently validated superior, the existing
+                # manager can replace the requester only if they are not
+                # already committed to a different approval level. Silently
+                # skipping this slot would shorten a required approval chain.
+                # The workflow service catches this error and verifies a
+                # higher-level candidate before resolving the route again.
+                actor, reason = _escalate_self_approval(requester, manager)
+                if actor is None or actor in reserved or actor in out_ids:
+                    raise RoutingError("Requester cannot approve own request")
         if actor is not None and actor in out_ids:
             actor, reason = None, "DUPLICATE_SKIPPED"
         if actor is not None:
@@ -355,6 +383,7 @@ def resolve_route(
     manager_id: str | None,
     amount_vnd: int | None = None,
     payload: dict[str, Any] | None = None,
+    eligible_superiors: tuple[str, ...] = (),
 ) -> RouteDecision:
     if (
         route_rules.get("schema_version") != 1
@@ -416,10 +445,17 @@ def resolve_route(
         requester=requester,
         manager=manager_id,
         department_bindings=department_bindings,
+        eligible_superiors=eligible_superiors,
     )
     executor = actor_for(executor_slot)
     acceptor = actor_for(acceptor_slot)
 
+    # Expose a stable SoD trail for workflow audits and the existing UI.
+    escalations = tuple(
+        (int(item["step_index"]), requester, str(item["assignee_id"]))
+        for item in adjustments
+        if item["reason"] == "SOD_ESCALATED" and item["step_index"] is not None
+    )
     _validate_resolved_actors(requester, approvers, executor, acceptor)
 
     return RouteDecision(
@@ -428,5 +464,6 @@ def resolve_route(
         approver_ids=approvers,
         executor_id=executor,
         acceptor_id=acceptor,
+        sod_escalations=escalations,
         adjustments=adjustments,
     )

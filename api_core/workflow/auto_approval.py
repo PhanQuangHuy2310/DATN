@@ -97,7 +97,12 @@ def _load_context(request_id: str) -> dict[str, Any] | None:
 
 def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | None:
     """Approve the active step when the AI allows it; return the result or None."""
-    if not settings.EAS_AI_AUTO_APPROVE_ENABLED:
+    if not (
+        settings.EAS_AI_AUTO_APPROVE_ENABLED
+        and settings.EAS_AI_AUTO_APPROVAL_POLICY_APPROVED
+    ):
+        # Advisory-only is the approved default. Even an old `.env` that
+        # enabled auto-approval cannot authorize an AI signature alone.
         return None
     context = _load_context(request_id)
     if (

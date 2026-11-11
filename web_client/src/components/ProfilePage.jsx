@@ -171,7 +171,7 @@ export function Profile({ user, onChanged }) {
               <ul className="ds-pwd-checklist" aria-label="Tiêu chuẩn mật khẩu">
                 {rules.map(([key, text, ok]) => (
                   <li key={key} className={ok ? "is-met" : ""}>
-                    <span aria-hidden="true">{ok ? "✓" : "○"}</span> {text}
+                    <span aria-hidden="true">{ok ? "" : "○"}</span> {text}
                   </li>
                 ))}
               </ul>

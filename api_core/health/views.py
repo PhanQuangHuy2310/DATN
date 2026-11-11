@@ -188,6 +188,10 @@ def database_readiness() -> tuple[bool, dict[str, object], dict[str, object]]:
                 versions, reachable = set(), False
             checks.update(assess_mock_sources(reachable, versions, eas_reads_mock))
 
+    # SQL completed successfully. Database connectivity is independent of the
+    # additional readiness gates (RBAC role, P0 releases, Redis, Storage, etc.).
+    # Always include an explicit connection check for the health dashboard.
+    checks["database"] = True
     return all(bool(value) for value in checks.values()), checks, catalog
 
 
@@ -196,6 +200,33 @@ def live(request):
     return JsonResponse(
         {"status": "ok", "service": "eas-api", "release": settings.EAS_RELEASE}
     )
+
+
+@require_GET
+def database_connection(request):
+    """Minimal PostgreSQL connectivity probe, independent of full readiness.
+
+    Only reports a coarse failure category; never returns DSNs or SQL text.
+    This endpoint MUST NOT be used as a substitute for /health/ready.
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            connected = cursor.fetchone() == (1,)
+    except DatabaseError as exc:
+        request_id = correlation_id(request)
+        category = failure_category(exc)
+        log.error(
+            "Database connectivity probe failure: category=%s SQLSTATE=%s correlation_id=%s",
+            category, sqlstate(exc), request_id,
+            extra={"correlation_id": request_id},
+        )
+        response = JsonResponse({"status": "not_ready", "database": False,
+                                 "reason": category}, status=503)
+        response["Retry-After"] = "5"
+        return response
+    return JsonResponse({"status": "ok" if connected else "not_ready",
+                         "database": connected}, status=200 if connected else 503)
 
 
 @require_GET

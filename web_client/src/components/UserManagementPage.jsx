@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import Icon from "./Icon.jsx";
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
 import { errorText } from "../domain.js";
@@ -48,6 +49,9 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
     password: "",
   });
   const [userSubmitting, setUserSubmitting] = useState(false);
+  const userPendingRef = useRef(false);
+  const leavePendingRef = useRef(false);
+  const lockPendingRef = useRef(new Set());
   const [toastMessage, setToastMessage] = useState(null);
 
   const showToast = (msg, type = "success") => {
@@ -71,7 +75,8 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
 
   // Quick leave/trip status update
   const handleLeaveTripSubmit = async (action) => {
-    if (!leaveModalUser) return;
+    if (!leaveModalUser || leavePendingRef.current) return;
+    leavePendingRef.current = true;
     setLeaveSubmitting(true);
     try {
       const payload = {
@@ -83,6 +88,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
         `${apiBase}/users-management/${leaveModalUser.id}/leave-trip`,
         {
           method: "POST",
+          toast: false,
           body: JSON.stringify(payload),
         }
       );
@@ -97,42 +103,63 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
     } catch (err) {
       showToast("Lỗi cập nhật trạng thái: " + errorText(err), "error");
     } finally {
+      leavePendingRef.current = false;
       setLeaveSubmitting(false);
     }
   };
 
   // Toggle user lock
   const handleToggleLock = async (user) => {
+    if (lockPendingRef.current.has(user.id)) return;
     if (!window.confirm(`Bạn có chắc muốn ${user.is_active ? "KHÓA" : "MỞ KHÓA"} tài khoản ${user.full_name}?`)) {
       return;
     }
+    lockPendingRef.current.add(user.id);
     try {
       await api(`${apiBase}/users-management/${user.id}`, {
         method: "PATCH",
+        toast: false,
         body: JSON.stringify({ is_active: !user.is_active }),
       });
       showToast(`Đã ${user.is_active ? "khóa" : "mở khóa"} người dùng thành công!`, "success");
       setRefreshKey((k) => k + 1);
     } catch (err) {
       showToast("Lỗi thay đổi trạng thái tài khoản: " + errorText(err), "error");
+    } finally {
+      lockPendingRef.current.delete(user.id);
     }
   };
 
   // Save add/edit user
   const handleSaveUser = async (e) => {
     e.preventDefault();
+    if (userPendingRef.current) return;
+    const payload = {
+      ...userFormData,
+      full_name: userFormData.full_name.trim(),
+      email: userFormData.email.trim().toLowerCase(),
+      job_title: userFormData.job_title.trim(),
+    };
+    if (!payload.full_name || !payload.email || !payload.role_id || !payload.department_id || (isNewUser && !payload.password)) {
+      showToast("Vui lòng điền đủ họ tên, email, vai trò, phòng ban và mật khẩu khi tạo mới.", "error");
+      return;
+    }
+    if (!isNewUser && !payload.password) delete payload.password;
+    userPendingRef.current = true;
     setUserSubmitting(true);
     try {
       if (isNewUser) {
         await api(`${apiBase}/users-management`, {
           method: "POST",
-          body: JSON.stringify(userFormData),
+          toast: false,
+          body: JSON.stringify(payload),
         });
         showToast("Tạo người dùng mới thành công!", "success");
       } else {
         await api(`${apiBase}/users-management/${editUserModal.id}`, {
           method: "PATCH",
-          body: JSON.stringify(userFormData),
+          toast: false,
+          body: JSON.stringify(payload),
         });
         showToast("Cập nhật thông tin người dùng thành công!", "success");
       }
@@ -141,6 +168,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
     } catch (err) {
       showToast("Lỗi lưu người dùng: " + errorText(err), "error");
     } finally {
+      userPendingRef.current = false;
       setUserSubmitting(false);
     }
   };
@@ -200,7 +228,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       <div className="page-heading">
         <div>
           <p className="eyebrow">TỔ CHỨC & NHÂN SỰ</p>
-          <h1>Quản lý Người dùng & Trạng thái làm việc</h1>
+          <h1>Quản lý người dùng</h1>
           <p className="muted">
             Theo dõi trạng thái làm việc thực tế (08:00 - 17:30 T2-T6), quản lý chức danh và tra cứu tiến độ 5 giai đoạn hồ sơ.
           </p>
@@ -211,7 +239,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
               type="button"
               className="secondary"
               onClick={onNavigateOrgChart}
-              title="Xem Sơ đồ cây tổ chức công ty"
+              title="Xem sơ đồ tổ chức công ty"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="9" y="3" width="6" height="4" rx="1" />
@@ -234,8 +262,12 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                   job_title: "Nhân viên",
                   role_id: "STAFF",
                   department_id: deptsRes.data?.items?.[0]?.id || "",
+<<<<<<< HEAD
+                  password: "", // Never prefill a reusable password for new accounts.
+=======
                   manager_id: "",
                   password: "Password@123456",
+>>>>>>> origin/main
                 });
                 setEditUserModal({});
               }}
@@ -320,11 +352,11 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
           className="filter-select"
         >
           <option value="">— Tất cả trạng thái —</option>
-          <option value="DANG_LAM">🟢 Đang làm việc</option>
-          <option value="NGHI_LAM">🟡 Nghỉ phép / Vắng</option>
-          <option value="CONG_TAC">🔵 Đi công tác</option>
-          <option value="NGOAI_GIO">⚪ Nghỉ trưa / Ngoài giờ</option>
-          <option value="INACTIVE">🔴 Bị khóa</option>
+          <option value="DANG_LAM">Đang làm việc</option>
+          <option value="NGHI_LAM">Nghỉ phép / Vắng</option>
+          <option value="CONG_TAC">Đi công tác</option>
+          <option value="NGOAI_GIO">Nghỉ trưa / Ngoài giờ</option>
+          <option value="INACTIVE">Bị khóa</option>
         </select>
 
         {(searchTerm || roleFilter || deptFilter || statusFilter) && (
@@ -368,7 +400,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
             <tbody>
               {userList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "3rem", color: "#64748b" }}>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "3rem", color: "var(--eas-ink-500)" }}>
                     Không tìm thấy nhân viên nào phù hợp với bộ lọc.
                   </td>
                 </tr>
@@ -473,7 +505,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                               setLeaveType("BUSINESS_TRIP");
                               setLeaveReason("Công tác đối tác ngoại tỉnh");
                             }}
-                            title="Cập nhật đơn nghỉ / công tác (Đổi trạng thái tức thì)"
+                            title="Cập nhật nghỉ phép / công tác"
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -557,9 +589,10 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
               <button
                 type="button"
                 className="drawer-close-btn"
+                aria-label="Đóng"
                 onClick={() => setSelectedUserForDetail(null)}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
 
@@ -626,7 +659,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                       <tbody>
                         {(!detailData?.items || detailData.items.length === 0) ? (
                           <tr>
-                            <td colSpan={6} style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
+                            <td colSpan={6} style={{ textAlign: "center", padding: "2rem", color: "var(--eas-ink-500)" }}>
                               Nhân viên này chưa tham gia hồ sơ nào trong hệ thống.
                             </td>
                           </tr>
@@ -655,7 +688,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                                   {r.user_role_in_request}
                                 </span>
                               </td>
-                              <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem", color: "#64748b" }}>
+                              <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem", color: "var(--eas-ink-500)" }}>
                                 {r.created_at ? new Date(r.created_at).toLocaleDateString("vi-VN") : "—"}
                               </td>
                             </tr>
@@ -673,12 +706,12 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
 
       {/* MODAL 2: Quick Leave / Trip Update */}
       {leaveModalUser && (
-        <div className="modal-backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && setLeaveModalUser(null)} onKeyDown={(e) => e.key === "Escape" && setLeaveModalUser(null)}>
+        <div className="modal-backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && !leaveSubmitting && setLeaveModalUser(null)} onKeyDown={(e) => e.key === "Escape" && !leaveSubmitting && setLeaveModalUser(null)}>
           <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: "520px" }}>
             <div className="modal-head">
               <h2>Cập nhật trạng thái làm việc</h2>
-              <button type="button" className="secondary ds-icon-button" onClick={() => setLeaveModalUser(null)}>
-                ✕
+              <button type="button" className="secondary ds-icon-button" aria-label="Đóng" disabled={leaveSubmitting} onClick={() => setLeaveModalUser(null)}>
+                <Icon name="x" size={16} />
               </button>
             </div>
             <p className="muted" style={{ marginTop: "0.25rem", marginBottom: "1rem" }}>
@@ -692,11 +725,11 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                 onChange={(e) => setLeaveType(e.target.value)}
                 className="input-select"
               >
-                <option value="BUSINESS_TRIP">🔵 Công tác (Business Trip) → Badge Xanh dương</option>
-                <option value="PAID_LEAVE">🟡 Nghỉ phép có lương (Paid Leave) → Badge Vàng</option>
-                <option value="UNPAID_LEAVE">🟡 Nghỉ không lương (Unpaid Leave) → Badge Vàng</option>
-                <option value="LATE_IN">🟡 Đi muộn (Late In) → Badge Vàng</option>
-                <option value="EARLY_OUT">🟡 Về sớm (Early Out) → Badge Vàng</option>
+                <option value="BUSINESS_TRIP">Công tác</option>
+                <option value="PAID_LEAVE">Nghỉ phép có lương</option>
+                <option value="UNPAID_LEAVE">Nghỉ không lương</option>
+                <option value="LATE_IN">Đi muộn</option>
+                <option value="EARLY_OUT">Về sớm</option>
               </select>
             </div>
 
@@ -719,7 +752,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                 onClick={() => handleLeaveTripSubmit("CANCEL_TODAY")}
                 title="Hủy các lịch trình hôm nay để trở về trạng thái Đang làm việc mặc định"
               >
-                🔄 Xóa đơn hôm nay (về Đang làm)
+                Xóa đơn hôm nay (về Đang làm việc)
               </button>
 
               <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -747,12 +780,12 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
 
       {/* MODAL 3: Add / Edit User Modal */}
       {editUserModal && (
-        <div className="modal-backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && setEditUserModal(null)} onKeyDown={(e) => e.key === "Escape" && setEditUserModal(null)}>
+        <div className="modal-backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && !userSubmitting && setEditUserModal(null)} onKeyDown={(e) => e.key === "Escape" && !userSubmitting && setEditUserModal(null)}>
           <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: "560px" }}>
             <div className="modal-head">
               <h2>{isNewUser ? "Thêm người dùng mới" : "Chỉnh sửa người dùng"}</h2>
-              <button type="button" className="secondary ds-icon-button" onClick={() => setEditUserModal(null)}>
-                ✕
+              <button type="button" className="secondary ds-icon-button" aria-label="Đóng" disabled={userSubmitting} onClick={() => setEditUserModal(null)}>
+                <Icon name="x" size={16} />
               </button>
             </div>
 
