@@ -4,7 +4,7 @@ import { AiSummary } from "./AiAssist.jsx";
 import { AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
 import { DetailSkeleton, EmptyState, PageTabs, WorkflowTimeline } from "./design.jsx";
 import { requestActionPayload } from "../actionPayload.js";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api, API_BASE } from "../api.js";
 import {
   date,
@@ -493,6 +493,7 @@ export default function RequestDetail({
     [tab, setTab] = useState(initialTab),
     [action, setAction] = useState(null),
     [verify, setVerify] = useState(null);
+  const uploadedEvidence = useRef("");
   const r = resource.data?.request,
     p = r ? permissions(user, r) : {};
 
@@ -525,13 +526,17 @@ export default function RequestDetail({
 
   async function execute(values) {
     const file = values.evidence;
-    if (file?.size) {
+    const fileKey = file?.size ? `${file.name}:${file.size}:${file.lastModified}` : "";
+    // A failed submit keeps the evidence already stored; retrying must not
+    // upload the same file again (the attempt allows only 5 files).
+    if (fileKey && uploadedEvidence.current !== fileKey) {
       const body = new FormData();
       body.append("file", file);
       await api(`/api/v1/requests/${id}/execution/attachments`, {
         method: "POST",
         body,
       });
+      uploadedEvidence.current = fileKey;
     }
     await command(`requests/${id}/execution/submit`, {
       expected_version: r.lock_version,

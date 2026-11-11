@@ -246,7 +246,8 @@
           },
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "minLength": 2,
+            "maxLength": 120
           },
           "deliverables": {
             "type": "string",
@@ -572,7 +573,8 @@
           },
           "project_id": {
             "type": "string",
-            "format": "uuid"
+            "minLength": 2,
+            "maxLength": 120
           },
           "board_resolution": {
             "type": "string",

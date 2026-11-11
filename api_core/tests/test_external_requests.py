@@ -188,6 +188,32 @@ class LeaveAndBudgetTests(SimpleTestCase):
         self.assertEqual(post.call_args.args[1], "it/user-access")
         self.assertEqual(out["it_access"]["status"], "GRANTED")
 
+    def test_access_already_active_in_itsm_completes(self):
+        conflict = ext.client.IntegrationError("ACCESS_ALREADY_ACTIVE", status=409)
+        with patch.object(ext.client, "post", side_effect=conflict):
+            out = ext.on_completed(
+                _cursor(),
+                request_id=str(uuid4()),
+                type_code="ACCESS",
+                payload={"requested_role": "AWS_READONLY"},
+                requester_id=str(uuid4()),
+            )
+        self.assertEqual(out["it_access"]["status"], "ALREADY_ACTIVE")
+
+    def test_other_itsm_errors_still_block_completion(self):
+        failure = ext.client.IntegrationError("UNKNOWN_ACCESS_ROLE", status=422)
+        with (
+            patch.object(ext.client, "post", side_effect=failure),
+            self.assertRaises(ext.client.IntegrationError),
+        ):
+            ext.on_completed(
+                _cursor(),
+                request_id=str(uuid4()),
+                type_code="ACCESS",
+                payload={"requested_role": "NOPE"},
+                requester_id=str(uuid4()),
+            )
+
 
 class TaxonomyTests(SimpleTestCase):
     MIGRATION = ROOT / "database/migrations/17_external_systems_via_api.sql"

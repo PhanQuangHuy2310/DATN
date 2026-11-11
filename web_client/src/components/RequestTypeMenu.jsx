@@ -79,7 +79,7 @@ export default function RequestTypeMenu({
           String(appLvl) === levelFilter ||
           `r${riskW}` === levelFilter) &&
         (!needle ||
-          `${item.label || ""} ${item.code || ""} ${item.group || ""} ${item.description || ""}`
+          `${item.label || ""} ${item.name || ""} ${item.code || ""} ${item.group || ""} ${item.description || ""}`
             .toLocaleLowerCase("vi-VN")
             .includes(needle))
       );

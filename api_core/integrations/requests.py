@@ -249,8 +249,8 @@ def on_completed(
         if isinstance(days, int) and days > 0
         else None
     )
-    return {
-        "it_access": client.post(
+    try:
+        granted = client.post(
             "it",
             "it/user-access",
             {
@@ -260,4 +260,10 @@ def on_completed(
                 "source_request_id": request_id,
             },
         )
-    }
+    except client.IntegrationError as exc:
+        # The employee already holds this role (granted by an earlier request):
+        # the goal of the request is met, so the executor must be able to finish.
+        if exc.code != "ACCESS_ALREADY_ACTIVE":
+            raise
+        granted = {"status": "ALREADY_ACTIVE"}
+    return {"it_access": granted}

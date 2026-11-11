@@ -461,6 +461,22 @@ const FIELD_REASON_LABELS = {
   ROLE_NOT_IN_APPLICATION: "Quyền đề nghị không thuộc ứng dụng đã chọn",
   EXPENSE_DAILY_LIMIT_EXCEEDED: "Số tiền vượt hạn mức chi tiêu theo ngày của hạng mục này",
   END_BEFORE_START: "Thời gian kết thúc phải sau thời gian bắt đầu",
+  END_MUST_BE_AFTER_START: "Giờ kết thúc phải sau giờ bắt đầu",
+  INVALID_TIME_FORMAT: "Giờ phải theo định dạng HH:MM (ví dụ 09:30)",
+  INVALID_ISO_DATETIME: "Ngày giờ không đúng định dạng",
+  TIMEZONE_REQUIRED: "Ngày giờ cần kèm múi giờ; vui lòng chọn lại bằng bộ chọn ngày giờ",
+  ADVANCE_AMOUNT_MUST_BE_BELOW_10M: "Biểu mẫu này dành cho khoản tạm ứng dưới 10.000.000 VNĐ; số lớn hơn hãy chọn biểu mẫu tạm ứng 10-50 triệu",
+  ADVANCE_AMOUNT_MUST_BE_BETWEEN_10M_AND_50M: "Biểu mẫu này dành cho khoản tạm ứng từ 10.000.000 đến 50.000.000 VNĐ; hãy chọn đúng biểu mẫu theo số tiền",
+  ADVANCE_AMOUNT_MUST_BE_OVER_50M: "Biểu mẫu này dành cho khoản tạm ứng trên 50.000.000 VNĐ; số nhỏ hơn hãy chọn biểu mẫu tạm ứng tương ứng",
+  LEAVE_LONG_REQUIRES_MORE_THAN_TWO_DAYS: "Nghỉ dài ngày phải từ 3 ngày trở lên; nghỉ ngắn hơn hãy dùng biểu mẫu nghỉ phép thường",
+  USE_LONG_LEAVE_FOR_THREE_OR_MORE_DAYS: "Nghỉ từ 3 ngày trở lên hãy dùng biểu mẫu nghỉ dài ngày",
+  SOURCE_AND_DESTINATION_MUST_DIFFER: "Kho nhập phải khác kho xuất",
+  SOURCE_AND_TARGET_BUDGET_MUST_DIFFER: "Ngân sách nhận phải khác ngân sách chuyển đi",
+  DISCOUNT_EXCEEDS_DEAL_VALUE: "Giá trị chiết khấu không được lớn hơn giá trị hợp đồng",
+  INVALID_PROPERTY_SCHEMA: "Biểu mẫu đang được cấu hình lại; vui lòng thử lại sau hoặc báo quản trị",
+  NO_PUBLISHED_RELEASE: "Loại yêu cầu này chưa có quy trình được công bố",
+  NO_REQUESTER_MEMBERSHIP: "Tài khoản chưa được cấp quyền tạo yêu cầu",
+  TYPE_INACTIVE: "Loại yêu cầu này đang tạm ngưng",
 };
 
 function formatFieldIssueItem(item) {

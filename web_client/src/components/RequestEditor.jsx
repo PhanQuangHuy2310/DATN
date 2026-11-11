@@ -204,6 +204,7 @@ function FormFieldControl({
         defaultValue={initialValue || ""}
         required={isRequired}
         rows={3}
+        minLength={spec?.minLength}
         maxLength={spec?.maxLength}
         placeholder={
           name === "reason"
@@ -256,7 +257,10 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   const [chosenLabel, setChosenLabel] = useState("");
   const [stage, setStage] = useState(initial?.id ? "form" : "choose");
   const [colleagues, setColleagues] = useState([]);
-  const [fieldOptions, setFieldOptions] = useState({});
+  // Catalogue options per type; null while loading so code fields never
+  // render as text boxes that a select then replaces (losing typed input).
+  const [optionsState, setOptionsState] = useState({ type: null, fields: {} });
+  const fieldOptions = optionsState.type === type ? optionsState.fields : null;
   const [selectedAppCode, setSelectedAppCode] = useState(initial?.payload?.app_code || "");
   const [groups, setGroups] = useState([]);
   const [preset, setPreset] = useState({});
@@ -310,8 +314,10 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
         if (active) {
           const items = result.items || [];
           setCatalog(items);
+          // Menu labels may differ from the type name; keep the name searchable.
+          const names = Object.fromEntries(items.map((item) => [item.code, item.name]));
           const choices =
-            result.approval_menu ||
+            result.approval_menu?.map((item) => ({ ...item, name: names[item.code] })) ||
             items.map((item) => ({
               group: "Biểu mẫu đang hoạt động",
               label: item.name || item.code,
@@ -367,10 +373,10 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     let alive = true;
     api(`/api/v1/integrations/options?type_code=${encodeURIComponent(type)}`)
       .then((result) => {
-        if (alive) setFieldOptions(result.fields || {});
+        if (alive) setOptionsState({ type, fields: result.fields || {} });
       })
       .catch(() => {
-        if (alive) setFieldOptions({});
+        if (alive) setOptionsState({ type, fields: {} });
       });
     return () => {
       alive = false;
@@ -759,8 +765,11 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
               (!current && !fields[type]?.length)
             }
           >
-            <div className="form-grid">
-              {formFields.map(([name, label, kind, spec]) => {
+            {fieldOptions === null && (
+              <p className="muted" role="status">Đang tải danh mục…</p>
+            )}
+            <div className="form-grid" hidden={fieldOptions === null}>
+              {fieldOptions !== null && formFields.map(([name, label, kind, spec]) => {
                 const isReq = Boolean(schema?.required?.includes(name));
                 return (
                   <label
