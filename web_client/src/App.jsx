@@ -22,6 +22,7 @@ import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
 import { ApiBaseContext, WORKSPACE_API } from "./apiBase.js";
 import ClientRequestsHub from "./components/ClientRequestsHub.jsx";
 import { formatVnd } from "./formatters.js";
+import easLogoUrl from "./assets/logo.png";
 
 function AdminDashboard(props) {
   return <AdminScreen name="AdminDashboard" {...props} />;
@@ -167,7 +168,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
         <div className="auth-card-clean">
           <div className="auth-header">
             <div className="auth-form-brand">
-              <img src="/logo.png" alt="EAS Logo" className="auth-form-logo-img" />
+              <img src={easLogoUrl} alt="EAS Logo" className="auth-form-logo-img" />
             </div>
             <h1 className="auth-greeting">
               {greeting}
@@ -1254,7 +1255,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
           </svg>
         </button>
         <a className="brand" href="#main" onClick={(event) => { event.preventDefault(); navigate("home"); }}>
-          <img src="/logo.png" alt="EAS Logo" className="brand-logo-img" />
+          <img src={easLogoUrl} alt="EAS Logo" className="brand-logo-img" />
           <span>
             {portal === "admin" ? "EAS Admin" : "EAS Portal"}<small>{portal === "admin" ? "QUẢN TRỊ HỆ THỐNG" : "PHÊ DUYỆT DOANH NGHIỆP"}</small>
           </span>

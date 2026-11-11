@@ -5,6 +5,7 @@ RUN cd web_client && npm ci
 COPY web_admin/package*.json ./web_admin/
 RUN cd web_admin && npm ci
 COPY web_client/src ./web_client/src
+COPY web_client/public ./web_client/public
 COPY web_admin/src ./web_admin/src
 COPY web_admin/index.html web_admin/vite.config.js ./web_admin/
 WORKDIR /app/web_admin

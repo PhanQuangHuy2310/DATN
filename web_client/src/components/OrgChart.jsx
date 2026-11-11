@@ -221,7 +221,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                 style={{
                   display: "grid",
                   // M11: wrap instead of squeezing 7-8 departments into one row.
-                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
                   gap: "16px",
                   paddingTop: "0",
                 }}
@@ -240,7 +240,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                     <div
                       key={dept.id || dept.code}
                       className="org-dept-column"
-                      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+                      style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 0 }}
                     >
                       {/* Vertical drop line from bus to department card */}
                       <div
@@ -263,7 +263,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                           borderRadius: "12px",
                           padding: "16px",
                           width: "100%",
-                          minWidth: "210px",
+                          minWidth: 0,
                           textAlign: "left",
                           cursor: "pointer",
                           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.06)",
@@ -272,17 +272,18 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                         onClick={() => handleOpenRoster(dept)}
                         title={`Bấm để xem toàn bộ ${dept.employee_count} nhân viên phòng ${dept.name}`}
                       >
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px" }}>
                           <span style={{ fontSize: "1.2rem" }}>{colors.icon}</span>
                           <span
                             className="badge"
                             style={{
                               backgroundColor: colors.badge,
                               color: "#ffffff",
-                              fontSize: "12px",
+                              fontSize: "12.5px",
                               fontWeight: 700,
-                              padding: "2px 8px",
+                              padding: "3px 10px",
                               borderRadius: "10px",
+                              whiteSpace: "nowrap",
                             }}
                           >
                             {dept.employee_count} nhân sự
@@ -294,22 +295,22 @@ export default function OrgChart({ navigate, portal = "client", user }) {
                           style={{
                             color: colors.text,
                             fontWeight: 700,
-                            fontSize: "13.5px",
-                            lineHeight: "1.3",
+                            fontSize: "14.5px",
+                            lineHeight: "1.35",
                             marginBottom: "6px",
                           }}
                         >
                           {dept.name}
                         </div>
 
-                        <div style={{ fontSize: "12px", color: "#475569" }}>
+                        <div style={{ fontSize: "13px", color: "#475569" }}>
                           Trưởng phòng:{" "}
                           <strong style={{ color: colors.text }}>
                             {dept.manager_name || "Chưa phân công"}
                           </strong>
                         </div>
 
-                        <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", color: "#475569" }}>
+                        <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12.5px", color: "#475569" }}>
                           <span>Xem danh sách</span>
                           <span>→</span>
                         </div>

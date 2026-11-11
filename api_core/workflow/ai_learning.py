@@ -397,6 +397,7 @@ def open_job_state() -> dict[str, Any] | None:
 
 def invalidate_lock_cache() -> None:
     cache.delete(LOCK_CACHE_KEY)
+    cache.delete("eas:public:ai_status")
 
 
 def steps_detail(current_step: int, failed: bool = False) -> list[dict[str, Any]]:
@@ -524,6 +525,17 @@ def claim_job(owner: str) -> dict[str, Any] | None:
     with transaction.atomic(), connection.cursor() as cursor:
         if not _jobs_table_ready(cursor):
             return None
+        if getattr(connection, "vendor", None) == "postgresql":
+            cursor.execute(
+                """
+                SELECT to_regclass('eas.ai_policy_version') IS NULL
+                    OR has_table_privilege('eas.ai_policy_version', 'SELECT')
+                """
+            )
+            can_read_policy = cursor.fetchone()
+            if can_read_policy and not can_read_policy[0]:
+                logger.warning("skip_claim_ai_learning_missing_policy_select_privilege")
+                return None
         cursor.execute(
             """
             UPDATE eas.ai_learning_job j

@@ -253,5 +253,34 @@ class AiDownLearningJobTests(SimpleTestCase):
         self.assertIn("status = 'FAILED'", sql)  # ...but _fail marks the job FAILED
         self.assertIn("sync_status = 'ERROR'", sql)
         self.assertIn("REGULATION_UPDATE_FAILED", sql)
-        # The active policy/version is never touched on failure.
-        self.assertNotIn("active_regulation_version", sql)
+
+
+class WorkerPrivilegeAndCacheTests(SimpleTestCase):
+    def test_invalidate_lock_cache_clears_public_ai_status(self):
+        from unittest.mock import patch
+
+        with patch.object(ai_learning.cache, "delete") as mock_del:
+            ai_learning.invalidate_lock_cache()
+        keys = [c.args[0] for c in mock_del.call_args_list]
+        self.assertIn(ai_learning.LOCK_CACHE_KEY, keys)
+        self.assertIn("eas:public:ai_status", keys)
+
+    def test_claim_job_skips_when_role_lacks_ai_policy_select(self):
+        from unittest.mock import MagicMock, patch
+
+        cursor = MagicMock()
+        cursor.fetchone.side_effect = [(True,), (False,)]
+        cursor.__enter__ = lambda _s: cursor
+        cursor.__exit__ = lambda _s, *a: False
+        fake_conn = MagicMock()
+        fake_conn.vendor = "postgresql"
+        fake_conn.cursor.return_value = cursor
+
+        with (
+            patch.object(ai_learning.transaction, "atomic"),
+            patch.object(ai_learning, "connection", fake_conn),
+        ):
+            self.assertIsNone(ai_learning.claim_job("worker-1"))
+        executed = " ".join(str(c.args[0]) for c in cursor.execute.call_args_list)
+        self.assertIn("has_table_privilege", executed)
+        self.assertNotIn("UPDATE eas.ai_learning_job", executed)

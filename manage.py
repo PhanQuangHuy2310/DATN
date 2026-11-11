@@ -4,9 +4,12 @@ import sys
 
 
 def main() -> None:
-    if "test" in sys.argv:
-        os.environ.setdefault("EAS_ENV", "test")
-    else:
+    # VS Code (python.terminal.useEnvFile) or shell sessions can pre-load
+    # EAS_ENV=development from .env; tests must use the isolated SQLite test
+    # profile unless EAS_TEST_USE_POSTGRES=1 is explicitly requested.
+    if "test" in sys.argv and os.environ.get("EAS_TEST_USE_POSTGRES") != "1":
+        os.environ["EAS_ENV"] = "test"
+    elif "test" not in sys.argv:
         from project_env import load_project_env
 
         load_project_env()

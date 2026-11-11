@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     eas_api_internal_url: str = "http://api:8000"  # NOSONAR python:S5332 - internal docker service communication
     # Simulated external systems (docs/TICH_HOP_HE_THONG_NGOAI.md): the AI reads
     # them through their API, never from snapshots or the database.
-    eas_mock_api_url: str = "http://mock_systems:8000/mock-api/v1"  # NOSONAR python:S5332 - internal docker service communication
+    eas_mock_api_url: str = "http://mock-systems:8000/mock-api/v1"  # NOSONAR python:S5332 - internal docker service communication
     eas_mock_api_secret: str = ""
 
     # --- Auto-Approve ---

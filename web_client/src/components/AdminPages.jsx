@@ -42,16 +42,442 @@ function StatusSelect({ value, onChange }) {
   </select></label>;
 }
 
-function HealthList({ diagnostics, ready }) {
+const STATUS_CHART_ORDER = [
+  "COMPLETED",
+  "PENDING_APPROVAL",
+  "READY_FOR_EXECUTION",
+  "IN_PROGRESS",
+  "WAITING_FOR_ACCEPTANCE",
+  "NEEDS_INFO",
+  "REJECTED",
+  "CANCELLED",
+  "PROCESSING",
+];
+
+const STATUS_CHART_COLORS = {
+  COMPLETED: "#10b981",
+  PENDING_APPROVAL: "#f59e0b",
+  READY_FOR_EXECUTION: "#2563eb",
+  IN_PROGRESS: "#0ea5e9",
+  WAITING_FOR_ACCEPTANCE: "#8b5cf6",
+  NEEDS_INFO: "#ea580c",
+  REJECTED: "#ef4444",
+  CANCELLED: "#64748b",
+  PROCESSING: "#f59e0b",
+};
+
+const STATUS_CHART_LABELS = {
+  ...statuses,
+  PROCESSING: "Đang xử lý",
+};
+
+function buildRequestStatusSegments(statusBreakdown, byStatus, kpis) {
+  let raw = statusBreakdown && Object.keys(statusBreakdown).length ? statusBreakdown : null;
+  if (!raw && byStatus && Object.keys(byStatus).length) {
+    raw = byStatus;
+  }
+  const entries = [];
+  if (raw) {
+    const seen = new Set();
+    for (const code of STATUS_CHART_ORDER) {
+      if (code === "DRAFT") continue;
+      const count = Number(raw[code] || 0);
+      if (count > 0) {
+        seen.add(code);
+        entries.push({ code, count });
+      }
+    }
+    for (const [code, val] of Object.entries(raw)) {
+      if (code === "DRAFT" || seen.has(code)) continue;
+      const count = Number(val || 0);
+      if (count > 0) entries.push({ code, count });
+    }
+  } else if (kpis && Number(kpis.total_requests || 0) > 0) {
+    for (const [code, count] of [
+      ["COMPLETED", Number(kpis.success_count || 0)],
+      ["PROCESSING", Number(kpis.processing_count || 0)],
+      ["REJECTED", Number(kpis.rejected_count || 0)],
+    ]) {
+      if (count > 0) entries.push({ code, count });
+    }
+  }
+  entries.sort((a, b) => b.count - a.count);
+  const total = entries.reduce((sum, item) => sum + item.count, 0);
+  if (!total) return { total: 0, items: [] };
+  return {
+    total,
+    items: entries.map((item) => ({
+      code: item.code,
+      label: STATUS_CHART_LABELS[item.code] || item.code,
+      color: STATUS_CHART_COLORS[item.code] || "#64748b",
+      count: item.count,
+      pct: Math.round((item.count / total) * 1000) / 10,
+    })),
+  };
+}
+
+function RequestStatusDonutChart({ statusBreakdown, byStatus, kpis }) {
+  const [activeCode, setActiveCode] = useState(null);
+  const { total, items } = buildRequestStatusSegments(statusBreakdown, byStatus, kpis);
+
+  if (!total || !items.length) {
+    return <EmptyState title="Chưa có dữ liệu trạng thái yêu cầu" />;
+  }
+
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+  const gap = items.length > 1 ? 3 : 0;
+  const usable = Math.max(1, circumference - gap * items.length);
+  const rawLens = items.map((it) => (it.count / total) * usable);
+  const minArc = items.length > 1 ? Math.min(11, usable / (items.length * 2)) : usable;
+  const boosted = rawLens.map((len) => Math.max(minArc, len));
+  const boostSum = boosted.reduce((acc, v) => acc + v, 0);
+  const scale = usable / boostSum;
+
+  const slices = items.reduce((acc, it, idx) => {
+    const arcLen = boosted[idx] * scale;
+    const prev = acc[idx - 1];
+    const offset = prev ? prev.offset + prev.arcLen + gap : 0;
+    acc.push({ ...it, arcLen, offset });
+    return acc;
+  }, []);
+
+  const activeItem = items.find((it) => it.code === activeCode) || null;
+
+  return (
+    <div className="status-chart-layout">
+      <div className="status-donut-wrap">
+        <svg
+          className="status-donut-svg"
+          viewBox="0 0 200 200"
+          role="img"
+          aria-label={`Biểu đồ trạng thái yêu cầu: tổng ${total} yêu cầu`}
+        >
+          <title>{`Biểu đồ phân bổ ${total} yêu cầu theo trạng thái`}</title>
+          <circle className="status-donut-track" cx="100" cy="100" r={radius} fill="none" strokeWidth="24" />
+          <g transform="rotate(-90 100 100)">
+            {slices.map((slice) => {
+              const isSelected = activeCode === slice.code;
+              const isDimmed = activeCode !== null && !isSelected;
+              return (
+                <circle
+                  key={slice.code}
+                  cx="100"
+                  cy="100"
+                  r={radius}
+                  fill="none"
+                  stroke={slice.color}
+                  strokeWidth={isSelected ? 30 : 24}
+                  strokeDasharray={`${slice.arcLen} ${Math.max(0, circumference - slice.arcLen)}`}
+                  strokeDashoffset={-slice.offset}
+                  strokeLinecap="butt"
+                  opacity={isDimmed ? 0.35 : 1}
+                  className="status-donut-slice"
+                  onMouseEnter={() => setActiveCode(slice.code)}
+                  onMouseLeave={() => setActiveCode(null)}
+                >
+                  <title>{`${slice.label}: ${slice.count} yêu cầu (${slice.pct}%)`}</title>
+                </circle>
+              );
+            })}
+          </g>
+        </svg>
+        <div className="status-donut-center" aria-live="polite">
+          <strong className="status-donut-total" style={activeItem ? { color: activeItem.color } : undefined}>
+            {activeItem ? activeItem.count : total}
+          </strong>
+          {activeItem ? (
+            <>
+              <span className="status-donut-pct">{activeItem.pct}%</span>
+              <span className="status-donut-sub">{activeItem.label}</span>
+            </>
+          ) : (
+            <span className="status-donut-sub">Tổng yêu cầu</span>
+          )}
+        </div>
+      </div>
+
+      <div className="status-legend-list" role="group" aria-label="Chú giải trạng thái yêu cầu">
+        {items.map((item) => {
+          const isSelected = activeCode === item.code;
+          return (
+            <button
+              key={item.code}
+              type="button"
+              aria-pressed={isSelected}
+              className={`status-legend-row ${isSelected ? "is-active" : ""}`}
+              onMouseEnter={() => setActiveCode(item.code)}
+              onMouseLeave={() => setActiveCode(null)}
+              onFocus={() => setActiveCode(item.code)}
+              onBlur={() => setActiveCode(null)}
+            >
+              <span className="status-legend-swatch" style={{ background: item.color }} aria-hidden="true" />
+              <span className="status-legend-main">
+                <span className="status-legend-head">
+                  <span className="status-legend-name">{item.label}</span>
+                  <span className="status-legend-nums">
+                    <strong>{item.count}</strong>
+                    <span className="status-legend-pct">{item.pct}%</span>
+                  </span>
+                </span>
+                <span className="status-legend-bar" aria-hidden="true">
+                  <span style={{ width: `${Math.min(100, Math.max(3, item.pct))}%`, background: item.color }} />
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const READINESS_LABELS = {
+  runtime_role_exists: "Role runtime DB tồn tại",
+  runtime_role_is_non_admin: "Role API không có quyền superuser",
+  runtime_role_is_api_only: "Tách biệt role API vs Worker",
+  schema_has_required_tables: "Đầy đủ bảng schema eas",
+  request_types_match_p0: "Khớp nhóm nghiệp vụ P0",
+  p0_active_types_configured: "Đã cấu hình quy trình P0",
+  mock_systems_api_reachable: "Gateway Mock APIs (:8100) phản hồi",
+  mock_source_migrations_current: "Migration schema mock đầy đủ",
+  eas_role_has_no_mock_table_access: "Cách ly quyền đọc bảng mock",
+  shared_security_cache: "Bộ nhớ đệm bảo mật (Cache)",
+  attachment_storage_requirement_satisfied: "Kho lưu trữ tệp đính kèm",
+  malware_scanner_requirement_satisfied: "Dịch vụ quét mã độc (ClamAV)",
+  database: "Kết nối Cơ sở dữ liệu",
+};
+
+function SystemServicesPanel({ ready, diagnostics, aiStatus, mockApis, navigate, lastCheckedAt }) {
+  const [showTech, setShowTech] = useState(false);
   const checks = ready.data?.checks || {};
-  const rows = [
-    ["Máy chủ ứng dụng (API)", ready.error ? "bad" : ready.data?.status === "ready" ? "ok" : "warn", ready.error ? "Không kết nối được" : ready.data?.status === "ready" ? "Sẵn sàng" : "Cần kiểm tra"],
-    ["Cơ sở dữ liệu", checks.database ? "ok" : "bad", checks.database ? "Kết nối bình thường" : "Không sẵn sàng"],
-    ["Bộ nhớ đệm bảo mật", checks.shared_security_cache ? "ok" : "warn", checks.shared_security_cache ? "Bình thường" : "Không khả dụng"],
-    ["Dịch vụ AI", diagnostics.data ? (diagnostics.data.ai_service.healthy ? "ok" : "warn") : "", diagnostics.data ? (diagnostics.data.ai_service.healthy ? "Đang phản hồi" : "Không phản hồi — AI dùng chế độ dự phòng") : "Đang kiểm tra…"],
-    ["Hàng đợi thông báo (worker)", diagnostics.data ? (diagnostics.data.worker.backlog_ok ? "ok" : "bad") : "", diagnostics.data ? (diagnostics.data.worker.backlog_ok ? "Không có tồn đọng quá hạn" : `Tồn đọng ${Math.round(diagnostics.data.outbox.oldest_pending_seconds / 60)} phút — kiểm tra worker`) : "Đang kiểm tra…"],
+  const catalog = ready.data?.catalog || null;
+  const diag = diagnostics.data || null;
+  const ai = aiStatus.data || null;
+  const apiData = mockApis.data || null;
+  const apiList = Array.isArray(apiData?.apis) ? apiData.apis : [];
+  const counts = diag?.outbox?.counts || {};
+
+  const readyPending = ready.loading && !ready.data && !ready.error;
+  const diagPending = diagnostics.loading && !diagnostics.data && !diagnostics.error;
+
+  const dbOk = Boolean(checks.database) || Boolean(checks.schema_has_required_tables && checks.runtime_role_exists);
+  const storageOk = checks.attachment_storage_requirement_satisfied !== false && checks.malware_scanner_requirement_satisfied !== false;
+  const mockGatewayOk = checks.mock_systems_api_reachable !== false && !apiData?.circuit_breaker_active;
+
+  const cards = [
+    {
+      id: "core-api",
+      name: "Máy chủ ứng dụng (EAS API)",
+      endpoint: "GET /health/ready",
+      tone: readyPending ? "" : ready.error ? "bad" : ready.data?.status === "ready" ? "ok" : "warn",
+      badge: readyPending ? "Đang kiểm tra…" : ready.error ? "Không kết nối" : ready.data?.status === "ready" ? "Sẵn sàng" : "Cần kiểm tra",
+      detail: readyPending
+        ? "Đang gửi tín hiệu kiểm tra tới Django API..."
+        : ready.error
+          ? "Không gọi được điểm kiểm tra /health/ready."
+          : `Dịch vụ: ${ready.data?.service || "eas-api"} · Role thực thi: ${checks.runtime_role_is_api_only === false ? "Cần rà soát" : "Chuẩn eas_api"}`,
+      actionLabel: "Phiên bản hệ thống →",
+      actionPage: "system",
+    },
+    {
+      id: "database",
+      name: "Cơ sở dữ liệu PostgreSQL",
+      endpoint: "Supabase · schema eas",
+      tone: readyPending ? "" : ready.error ? "bad" : dbOk ? "ok" : "bad",
+      badge: readyPending ? "Đang kiểm tra…" : ready.error ? "Mất kết nối" : dbOk ? "Hoạt động tốt" : "Không sẵn sàng",
+      detail: readyPending
+        ? "Đang xác minh bảng lõi và danh mục quy trình..."
+        : ready.error
+          ? "Không truy vấn được trạng thái cơ sở dữ liệu."
+          : `${checks.schema_has_required_tables || checks.database ? "Đủ bảng lõi & role hợp lệ" : "Thiếu bảng bắt buộc"}${catalog ? ` · ${catalog.active_type_count} loại đang bật (${catalog.unconfigured_active_type_count} chưa cấu hình)` : ""}`,
+    },
+    {
+      id: "ai-engine",
+      name: "Dịch vụ AI & Quy chế",
+      endpoint: "FastAPI :8001 · Hybrid Engine",
+      tone: diagPending ? "" : diagnostics.error ? "warn" : diag?.ai_service?.healthy ? (ai?.client_maintenance_lock ? "warn" : "ok") : "warn",
+      badge: diagPending ? "Đang kiểm tra…" : diagnostics.error ? "Chưa đủ quyền" : diag?.ai_service?.healthy ? (ai?.client_maintenance_lock ? "Đang bảo trì" : "Đang phản hồi") : "Dự phòng (Offline)",
+      detail: diagPending
+        ? "Đang kiểm tra sức khỏe AI Service..."
+        : diagnostics.error
+          ? "Không đọc được tín hiệu diagnostics từ API."
+          : `${diag?.ai_service?.healthy ? "AI Service trực tuyến (NLP + Risk)" : "AI đang chạy chế độ dự phòng an toàn"}${ai ? ` · Quy định ${ai.active_regulation_version || "v1.0"} (${ai.sync_status || "—"})` : ""}`,
+      actionLabel: "Quản trị AI →",
+      actionPage: "ai-process",
+    },
+    {
+      id: "worker-sla",
+      name: "Outbox Worker & Giám sát SLA",
+      endpoint: "Async Outbox · SLA Alert",
+      tone: diagPending ? "" : diagnostics.error ? "warn" : diag?.worker?.backlog_ok ? ((counts.DEAD || 0) > 0 ? "warn" : "ok") : "bad",
+      badge: diagPending ? "Đang kiểm tra…" : diagnostics.error ? "Chưa đủ quyền" : diag?.worker?.backlog_ok ? ((counts.DEAD || 0) > 0 ? "Có lỗi DEAD" : "Ổn định") : "Tồn đọng quá hạn",
+      detail: diagPending
+        ? "Đang đọc hàng đợi Outbox và SLA..."
+        : diagnostics.error
+          ? "Không đọc được hàng đợi Outbox."
+          : `Đã gửi ${counts.SENT || 0} · Chờ ${counts.PENDING || 0} · Thất bại ${counts.DEAD || 0} · SLA mở ${diag?.sla?.open_stages ?? 0} (${diag?.sla?.overdue_stages ?? 0} quá hạn)`,
+      actionLabel: diagnostics.error ? null : "Chi tiết SLA & Outbox →",
+      actionPage: "sla",
+    },
+    {
+      id: "mock-gateway",
+      name: "Hệ thống 8 API Nghiệp vụ",
+      endpoint: "Mock Systems :8100 · Circuit Breaker",
+      tone: readyPending ? "" : ready.error ? "bad" : mockGatewayOk ? "ok" : "warn",
+      badge: readyPending
+        ? "Đang kiểm tra…"
+        : ready.error
+          ? "Mất kết nối"
+          : apiList.length
+            ? `${apiData.enabled_count}/${apiData.total_count} API bật`
+            : checks.mock_systems_api_reachable
+              ? "Gateway sẵn sàng"
+              : "Cần kiểm tra",
+      detail: readyPending
+        ? "Đang kiểm tra kết nối 8 hệ thống nghiệp vụ..."
+        : apiList.length
+          ? `${apiData.circuit_breaker_active ? "Có API đang tạm ngắt (Circuit Breaker mở)" : "Toàn bộ 8 kết nối tích hợp hoạt động bình thường"}${checks.mock_source_migrations_current ? " · Migration đồng bộ" : ""}`
+          : checks.mock_systems_api_reachable
+            ? "Mock Systems API đang phản hồi và cách ly schema."
+            : "Không kết nối được Gateway Mock Systems.",
+      actionLabel: "Quản lý 8 API →",
+      actionPage: "api-admin",
+    },
+    {
+      id: "cache-storage",
+      name: "Cache Bảo mật, Lưu trữ & Quét mã độc",
+      endpoint: "Redis/Cache · Storage · ClamAV",
+      tone: readyPending ? "" : ready.error ? "bad" : checks.shared_security_cache && storageOk ? "ok" : "warn",
+      badge: readyPending ? "Đang kiểm tra…" : ready.error ? "Cần kiểm tra" : checks.shared_security_cache && storageOk ? "Bình thường" : "Lưu ý",
+      detail: readyPending
+        ? "Đang kiểm tra bộ nhớ đệm và dịch vụ lưu trữ..."
+        : `Cache: ${checks.shared_security_cache ? "Sẵn sàng" : "Chưa sẵn sàng"} · Lưu trữ tệp: ${checks.attachment_storage_requirement_satisfied === false ? "Thiếu" : "Đạt"} · ClamAV: ${checks.malware_scanner_requirement_satisfied === false ? "Tạm tắt" : "Đạt"}`,
+    },
   ];
-  return <ul className="ds-health-list">{rows.map(([name, tone, text]) => <li key={name}><span>{name}</span><span><i className={`ds-dot ${tone}`} aria-hidden="true" />{text}</span></li>)}</ul>;
+
+  const badCount = cards.filter((c) => c.tone === "bad").length;
+  const warnCount = cards.filter((c) => c.tone === "warn").length;
+  const readyCount = cards.filter((c) => c.tone === "ok").length;
+
+  return (
+    <div className="service-health-wrapper">
+      <div className="service-health-summary">
+        <div className="service-summary-left">
+          <span className={`service-overall-pill ${badCount > 0 ? "tone-bad" : warnCount > 0 ? "tone-warn" : readyCount === cards.length ? "tone-ok" : "tone-idle"}`}>
+            <i className={`ds-dot ${badCount > 0 ? "bad" : warnCount > 0 ? "warn" : readyCount === cards.length ? "ok" : ""}`} aria-hidden="true" />
+            {badCount > 0
+              ? `Phát hiện ${badCount} dịch vụ lỗi`
+              : warnCount > 0
+                ? `${readyCount}/${cards.length} dịch vụ tốt · ${warnCount} cần lưu ý`
+                : readyCount === cards.length
+                  ? `Tất cả ${cards.length}/${cards.length} nhóm dịch vụ hoạt động ổn định`
+                  : "Đang tổng hợp trạng thái các dịch vụ..."}
+          </span>
+          {lastCheckedAt && (
+            <span className="muted service-checked-time">
+              Cập nhật lúc {lastCheckedAt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          className="link service-tech-toggle"
+          aria-expanded={showTech}
+          onClick={() => setShowTech((v) => !v)}
+        >
+          {showTech ? "Ẩn chi tiết kiểm tra kỹ thuật ▲" : "Xem chi tiết kiểm tra kỹ thuật ▼"}
+        </button>
+      </div>
+
+      <div className="service-health-grid">
+        {cards.map((svc) => (
+          <article key={svc.id} className={`service-health-card ${svc.tone ? `tone-${svc.tone}` : ""}`}>
+            <div className="service-card-top">
+              <div>
+                <h3 className="service-card-name">{svc.name}</h3>
+                <span className="service-card-endpoint">{svc.endpoint}</span>
+              </div>
+              <span className={`service-status-pill ${svc.tone ? `tone-${svc.tone}` : ""}`}>
+                <i className={`ds-dot ${svc.tone}`} aria-hidden="true" />
+                {svc.badge}
+              </span>
+            </div>
+            <p className="service-card-detail">{svc.detail}</p>
+            {svc.actionLabel && navigate && (
+              <div className="service-card-actions">
+                <button type="button" className="link" onClick={() => navigate(svc.actionPage)}>
+                  {svc.actionLabel}
+                </button>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+
+      {apiList.length > 0 && (
+        <div className="service-api-strip">
+          <div className="service-api-strip-head">
+            <div>
+              <strong>Chi tiết 8 API hệ thống nghiệp vụ ({apiData.enabled_count}/{apiData.total_count} đang hoạt động)</strong>
+              <small className="muted">Trạng thái kết nối thực tế tới các hệ thống HRM, Tài chính, CNTT, Tài sản, Mua sắm…</small>
+            </div>
+            {navigate && (
+              <button type="button" className="secondary" onClick={() => navigate("api-admin")}>
+                Cấu hình Circuit Breaker →
+              </button>
+            )}
+          </div>
+          <div className="service-api-chip-grid">
+            {apiList.map((item) => (
+              <div key={item.id || item.api_code} className={`service-api-chip ${item.is_enabled ? "is-on" : "is-off"}`}>
+                <div className="service-api-chip-top">
+                  <strong>{item.api_code}</strong>
+                  <span className={`service-api-state ${item.is_enabled ? "is-on" : "is-off"}`}>
+                    <i className={`ds-dot ${item.is_enabled ? "ok" : "bad"}`} aria-hidden="true" />
+                    {item.is_enabled ? "Hoạt động" : "Đang ngắt"}
+                  </span>
+                </div>
+                <span className="service-api-name">{item.api_name}</span>
+                <span className="service-api-meta">
+                  {item.source_system} · {item.linked_count || 0} biểu mẫu
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showTech && (
+        <div className="service-tech-panel">
+          <div className="service-tech-title">Thông số kiểm tra chi tiết (/health/ready & Diagnostics)</div>
+          <div className="service-tech-grid">
+            {Object.entries(checks).map(([key, val]) => (
+              <div key={key} className="service-tech-item">
+                <span>{READINESS_LABELS[key] || key}</span>
+                <span className={`service-tech-val ${val ? "ok" : "bad"}`}>
+                  <i className={`ds-dot ${val ? "ok" : "bad"}`} aria-hidden="true" />
+                  {val ? "TRUE" : "FALSE"}
+                </span>
+              </div>
+            ))}
+            {diag?.outbox && (
+              <>
+                <div className="service-tech-item">
+                  <span>Outbox gửi thành công gần nhất</span>
+                  <strong>{diag.outbox.last_sent_at ? shortDate(diag.outbox.last_sent_at) : "Chưa có"}</strong>
+                </div>
+                <div className="service-tech-item">
+                  <span>Số sự kiện lỗi (DEAD events)</span>
+                  <strong>{diag.outbox.dead_events?.length || 0}</strong>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** System-wide dashboard; every figure comes from /api/v1/admin/overview and diagnostics. */
@@ -74,7 +500,10 @@ export function AdminDashboard({ navigate, workspace = false }) {
   const overview = useResource(valid && !workspace ? `/api/v1/admin/overview?${params}` : "");
   const diagnostics = useResource(workspace ? "" : "/api/v1/admin/diagnostics");
   const ready = useResource(workspace ? "" : "/health/ready");
+  const aiStatus = useResource(workspace ? "" : "/api/v1/system/ai-status");
+  const mockApis = useResource(workspace ? "" : "/api/v1/admin/mock-apis");
   const analytics = useResource(`${apiBase}/analytics?period=${period}`);
+  const [lastCheckedAt, setLastCheckedAt] = useState(() => new Date());
 
   const aData = analytics.data;
   const oData = overview.data;
@@ -92,7 +521,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
     processing_rate: oData?.total ? Math.round((100 * running) / oData.total) : 0,
   };
 
-  const trends = aData?.trends || [];
+  const statusBreakdown = aData?.status_breakdown || null;
   const topTypes = aData?.top_types || (oData?.top_types || []);
   const topDepartments = aData?.top_departments || [];
   const topUsers = aData?.top_users || [];
@@ -164,6 +593,10 @@ export function AdminDashboard({ navigate, workspace = false }) {
               analytics.reload();
               overview.reload();
               diagnostics.reload();
+              ready.reload();
+              aiStatus.reload();
+              mockApis.reload();
+              setLastCheckedAt(new Date());
             }}
           >
             Làm mới
@@ -322,57 +755,31 @@ export function AdminDashboard({ navigate, workspace = false }) {
         </div>
       </section>
 
-      {/* 3. BIỂU ĐỒ XU HƯỚNG YÊU CẦU & LOẠI YÊU CẦU PHỔ BIẾN NHẤT */}
-      <div className="ds-grid-2" style={{ marginTop: 16 }}>
-        <section className="panel admin-trend-panel">
+      {/* 3. BIỂU ĐỒ TRẠNG THÁI YÊU CẦU & LOẠI YÊU CẦU PHỔ BIẾN NHẤT */}
+      <div className="ds-grid-2 admin-analytics-grid" style={{ marginTop: 16 }}>
+        <section className="panel admin-status-panel">
           <div className="section-head">
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Xu hướng yêu cầu</h2>
+              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Trạng thái yêu cầu</h2>
               <small className="muted">
-                Số lượng yêu cầu theo {period === "day" ? "khung giờ" : period === "week" ? "các ngày trong tuần" : period === "year" ? "các tháng trong năm" : "các tuần trong tháng"}
+                Cơ cấu phân bổ theo từng trạng thái xử lý ({period === "day" ? "hôm nay" : period === "week" ? "tuần này" : period === "year" ? "năm nay" : "tháng này"})
               </small>
             </div>
-            <div className="trend-legends">
-              <span className="leg-item"><i className="leg-dot dot-green" /> Thành công</span>
-              <span className="leg-item"><i className="leg-dot dot-amber" /> Đang xử lý</span>
-              <span className="leg-item"><i className="leg-dot dot-red" /> Bị từ chối</span>
-            </div>
-          </div>
-
-          <div className="trend-chart-area">
-            {trends.length > 0 ? (
-              <div className="trend-bar-chart">
-                {(() => {
-                  const maxVal = Math.max(1, ...trends.map((t) => t.total || 0));
-                  return trends.map((item, idx) => {
-                    const sucH = ((item.success || 0) / maxVal) * 140;
-                    const proH = ((item.processing || 0) / maxVal) * 140;
-                    const rejH = ((item.rejected || 0) / maxVal) * 140;
-                    return (
-                      <div
-                        key={idx}
-                        className="trend-col"
-                        title={`${item.label}: Tổng ${item.total} (Thành công ${item.success}, Đang xử lý ${item.processing}, Từ chối ${item.rejected})`}
-                      >
-                        <div className="trend-bar-stack">
-                          <span className="trend-stack-total">{item.total > 0 ? item.total : ""}</span>
-                          <div className="trend-seg seg-red" style={{ height: `${rejH}px` }} />
-                          <div className="trend-seg seg-amber" style={{ height: `${proH}px` }} />
-                          <div className="trend-seg seg-green" style={{ height: `${sucH}px` }} />
-                        </div>
-                        <span className="trend-label">{item.label}</span>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            ) : (
-              <EmptyState title="Chưa có dữ liệu xu hướng" />
+            {Number(kpis.total_requests || 0) > 0 && (
+              <span className="status-panel-summary-pill">
+                Hoàn thành <strong>{kpis.success_rate}%</strong>
+              </span>
             )}
           </div>
+
+          <RequestStatusDonutChart
+            statusBreakdown={statusBreakdown}
+            byStatus={by}
+            kpis={kpis}
+          />
         </section>
 
-        <section className="panel">
+        <section className="panel admin-popular-panel">
           <div className="section-head">
             <div>
               <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Loại yêu cầu phổ biến nhất</h2>
@@ -406,8 +813,8 @@ export function AdminDashboard({ navigate, workspace = false }) {
       </div>
 
       {/* 4. THỐNG KÊ THEO PHÒNG BAN & CÁ NHÂN */}
-      <div className="ds-grid-2" style={{ marginTop: 16 }}>
-        <section className="panel">
+      <div className="ds-grid-2 admin-rank-grid" style={{ marginTop: 16 }}>
+        <section className="panel admin-rank-panel">
           <div className="section-head">
             <div>
               <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Top Phòng ban gửi yêu cầu</h2>
@@ -415,31 +822,42 @@ export function AdminDashboard({ navigate, workspace = false }) {
             </div>
           </div>
           {topDepartments.length ? (
-            <div className="table-wrap">
+            <div className="table-wrap admin-rank-table-wrap">
               <table className="admin-rank-table">
+                <colgroup>
+                  <col style={{ width: "74px" }} />
+                  <col />
+                  <col style={{ width: "74px" }} />
+                  <col style={{ width: "108px" }} />
+                  <col style={{ width: "92px" }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ width: 44 }}>Hạng</th>
+                    <th style={{ textAlign: "center" }}>Hạng</th>
                     <th>Phòng ban</th>
-                    <th style={{ textAlign: "right" }}>Tổng số</th>
+                    <th style={{ textAlign: "right" }}>Tổng</th>
                     <th style={{ textAlign: "right" }}>Thành công</th>
-                    <th style={{ textAlign: "right" }}>Tỷ lệ</th>
+                    <th style={{ textAlign: "right" }} title="Tỷ trọng trên tổng yêu cầu">Tỷ trọng</th>
                   </tr>
                 </thead>
                 <tbody>
                   {topDepartments.map((d, idx) => (
                     <tr key={idx}>
-                      <td>
+                      <td style={{ textAlign: "center" }}>
                         <span className={`rank-badge ${idx === 0 ? "rank-1" : idx === 1 ? "rank-2" : idx === 2 ? "rank-3" : ""}`}>
                           {idx + 1}
                         </span>
                       </td>
                       <td>
-                        <strong>{d.department_name}</strong>
+                        <strong className="rank-dept-name">{d.department_name}</strong>
                       </td>
-                      <td style={{ textAlign: "right" }}>{d.total}</td>
-                      <td style={{ textAlign: "right", color: "var(--ds-success)" }}>{d.success}</td>
-                      <td style={{ textAlign: "right" }}>
+                      <td style={{ textAlign: "right" }} className="rank-num-cell">
+                        <strong>{d.total}</strong>
+                      </td>
+                      <td style={{ textAlign: "right", color: "var(--ds-success)" }} className="rank-num-cell">
+                        <strong>{d.success}</strong>
+                      </td>
+                      <td style={{ textAlign: "right" }} className="rank-num-cell">
                         <span className="badge-pct">{d.percentage}%</span>
                       </td>
                     </tr>
@@ -452,7 +870,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
           )}
         </section>
 
-        <section className="panel">
+        <section className="panel admin-rank-panel">
           <div className="section-head">
             <div>
               <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Top Cá nhân gửi nhiều yêu cầu</h2>
@@ -460,45 +878,57 @@ export function AdminDashboard({ navigate, workspace = false }) {
             </div>
           </div>
           {topUsers.length ? (
-            <div className="table-wrap">
+            <div className="table-wrap admin-rank-table-wrap">
               <table className="admin-rank-table">
+                <colgroup>
+                  <col style={{ width: "74px" }} />
+                  <col />
+                  <col style={{ width: "74px" }} />
+                  <col style={{ width: "108px" }} />
+                  <col style={{ width: "92px" }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ width: 44 }}>Hạng</th>
-                    <th>Người dùng</th>
-                    <th>Phòng ban</th>
+                    <th style={{ textAlign: "center" }}>Hạng</th>
+                    <th>Nhân viên</th>
                     <th style={{ textAlign: "right" }}>Tổng</th>
-                    <th style={{ textAlign: "right" }}>Đã duyệt</th>
+                    <th style={{ textAlign: "right" }}>Thành công</th>
+                    <th style={{ textAlign: "right" }} title="Tỷ trọng trên tổng yêu cầu">Tỷ trọng</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {topUsers.map((u, idx) => (
-                    <tr key={idx}>
-                      <td>
-                        <span className={`rank-badge ${idx === 0 ? "rank-1" : idx === 1 ? "rank-2" : idx === 2 ? "rank-3" : ""}`}>
-                          {idx + 1}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="user-flex-cell">
-                          <div className="user-circle">{(u.name || "U")[0]}</div>
-                          <div>
-                            <div className="user-display-name">{u.name}</div>
-                            <small className="user-email-text muted">{u.email}</small>
+                  {topUsers.map((u, idx) => {
+                    const userPct = Number(kpis.total_requests)
+                      ? Math.round((Number(u.total || 0) / Number(kpis.total_requests)) * 1000) / 10
+                      : 0;
+                    return (
+                      <tr key={idx}>
+                        <td style={{ textAlign: "center" }}>
+                          <span className={`rank-badge ${idx === 0 ? "rank-1" : idx === 1 ? "rank-2" : idx === 2 ? "rank-3" : ""}`}>
+                            {idx + 1}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="user-flex-cell" title={u.email || u.name}>
+                            <div className="user-circle">{(u.name || "U")[0]}</div>
+                            <div className="user-text-stack">
+                              <div className="user-display-name">{u.name}</div>
+                              <small className="rank-user-dept">{u.department || u.email}</small>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td>
-                        <small>{u.department}</small>
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        <strong>{u.total}</strong>
-                      </td>
-                      <td style={{ textAlign: "right", color: "var(--ds-success)" }}>
-                        <strong>{u.success}</strong>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td style={{ textAlign: "right" }} className="rank-num-cell">
+                          <strong>{u.total}</strong>
+                        </td>
+                        <td style={{ textAlign: "right", color: "var(--ds-success)" }} className="rank-num-cell">
+                          <strong>{u.success}</strong>
+                        </td>
+                        <td style={{ textAlign: "right" }} className="rank-num-cell">
+                          <span className="badge-pct">{userPct}%</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -513,7 +943,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
         <div className="section-head">
           <div>
             <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Tình trạng dịch vụ hệ thống</h2>
-            <small className="muted">Kiểm tra tính sẵn sàng của các thành phần nền tảng</small>
+            <small className="muted">Giám sát chi tiết trạng thái các dịch vụ lõi, AI Engine, Outbox Worker và 8 API nghiệp vụ</small>
           </div>
           <button
             type="button"
@@ -521,12 +951,22 @@ export function AdminDashboard({ navigate, workspace = false }) {
             onClick={() => {
               ready.reload();
               diagnostics.reload();
+              aiStatus.reload();
+              mockApis.reload();
+              setLastCheckedAt(new Date());
             }}
           >
             Kiểm tra lại
           </button>
         </div>
-        <HealthList diagnostics={diagnostics} ready={ready} />
+        <SystemServicesPanel
+          ready={ready}
+          diagnostics={diagnostics}
+          aiStatus={aiStatus}
+          mockApis={mockApis}
+          navigate={navigate}
+          lastCheckedAt={lastCheckedAt}
+        />
       </section>}
     </div>
   );

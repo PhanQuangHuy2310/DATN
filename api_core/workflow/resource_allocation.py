@@ -385,48 +385,60 @@ def need_for_request(cursor, request_id: str) -> Need | None:
 # --------------------------------------------------------------------------
 # Worker: end of the borrowing period, orphan reconciliation
 # --------------------------------------------------------------------------
-def release_expired(cursor, *, now: datetime) -> list[tuple[str, list[str]]]:
-    """Return everything whose period ended; cancel orphan allocations."""
+def release_expired(cursor=None, *, now: datetime) -> list[tuple[str, list[str]]]:
+    """Return everything whose period ended; cancel orphan allocations.
+
+    External HTTP reads/writes run outside database transactions so slow API calls
+    never hold ``eas.security_epoch`` locks open across network roundtrips.
+    """
+    from django.db import connection, transaction
+
     from api_core.workflow.service import _append_request_audit
 
-    returned = []
     ended = client.get(
         "allocations", "allocations", state="ended", before=now.isoformat()
     )["items"]
-    for request_id in ended:
-        codes = client.post(
-            "allocations", "allocations/return", {"source_request_id": request_id}
-        ).get("released", [])
-        if not codes:
-            continue
-        cursor.execute("SELECT 1 FROM eas.request WHERE id = %s", [request_id])
-        if cursor.fetchone():
-            _append_request_audit(
-                cursor,
-                request_id=request_id,
-                actor_id=None,
-                actor_kind="SYSTEM",
-                action="RESOURCE_RETURNED",
-                target_type="request",
-                target_id=request_id,
-                details={"released": codes},
-                correlation_id=str(uuid4()),
-                occurred_at=now,
-            )
-        returned.append((request_id, codes))
-
     active = client.get(
         "allocations",
         "allocations",
         state="active",
         before=(now - ORPHAN_GRACE).isoformat(),
     )["items"]
+    if not ended and not active:
+        return []
+
+    returned = []
+    for request_id in ended:
+        codes = client.post(
+            "allocations", "allocations/return", {"source_request_id": request_id}
+        ).get("released", [])
+        if not codes:
+            continue
+        with transaction.atomic(), connection.cursor() as cur:
+            cur.execute("SELECT eas.lock_security(false)")
+            cur.execute("SELECT 1 FROM eas.request WHERE id = %s", [request_id])
+            if cur.fetchone():
+                _append_request_audit(
+                    cur,
+                    request_id=request_id,
+                    actor_id=None,
+                    actor_kind="SYSTEM",
+                    action="RESOURCE_RETURNED",
+                    target_type="request",
+                    target_id=request_id,
+                    details={"released": codes},
+                    correlation_id=str(uuid4()),
+                    occurred_at=now,
+                )
+        returned.append((request_id, codes))
+
     if active:
-        cursor.execute(
-            "SELECT id::text FROM eas.request WHERE id = ANY(%s::uuid[]) AND status = ANY(%s)",
-            [active, list(HOLDING_STATUSES)],
-        )
-        keep = {row[0] for row in cursor.fetchall()}
+        with transaction.atomic(), connection.cursor() as cur:
+            cur.execute(
+                "SELECT id::text FROM eas.request WHERE id = ANY(%s::uuid[]) AND status = ANY(%s)",
+                [active, list(HOLDING_STATUSES)],
+            )
+            keep = {row[0] for row in cur.fetchall()}
         for request_id in set(active) - keep:
             client.post(
                 "allocations", "allocations/cancel", {"source_request_id": request_id}

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import ClassVar
 
 from django.test import SimpleTestCase
 
@@ -53,6 +54,73 @@ class AnalyticsBucketTests(SimpleTestCase):
         self.assertEqual(analytics._outcome("COMPLETED"), "success")
         self.assertEqual(analytics._outcome("CANCELLED"), "rejected")
         self.assertEqual(analytics._outcome("PENDING_APPROVAL"), "processing")
+
+
+class AnalyticsEndpointTests(SimpleTestCase):
+    databases: ClassVar[set[str]] = {"default"}
+
+    def test_analytics_view_returns_status_breakdown(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        actor = SimpleNamespace(
+            id="u-1",
+            email="admin@eas.com",
+            display_name="Admin",
+            roles=frozenset({"OPS_ADMIN"}),
+            must_change_password=False,
+        )
+        now = datetime(2026, 11, 10, 9, 0, tzinfo=timezone.utc)
+        rows = [
+            (now, "COMPLETED", "A", "Nghỉ phép", "Nhân sự", "A", "a@eas.com", 5.0, 12),
+            (now, "COMPLETED", "A", "WFH", "Nhân sự", "A", "a@eas.com", 4.0, 12),
+            (
+                now,
+                "PENDING_APPROVAL",
+                "B",
+                "IT",
+                "Kỹ thuật",
+                "B",
+                "b@eas.com",
+                None,
+                24,
+            ),
+            (
+                now,
+                "READY_FOR_EXECUTION",
+                "C",
+                "Mua sắm",
+                "Kinh doanh",
+                "C",
+                "c@eas.com",
+                None,
+                72,
+            ),
+            (now, "REJECTED", "C", "Mua sắm", "Kinh doanh", "C", "c@eas.com", 15.0, 72),
+        ]
+        cur = MagicMock()
+        cur.fetchall.return_value = rows
+        with (
+            patch("api_core.authn.service.load_actor_from_session", return_value=actor),
+            patch("api_core.administration.analytics.connection.cursor") as mock_cur,
+        ):
+            mock_cur.return_value.__enter__.return_value = cur
+            res = self.client.get("/api/v1/admin/analytics?period=month")
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(
+            body["status_breakdown"],
+            {
+                "COMPLETED": 2,
+                "PENDING_APPROVAL": 1,
+                "READY_FOR_EXECUTION": 1,
+                "REJECTED": 1,
+            },
+        )
+        self.assertEqual(body["kpis"]["total_requests"], 5)
+        self.assertEqual(body["kpis"]["success_count"], 2)
+        self.assertEqual(body["kpis"]["processing_count"], 2)
+        self.assertEqual(body["kpis"]["rejected_count"], 1)
 
 
 class IntegrationMappingTests(SimpleTestCase):

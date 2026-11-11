@@ -122,3 +122,97 @@ class LifecycleBCompletionTests(SimpleTestCase):
         self.assertIn((SQL_CLOSE_SLA_STAGE, [now, request_id]), calls)
         # No new stage is opened after completion.
         self.assertFalse(any("INSERT INTO eas.sla_stage" in sql for sql, _ in calls))
+
+
+class ConcurrencyConflictRegressionTests(SimpleTestCase):
+    """Ensure concurrent cancel vs approve yields 409 Conflict instead of 404 or 5s 503."""
+
+    def test_execute_idempotent_sets_local_lock_timeout_on_postgres(self):
+        from unittest.mock import MagicMock, patch
+
+        from api_core.workflow.service import SQL_LOCK_SECURITY, _execute_idempotent
+
+        cursor = MagicMock()
+        cursor.fetchone.return_value = None
+        cursor.__enter__ = lambda _s: cursor
+        cursor.__exit__ = lambda _s, *a: False
+        fake_conn = MagicMock()
+        fake_conn.vendor = "postgresql"
+        fake_conn.cursor.return_value = cursor
+
+        with (
+            patch("api_core.workflow.service.transaction.atomic"),
+            patch("api_core.workflow.service.connection", fake_conn),
+        ):
+            res = _execute_idempotent(
+                actor_id=str(uuid4()),
+                scope="TEST_SCOPE",
+                key=str(uuid4()),
+                command_body={"x": 1},
+                operation=lambda _cur: ({"ok": True}, 200, None),
+            )
+        self.assertEqual(res.status, 200)
+        executed = [c.args[0] for c in cursor.execute.call_args_list]
+        self.assertIn("SET LOCAL lock_timeout = %s", executed)
+        self.assertLess(
+            executed.index("SET LOCAL lock_timeout = %s"),
+            executed.index(SQL_LOCK_SECURITY),
+        )
+
+    def test_decide_approval_returns_409_when_cancelled_instance_inactive(self):
+        from unittest.mock import MagicMock, patch
+
+        actor = Actor(
+            id=str(uuid4()),
+            email="approver@eas.com",
+            display_name="Approver",
+            department_id=str(uuid4()),
+            auth_version=1,
+            roles=frozenset({"APPROVER"}),
+            must_change_password=False,
+        )
+        cursor = MagicMock()
+        # 1st fetchone: idempotency lookup -> None
+        # 2nd fetchone: SELECT request + LEFT JOIN workflow_instance -> CANCELLED & instance None
+        cursor.fetchone.side_effect = [
+            None,
+            (
+                "CANCELLED",
+                2,
+                str(uuid4()),
+                str(uuid4()),
+                None,
+                "A",
+                None,
+                None,
+                {},
+                str(uuid4()),
+            ),
+        ]
+        cursor.__enter__ = lambda _s: cursor
+        cursor.__exit__ = lambda _s, *a: False
+        fake_conn = MagicMock()
+        fake_conn.vendor = "postgresql"
+        fake_conn.cursor.return_value = cursor
+
+        with (
+            patch("api_core.workflow.service.transaction.atomic"),
+            patch("api_core.workflow.service.connection", fake_conn),
+            self.assertRaises(CommandError) as ctx,
+        ):
+            decide_approval(
+                actor=actor,
+                request_id=str(uuid4()),
+                body={"outcome": "APPROVE", "reason": None, "expected_version": 1},
+                idempotency_key=str(uuid4()),
+                correlation_id=str(uuid4()),
+            )
+        self.assertEqual(ctx.exception.code, "REQUEST_STATE_CONFLICT")
+        self.assertEqual(ctx.exception.status, 409)
+        lock_sql = next(
+            c.args[0]
+            for c in cursor.execute.call_args_list
+            if "FROM eas.request r" in c.args[0]
+        )
+        self.assertIn("LEFT JOIN eas.workflow_instance", lock_sql)
+        self.assertIn("FOR UPDATE OF r", lock_sql)

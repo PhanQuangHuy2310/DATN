@@ -1,0 +1,418 @@
+================================================================================
+HƯỚNG DẪN SỬ DỤNG CÁC CÔNG CỤ KIỂM THỬ HỆ THỐNG EAS
+(Tương ứng các mục 3.3.3.4 – 3.3.3.7 trong Báo cáo ĐATN)
+Thư mục gốc dự án: d:\DATN\code\enterprise_approval_system
+================================================================================
+
+MỤC LỤC NHANH
+  0. Chuẩn bị môi trường & lưu ý cổng chạy trên máy Windows
+  1. [Mục 3.3.3.4] Kiểm thử giao tiếp API bằng Postman & Contract Tests
+  2. [Mục 3.3.3.5] Kiểm thử E2E Automation bằng Playwright & Katalon Studio
+  3. [Mục 3.3.3.6] Kiểm thử đơn vị, Coverage & VS Code Python Test Explorer
+  4. [Mục 3.3.3.7] Kiểm thử toàn vẹn CSDL, Chuỗi băm Audit Log, AI/OCR & Hiệu năng
+
+--------------------------------------------------------------------------------
+0. CHUẨN BỊ MÔI TRƯỜNG & LƯU Ý CỔNG CHẠY TRÊN WINDOWS
+--------------------------------------------------------------------------------
+1) Mở Terminal (PowerShell hoặc VS Code Terminal) tại thư mục gốc:
+   cd d:\DATN\code\enterprise_approval_system
+
+2) Phân biệt 2 chế độ khởi chạy backend/frontend (KHÔNG bật trùng cổng):
+   - Chế độ Docker Compose (khuyên dùng khi kiểm thử full stack):
+     * API Core         : http://127.0.0.1:8000
+     * AI Service       : http://127.0.0.1:8001
+     * API Gateway      : http://127.0.0.1:8088
+     * Web Admin        : http://127.0.0.1:8081
+     * Web Client       : http://127.0.0.1:8080 (hoặc http://127.0.0.1:5173 nếu cổng
+                          8080 trên máy Windows đang bị dịch vụ PEMHTTPD-x64 chiếm)
+     * Redis 8          : 127.0.0.1:6380 (trong container là cổng 6379)
+
+   - Chế độ chạy Local trực tiếp qua file .cmd:
+     * Redis            : docker compose up -d redis
+     * Mock Systems     : start_mock_local.cmd          (chạy tại 127.0.0.1:8100)
+     * Backend API      : start_backend_local.cmd       (chạy tại 127.0.0.1:8000)
+     * Web Client (dev) : start_frontend_local.cmd      (chạy tại 127.0.0.1:5173)
+     * Web Admin (dev)  : start_admin_local.cmd         (chạy tại 127.0.0.1:8081)
+     Lưu ý: File start_backend_local.cmd mặc định tìm ".venv\Scripts\python.exe".
+     Nếu chưa tạo .venv, chạy ".\start_backend.ps1 -Install" một lần hoặc chạy
+     trực tiếp bằng Python global (3.12): "python manage.py runserver 127.0.0.1:8000".
+
+3) Tài khoản kiểm thử trên môi trường dev/seed (lấy mật khẩu dev trong bộ seed của bạn):
+   - Nhân viên (Client Portal) : hung.nguyen@eas.com
+   - Quản trị viên (Admin)     : admin@eas.com
+
+
+================================================================================
+1. [MỤC 3.3.3.4] KIỂM THỬ GIAO TIẾP API BẰNG POSTMAN & CONTRACT TESTS
+================================================================================
+
+1.1. Chạy bộ kiểm thử hợp đồng tự động (Contract Tests)
+--------------------------------------------------------------------------------
+Chạy 3 bộ test hợp đồng bằng Terminal tại thư mục gốc:
+  python manage.py test api_core.tests.test_workflow_api -v 2
+  python -m unittest tests.test_ai_payload_contract -v
+  python -m unittest tests.test_flutter_contract -v
+
+(Hoặc chạy gộp toàn bộ suite trong tests/: python tests/run_tests.py)
+
+
+1.2. Bước 1 — Khởi động dịch vụ API phục vụ Postman
+--------------------------------------------------------------------------------
+- Cách A (Nếu đã chạy Docker Compose):
+  Đảm bảo container eas-api-1, eas-redis-1, eas-mock_systems-1 đang Healthy:
+    docker compose ps
+
+- Cách B (Nếu chạy Local theo từng bước ngoài Docker):
+  1) Đảm bảo trong file .env đặt EAS_MOCK_API_URL=http://127.0.0.1:8100/mock-api/v1
+     (nếu đang chạy Docker trước đó hãy dừng container api: docker compose stop api).
+  2) Bật Redis:
+       docker compose up -d redis
+  3) Mở cửa sổ thứ 1 chạy Mock Systems (:8100):
+       .\start_mock_local.cmd
+  4) Mở cửa sổ thứ 2 chạy Backend API (:8000):
+       .\start_backend_local.cmd
+       (Hoặc: python manage.py runserver 127.0.0.1:8000)
+  5) Kiểm tra API sẵn sàng bằng cách truy cập: http://127.0.0.1:8000/health/ready
+
+
+1.3. Bước 2 — Thiết lập Postman (Collection, Environment & CSRF Token)
+--------------------------------------------------------------------------------
+1) Mở Postman -> Chọn "Collections" -> Nhấn "+" để tạo Collection mới tên:
+     EAS_API_Testing
+2) Nhấn biểu tượng "Environments" (góc trên bên phải) -> Tạo Environment tên "EAS_Local"
+   với các biến:
+     - base_url         = http://127.0.0.1:8000
+     - csrftoken        = (để trống)
+     - request_id       = (UUID 1 đơn của chính user đăng nhập)
+     - other_request_id = (UUID 1 đơn thuộc nhân viên/phòng ban khác)
+     - template_id      = (UUID 1 loại yêu cầu lấy từ trường "id" của GET /api/v1/admin/request-templates)
+   Nhớ chọn "EAS_Local" làm Environment đang kích hoạt ở góc trên bên phải!
+
+3) BẮT BUỘC — Tạo Request (0) lấy CSRF Token (tránh lỗi 403 CSRF khi POST/PATCH):
+   Vì Django bật CsrfViewMiddleware cho các phương thức thay đổi dữ liệu (kể cả login),
+   hãy tạo Request đầu tiên trong Collection:
+     - Tên    : 0. Get CSRF Token
+     - Method : GET
+     - URL    : {{base_url}}/api/v1/auth/csrf
+   - Mở tab "Scripts" -> "Post-response" (bản cũ là tab "Tests"), dán đoạn mã:
+       const csrfCookie = pm.cookies.get("csrftoken");
+       if (csrfCookie) {
+         pm.environment.set("csrftoken", csrfCookie);
+       }
+   - Nhấn "Send" -> Kiểm tra status 200 OK. Từ lúc này Postman tự lưu Cookie Jar cho
+     127.0.0.1 và biến {{csrftoken}} đã có giá trị.
+   - Ở mọi Request POST/PATCH bên dưới, luôn thêm 2 Header:
+       X-CSRFToken : {{csrftoken}}
+       Origin      : http://127.0.0.1:5173    (hoặc http://127.0.0.1:8080)
+
+
+1.4. Bước 3 — Thực hiện 4 Request chính và chụp ảnh kết quả
+--------------------------------------------------------------------------------
+(1) Request 1: Kiểm tra Đăng nhập (200 OK & Cookie HttpOnly)
+    - Method & URL : POST {{base_url}}/api/v1/auth/login
+    - Headers      :
+        Content-Type : application/json
+        X-CSRFToken  : {{csrftoken}}
+        Origin       : http://127.0.0.1:5173
+    - Body (raw -> JSON):
+        {
+          "email": "hung.nguyen@eas.com",
+          "password": "<MAT_KHAU_DEV_CUA_BAN>"
+        }
+    - Kiểm chứng & Chụp ảnh:
+      * Status: 200 OK, Body JSON có trường "user" và "correlation_id".
+      * Mở tab "Cookies" ở khung Response -> thấy cookie "eas_session" có thuộc tính
+        HttpOnly = true, SameSite = Lax.
+    - (Mở rộng test Rate Limit 429 & Retry-After):
+      * Gửi sai mật khẩu >= 5 lần liên tiếp -> API trả HTTP 429 LOGIN_RATE_LIMITED kèm
+        Header "Retry-After" trong tab Headers của Response.
+
+(2) Request 2: Kiểm tra thiếu Header Idempotency-Key (400 Bad Request)
+    - Chuẩn bị: Tạo trước 1 đơn nháp bằng POST {{base_url}}/api/v1/request-drafts (hoặc
+      dán UUID 1 đơn ở trạng thái DRAFT vào biến {{request_id}}).
+    - Method & URL : POST {{base_url}}/api/v1/requests/{{request_id}}/submit
+    - Headers      :
+        Content-Type : application/json
+        X-CSRFToken  : {{csrftoken}}
+        Origin       : http://127.0.0.1:5173
+        (CHÚ Ý: KHÔNG thêm / bỏ trống tích chọn Header "Idempotency-Key")
+    - Body (raw -> JSON): {}
+    - Kiểm chứng & Chụp ảnh:
+      * Status: 400 Bad Request.
+      * Body JSON báo error.code = "IDEMPOTENCY_KEY_REQUIRED".
+    - (Mở rộng test Replay): Tick thêm Header "Idempotency-Key" = 1 UUID v4 bất kỳ rồi
+      nhấn Send 2 lần liên tiếp -> lần 2 trả Header "X-Idempotent-Replay: true" và
+      "X-Correlation-ID".
+
+(3) Request 3: Kiểm tra chống IDOR truy cập đơn phòng khác (404 Not Found)
+    - Giữ nguyên Cookie đăng nhập nhân viên ở Request (1).
+    - Đặt biến {{other_request_id}} = UUID 1 đơn của người/phòng ban khác mà tài khoản
+      này không tham gia (không phải người tạo, người duyệt, thực hiện hay nghiệm thu).
+    - Method & URL : GET {{base_url}}/api/v1/requests/{{other_request_id}}
+    - Kiểm chứng & Chụp ảnh:
+      * Status: 404 Not Found (che giấu sự tồn tại bản ghi theo thiết kế chống IDOR).
+
+(4) Request 4: Kiểm tra chặn phân quyền RBAC trên API (403 Forbidden)
+    - Đăng nhập Postman bằng một tài khoản vai trò APPROVER / nhân viên (không phải
+      Admin và không được bật quyền can_update ở module requests_workflows).
+    - Method & URL : PATCH {{base_url}}/api/v1/workspace/request-templates/{{template_id}}
+    - Headers      :
+        Content-Type : application/json
+        X-CSRFToken  : {{csrftoken}}
+        Origin       : http://127.0.0.1:5173
+    - Body (raw -> JSON):
+        {
+          "is_active": false
+        }
+    - Kiểm chứng & Chụp ảnh:
+      * Status: 403 Forbidden (mã lỗi từ chối truy cập phân quyền module).
+
+
+================================================================================
+2. [MỤC 3.3.3.5] KIỂM THỬ E2E AUTOMATION BẰNG PLAYWRIGHT & KATALON STUDIO
+================================================================================
+
+2.1. Cách 1 — Chạy Playwright có sẵn trong web_client/e2e/ và xuất HTML Report
+--------------------------------------------------------------------------------
+Trong web_client/e2e/ có 2 nhóm kịch bản khác nhau:
+  - Nhóm A (Chạy độc lập với mocked server preview ở :4173 & :4174, không phụ thuộc Docker):
+      e2e/portal.spec.js
+      e2e/ui.spec.js
+  - Nhóm B (Chạy trực tiếp trên stack Live đang bật ở :5173 và :8081):
+      e2e/batch1_audit.spec.js
+      e2e/batch2_verification.mjs
+      e2e/batch3_verification.mjs
+      e2e/batch4_verification.mjs
+
+Bước thực hiện:
+1) Di chuyển vào thư mục web_client:
+     cd d:\DATN\code\enterprise_approval_system\web_client
+
+2) Chạy bộ kiểm thử Playwright tiêu chuẩn (mocked preview server) & xuất HTML Report:
+     npx playwright test e2e/portal.spec.js e2e/ui.spec.js --reporter=html
+     npx playwright show-report
+   -> Trình duyệt tự mở trang báo cáo HTML (mặc định lưu ở web_client/playwright-report/),
+   hiển thị danh sách Test Suites Passed kèm thời gian thực thi từng ca để chụp ảnh
+   cho Phụ lục C.2.
+
+3) Nếu muốn chạy kèm batch1_audit.spec.js trên Docker / Server Live đang bật:
+   - Cần bật biến môi trường EAS_E2E_EXTERNAL="true" (do cấu hình trong
+     web_client/playwright.config.js chỉ nhận file ngoài portal/ui khi biến này = "true"):
+       $env:EAS_E2E_EXTERNAL = "true"
+       npx playwright test e2e/portal.spec.js e2e/batch1_audit.spec.js --reporter=html
+       npx playwright show-report
+   - Lưu ý thực tế trước khi chạy batch1_audit.spec.js và batch2..4_verification.mjs:
+     * Đảm bảo Web Client chạy tại http://127.0.0.1:5173 và Web Admin tại http://127.0.0.1:8081.
+     * Nếu DB hiện tại đặt mật khẩu cho admin@eas.com khác chuỗi "admin@123456789"
+       hoặc chuỗi thông báo chặn cổng không còn gắn đuôi "(8081)/(8080)", cần đối
+       chiếu & cập nhật lại giá trị kỳ vọng trong các file này trước khi chạy live.
+
+4) Chạy các file kiểm chứng Batch 2..4 (đuôi .mjs dùng Node.js + Playwright trực tiếp):
+     node e2e/batch2_verification.mjs
+     node e2e/batch3_verification.mjs
+     node e2e/batch4_verification.mjs
+
+5) Chạy bộ Unit Test Frontend (Node test runner — 72 ca kiểm thử):
+     npm test
+
+
+2.2. Cách 2 — Sử dụng Katalon Studio
+--------------------------------------------------------------------------------
+1) Mở Katalon Studio -> chọn "File -> New -> Project -> Web".
+2) Đảm bảo dự án EAS đang chạy (Web Admin tại http://127.0.0.1:8081/ và Web Client
+   tại http://127.0.0.1:8080/ hoặc http://127.0.0.1:5173/ nếu cổng 8080 bận).
+3) Dùng chức năng "Record Web" (hoặc Script mode) tạo 4 Test Case mẫu:
+   - TC01_DangNhap: Mở trang Web Client/Admin -> nhập email & mật khẩu -> Verify có
+     phần tử ".sidebar-nav" hiển thị sau khi đăng nhập.
+   - TC02_TaoYeuCau: Ở Web Client -> "Tạo yêu cầu" -> chọn nhóm/loại yêu cầu -> điền
+     biểu mẫu -> nhấn "Gửi yêu cầu" -> Verify thông báo thành công & mã REQ mới.
+   - TC03_PheDuyetDaCap: Đăng nhập tài khoản người duyệt (Quản lý/Giám đốc) -> mở
+     mục "Phê duyệt" -> mở đơn vừa tạo -> nhấn "Phê duyệt" -> Verify chuyển bước/trạng thái.
+   - TC04_QuanTriRBAC: Mở Web Admin (http://127.0.0.1:8081/) -> đăng nhập admin@eas.com ->
+     chọn menu "Phân quyền" -> kiểm tra 4 module hệ thống có nhãn khóa cứng, bật/tắt
+     1 quyền module của role và bấm Lưu -> Verify thông báo cập nhật thành công.
+4) Tạo Test Suite: chuột phải "Test Suites -> New -> Test Suite" -> Add cả 4 Test Case.
+5) Nhấn nút "Run" (biểu tượng Play màu xanh, chọn Chrome/Edge). Sau khi hoàn tất, mở
+   tab "Result" hoặc "Reports" -> nhấn "Export Report" (HTML/PDF) để thu màn hình
+   Test Suite Report tổng hợp tỷ lệ Passed/Failed và thời gian thực thi.
+
+
+================================================================================
+3. [MỤC 3.3.3.6] KIỂM THỬ ĐƠN VỊ, ĐỘ PHỦ MÃ NGUỒN & VS CODE TEST EXPLORER
+================================================================================
+
+3.1. Các tệp mã nguồn & kiểm thử tương ứng (UT01 – UT08)
+--------------------------------------------------------------------------------
+- Mã nguồn lõi cần mở xem trên VS Code:
+    api_core/domain/validation.py
+    api_core/domain/routing.py
+    api_core/storage.py
+    api_core/audit.py
+- Tệp kiểm thử đơn vị tương ứng trong api_core/tests/:
+    api_core/tests/test_domain.py    (PayloadValidationTests, RoutingTests)
+    api_core/tests/test_storage.py   (StorageSecurityTests, SupabaseKeyHeaderTests)
+    api_core/tests/test_audit.py     (AuditCanonicalizationTests)
+
+
+3.2. Thực thi qua Terminal trong VS Code (Ctrl + `)
+--------------------------------------------------------------------------------
+1) Chạy toàn bộ Unit Test Django (manage.py tự bật EAS_ENV=test dùng SQLite in-memory):
+     python manage.py test api_core -v 2
+   *(Kết quả hiện tại trên bản mã nguồn đầy đủ: 364 test cases OK; tăng so với mốc
+   340 trước đây do bổ sung các test hồi quy concurrency, privilege, analytics).*
+
+2) Chạy riêng 3 tệp trọng tâm cho nhóm hàm UT01–UT08:
+     python manage.py test api_core.tests.test_domain api_core.tests.test_storage api_core.tests.test_audit -v 2
+
+3) Chạy bộ kiểm thử tích hợp & hợp đồng:
+     python tests/run_tests.py
+   *(Kết quả hiện tại: 155 tests OK, trong đó 1 smoke test OCR có thể hiển thị
+   skipped nếu môi trường Python host chưa cài paddleocr).*
+
+
+3.3. Đo độ phủ mã nguồn (Code Coverage) bằng Coverage.py
+--------------------------------------------------------------------------------
+Môi trường Python hiện tại đã có sẵn Coverage.py (version 7.17.0). Chạy lần lượt:
+  python -m coverage run --source=api_core manage.py test api_core
+  python -m coverage report -m
+  python -m coverage html
+
+Sau khi chạy xong:
+- Trên Terminal hiển thị bảng % độ phủ cho từng file trong api_core/ (kèm các dòng Missing).
+- Mở tệp "htmlcov\index.html" bằng trình duyệt để xem báo cáo đồ họa chi tiết từng
+  file mã nguồn (xanh = đã chạy qua, đỏ = chưa phủ) và chụp ảnh báo cáo coverage.
+
+
+3.4. Chạy trên giao diện Python Test Explorer của VS Code
+--------------------------------------------------------------------------------
+1) Cài Extension "Python" (ms-python.python) trong VS Code nếu chưa có.
+2) Nhấn Ctrl + Shift + P -> chọn "Python: Select Interpreter" -> chọn đúng trình
+   thông dịch Python 3.12 đang dùng cho dự án.
+3) Nhấn biểu tượng "Testing" (hình bình thí nghiệm) ở thanh công cụ bên trái VS Code
+   -> chọn "Configure Python Tests" -> chọn "unittest":
+   - Cách nhanh (hiện Test Explorer cho thư mục tests/):
+     Chọn thư mục "tests", mẫu tên file "test_*.py". Cây Test Explorer sẽ liệt kê
+     toàn bộ các hàm test trong tests/ để bấm Run và hiện dấu tích xanh Passed.
+   - Nếu muốn chạy hiển thị vạch xanh cho cả Django tests (api_core/tests/):
+     * Lưu ý cần đặt biến môi trường EAS_ENV=test và DJANGO_SETTINGS_MODULE=api_core.config.settings
+       trong cài đặt VS Code ("python.envFile" hoặc Terminal profile).
+     * Khi đánh dấu Run từng lớp test (như test_domain, test_storage, test_audit), kết
+       quả vạch xanh Passed sẽ hiện cạnh mỗi hàm test và ở thanh Test Explorer.
+
+
+================================================================================
+4. [MỤC 3.3.3.7] KIỂM THỬ TOÀN VẸN CSDL, AUDIT CLI, AI/OCR & BENCHMARK
+================================================================================
+
+4.1. Kiểm chứng chuỗi băm Audit Log (RFC 8785) bằng Django Management CLI
+--------------------------------------------------------------------------------
+Lưu ý cú pháp thực tế: Lệnh "audit_verify" BẮT BUỘC truyền tham số "--scope"
+(giá trị là "ADMIN" hoặc "REQ:<uuid_cua_yeu_cau>").
+
+- Cách 1 (Chạy từ máy host, đọc cấu hình DB trong .env):
+    python manage.py audit_verify --scope ADMIN
+    python manage.py audit_verify --scope REQ:<uuid_yeu_cau>
+
+- Cách 2 (Chạy trực tiếp qua container Docker API đang chạy):
+    docker exec eas-api-1 python manage.py audit_verify --scope ADMIN
+    docker exec eas-api-1 python manage.py audit_verify --scope REQ:<uuid_yeu_cau>
+
+Cách đọc kết quả:
+- Chuỗi băm hợp lệ: In JSON có "status": "PASS", Exit Code = 0.
+- Dữ liệu/hash bị sửa lén: In JSON có "status": "FAIL", Exit Code = 2.
+- Mẹo kiểm tra trường hợp FAIL an toàn mà không làm hỏng dữ liệu thật trên Supabase:
+    python manage.py test api_core.tests.test_reporting_and_cli -v 2
+  (Trong bài test này có test_audit_verify_hash_chain_tamper_detected tự giả lập
+  thao tác sửa lén hash và kiểm chứng CLI trả mã thoát khác 0 kèm FAIL).
+
+
+4.2. Kiểm thử bất biến CSDL & Trigger (PostgreSQL / Supabase SQL)
+--------------------------------------------------------------------------------
+Tệp kiểm thử bất biến:
+  database/EAS_Supabase_SQL/03_database_regression_DEV_ONLY.sql
+(Kiểm tra RBAC PostgreSQL, RLS policy, trigger cấm UPDATE/DELETE lịch sử kiểm
+toán kể cả với chủ sở hữu, separation of duties, retention hold... và tự ROLLBACK ở cuối).
+
+[CẢNH BÁO QUAN TRỌNG]:
+Tệp 03_database_regression_DEV_ONLY.sql được thiết kế để chạy trên MỘT SCHEMA EAS RỖNG
+(ngay sau bước cài 00_eas_supabase_schema.sql, khi bảng app_user, config_release,
+request đều chưa có dữ liệu). Nếu chạy trên DB đã có sẵn dữ liệu demo/production, câu
+lệnh bảo vệ ở đầu file sẽ dừng lại với thông báo:
+"Demo seed requires an empty EAS domain. Never run it on production."
+
+- Cách chạy 03_database_regression_DEV_ONLY.sql trên môi trường Dev/Test sạch:
+  * Bằng Supabase Dashboard -> SQL Editor (trên project test rỗng): mở nội dung tệp
+    database/EAS_Supabase_SQL/03_database_regression_DEV_ONLY.sql -> nhấn Run.
+  * Hoặc bằng psql CLI:
+      psql "<CHUOI_KET_NOI_POSTGRES_ADMIN_CUA_DB_TEST_RONG>" -v ON_ERROR_STOP=1 -f database/EAS_Supabase_SQL/03_database_regression_DEV_ONLY.sql
+  -> Kết quả thành công sẽ in hàng loạt các dòng "PASS ..." (đến dòng cuối
+  "PASS Three core lifecycles preserve complete final state") và tự động ROLLBACK.
+
+- Nếu muốn kiểm tra an toàn trên DB ĐANG CHẠY ĐẦY ĐỦ DỮ LIỆU (không làm ảnh hưởng dữ liệu):
+  Chạy tệp chỉ đọc: database/EAS_Supabase_SQL/02_verify_installation_READ_ONLY.sql
+  (Kiểm tra toàn bộ số bảng, RLS, FK, Trigger, Owner ở chế độ READ ONLY).
+
+
+4.3. Kiểm thử tích hợp AI, Chính sách Auto-Approve & OCR Hóa đơn
+--------------------------------------------------------------------------------
+1) Kiểm thử model artifacts, suy luận XGBoost đa miền, fallback & lọc PII:
+     python -m unittest tests/integration/test_ai_service.py -v
+   *(Kiểm tra 15 tệp model/metadata trong ai_service/models/, registry 4 miền
+   finance/hr/it/master, điểm rủi ro cao/thấp, fallback an toàn khi offline).*
+
+2) Kiểm thử quy tắc Auto-Approve, ngưỡng số tiền & tốc độ phản hồi rule engine:
+     python -m unittest tests/integration/test_ai_scenarios.py -v
+
+3) Kiểm thử OCR Hóa đơn thực tế bằng PaddleOCR:
+   - Tệp test mẫu: tests/ocr_smoke/test_ocr_invoices.py (đọc 3 ảnh mẫu hóa đơn:
+     invoice_vat.png, invoice_supplies.png, receipt_service.png và so khớp expected.json).
+   - Lưu ý môi trường: Trên Python host nếu chưa cài paddleocr thì chạy
+     "python -m unittest tests/ocr_smoke/test_ocr_invoices.py -v" sẽ báo SKIPPED.
+   - Container Docker "eas-ai-service-1" đã cài sẵn PaddleOCR và model tiếng Việt
+     (từ image ai-service). Có thể kiểm thử OCR trực tiếp qua API AI đang chạy tại
+     http://127.0.0.1:8001/ai/ocr/extract (POST multipart/form-data với field "file"
+     là 1 trong các ảnh trong tests/ocr_smoke/ và Header "X-Internal-Secret" lấy giá
+     trị INTERNAL_API_SECRET từ tệp .env), hoặc gọi từ Postman / Invoke-RestMethod để
+     quan sát độ chính xác bóc tách văn bản & thông tin hóa đơn.
+
+
+4.4. Kiểm thử hiệu năng & thời gian phản hồi (time.perf_counter / Locust)
+--------------------------------------------------------------------------------
+1) Kiểm tra thời gian phản hồi API thực tế có sẵn trong Middleware:
+   Mọi phản hồi /api/v1/* đều được api_core/middleware.py đo bằng time.perf_counter()
+   và đính kèm vào Header:
+     Server-Timing: app;dur=<số_ms>
+   Mở tab Headers trong Postman hoặc Network trong Chrome DevTools để đọc trực tiếp.
+
+2) Chạy bài test hồi quy hiệu năng có sẵn (dùng perf_counter):
+     python manage.py test api_core.tests.test_request_workflow_scenarios -v 2
+
+3) Chạy benchmark nhanh 200 lượt suy luận AI (NLP + XGBoost) bằng time.perf_counter():
+   Chạy trực tiếp trong container eas-ai-service-1 (chỉ cần 1 dòng trên PowerShell):
+
+   - Benchmark phân loại NLP (TF-IDF + Classifier, 200 lượt):
+     docker exec eas-ai-service-1 python -c "import time, joblib, statistics; vec = joblib.load('models/nlp_vectorizer.pkl'); clf = joblib.load('models/nlp_request_type_model.pkl'); t = []; [(t0 := time.perf_counter(), clf.predict(vec.transform(['Mua 2 man hinh Dell'])), t.append((time.perf_counter() - t0)*1000)) for _ in range(200)]; print(f'NLP 200 runs: avg={statistics.mean(t):.3f}ms, max={max(t):.3f}ms')"
+
+   - Benchmark chấm điểm rủi ro XGBoost (Finance, 200 lượt):
+     docker exec eas-ai-service-1 python -c "import time, joblib, statistics, numpy as np; xgb = joblib.load('models/risk_model_finance.pkl'); X = np.zeros((1, xgb.n_features_in_)); t = []; [(t0 := time.perf_counter(), xgb.predict_proba(X), t.append((time.perf_counter() - t0)*1000)) for _ in range(200)]; print(f'XGBoost Finance 200 runs: avg={statistics.mean(t):.3f}ms, max={max(t):.3f}ms')"
+
+   (Mục tiêu đạt: thời gian trung bình avg <= 300 ms).
+
+4) Kiểm thử chịu tải HTTP đồng thời bằng Locust (tùy chọn):
+   - Cài đặt: python -m pip install locust
+   - Tạo tạm tệp locustfile.py ở thư mục bất kỳ với nội dung mẫu:
+       from locust import HttpUser, task, between
+       class EasApiUser(HttpUser):
+           wait_time = between(0.2, 0.8)
+           @task(2)
+           def health_ready(self):
+               self.client.get("/health/ready")
+           @task(1)
+           def public_ai_status(self):
+               self.client.get("/api/v1/system/ai-status")
+   - Chạy lệnh:
+       locust -f locustfile.py --host=http://127.0.0.1:8000
+   - Mở trình duyệt tới http://localhost:8089 -> nhập Number of users (vd: 30),
+     Ramp up (vd: 5) -> nhấn Start Swarming để theo dõi bảng RPS, P50/P95/P99 latency
+     và chụp ảnh biểu đồ hiệu năng.
+================================================================================

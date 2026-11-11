@@ -204,6 +204,10 @@ class AdminPortalIngressTests(unittest.TestCase):
         dockerfile = (ROOT / "web_admin/Dockerfile").read_text(encoding="utf-8")
         self.assertIn("COPY web_admin/nginx.conf", dockerfile)
 
+    def test_admin_image_copies_shared_public_assets(self):
+        dockerfile = (ROOT / "web_admin/Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("COPY web_client/public ./web_client/public", dockerfile)
+
 
 class GatewayIngressTests(unittest.TestCase):
     conf = "api_gateway/nginx.conf"

@@ -190,6 +190,7 @@ def admin_analytics_view(request):
 
     # ponytail: aggregated in Python; move to SQL GROUP BY if a period exceeds ~100k requests.
     kpi = {"success": 0, "rejected": 0, "processing": 0}
+    status_breakdown: dict[str, int] = {}
     trends = {
         label: {
             "label": label,
@@ -218,6 +219,7 @@ def admin_analytics_view(request):
     ) in rows:
         outcome = _outcome(status)
         kpi[outcome] += 1
+        status_breakdown[status] = status_breakdown.get(status, 0) + 1
         b_key = _bucket(period, created)
         bucket = trends.get(b_key)
         if not bucket:
@@ -292,6 +294,7 @@ def admin_analytics_view(request):
                 "processing_count": kpi["processing"],
                 "processing_rate": _pct(kpi["processing"], total),
             },
+            "status_breakdown": status_breakdown,
             "trends": list(trends.values()),
             "top_types": [
                 {"name": k, "count": v["total"], "percentage": _pct(v["total"], total)}

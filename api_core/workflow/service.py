@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import os
 import re
 import unicodedata
 from collections.abc import Callable
@@ -345,6 +346,11 @@ def _execute_idempotent(
     key = _canonical_uuid(key, "INVALID_IDEMPOTENCY_KEY")
     request_hash = canonical_sha256(command_body)
     with transaction.atomic(), connection.cursor() as cursor:
+        if getattr(connection, "vendor", None) == "postgresql":
+            lock_timeout_ms = max(
+                1000, int(os.getenv("EAS_DB_LOCK_TIMEOUT_MS", "15000"))
+            )
+            cursor.execute("SET LOCAL lock_timeout = %s", [f"{lock_timeout_ms}ms"])
         cursor.execute(SQL_LOCK_SECURITY)
         cursor.execute(
             "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
@@ -2187,10 +2193,10 @@ def decide_approval(
                    cr.sla_profile,r.requester_id::text
             FROM eas.request r
             JOIN eas.request_revision v ON v.id=r.current_revision_id
-            JOIN eas.workflow_instance i ON i.revision_id=v.id AND i.state='ACTIVE'
+            LEFT JOIN eas.workflow_instance i ON i.revision_id=v.id AND i.state='ACTIVE'
             JOIN eas.config_release cr ON cr.id=v.release_id
             WHERE r.id=%s
-            FOR UPDATE OF r,i
+            FOR UPDATE OF r
             """,
             [request_id],
         )
@@ -2213,6 +2219,8 @@ def decide_approval(
             raise CommandError(ERR_STATE_CONFLICT, status=409)
         if lock_version != expected_version:
             raise CommandError(ERR_VERSION_CONFLICT, status=409)
+        if not instance_id:
+            raise CommandError(ERR_STATE_CONFLICT, status=409)
         cursor.execute(
             """
             SELECT id::text,step_no,assignee_id::text

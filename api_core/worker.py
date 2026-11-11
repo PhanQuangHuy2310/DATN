@@ -366,9 +366,7 @@ def process_resource_batch() -> int:
     from api_core.workflow.resource_allocation import release_expired
 
     try:
-        with transaction.atomic(), connection.cursor() as cursor:
-            cursor.execute(SQL_LOCK_SECURITY)
-            return len(release_expired(cursor, now=timezone.now()))
+        return len(release_expired(now=timezone.now()))
     except CommandError:
         # External systems down or switched off: try again next round.
         logger.warning("resource_release_skipped_integration_unavailable")

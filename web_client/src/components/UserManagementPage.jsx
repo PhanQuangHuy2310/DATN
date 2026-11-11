@@ -348,12 +348,12 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
         <div className="um-table-card">
           <table className="user-management-table">
             <colgroup>
-              <col style={{ width: "27%" }} />
+              <col style={{ width: "25%" }} />
+              <col style={{ width: "13%" }} />
               <col style={{ width: "14%" }} />
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "12%" }} />
+              <col style={{ width: "18%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "14%" }} />
             </colgroup>
             <thead>
               <tr>

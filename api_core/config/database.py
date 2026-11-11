@@ -60,7 +60,7 @@ def parse_database_url(url: str) -> dict[str, object]:
                     os.getenv("EAS_DB_CONNECT_TIMEOUT_SECONDS", "5")
                 ),
                 "prepare_threshold": None,
-                "options": f"-c statement_timeout={int(os.getenv('EAS_DB_STATEMENT_TIMEOUT_MS', '20000'))} -c lock_timeout=5000",
+                "options": f"-c statement_timeout={int(os.getenv('EAS_DB_STATEMENT_TIMEOUT_MS', '20000'))} -c lock_timeout={int(os.getenv('EAS_DB_LOCK_TIMEOUT_MS', '15000'))}",
             },
         }
     except (ValueError, TypeError) as exc:
