@@ -147,6 +147,44 @@ def _outcome(status: str) -> str:
     return "processing"
 
 
+OPEN_STATUSES = frozenset(
+    {
+        "PENDING_APPROVAL",
+        "NEEDS_INFO",
+        "READY_FOR_EXECUTION",
+        "IN_PROGRESS",
+        "WAITING_FOR_ACCEPTANCE",
+    }
+)
+
+
+def _lifecycle_bucket() -> dict:
+    return {
+        "total": 0,
+        "success": 0,
+        "on_time": 0,
+        "evaluated": 0,
+        "overdue_open": 0,
+        "durations": [],
+        "sla": [],
+    }
+
+
+def _track_sla(lc: dict, created, status, minutes, sla_hours, now) -> None:
+    """Average over finished requests; on-time rate also counts open requests
+    already past their SLA as late (they cannot finish on time any more)."""
+    limit = float(sla_hours) * 60 if sla_hours else None
+    if minutes is not None:
+        lc["durations"].append(float(minutes))
+        lc["evaluated"] += 1
+        if limit is None or float(minutes) <= limit:
+            lc["on_time"] += 1
+    elif status in OPEN_STATUSES and limit is not None:
+        if (now - created).total_seconds() / 60 > limit:
+            lc["evaluated"] += 1
+            lc["overdue_open"] += 1
+
+
 def _top(counter: dict, limit: int | None = None) -> list[tuple]:
     rows = sorted(counter.items(), key=lambda kv: -kv[1]["total"])
     return rows[:limit] if limit else rows
@@ -201,10 +239,7 @@ def admin_analytics_view(request):
         }
         for label in _bucket_labels(period)
     }
-    lifecycles = {
-        code: {"total": 0, "success": 0, "on_time": 0, "durations": [], "sla": []}
-        for code in LIFECYCLES
-    }
+    lifecycles = {code: _lifecycle_bucket() for code in LIFECYCLES}
     types, depts, users = {}, {}, {}
     for (
         created,
@@ -235,19 +270,13 @@ def admin_analytics_view(request):
             )
         bucket["total"] += 1
         bucket[outcome] += 1
-        lc = lifecycles.setdefault(
-            lifecycle,
-            {"total": 0, "success": 0, "on_time": 0, "durations": [], "sla": []},
-        )
+        lc = lifecycles.setdefault(lifecycle, _lifecycle_bucket())
         lc["total"] += 1
         if sla_hours:
             lc["sla"].append(float(sla_hours))
         if outcome == "success":
             lc["success"] += 1
-        if minutes is not None:
-            lc["durations"].append(float(minutes))
-            if not sla_hours or float(minutes) <= float(sla_hours) * 60:
-                lc["on_time"] += 1
+        _track_sla(lc, created, status, minutes, sla_hours, now)
         for counter, key in (
             (types, type_name),
             (depts, dept),
@@ -273,9 +302,13 @@ def admin_analytics_view(request):
                 "avg_duration_minutes": round(avg, 1),
                 "avg_duration_text": _format_duration(avg),
                 "on_time_count": lc["on_time"],
-                "on_time_rate": _pct(lc["on_time"], len(lc["durations"]))
-                if lc["durations"]
-                else 100.0,
+                # Finished requests plus open ones already past their SLA; an
+                # open request still inside its SLA has no verdict yet.
+                "sla_evaluated": lc["evaluated"],
+                "overdue_open": lc["overdue_open"],
+                "on_time_rate": _pct(lc["on_time"], lc["evaluated"])
+                if lc["evaluated"]
+                else None,
                 "speed_rating": SPEED_LABELS.get(code, "Tiêu chuẩn"),
             }
         )
@@ -298,7 +331,7 @@ def admin_analytics_view(request):
             "trends": list(trends.values()),
             "top_types": [
                 {"name": k, "count": v["total"], "percentage": _pct(v["total"], total)}
-                for k, v in _top(types)
+                for k, v in _top(types, 10)
             ],
             "top_departments": [
                 {

@@ -22,7 +22,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from .mock_context import lookup_facility_available, lookup_leave_balance
-from .policy import apply_policy
+from .policy import apply_policy, policy_citations
 
 settings = get_settings()
 router = APIRouter()
@@ -61,6 +61,10 @@ class AutoApproveDecision(BaseModel):
     )
     evaluated_at: str
     policy_version: str | None = Field(None, description="Bộ luật quy định đã áp dụng")
+    citations: list[dict] = Field(
+        default_factory=list,
+        description="Điều khoản quy chế đã đối chiếu (áp dụng hoặc không) và phép so sánh",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -271,4 +275,9 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         auto_approve_note=note,
         evaluated_at=datetime.now(timezone.utc).isoformat(),
         policy_version=policy_version,
+        citations=policy_citations(
+            request_type=body.request_type,
+            amount=body.amount,
+            days=body.days_requested,
+        ),
     )

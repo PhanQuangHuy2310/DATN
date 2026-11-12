@@ -8,12 +8,14 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from django.db import connection, transaction
+from psycopg.types.json import Jsonb
 
 from api_core.authn.models import Actor
 from api_core.workflow.service import (
     CommandError,
     _append_admin_audit,
     _canonical_uuid,
+    _substitute_approver,
     _table_readable,
 )
 
@@ -181,7 +183,84 @@ def create_delegation(
             reason=data["reason"],
             correlation_id=correlation_id,
         )
-    return {"id": delegation_id, **{k: str(v) for k, v in data.items()}}
+    # A delegation that is already in force also takes the steps waiting on
+    # the delegator now; later ones are picked up by the worker tick.
+    moved = reassign_delegated_steps(
+        delegator_id=actor.id, correlation_id=correlation_id
+    )
+    return {
+        "id": delegation_id,
+        **{k: str(v) for k, v in data.items()},
+        "reassigned_steps": moved,
+    }
+
+
+def reassign_delegated_steps(
+    *, delegator_id: str | None = None, correlation_id: str | None = None
+) -> int:
+    """Hand approval steps already waiting on an approver to their delegate.
+
+    Steps are otherwise substituted only when they activate, so work that was
+    pending before the delegation started stayed with the absent approver.
+    Eligibility (role, scope, SoD) is re-checked by _substitute_approver.
+    """
+    moved = 0
+    with transaction.atomic(), connection.cursor() as cursor:
+        if not _table_readable(cursor, "eas.approval_delegation"):
+            return 0
+        cursor.execute(
+            """
+            SELECT s.id::text, r.id::text, r.requester_id::text,
+                   v.department_id::text, r.type_id::text
+            FROM eas.approval_step s
+            JOIN eas.request r ON r.id = s.request_id
+            JOIN eas.request_revision v ON v.id = r.current_revision_id
+            WHERE s.state = 'ACTIVE' AND r.status = 'PENDING_APPROVAL'
+              AND (%s::uuid IS NULL OR s.assignee_id = %s::uuid)
+              AND EXISTS (
+                SELECT 1 FROM eas.approval_delegation d
+                WHERE d.delegator_id = s.assignee_id AND d.revoked_at IS NULL
+                  AND d.starts_at <= statement_timestamp()
+                  AND d.ends_at > statement_timestamp()
+              )
+            ORDER BY s.activated_at
+            LIMIT 200
+            FOR UPDATE OF s, r SKIP LOCKED
+            """,
+            [delegator_id, delegator_id],
+        )
+        for (
+            step_id,
+            request_id,
+            requester_id,
+            department_id,
+            type_id,
+        ) in cursor.fetchall():
+            change = _substitute_approver(
+                cursor,
+                step_id=step_id,
+                request_id=request_id,
+                requester_id=requester_id,
+                department_id=department_id,
+                type_id=type_id,
+                correlation_id=correlation_id,
+            )
+            if not change:
+                continue
+            moved += 1
+            cursor.execute(
+                """
+                INSERT INTO eas.outbox_event(request_id,event_type,payload,dedupe_key)
+                VALUES (%s,'APPROVAL_REQUESTED',%s,%s)
+                ON CONFLICT DO NOTHING
+                """,
+                [
+                    request_id,
+                    Jsonb({"request_id": request_id, "step_id": step_id}),
+                    f"request:{request_id}:step:{step_id}:to:{change['assignee_id']}",
+                ],
+            )
+    return moved
 
 
 def revoke_delegation(

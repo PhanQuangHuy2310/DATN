@@ -483,7 +483,7 @@ function SystemServicesPanel({ ready, diagnostics, aiStatus, mockApis, navigate,
 /** System-wide dashboard; every figure comes from /api/v1/admin/overview and diagnostics. */
 /** `workspace`: employee-portal mode — figures scoped by the API (own requests,
  * departments led, or company), no system health or operations shortcut. */
-export function AdminDashboard({ navigate, workspace = false }) {
+export function AdminDashboard({ navigate, workspace = false, intro = null }) {
   const apiBase = useApiBase();
   const [period, setPeriod] = useState("month");
   const [start, setStart] = useState(() => localDay(Date.now() - 29 * 86400000));
@@ -545,6 +545,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
           )
         }
       />
+      {intro}
 
       {/* Bộ lọc thời gian chuẩn: Theo Ngày | Theo Tuần | Theo Tháng | Theo Năm */}
       <div className="admin-period-bar">
@@ -630,7 +631,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
         <div className="admin-kpi-card card-total">
           <div className="kpi-top">
             <span className="kpi-title">Tổng yêu cầu phát sinh</span>
-            <div className="kpi-icon-wrap icon-blue">📋</div>
+            <div className="kpi-icon-wrap icon-blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M8 13h8M8 17h5" /></svg></div>
           </div>
           <div className="kpi-value">{kpis.total_requests}</div>
           <div className="kpi-detail">
@@ -641,7 +642,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
         <div className="admin-kpi-card card-success">
           <div className="kpi-top">
             <span className="kpi-title">Thành công (Đã duyệt / Xong)</span>
-            <div className="kpi-icon-wrap icon-green">✅</div>
+            <div className="kpi-icon-wrap icon-green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></svg></div>
           </div>
           <div className="kpi-value text-success">{kpis.success_count}</div>
           <div className="kpi-detail">
@@ -655,7 +656,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
         <div className="admin-kpi-card card-danger">
           <div className="kpi-top">
             <span className="kpi-title">Bị từ chối</span>
-            <div className="kpi-icon-wrap icon-red">❌</div>
+            <div className="kpi-icon-wrap icon-red"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m15 9-6 6M9 9l6 6" /></svg></div>
           </div>
           <div className="kpi-value text-danger">{kpis.rejected_count}</div>
           <div className="kpi-detail">
@@ -669,7 +670,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
         <div className="admin-kpi-card card-warning">
           <div className="kpi-top">
             <span className="kpi-title">Đang xử lý</span>
-            <div className="kpi-icon-wrap icon-amber">⏳</div>
+            <div className="kpi-icon-wrap icon-amber"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg></div>
           </div>
           <div className="kpi-value text-amber">{kpis.processing_count}</div>
           <div className="kpi-detail">
@@ -701,12 +702,10 @@ export function AdminDashboard({ navigate, workspace = false }) {
         </div>
 
         <div className="admin-cat-perf-grid">
-          {(categoryPerf.length ? categoryPerf : [
-            { category_code: "A", name: "Thủ tục hành chính đơn giản", sla_hours: 2, total_requests: 8, avg_duration_text: "15 phút", on_time_rate: 100.0, speed_rating: "Siêu tốc (Tự động)" },
-            { category_code: "B", name: "Nghiệp vụ phòng ban & Tài nguyên", sla_hours: 24, total_requests: 5, avg_duration_text: "3 giờ", on_time_rate: 100.0, speed_rating: "Nhanh (Phòng ban)" },
-            { category_code: "C", name: "Dự án, Ngân sách lớn & Ngoại lệ", sla_hours: 72, total_requests: 4, avg_duration_text: "12 giờ", on_time_rate: 100.0, speed_rating: "Tiêu chuẩn (Đa cấp)" },
-          ]).map((cat) => {
+          {!categoryPerf.length && <EmptyState title="Chưa có hồ sơ trong khoảng thời gian này" />}
+          {categoryPerf.map((cat) => {
             const code = cat.category_code;
+            const rated = cat.on_time_rate !== null && cat.on_time_rate !== undefined;
             const isA = code === "A";
             const isB = code === "B";
             const themeClass = isA ? "theme-a" : isB ? "theme-b" : "theme-c";
@@ -729,11 +728,11 @@ export function AdminDashboard({ navigate, workspace = false }) {
                   </div>
                   <div className="cat-metric-box">
                     <span className="cat-metric-label">Xử lý trung bình</span>
-                    <strong className="cat-metric-val highlight">{cat.avg_duration_text}</strong>
+                    <strong className="cat-metric-val highlight">{cat.avg_duration_text === "0 phút" && !cat.on_time_count ? "—" : cat.avg_duration_text}</strong>
                   </div>
                   <div className="cat-metric-box">
                     <span className="cat-metric-label">Tỷ lệ đúng hạn SLA</span>
-                    <strong className="cat-metric-val text-success">{cat.on_time_rate}%</strong>
+                    <strong className={`cat-metric-val ${rated && cat.on_time_rate < 80 ? "text-danger" : "text-success"}`}>{rated ? `${cat.on_time_rate}%` : "—"}</strong>
                   </div>
                 </div>
 
@@ -741,11 +740,14 @@ export function AdminDashboard({ navigate, workspace = false }) {
                   <div className="cat-bar-bg">
                     <div
                       className="cat-bar-fill"
-                      style={{ width: `${Math.min(100, cat.on_time_rate || 100)}%` }}
+                      style={{ width: `${rated ? Math.min(100, cat.on_time_rate) : 0}%` }}
                     />
                   </div>
                   <div className="cat-bar-meta">
-                    <span>Đúng hạn SLA: {cat.on_time_rate}%</span>
+                    <span>
+                      {rated ? `Đúng hạn SLA: ${cat.on_time_rate}%` : "Chưa có hồ sơ đến hạn để đánh giá"}
+                      {cat.overdue_open > 0 && <strong className="text-danger"> · {cat.overdue_open} đang quá hạn</strong>}
+                    </span>
                     <span>{cat.total_requests} hồ sơ</span>
                   </div>
                 </div>
@@ -813,7 +815,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
       </div>
 
       {/* 4. THỐNG KÊ THEO PHÒNG BAN & CÁ NHÂN */}
-      <div className="ds-grid-2 admin-rank-grid" style={{ marginTop: 16 }}>
+      {aData?.scope?.kind !== "OWN" && <div className="ds-grid-2 admin-rank-grid" style={{ marginTop: 16 }}>
         <section className="panel admin-rank-panel">
           <div className="section-head">
             <div>
@@ -936,7 +938,7 @@ export function AdminDashboard({ navigate, workspace = false }) {
             <EmptyState title="Chưa có dữ liệu cá nhân" />
           )}
         </section>
-      </div>
+      </div>}
 
       {/* 5. TÌNH TRẠNG DỊCH VỤ HỆ THỐNG */}
       {!workspace && <section className="panel" style={{ marginTop: 16 }}>

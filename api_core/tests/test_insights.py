@@ -601,3 +601,43 @@ class AdminOverviewAndDiagnosticsTests(_DbPatchedTestCase):
             inspect.getsource(ops_service.list_ops_metadata),
         ):
             self.assertIn("payload->>'title'", source)
+
+
+class RegulationCitationTests(SimpleTestCase):
+    databases: ClassVar[set[str]] = {"default"}
+
+    def test_requested_days_is_inclusive_and_zero_without_range(self):
+        self.assertEqual(
+            insights._requested_days(
+                {"start_date": "2026-11-10", "end_date": "2026-11-12"}
+            ),
+            3,
+        )
+        self.assertEqual(insights._requested_days({"amount": 5}), 0)
+
+    def test_citations_carry_source_regulation_and_clause(self):
+        cursor = MagicMock()
+        cursor.__enter__.return_value = cursor
+        cursor.fetchall.return_value = [
+            ("REG-002", "Quy định phân loại và hạn mức phê duyệt", "1.12")
+        ]
+        raw = [
+            {
+                "rule_id": "REG-002-4",
+                "text": "Yêu cầu trên 10 triệu bắt buộc duyệt thủ công.",
+                "applies": True,
+                "checks": ["Số tiền 12.000.000 VNĐ > ngưỡng 10.000.000 VNĐ"],
+                "effect": "Bắt buộc người có thẩm quyền duyệt thủ công",
+                "policy_version": "v5.0",
+            },
+            {"rule_id": "REG-001-2-LEAVE", "applies": False},
+        ]
+        with patch.object(insights.connection, "cursor", return_value=cursor):
+            cited = insights._cite_regulations(raw)
+        self.assertEqual(
+            (cited[0]["regulation_code"], cited[0]["clause_no"]), ("REG-002", 4)
+        )
+        self.assertEqual(cited[0]["regulation_version"], "1.12")
+        self.assertEqual(cited[1]["regulation_code"], "REG-001")
+        self.assertIsNone(cited[1]["regulation_title"])
+        self.assertEqual(cursor.execute.call_args.args[1], [["REG-001", "REG-002"]])

@@ -3,7 +3,7 @@ import { date, types } from "../domain.js";
 import { Badge, ResourceState, useResource } from "./ui.jsx";
 import { PageControls } from "./ux.jsx";
 import { PeriodChooser } from "./DashboardOverview.jsx";
-import { ClientPageHeader, ClientStatCard } from "./clientDesign.jsx";
+import { ClientPageHeader } from "./clientDesign.jsx";
 
 function localDay(value) { return new Date(value).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }); }
 
@@ -39,6 +39,100 @@ function EmployeeRequests({ employee, from, to, onOpen }) {
   </section>;
 }
 
+const SEGMENTS = [
+  ["completed", "Hoàn thành", "done"],
+  ["in_progress", "Đang thực hiện", "work"],
+  ["pending", "Chờ duyệt / bổ sung", "wait"],
+  ["rejected", "Bị từ chối", "stop"],
+];
+
+/** Share of each status in one row of report counts, as a stacked bar. */
+function StatusBar({ row, legend = false }) {
+  const total = SEGMENTS.reduce((sum, [key]) => sum + (row[key] || 0), 0);
+  const label = SEGMENTS.map(([key, name]) => `${name}: ${row[key] || 0}`).join(", ");
+  return <div className="team-status">
+    <div className="team-status-bar" role="img" aria-label={label}>
+      {total
+        ? SEGMENTS.map(([key, , tone]) => (row[key] ? <span key={key} className={`seg-${tone}`} style={{ width: `${(100 * row[key]) / total}%` }} /> : null))
+        : <span className="seg-empty" style={{ width: "100%" }} />}
+    </div>
+    {legend && <ul className="team-status-legend">{SEGMENTS.map(([key, name, tone]) => (
+      <li key={key}><i className={`seg-${tone}`} aria-hidden="true" />{name} <strong>{row[key] || 0}</strong></li>
+    ))}</ul>}
+  </div>;
+}
+
+function initials(name = "") {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+
+function Kpis({ totals }) {
+  return <div className="team-kpis">
+    <article className={`team-kpi ${totals.awaiting_me ? "is-action" : ""}`}>
+      <span>Chờ tôi phê duyệt</span><strong>{totals.awaiting_me ?? 0}</strong><small>Đang đến lượt bạn xử lý</small>
+    </article>
+    <article className="team-kpi">
+      <span>Đang xử lý</span><strong>{(totals.pending || 0) + (totals.in_progress || 0)}</strong>
+      <small>{totals.pending || 0} chờ duyệt · {totals.in_progress || 0} đang thực hiện</small>
+    </article>
+    <article className={`team-kpi ${totals.overdue ? "is-danger" : ""}`}>
+      <span>Quá hạn</span><strong>{totals.overdue ?? 0}</strong><small>Bước hiện tại đã quá hạn</small>
+    </article>
+    <article className="team-kpi">
+      <span>Hoàn thành</span><strong>{rate(totals.completed, totals.total)}</strong>
+      <small>{totals.completed || 0}/{totals.total || 0} hồ sơ · {totals.rejected || 0} bị từ chối</small>
+    </article>
+  </div>;
+}
+
+function DepartmentCards({ departments, onPick }) {
+  if (!departments.length) return <p className="muted">Chưa có hồ sơ nào trong phạm vi của bạn trong khoảng thời gian này.</p>;
+  return <div className="team-dept-grid">{departments.map((row) => <article key={row.department_id} className="team-dept-card">
+    <header>
+      <h3>{row.department_name}</h3>
+      {row.overdue > 0 && <span className="team-pill danger">{row.overdue} quá hạn</span>}
+    </header>
+    <p className="team-dept-meta">{row.employees} nhân viên · {row.total} hồ sơ · hoàn thành {rate(row.completed, row.total)}</p>
+    <StatusBar row={row} />
+    <dl className="team-dept-stats">
+      <div><dt>Chờ duyệt</dt><dd>{row.pending}</dd></div>
+      <div><dt>Đang làm</dt><dd>{row.in_progress}</dd></div>
+      <div><dt>Hoàn thành</dt><dd>{row.completed}</dd></div>
+    </dl>
+    <button type="button" className="secondary team-dept-open" onClick={() => onPick(row)}>Xem nhân viên →</button>
+  </article>)}</div>;
+}
+
+function EmployeeList({ employees, showDepartment, onPick }) {
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLocaleLowerCase("vi-VN");
+  const rows = employees
+    .filter((row) => !needle || row.requester_name.toLocaleLowerCase("vi-VN").includes(needle))
+    .sort((a, b) => (b.overdue || 0) - (a.overdue || 0) || b.total - a.total);
+  return <>
+    <input className="team-search" type="search" aria-label="Tìm nhân viên theo tên" placeholder="Tìm nhân viên theo tên…" value={query} onChange={(e) => setQuery(e.target.value)} />
+    {rows.length ? <ul className="team-member-list">{rows.map((row) => <li key={row.requester_id} className="team-member">
+      <span className="team-avatar" aria-hidden="true">{initials(row.requester_name)}</span>
+      <div className="team-member-id">
+        <strong>{row.requester_name}</strong>
+        <small>{showDepartment ? `${row.department_name} · ` : ""}{row.total} hồ sơ{row.avg_completion_hours == null ? "" : ` · TB ${formatHours(row.avg_completion_hours)}`}</small>
+      </div>
+      <div className="team-member-chips">
+        <span className="team-pill">Chờ duyệt <b>{row.pending}</b></span>
+        <span className="team-pill">Đang làm <b>{row.in_progress}</b></span>
+        <span className="team-pill">Từ chối <b>{row.rejected}</b></span>
+        {row.overdue > 0 && <span className="team-pill danger">Quá hạn <b>{row.overdue}</b></span>}
+      </div>
+      <div className="team-member-rate">
+        <span>Hoàn thành {rate(row.completed, row.total)}</span>
+        <StatusBar row={row} />
+      </div>
+      <button type="button" className="secondary team-member-open" onClick={() => onPick(row)}>Xem hồ sơ →</button>
+    </li>)}</ul> : <p className="muted">{needle ? "Không có nhân viên phù hợp." : "Chưa có hồ sơ nào trong phạm vi của bạn trong khoảng thời gian này."}</p>}
+  </>;
+}
+
 /** Department / organization dashboard. All figures come from /api/v1/reports/team,
  * which applies the documented participant/auditor read scope on the server. */
 export default function TeamDashboard({ onOpen, mode = "departments" }) {
@@ -53,6 +147,7 @@ export default function TeamDashboard({ onOpen, mode = "departments" }) {
   const data = report.data?.report;
   const totals = data?.totals || {};
   const employees = (data?.employees || []).filter((row) => !department || row.department_id === department.department_id);
+  const drilled = Boolean(department || employee);
 
   return <div className="client-dashboard team-dashboard">
     <ClientPageHeader eyebrow="QUẢN LÝ PHÒNG BAN" title={employeeMode ? "Nhân viên phòng ban" : "Tổng quan phòng ban"}
@@ -60,48 +155,26 @@ export default function TeamDashboard({ onOpen, mode = "departments" }) {
     <PeriodChooser start={from} end={to} setStart={setFrom} setEnd={setTo} reload={report.reload} />
     {!valid && <p role="alert" className="error">Khoảng thời gian không hợp lệ hoặc dài hơn 12 tháng.</p>}
     {valid && <ResourceState resource={report}>{data && <>
-      <div className="client-metric-grid">
-        <ClientStatCard title="Tổng hồ sơ" value={totals.total} detail="Trong phạm vi được xem" />
-        <ClientStatCard title="Chờ tôi phê duyệt" value={totals.awaiting_me} detail="Đang đến lượt bạn" />
-        <ClientStatCard title="Chờ duyệt / bổ sung" value={totals.pending} detail="Chưa có quyết định cuối" />
-        <ClientStatCard title="Đang thực hiện" value={totals.in_progress} detail="Thực hiện và nghiệm thu" />
-        <ClientStatCard title="Quá hạn" value={totals.overdue} detail="Bước hiện tại đã quá hạn" />
-        <ClientStatCard title="Hoàn thành" value={totals.completed} detail={`Tỉ lệ ${rate(totals.completed, totals.total)}`} />
-        <ClientStatCard title="Bị từ chối" value={totals.rejected} detail="Có lý do từ chối" />
-      </div>
-
-      <nav className="team-breadcrumb" aria-label="Phạm vi đang xem">
-        <button type="button" className="link" onClick={() => { setDepartment(null); setEmployee(null); }} aria-current={!department ? "page" : undefined}>Tổ chức</button>
-        {department && <><span aria-hidden="true">›</span><button type="button" className="link" onClick={() => setEmployee(null)} aria-current={!employee ? "page" : undefined}>{department.department_name}</button></>}
-        {employee && <><span aria-hidden="true">›</span><span aria-current="page">{employee.requester_name}</span></>}
-      </nav>
-
-      {!department && !employeeMode && <section className="panel table-panel">
-        <h2>Phòng ban</h2>
-        <div className="table-wrap"><table className="responsive-records"><thead><tr><th>Phòng ban</th><th>Nhân viên</th><th>Tổng</th><th>Chờ duyệt</th><th>Đang thực hiện</th><th>Quá hạn</th><th>Hoàn thành</th><th></th></tr></thead>
-          <tbody>{data.departments.map((row) => <tr key={row.department_id}>
-            <td data-label="Phòng ban"><strong>{row.department_name}</strong></td>
-            <td data-label="Nhân viên">{row.employees}</td><td data-label="Tổng">{row.total}</td>
-            <td data-label="Chờ duyệt">{row.pending}</td><td data-label="Đang thực hiện">{row.in_progress}</td>
-            <td data-label="Quá hạn">{row.overdue ? <span className="badge REJECTED">{row.overdue}</span> : 0}</td>
-            <td data-label="Hoàn thành">{row.completed} ({rate(row.completed, row.total)})</td>
-            <td data-label="Thao tác"><button type="button" className="link" onClick={() => setDepartment(row)}>Xem nhân viên →</button></td>
-          </tr>)}</tbody></table></div>
-        {!data.departments.length && <p className="muted">Chưa có hồ sơ nào trong phạm vi của bạn trong khoảng thời gian này.</p>}
+      <Kpis totals={totals} />
+      {!employeeMode && !drilled && <section className="panel team-status-panel">
+        <h2>Tình trạng hồ sơ trong kỳ</h2>
+        <StatusBar row={totals} legend />
       </section>}
 
-      {(department || employeeMode) && !employee && <section className="panel table-panel">
-        <h2>Hiệu suất nhân viên{department ? ` · ${department.department_name}` : ""}</h2>
-        <div className="table-wrap"><table className="responsive-records"><thead><tr><th>Nhân viên</th><th>Tổng</th><th>Chờ duyệt</th><th>Đang thực hiện</th><th>Hoàn thành</th><th>Từ chối</th><th>Quá hạn</th><th>TG hoàn thành TB</th><th></th></tr></thead>
-          <tbody>{employees.map((row) => <tr key={row.requester_id}>
-            <td data-label="Nhân viên"><strong>{row.requester_name}</strong>{!department && <span className="ds-cell-sub">{row.department_name}</span>}</td>
-            <td data-label="Tổng">{row.total}</td><td data-label="Chờ duyệt">{row.pending}</td>
-            <td data-label="Đang thực hiện">{row.in_progress}</td><td data-label="Hoàn thành">{row.completed}</td>
-            <td data-label="Từ chối">{row.rejected}</td>
-            <td data-label="Quá hạn">{row.overdue ? <span className="badge REJECTED">{row.overdue}</span> : 0}</td>
-            <td data-label="TG hoàn thành TB">{formatHours(row.avg_completion_hours)}</td>
-            <td data-label="Thao tác"><button type="button" className="link" onClick={() => setEmployee(row)}>Xem hồ sơ →</button></td>
-          </tr>)}</tbody></table></div>
+      {drilled && <nav className="team-breadcrumb" aria-label="Phạm vi đang xem">
+        <button type="button" className="link" onClick={() => { setDepartment(null); setEmployee(null); }}>{employeeMode ? "Tất cả nhân viên" : "Tất cả phòng ban"}</button>
+        {department && <><span aria-hidden="true">›</span><button type="button" className="link" onClick={() => setEmployee(null)} aria-current={employee ? undefined : "page"}>{department.department_name}</button></>}
+        {employee && <><span aria-hidden="true">›</span><span aria-current="page">{employee.requester_name}</span></>}
+      </nav>}
+
+      {!department && !employeeMode && <section className="panel">
+        <h2>Phòng ban ({data.departments.length})</h2>
+        <DepartmentCards departments={data.departments} onPick={setDepartment} />
+      </section>}
+
+      {(department || employeeMode) && !employee && <section className="panel">
+        <h2>Nhân viên{department ? ` · ${department.department_name}` : ""} ({employees.length})</h2>
+        <EmployeeList employees={employees} showDepartment={!department} onPick={setEmployee} />
       </section>}
 
       {employee && <EmployeeRequests key={employee.requester_id} employee={employee} from={from} to={to} onOpen={onOpen} />}

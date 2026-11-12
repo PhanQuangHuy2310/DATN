@@ -221,11 +221,24 @@ export function useResource(url) {
   };
 }
 
+/** Tells the user a slow load is still going instead of looking frozen. */
+function SlowLoadHint() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+  return slow ? (
+    <span className="ds-slow-hint">Máy chủ đang phản hồi chậm, dữ liệu vẫn đang được tải…</span>
+  ) : null;
+}
+
 export function ResourceState({ resource, skeleton = null, children }) {
   if (resource.loading && !resource.data) {
     return (
       <output className="ds-loading" aria-live="polite" aria-busy="true">
         <span className="sr-only">Đang tải dữ liệu…</span>
+        <SlowLoadHint />
         {skeleton || (
           <span className="ds-skeleton" aria-hidden="true">
             {[92, 78, 64].map((w) => (

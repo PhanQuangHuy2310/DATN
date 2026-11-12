@@ -616,6 +616,7 @@ const ERROR_MESSAGES = {
   SERVER_ERROR: "Hệ thống đang bận xử lý hoặc gặp sự cố tạm thời. Vui lòng thử lại sau.",
   INTERNAL_SERVER_ERROR: "Hệ thống gặp sự cố nội bộ tạm thời. Vui lòng thử lại sau.",
   INVALID_RESPONSE: "Phản hồi từ máy chủ bị gián đoạn. Vui lòng tải lại trang và thử lại.",
+  REQUEST_TIMEOUT: "Máy chủ đang phản hồi chậm nên chưa tải xong dữ liệu. Vui lòng bấm Thử lại sau giây lát.",
   REQUEST_TIMEOUT_UNKNOWN: "Kết nối quá thời gian chờ phản hồi. Vui lòng kiểm tra lại danh sách hồ sơ trước khi gửi lại để tránh trùng lặp.",
   IDEMPOTENCY_KEY_REQUIRED: "Phiên gửi biểu mẫu thiếu khóa xác thực. Vui lòng thử lại.",
   IDEMPOTENCY_KEY_REUSED: "Thao tác đang được xử lý, vui lòng không bấm lặp lại.",

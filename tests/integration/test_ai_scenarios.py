@@ -149,6 +149,42 @@ class PolicyRulesLatencyTests(unittest.TestCase):
         self.assertEqual(state.version, "QD-DB")
         self.assertTrue(os.path.exists(policy.POLICY_FILE))
 
+    def test_advice_cites_each_relevant_regulation_clause(self):
+        self.publish(
+            "QD-06",
+            [
+                {
+                    "id": "REG-002-4",
+                    "description": "Yêu cầu trên 10 triệu bắt buộc duyệt thủ công.",
+                    "amount_gt": 10_000_000,
+                    "auto_approve": False,
+                },
+                {
+                    "id": "REG-003-1-OTHER",
+                    "request_type": "other_type",
+                    "auto_approve": False,
+                },
+            ],
+        )
+        small = self.evaluate(amount=5_000_000).citations
+        self.assertEqual([c["rule_id"] for c in small], ["REG-002-4"])
+        self.assertFalse(small[0]["applies"])
+        self.assertIn("5.000.000 VNĐ ≤ ngưỡng 10.000.000 VNĐ", small[0]["checks"][0])
+        big = self.evaluate(amount=12_000_000).citations[0]
+        self.assertTrue(big["applies"])
+        self.assertEqual(big["text"], "Yêu cầu trên 10 triệu bắt buộc duyệt thủ công.")
+        self.assertEqual(big["policy_version"], "QD-06")
+
+    def test_at_least_threshold_is_shown_as_written_in_the_regulation(self):
+        self.publish(
+            "QD-07", [{"id": "REG-002-3", "amount_gt": 29_999_999, "min_risk": 5}]
+        )
+        below = self.evaluate(amount=12_000_000).citations[0]["checks"][0]
+        self.assertIn("12.000.000 VNĐ < ngưỡng 30.000.000 VNĐ", below)
+        at = self.evaluate(amount=30_000_000).citations[0]
+        self.assertTrue(at["applies"])
+        self.assertIn("≥ ngưỡng 30.000.000 VNĐ", at["checks"][0])
+
     def test_rule_without_effect_is_rejected(self):
         from pydantic import ValidationError
 

@@ -1,7 +1,7 @@
 import FullHistory from "./FullHistory.jsx";
 import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { AiSummary } from "./AiAssist.jsx";
-import { AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
+import { AiAdviceCard, AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
 import { DetailSkeleton, EmptyState, PageTabs, WorkflowTimeline } from "./design.jsx";
 import { requestActionPayload } from "../actionPayload.js";
 import { useRef, useState } from "react";
@@ -374,7 +374,50 @@ function AssignDownSelect({ requestId }) {
   );
 }
 
-function DetailTabContent({ tab, r, id, user, verify, setVerify }) {
+const canRunAi = (r, user) =>
+  r.progress?.stage !== "CLOSED" &&
+  !user.roles.some((role) => ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"].includes(role));
+
+/** Files of the submitted revision, shown with the request content. */
+function CurrentAttachments({ id }) {
+  const r = useResource(`/api/v1/requests/${id}/revisions`);
+  const revisions = r.data?.revisions || [];
+  const files = revisions[revisions.length - 1]?.attachments || [];
+  return (
+    <section className="ds-current-files" aria-label="Tệp đính kèm của hồ sơ">
+      <h3>Tệp đính kèm ({files.length})</h3>
+      <ResourceState resource={r}>
+        {files.length ? (
+          <ul className="ds-file-list">
+            {files.map((a) => (
+              <li key={a.id}>
+                <span className="ds-file-icon" aria-hidden="true">
+                  {/\.pdf$/i.test(a.original_name) ? "PDF" : "IMG"}
+                </span>
+                <span className="ds-file-name">{a.original_name}</span>
+                <Badge value={a.scan_state} />
+                {a.scan_state === "CLEAN" && (
+                  <a
+                    className="secondary ds-file-open"
+                    href={`${API_BASE}/api/v1/attachments/${a.id}/download`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Xem / tải xuống
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">Người đề nghị không đính kèm tệp nào.</p>
+        )}
+      </ResourceState>
+    </section>
+  );
+}
+
+function DetailTabContent({ tab, r, id, user, verify, setVerify, setTab }) {
   if (tab === "info") {
     return (
       <>
@@ -393,6 +436,14 @@ function DetailTabContent({ tab, r, id, user, verify, setVerify }) {
           payload={r.payload}
           resolvedUsers={r.resolved_users}
         />
+        {r.status !== "DRAFT" && <CurrentAttachments id={id} />}
+        {r.status !== "DRAFT" && (
+          <AiAdviceCard
+            requestId={id}
+            canRun={canRunAi(r, user)}
+            onOpenDetails={() => setTab("ai")}
+          />
+        )}
       </>
     );
   }
@@ -436,15 +487,7 @@ function DetailTabContent({ tab, r, id, user, verify, setVerify }) {
   if (tab === "ai" && r.status !== "DRAFT") {
     return (
       <>
-        <AiAssessmentPanel
-          requestId={id}
-          canRun={
-            r.progress?.stage !== "CLOSED" &&
-            !user.roles.some((role) =>
-              ["OPS_ADMIN", "POLICY_ADMIN", "AUDITOR"].includes(role),
-            )
-          }
-        />
+        <AiAssessmentPanel requestId={id} canRun={canRunAi(r, user)} />
         <AiSummary request={r} />
       </>
     );
@@ -623,6 +666,7 @@ export default function RequestDetail({
                   user={user}
                   verify={verify}
                   setVerify={setVerify}
+                  setTab={setTab}
                 />
               </div>
               <aside className="panel">

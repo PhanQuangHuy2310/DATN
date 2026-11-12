@@ -64,8 +64,10 @@ export function Profile({ user, onChanged }) {
                 <span className="ds-role-chip ds-position-chip">
                   {user.job_title || roleBadge.name}
                 </span>
-                {(user.roles || [])
+                {[...new Set(user.roles || [])]
                   .filter((r) => !POSITION_CODES.includes(r))
+                  // The position chip already shows this label (e.g. "Người phê duyệt").
+                  .filter((r) => (roles[r] || r) !== (user.job_title || roleBadge.name))
                   .map((r) => (
                     <span key={r} className="ds-role-chip">
                       {roles[r] || r}

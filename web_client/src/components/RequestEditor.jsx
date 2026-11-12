@@ -120,6 +120,7 @@ function FormFieldControl({
           name={`evidence_${name}`}
           type="file"
           accept="application/pdf,image/jpeg,image/png"
+          required={isRequired && !attached}
         />
         {attached && <small className="ds-attached-hint">Đã gắn tệp: {attached}</small>}
         <small className="muted">
@@ -869,6 +870,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                 value="draft"
                 className="secondary"
                 formNoValidate
+                disabled={fieldOptions === null}
               >
                 Lưu bản nháp
               </button>
@@ -876,7 +878,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                 type="submit"
                 name="action"
                 value="send"
-                disabled={busy || isTypeBlocked}
+                disabled={busy || isTypeBlocked || fieldOptions === null}
                 title={isTypeBlocked ? typeBlockedNotice : undefined}
                 className={isTypeBlocked ? "btn-disabled-circuit-breaker" : ""}
               >

@@ -11,6 +11,7 @@ from api_core.worker import (
     process_idempotency_cleanup,
     process_resource_batch,
     process_sla_batch,
+    request_delegation_tick,
     run_outbox_batch,
 )
 from api_core.workflow.ai_learning import run_pending as run_learning_jobs
@@ -47,12 +48,17 @@ class Command(BaseCommand):
         except (ValueError, AttributeError):
             pass
 
+        next_delegation_tick = 0.0
         while running:
             close_old_connections()
             try:
                 sla_events = process_sla_batch(batch_size=min(batch_size * 5, 500))
                 # Borrowed rooms / vehicles / equipment go back when the period ends.
                 sla_events += process_resource_batch()
+                # Delegations that started: waiting steps go to the delegate.
+                if time.monotonic() >= next_delegation_tick:
+                    sla_events += request_delegation_tick()
+                    next_delegation_tick = time.monotonic() + 60
                 # Expired idempotency responses / tombstones (no events emitted).
                 process_idempotency_cleanup()
                 processed = run_outbox_batch(batch_size=batch_size)

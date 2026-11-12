@@ -62,7 +62,9 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
   // Only replay safe, idempotent reads. Never retry a non-idempotent command.
   const attempts = isRead ? 2 : 1;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const waitMs = timeoutMs || (isRead ? 15000 : 30000);
+    // Reads wait past the server statement timeout (20 s) so a slow query that
+    // still succeeds is not thrown away and replayed onto an already busy DB.
+    const waitMs = timeoutMs || 30000;
     const timeoutSignal = typeof AbortSignal !== "undefined" && AbortSignal.timeout
       ? AbortSignal.timeout(waitMs)
       : null;
@@ -108,7 +110,8 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
     } catch (error) {
       if (options.signal?.aborted) throw error;
       const isTimeoutAbort = error.name === "AbortError" || error.name === "TimeoutError";
-      if (isRead && attempt < attempts - 1 && (isTimeoutAbort || error instanceof TypeError)) {
+      // Retry only a dropped connection; a timed-out read would double the load.
+      if (isRead && attempt < attempts - 1 && !isTimeoutAbort && error instanceof TypeError) {
         await pause(300 * (2 ** attempt));
         continue;
       }
@@ -117,6 +120,7 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
         // The server may have committed despite a client timeout. Do not retry.
         throw new Error("REQUEST_TIMEOUT_UNKNOWN");
       }
+      if (isTimeoutAbort) throw new Error("REQUEST_TIMEOUT");
       throw error;
     } finally {
       if (timeout) clearTimeout(timeout);

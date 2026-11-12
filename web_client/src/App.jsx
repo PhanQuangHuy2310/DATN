@@ -37,6 +37,7 @@ const DelegationSettings = lazy(() => import("./components/DelegationSettings.js
 import TeamDashboard from "./components/TeamDashboard.jsx";
 import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
 import { PageHeader, ShellSkeleton, TableSkeleton } from "./components/design.jsx";
+import MyWorkPanel from "./components/MyWorkPanel.jsx";
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
@@ -1013,7 +1014,9 @@ function renderWorkspaceContent({
     case "home":
       if (portal === "admin") return <AdminDashboard navigate={navigate} />;
       return portal === "client" ? (
-        <ApiBaseContext.Provider value={WORKSPACE_API}><WorkspaceDashboard navigate={navigate} workspace /></ApiBaseContext.Provider>
+        <ApiBaseContext.Provider value={WORKSPACE_API}>
+          <WorkspaceDashboard navigate={navigate} workspace intro={<MyWorkPanel user={user} onOpen={setSelected} navigate={navigate} />} />
+        </ApiBaseContext.Provider>
       ) : <Overview navigate={navigate} onOpen={setSelected} user={user} />;
     case "requests":
       return <ClientRequestsHub user={user} revision={revision} onOpen={setSelected} onNew={(init) => { setSelected(null); setEditor(init || {}); }} />;

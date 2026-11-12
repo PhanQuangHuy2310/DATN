@@ -60,6 +60,28 @@ function stageDetail(stage) {
   return stage.detail || "";
 }
 
+/** Company regulation clauses the AI advice was checked against (applied or not). */
+export function Citations({ items = [], version }) {
+  if (!items.length) {
+    return <p className="muted ai-citations-empty">Không có điều khoản quy chế nào{version ? ` trong bộ quy định ${version}` : ""} liên quan tới loại yêu cầu này; khuyến nghị dựa trên mức rủi ro và luồng duyệt.</p>;
+  }
+  return <section className="ai-citations" aria-label="Căn cứ đối chiếu theo quy chế công ty">
+    <h4>Căn cứ đối chiếu theo quy chế công ty{version ? ` · bộ quy định ${version}` : ""}</h4>
+    <ol>{items.map((c) => <li key={c.rule_id} className={c.applies ? "applies" : "not-applies"}>
+      <div className="ai-citation-head">
+        <span className={`ai-citation-badge ${c.applies ? "applies" : ""}`}>{c.applies ? "Áp dụng" : "Không áp dụng"}</span>
+        <strong>{c.regulation_title || c.regulation_code || c.rule_id}</strong>
+        <small className="muted">
+          {[c.regulation_code, c.regulation_version && `phiên bản ${c.regulation_version}`, c.clause_no && `câu ${c.clause_no}`].filter(Boolean).join(" · ")}
+        </small>
+      </div>
+      {c.text && <blockquote className="ai-citation-quote">“{c.text}”</blockquote>}
+      {c.checks?.length > 0 && <ul className="ai-citation-checks">{c.checks.map((x) => <li key={x}>{x}</li>)}</ul>}
+      {c.applies && c.effect && <p className="ai-citation-effect">Hệ quả: {c.effect}</p>}
+    </li>)}</ol>
+  </section>;
+}
+
 function Assessment({ item }) {
   const recommendation = item.stages?.find((s) => s.key === "RECOMMENDATION");
   return <div className="ai-assessment">
@@ -72,6 +94,7 @@ function Assessment({ item }) {
       </li>;
     })}</ol>
     {recommendation?.reasons?.length > 0 && <ul className="ai-reasons">{recommendation.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>}
+    {recommendation && <Citations items={recommendation.citations} version={recommendation.policy_version} />}
     {item.fallback_used && <p className="error" role="note">Một phần đánh giá dùng dữ liệu dự phòng vì dịch vụ AI chưa phản hồi; không coi đó là kết quả mô hình.</p>}
   </div>;
 }
@@ -106,4 +129,43 @@ export function AiAssessmentPanel({ requestId, canRun }) {
       </> : <p className="muted">Chưa có đánh giá AI cho hồ sơ này.</p>}
     </ResourceState>
   </div>;
+}
+
+/** Compact AI advice for the approver, shown next to the request content. */
+export function AiAdviceCard({ requestId, canRun, onOpenDetails }) {
+  const history = useResource(`/api/v1/requests/${requestId}/ai-assessments`);
+  const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const latest = history.data?.items?.[0];
+  const recommendation = latest?.stages?.find((s) => s.key === "RECOMMENDATION");
+  const risk = latest?.stages?.find((s) => s.key === "RISK_ANALYSIS");
+  async function run() {
+    setBusy(true); setError("");
+    try {
+      await api(`/api/v1/requests/${requestId}/ai-assessments`, { method: "POST", body: "{}", silent: true, timeoutMs: 90000 });
+      history.reload();
+    } catch (e) { setError(errorText(e)); }
+    finally { setBusy(false); }
+  }
+  return <section className="ai-advice-card" aria-label="Khuyến nghị AI">
+    <div className="section-head">
+      <h3>Khuyến nghị AI &amp; căn cứ quy chế</h3>
+      <span className="ai-advice-actions">
+        {canRun && <button type="button" className="secondary" onClick={run} disabled={busy}>{busy ? "Đang phân tích…" : latest ? "Đánh giá lại" : "Chạy đánh giá AI"}</button>}
+        {latest && onOpenDetails && <button type="button" className="link" onClick={onOpenDetails}>Xem chi tiết các bước →</button>}
+      </span>
+    </div>
+    {error && <p className="error" role="alert">{error}</p>}
+    <ResourceState resource={history}>
+      {recommendation ? <>
+        <p className="ai-advice-verdict">
+          <strong>{DECISIONS[recommendation.decision] || recommendation.decision}</strong>
+          {risk?.risk_score != null && <span className="muted"> · Điểm rủi ro {risk.risk_score}/5</span>}
+          <span className="muted"> · {date(latest.occurred_at)}</span>
+        </p>
+        <Citations items={recommendation.citations} version={recommendation.policy_version} />
+        {latest.fallback_used && <p className="error" role="note">Một phần đánh giá dùng dữ liệu dự phòng; không coi đó là kết quả mô hình.</p>}
+      </> : <p className="muted">Chưa có đánh giá AI cho hồ sơ này{canRun ? ". Bấm “Chạy đánh giá AI” để AI đối chiếu với quy chế công ty." : "."}</p>}
+    </ResourceState>
+    <p className="muted ai-advice-note">AI chỉ khuyến nghị; người có thẩm quyền quyết định phê duyệt hoặc từ chối.</p>
+  </section>;
 }

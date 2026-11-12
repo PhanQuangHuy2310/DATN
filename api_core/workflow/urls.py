@@ -61,6 +61,11 @@ urlpatterns = [
         name="execution-attachment-upload",
     ),
     path(
+        "internal/delegations/tick",
+        views.internal_delegation_tick_view,
+        name="internal-delegation-tick",
+    ),
+    path(
         "internal/requests/<uuid:request_id>/auto-approve",
         views.internal_auto_approve_view,
         name="internal-auto-approve",

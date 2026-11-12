@@ -137,6 +137,73 @@ def apply_policy(
     return risk, forced_manual, matched, policy.version
 
 
+def _vnd(value: float) -> str:
+    return f"{value:,.0f}".replace(",", ".") + " VNĐ"
+
+
+def _amount_check(amount: float, threshold: float) -> tuple[bool, str]:
+    hit = amount > threshold
+    # "từ 30 triệu trở lên" is compiled as > 29,999,999: show it as written.
+    if (threshold + 1) % 1_000_000 == 0:
+        return (
+            hit,
+            f"Số tiền {_vnd(amount)} {'≥' if hit else '<'} ngưỡng {_vnd(threshold + 1)}",
+        )
+    return hit, f"Số tiền {_vnd(amount)} {'>' if hit else '≤'} ngưỡng {_vnd(threshold)}"
+
+
+def _days_check(days: int, threshold: int) -> tuple[bool, str]:
+    hit = days > threshold
+    return hit, f"Số ngày {days} {'>' if hit else '≤'} ngưỡng {threshold} ngày"
+
+
+def _effect(rule: PolicyRule) -> str:
+    if rule.auto_approve is False:
+        return "Bắt buộc người có thẩm quyền duyệt thủ công"
+    if rule.auto_approve:
+        return "Cho phép tự động duyệt"
+    return f"Nâng mức rủi ro tối thiểu lên {rule.min_risk}/5"
+
+
+def _citation(rule: PolicyRule, version: str, amount: float, days: int) -> dict:
+    results = []
+    if rule.amount_gt is not None:
+        results.append(_amount_check(amount, rule.amount_gt))
+    if rule.days_gt is not None:
+        results.append(_days_check(days, rule.days_gt))
+    checks = [text for _hit, text in results]
+    if rule.request_type:
+        checks.append("Áp dụng riêng cho loại yêu cầu này")
+    return {
+        "rule_id": rule.id,
+        "text": rule.description,
+        "applies": all(hit for hit, _text in results),
+        "checks": checks,
+        "effect": _effect(rule),
+        "policy_version": version,
+    }
+
+
+def policy_citations(
+    *, request_type: str, amount: float, days: int, path: str | None = None
+) -> list[dict]:
+    """Every rule that concerns this request type, with the comparison made.
+
+    Lets an approver see which company regulation clause the advice was checked
+    against, including clauses that did not apply and why.
+    """
+    policy = load_policy(path)
+    if policy is None:
+        return []
+    citations = [
+        _citation(rule, policy.version, amount, days)
+        for rule in policy.rules
+        if not rule.request_type or rule.request_type == request_type
+    ]
+    citations.sort(key=lambda c: not c["applies"])
+    return citations
+
+
 @router.post("/rules", response_model=PolicyState, summary="Nạp bộ luật quy định")
 async def publish_rules(body: PolicyDocument):
     return save_policy(body)

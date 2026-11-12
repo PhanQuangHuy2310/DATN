@@ -266,6 +266,24 @@ def request_ai_auto_approval(request_id: str) -> bool:
         return False
 
 
+def request_delegation_tick() -> int:
+    """Ask the API (which owns approval writes) to hand waiting steps of
+    approvers whose delegation has started to their delegate."""
+    import httpx
+
+    try:
+        response = httpx.post(
+            f"{settings.EAS_API_INTERNAL_URL}/api/v1/internal/delegations/tick",
+            headers={"X-Internal-Secret": settings.EAS_WORKER_INTERNAL_SECRET},
+            timeout=15,
+        )
+        response.raise_for_status()
+        return int(response.json().get("reassigned") or 0)
+    except (httpx.HTTPError, ValueError):
+        logger.warning("delegation_tick_unavailable")
+        return 0
+
+
 def run_outbox_batch(*, batch_size: int = 20) -> int:
     items = claim_outbox(batch_size=batch_size)
     for item in items:

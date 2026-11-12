@@ -16,8 +16,8 @@ export default function DelegationSettings() {
     setBusy(true);
     setMessage({ kind: "", text: "" });
     try {
-      await action();
-      setMessage({ kind: "success", text: success });
+      const result = await action();
+      setMessage({ kind: "success", text: typeof success === "function" ? success(result) : success });
       list.reload();
     } catch (error) {
       setMessage({
@@ -35,9 +35,12 @@ export default function DelegationSettings() {
     const form = event.currentTarget;
     const values = Object.fromEntries(new FormData(form));
     return run(async () => {
-      await command("delegations", delegationBody(values));
+      const created = await command("delegations", delegationBody(values));
       form.reset();
-    }, "Đã thiết lập ủy quyền phê duyệt thành công.");
+      return created;
+    }, (created) => created?.reassigned_steps
+      ? `Đã thiết lập ủy quyền. ${created.reassigned_steps} hồ sơ đang chờ bạn duyệt đã được chuyển cho người nhận ủy quyền.`
+      : "Đã thiết lập ủy quyền phê duyệt thành công.");
   }
 
   const row = (item, given) => {
@@ -87,10 +90,10 @@ export default function DelegationSettings() {
     <section className="panel" aria-label="Ủy quyền duyệt">
       <h2>Ủy quyền phê duyệt khi vắng mặt</h2>
       <p className="muted">
-        Trong thời gian ủy quyền có hiệu lực, các hồ sơ mới chuyển đến bước duyệt của bạn sẽ
-        được giao cho đồng nghiệp nhận ủy quyền. Nếu bạn đang nghỉ phép hoặc đi công tác đã
-        được phê duyệt mà chưa thiết lập ủy quyền, hệ thống tự động chuyển bước duyệt lên cấp
-        quản lý trực tiếp.
+        Khi ủy quyền bắt đầu có hiệu lực, các hồ sơ đang chờ bạn duyệt và hồ sơ mới đến lượt bạn
+        đều được giao cho đồng nghiệp nhận ủy quyền (trong vòng khoảng 1 phút). Nếu bạn nghỉ
+        phép đã được duyệt mà chưa thiết lập ủy quyền, bước duyệt tự động chuyển lên quản lý trực
+        tiếp; khi đi công tác, bạn vẫn giữ bước duyệt.
       </p>
       <form onSubmit={submit} className="form-grid">
         <label>

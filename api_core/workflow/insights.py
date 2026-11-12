@@ -9,7 +9,8 @@ scope, and only the AI assessment command writes (an append-only audit event).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import re
+from datetime import date, datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -613,6 +614,58 @@ def _describe_payload(payload: dict[str, Any]) -> str:
     return "; ".join(parts)[:4000]
 
 
+_RULE_ID = re.compile(r"^(?P<code>.+)-(?P<clause>\d+)(?:-[A-Z][A-Z0-9_]*)?$")
+
+
+def _requested_days(payload: dict[str, Any]) -> int:
+    """Inclusive day span of start_date..end_date, 0 when not a date range."""
+    try:
+        begin = date.fromisoformat(str(payload["start_date"])[:10])
+        end = date.fromisoformat(str(payload["end_date"])[:10])
+    except (KeyError, ValueError):
+        return 0
+    return max((end - begin).days + 1, 0)
+
+
+def _cite_regulations(citations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Attach the source regulation (title, version, clause) to each AI rule.
+
+    Rule ids are compiled as ``<regulation code>-<sentence no>[-<TYPE>]``
+    (workflow.ai_learning.compile_regulations).
+    """
+    items = []
+    for item in citations[:12]:
+        match = _RULE_ID.match(str(item.get("rule_id") or ""))
+        items.append(
+            {
+                "rule_id": str(item.get("rule_id") or "")[:60],
+                "regulation_code": match["code"] if match else None,
+                "clause_no": int(match["clause"]) if match else None,
+                "text": str(item.get("text") or "")[:500],
+                "applies": bool(item.get("applies")),
+                "checks": [str(c)[:200] for c in (item.get("checks") or [])][:4],
+                "effect": str(item.get("effect") or "")[:200],
+                "policy_version": item.get("policy_version"),
+            }
+        )
+    codes = sorted({i["regulation_code"] for i in items if i["regulation_code"]})
+    if codes:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT code, title, version_string FROM eas.company_regulations
+                WHERE code = ANY(%s) AND NOT is_deleted
+                """,
+                [codes],
+            )
+            known = {row[0]: (row[1], row[2]) for row in cursor.fetchall()}
+        for item in items:
+            title, version = known.get(item["regulation_code"], (None, None))
+            item["regulation_title"] = title
+            item["regulation_version"] = version
+    return items
+
+
 def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]:
     """Analyse a stored request and append the result to its audit chain.
 
@@ -738,6 +791,7 @@ def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]
             requester_name="",
             requester_dept=department_name or "",
             amount=float(amount or 0),
+            days_requested=_requested_days(payload),
             correlation_id=cid,
         )
     fallback = bool(advice.get("fallback_used")) or advice.get("decision") is None
@@ -755,6 +809,8 @@ def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]
                 "method": "unavailable" if fallback else "rule_based",
                 "decision": advice.get("decision") or "escalate_to_human",
                 "reasons": [str(item)[:300] for item in reasons][:8],
+                "policy_version": advice.get("policy_version"),
+                "citations": _cite_regulations(advice.get("citations") or []),
             },
             {
                 "key": "HUMAN_REVIEW",

@@ -14,7 +14,11 @@ from api_core.management.commands.sync_employee_codes import (
     match_employees,
     normalize_name,
 )
-from api_core.workflow.delegation import create_delegation, validate_delegation
+from api_core.workflow.delegation import (
+    create_delegation,
+    reassign_delegated_steps,
+    validate_delegation,
+)
 from api_core.workflow.service import (
     CommandError,
     _apply_acceptance_decision,
@@ -229,9 +233,13 @@ class DelegationStoreTests(SimpleTestCase):
             patch("api_core.workflow.delegation.transaction.atomic"),
             patch("api_core.workflow.delegation.connection.cursor") as cm,
             patch("api_core.workflow.delegation._append_admin_audit") as audit,
+            patch(
+                "api_core.workflow.delegation.reassign_delegated_steps", return_value=2
+            ) as moved,
         ):
             cm.return_value.__enter__.return_value = cursor
             result = create_delegation(actor=_actor(), body=body, correlation_id="c")
+        self.moved = moved
         return result, cursor, audit
 
     def test_create_records_and_audits(self):
@@ -241,6 +249,8 @@ class DelegationStoreTests(SimpleTestCase):
             audit.call_args.kwargs["action"], "APPROVAL_DELEGATION_CREATED"
         )
         self.assertIn("id", result)
+        self.assertEqual(result["reassigned_steps"], 2)
+        self.assertTrue(self.moved.call_args.kwargs["delegator_id"])
 
     def test_delegate_must_be_an_approver(self):
         with self.assertRaises(CommandError) as raised:
@@ -256,6 +266,50 @@ class DelegationStoreTests(SimpleTestCase):
         with self.assertRaises(CommandError) as raised:
             self.create([(False,)])
         self.assertEqual(raised.exception.status, 503)
+
+
+class ReassignWaitingStepsTests(SimpleTestCase):
+    """Steps waiting before a delegation started go to the delegate."""
+
+    databases: ClassVar[set[str]] = {"default"}
+
+    def run_reassign(self, rows, change):
+        cursor = MagicMock()
+        cursor.fetchone.return_value = (True,)  # delegation table installed
+        cursor.fetchall.return_value = rows
+        with (
+            patch("api_core.workflow.delegation.transaction.atomic"),
+            patch("api_core.workflow.delegation.connection.cursor") as cm,
+            patch(
+                "api_core.workflow.delegation._substitute_approver", return_value=change
+            ) as substitute,
+        ):
+            cm.return_value.__enter__.return_value = cursor
+            moved = reassign_delegated_steps(delegator_id=str(uuid4()))
+        return moved, cursor, substitute
+
+    def test_waiting_step_is_handed_over_and_delegate_notified(self):
+        step, request = str(uuid4()), str(uuid4())
+        delegate = str(uuid4())
+        moved, cursor, substitute = self.run_reassign(
+            [(step, request, str(uuid4()), str(uuid4()), str(uuid4()))],
+            {"assignee_id": delegate, "reason": "DELEGATED"},
+        )
+        self.assertEqual(moved, 1)
+        self.assertEqual(substitute.call_args.kwargs["step_id"], step)
+        select = cursor.execute.call_args_list[1].args[0]
+        self.assertIn("s.state = 'ACTIVE'", select)
+        self.assertIn("FOR UPDATE OF s, r SKIP LOCKED", select)
+        outbox = cursor.execute.call_args_list[-1].args
+        self.assertIn("APPROVAL_REQUESTED", outbox[0])
+        self.assertIn(delegate, outbox[1][2])
+
+    def test_ineligible_delegate_leaves_step_and_sends_nothing(self):
+        moved, cursor, _ = self.run_reassign(
+            [(str(uuid4()), str(uuid4()), None, str(uuid4()), str(uuid4()))], None
+        )
+        self.assertEqual(moved, 0)
+        self.assertNotIn("outbox_event", _sql(cursor))
 
 
 class DelegationApiAccessTests(SimpleTestCase):
