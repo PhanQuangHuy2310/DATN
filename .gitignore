@@ -86,3 +86,6 @@ logs/
 
 # Runtime AI policy rules written by /ai/policy/rules
 ai_service/data/active_enterprise_policy.json
+
+# Impeccable detector cache (per machine)
+**/.impeccable/hook.cache.json

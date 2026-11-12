@@ -12,6 +12,8 @@ const QUEUES = [
   { key: "acceptance", role: "ACCEPTOR", label: "Chờ tôi nghiệm thu", query: "tab=acceptance", empty: "Không có kết quả nào chờ bạn nghiệm thu." },
   { key: "needs-info", role: "REQUESTER", label: "Đơn cần bổ sung", query: "tab=mine&status=NEEDS_INFO", empty: "Không có đơn nào cần bạn bổ sung thông tin." },
   { key: "mine-open", role: "REQUESTER", label: "Đơn đang chờ xử lý", query: "tab=mine", open: true, empty: "Bạn không có đơn nào đang chờ người khác xử lý." },
+  // Read-only: the default list is already limited to the auditor's granted scope.
+  { key: "audit", role: "AUDITOR", label: "Trong phạm vi kiểm toán", query: "", open: true, page: "audit", empty: "Chưa có hồ sơ đang mở trong phạm vi kiểm toán của bạn." },
 ];
 
 function useQueue(queue, enabled) {
@@ -48,14 +50,14 @@ function QueueList({ queue, data, onOpen, onShowAll }) {
       <button type="button" className="mywork-row" onClick={() => onOpen(item.id)}>
         <span className="mywork-main">
           <strong>{item.title || item.type_name}</strong>
-          <small>{item.code} · {item.type_name}{queue.key === "mine-open" ? ` · đang ở ${item.current_assignee_name || "hệ thống"}` : ` · ${item.requester_name}`}</small>
+          <small>{item.code} · {item.type_name}{queue.key === "mine-open" || queue.key === "audit" ? ` · đang ở ${item.current_assignee_name || "hệ thống"}` : ` · ${item.requester_name}`}</small>
         </span>
         <Badge value={item.status} />
         <span className={`mywork-due ${item.overdue ? "is-overdue" : ""}`}>{dueText(item)}</span>
         <span aria-hidden="true" className="mywork-go">→</span>
       </button>
     </li>)}</ul> : <p className="muted mywork-empty">{queue.empty}</p>}
-    {data.items.length > rows.length && <button type="button" className="link" onClick={onShowAll}>Xem tất cả {data.items.length}{data.more ? "+" : ""} hồ sơ →</button>}
+    {(data.items.length > rows.length || queue.page) && <button type="button" className="link" onClick={onShowAll}>{queue.page ? "Mở trang tra cứu & xác minh kiểm toán →" : `Xem tất cả ${data.items.length}${data.more ? "+" : ""} hồ sơ →`}</button>}
   </ResourceState>;
 }
 
@@ -68,7 +70,8 @@ export default function MyWorkPanel({ user, onOpen, navigate }) {
   const acceptance = useQueue(QUEUES[2], roles.has(QUEUES[2].role));
   const needsInfo = useQueue(QUEUES[3], roles.has(QUEUES[3].role));
   const mineOpen = useQueue(QUEUES[4], roles.has(QUEUES[4].role));
-  const data = { approval, execution, acceptance, "needs-info": needsInfo, "mine-open": mineOpen };
+  const audit = useQueue(QUEUES[5], roles.has(QUEUES[5].role));
+  const data = { approval, execution, acceptance, "needs-info": needsInfo, "mine-open": mineOpen, audit };
   const queues = QUEUES.filter((q) => roles.has(q.role));
   const [picked, setPicked] = useState(null);
   if (!queues.length) return null;
@@ -78,6 +81,6 @@ export default function MyWorkPanel({ user, onOpen, navigate }) {
     <div className="mywork-tabs" role="tablist" aria-label="Hàng đợi công việc">
       {queues.map((q) => <QueueTab key={q.key} queue={q} data={data[q.key]} active={q.key === current.key} onSelect={() => setPicked(q.key)} />)}
     </div>
-    <QueueList queue={current} data={data[current.key]} onOpen={onOpen} onShowAll={() => navigate?.("requests")} />
+    <QueueList queue={current} data={data[current.key]} onOpen={onOpen} onShowAll={() => navigate?.(current.page || "requests")} />
   </section>;
 }

@@ -25,7 +25,9 @@ log("employee signed in");
 
 const regs = await (await admin.get("/api/v1/admin/regulations")).json();
 const reg = regs.regulations.find((r) => r.code === "REG-001") || regs.regulations[0];
-const res = await post("PATCH", `/api/v1/admin/regulations/${reg.id}`, { content: `${reg.content} (Rà soát ${Date.now()})`, change_summary: "Kiểm thử khoá bảo trì" });
+// The marker only forces a new version; the original text is restored at the end.
+const original = reg.content.replace(/\s*\(Rà soát \d+\)/g, "");
+const res = await post("PATCH", `/api/v1/admin/regulations/${reg.id}`, { content: `${original} (Rà soát ${Date.now()})`, change_summary: "Kiểm thử khoá bảo trì" });
 log("admin edits regulation", res.status(), (await res.json()).new_version);
 
 await page.locator(".client-maintenance-backdrop").waitFor({ timeout: 15000 });
@@ -50,5 +52,6 @@ await page.getByRole("navigation", { name: "Điều hướng chính" }).waitFor(
 await page.waitForTimeout(2500);
 const dialogs = await page.locator("dialog[open]").count();
 log("employee back in; failure notice shown to employee:", dialogs ? await page.locator("dialog[open]").getAttribute("aria-label") : "none");
+log("regulation restored", (await post("PATCH", `/api/v1/admin/regulations/${reg.id}`, { content: original, change_summary: "Khôi phục nội dung sau kiểm thử" })).status());
 await browser.close();
 await admin.dispose();

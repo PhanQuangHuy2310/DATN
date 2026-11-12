@@ -385,19 +385,17 @@ export default function RequestWorkflowsPage() {
           <div className="rw-table-wrap">
             <table className="rw-table">
               <colgroup>
-                <col style={{ width: "21%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "17%" }} />
-                <col style={{ width: "15%" }} />
+                <col style={{ width: "27%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "10%" }} />
                 <col style={{ width: "13%" }} />
-                <col style={{ width: "11%" }} />
-                <col style={{ width: "11%" }} />
               </colgroup>
               <thead>
                 <tr>
                   <th>Tên mẫu yêu cầu</th>
-                  <th>Nghiệp vụ</th>
-                  <th>Thuộc phân loại</th>
+                  <th title="Đổi phân loại sẽ tự động đổi các bước quy trình">Phân loại</th>
                   <th>Trọng số tự động</th>
                   <th>API tích hợp</th>
                   <th>Quy trình</th>
@@ -407,7 +405,7 @@ export default function RequestWorkflowsPage() {
               <tbody>
                 {filteredTemplates.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="rw-empty-cell">
+                    <td colSpan="6" className="rw-empty-cell">
                       Không tìm thấy mẫu yêu cầu nào phù hợp.
                     </td>
                   </tr>
@@ -421,13 +419,11 @@ export default function RequestWorkflowsPage() {
                         <td>
                           <div className="rw-tpl-name-cell">
                             <strong>{tpl.name}</strong>
-                            <code className="rw-code-badge">{tpl.code}</code>
+                            <span className="rw-tpl-sub">
+                              <code className="rw-code-badge">{tpl.code}</code>
+                              <span className="rw-type-pill">{tpl.request_type || "Chung"}</span>
+                            </span>
                           </div>
-                        </td>
-
-                        {/* Request Type */}
-                        <td>
-                          <span className="rw-type-pill">{tpl.request_type || "Chung"}</span>
                         </td>
 
                         {/* Category Dropdown (AUTO-UPDATE LOGIC) */}
@@ -439,12 +435,12 @@ export default function RequestWorkflowsPage() {
                               onChange={(e) => handleCategoryChange(tpl, e.target.value)}
                               className={`rw-cat-select rw-cat-select-${tpl.category_code.toLowerCase()}`}
                               title="Thay đổi phân loại sẽ tự động cập nhật lại các bước quy trình"
+                              aria-label={`Phân loại của ${tpl.name}`}
                             >
                               <option value="A">Loại A · Tự động</option>
                               <option value="B">Loại B · Phòng ban</option>
                               <option value="C">Loại C · Đa cấp</option>
                             </select>
-                            <span className="rw-auto-sync-hint">⚡ Tự động đổi quy trình</span>
                           </div>
                         </td>
 
@@ -496,7 +492,12 @@ export default function RequestWorkflowsPage() {
                               )}
                             </div>
                           ) : (
-                            <span className="muted" style={{ fontSize: 12 }}>Chưa liên kết</span>
+                            <span
+                              className="rw-api-none"
+                              title="Loại yêu cầu này không gọi hệ thống ngoài; hoạt động bình thường mà không cần API."
+                            >
+                              Không cần API
+                            </span>
                           )}
                         </td>
 
@@ -511,7 +512,7 @@ export default function RequestWorkflowsPage() {
                             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2">
                               <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
-                            <span>{stepsCount} bước · {tpl.category_code}</span>
+                            <span>{stepsCount} bước</span>
                           </button>
                         </td>
 

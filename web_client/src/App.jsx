@@ -38,6 +38,7 @@ import TeamDashboard from "./components/TeamDashboard.jsx";
 import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
 import { PageHeader, ShellSkeleton, TableSkeleton } from "./components/design.jsx";
 import MyWorkPanel from "./components/MyWorkPanel.jsx";
+import { usePageTitleDedupe } from "./usePageTitleDedupe.js";
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
@@ -1421,6 +1422,7 @@ function fetchInitialSession() {
 }
 
 export default function App({ portal = (import.meta.env.VITE_EAS_PORTAL || "unified"), adminScreens = {} }) {
+  usePageTitleDedupe(true);
   const [theme, setTheme] = useState(() => {
     try {
       return localStorage.getItem("eas.theme") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");

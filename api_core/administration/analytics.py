@@ -111,22 +111,37 @@ def _period_range(period: str, now: datetime) -> tuple[str, datetime]:
 def _bucket(period: str, created: datetime) -> str:
     local = created.astimezone(VN_TZ)
     if period == "day":
-        return f"{local.hour // 3 * 3:02d}:00"
+        return f"{local.hour:02d}:00"
     if period == "week":
         return WEEKDAYS[local.weekday()]
     if period == "year":
         return f"T{local.month}"
-    return f"Tuần {min((local.day - 1) // 7 + 1, 5)}"
+    return f"{local.day:02d}/{local.month:02d}"
 
 
-def _bucket_labels(period: str) -> list[str]:
+def _bucket_starts(period: str, start: datetime) -> list[tuple[str, datetime]]:
+    """Every bucket of the whole period that contains ``start`` (VN time):
+    a day = 24 hours, a week = 7 days, a month = all its days, a year = 12
+    months, so the chart always spans the full selected period."""
+    local = start.astimezone(VN_TZ)
+    midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
     if period == "day":
-        return [f"{h:02d}:00" for h in range(0, 24, 3)]
+        return [(f"{h:02d}:00", midnight.replace(hour=h)) for h in range(24)]
     if period == "week":
-        return WEEKDAYS
+        monday = midnight - timedelta(days=midnight.weekday())
+        return [(WEEKDAYS[i], monday + timedelta(days=i)) for i in range(7)]
     if period == "year":
-        return [f"T{m}" for m in range(1, 13)]
-    return [f"Tuần {i}" for i in range(1, 6)]
+        jan = midnight.replace(month=1, day=1)
+        return [(f"T{m}", jan.replace(month=m)) for m in range(1, 13)]
+    first = midnight.replace(day=1)
+    days = ((first.replace(day=28) + timedelta(days=4)).replace(day=1) - first).days
+    return [
+        (f"{d:02d}/{first.month:02d}", first.replace(day=d)) for d in range(1, days + 1)
+    ]
+
+
+def _bucket_labels(period: str, start: datetime | None = None) -> list[str]:
+    return [label for label, _ in _bucket_starts(period, start or datetime.now(VN_TZ))]
 
 
 def _parse_dt(value: str | None, default: datetime) -> datetime:
@@ -236,8 +251,10 @@ def admin_analytics_view(request):
             "success": 0,
             "rejected": 0,
             "processing": 0,
+            # Buckets not reached yet are drawn as gaps, not as zero activity.
+            "future": begins > now,
         }
-        for label in _bucket_labels(period)
+        for label, begins in _bucket_starts(period, start)
     }
     lifecycles = {code: _lifecycle_bucket() for code in LIFECYCLES}
     types, depts, users = {}, {}, {}
@@ -266,6 +283,7 @@ def admin_analytics_view(request):
                     "success": 0,
                     "rejected": 0,
                     "processing": 0,
+                    "future": False,
                 },
             )
         bucket["total"] += 1

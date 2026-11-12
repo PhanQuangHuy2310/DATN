@@ -45,10 +45,17 @@ class AnalyticsBucketTests(SimpleTestCase):
     def test_buckets_use_vietnam_time_and_known_labels(self):
         # 2026-11-02 18:30 UTC = Tuesday 2026-11-03 01:30 in Vietnam.
         created = datetime(2026, 11, 2, 18, 30, tzinfo=timezone.utc)
-        expected = {"day": "00:00", "week": "Thứ 3", "month": "Tuần 1", "year": "T11"}
+        expected = {"day": "01:00", "week": "Thứ 3", "month": "03/11", "year": "T11"}
         for period, label in expected.items():
             self.assertEqual(analytics._bucket(period, created), label)
-            self.assertIn(label, analytics._bucket_labels(period))
+            self.assertIn(label, analytics._bucket_labels(period, created))
+
+    def test_buckets_cover_the_whole_selected_period(self):
+        start = datetime(2026, 2, 10, 3, 0, tzinfo=timezone.utc)
+        sizes = {"day": 24, "week": 7, "month": 28, "year": 12}
+        for period, size in sizes.items():
+            self.assertEqual(len(analytics._bucket_labels(period, start)), size)
+        self.assertEqual(analytics._bucket_labels("month", start)[-1], "28/02")
 
     def test_outcome(self):
         self.assertEqual(analytics._outcome("COMPLETED"), "success")

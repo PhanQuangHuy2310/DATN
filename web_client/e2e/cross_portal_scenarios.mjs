@@ -178,7 +178,9 @@ async function openPeople() {
   const regs = await (await call("GET", "/api/v1/admin/regulations")).json();
   const reg = regs.regulations[0];
   await emp.page.nav?.waitFor?.();
-  const res = await call("PATCH", `/api/v1/admin/regulations/${reg.id}`, { content: `${reg.content} (Rà soát ${Date.now()})`, change_summary: "Kiểm thử liên thông" });
+  // The marker only forces a new version; the original text is restored below.
+  const original = reg.content.replace(/\s*\(Rà soát \d+\)/g, "");
+  const res = await call("PATCH", `/api/v1/admin/regulations/${reg.id}`, { content: `${original} (Rà soát ${Date.now()})`, change_summary: "Kiểm thử liên thông" });
   record("4", "Admin sửa quy định", res.status() === 200, (await res.json()).new_version);
   const overlay = await emp.page.locator(".client-maintenance-backdrop").waitFor({ timeout: 15000 }).then(() => true).catch(() => false);
   record("4", "Cổng Nhân viên hiện màn hình AI đang cập nhật", overlay, "", await shot(emp.page));
@@ -192,6 +194,8 @@ async function openPeople() {
   await emp.page.waitForTimeout(2500);
   const dialog = await emp.page.locator("dialog[open]").getAttribute("aria-label").catch(() => null);
   record("4", "AI xong: đăng nhập lại được và thấy thông báo cập nhật", again, dialog || "", await shot(emp.page));
+  const restored = await call("PATCH", `/api/v1/admin/regulations/${reg.id}`, { content: original, change_summary: "Khôi phục nội dung sau kiểm thử" });
+  record("4", "Khôi phục nội dung quy định gốc", restored.status() === 200, "");
 }
 
 await emp.context.close();

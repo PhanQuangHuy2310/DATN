@@ -483,6 +483,89 @@ function SystemServicesPanel({ ready, diagnostics, aiStatus, mockApis, navigate,
 /** System-wide dashboard; every figure comes from /api/v1/admin/overview and diagnostics. */
 /** `workspace`: employee-portal mode — figures scoped by the API (own requests,
  * departments led, or company), no system health or operations shortcut. */
+const TREND_SERIES = [
+  ["success", "Hoàn thành", "rtrend-done"],
+  ["processing", "Đang xử lý", "rtrend-work"],
+  ["rejected", "Từ chối / hủy", "rtrend-stop"],
+];
+const PERIOD_TREND = { day: "theo giờ trong ngày", week: "theo ngày trong tuần", month: "theo ngày trong tháng", year: "theo tháng trong năm" };
+const CHART_W = 1000, CHART_H = 240;
+
+function trendLayers(trends, x, y) {
+  const lastPast = trends.reduce((last, t, i) => (t.future ? last : i), -1);
+  return TREND_SERIES.map(([key, label, cls], si) => {
+    const pts = trends.slice(0, lastPast + 1).map((t, i) => {
+      const below = TREND_SERIES.slice(0, si).reduce((sum, [k]) => sum + (t[k] || 0), 0);
+      return { i, lo: below, hi: below + (t[key] || 0) };
+    });
+    const top = pts.map((p) => `${x(p.i)},${y(p.hi)}`).join(" L");
+    const bottom = pts.slice().reverse().map((p) => `${x(p.i)},${y(p.lo)}`).join(" L");
+    return { key, label, cls, d: pts.length ? `M${top} L${bottom} Z` : "", line: pts.length ? `M${top}` : "" };
+  });
+}
+
+/** Stacked area over the whole selected period (day / week / month / year). */
+function RequestTrendChart({ trends = [], period }) {
+  const [hover, setHover] = useState(null);
+  const n = trends.length;
+  const past = trends.filter((t) => !t.future);
+  const max = Math.max(1, ...past.map((t) => t.total || 0));
+  const total = past.reduce((sum, t) => sum + (t.total || 0), 0);
+  const span = Math.max(1, n - 1);
+  const x = (i) => (i / span) * CHART_W;
+  const y = (v) => CHART_H - (v / max) * (CHART_H - 12);
+  const layers = trendLayers(trends, x, y);
+  const step = Math.ceil(n / 12);
+  const shown = hover === null ? null : trends[hover];
+  return (
+    <section className="panel rtrend-panel">
+      <div className="section-head">
+        <div>
+          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Xu hướng yêu cầu</h2>
+          <p className="muted" style={{ margin: "4px 0 0" }}>Số hồ sơ phát sinh {PERIOD_TREND[period] || ""}, chia theo kết quả</p>
+        </div>
+        <ul className="rtrend-legend">
+          {TREND_SERIES.map(([key, label, cls]) => <li key={key}><i className={cls} aria-hidden="true" />{label}</li>)}
+        </ul>
+      </div>
+      {total ? (
+        <div className="rtrend-area">
+          <div className="rtrend-yaxis" aria-hidden="true">{[max, Math.round(max / 2), 0].map((t, i) => <span key={i}>{t}</span>)}</div>
+          <div className="rtrend-plot">
+            <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} preserveAspectRatio="none" role="img"
+              aria-label={past.map((t) => `${t.label}: ${t.total} hồ sơ`).join("; ")}>
+              {[0.5, 1].map((f) => <line key={f} x1="0" x2={CHART_W} y1={y(max * f)} y2={y(max * f)} className="rtrend-grid" vectorEffect="non-scaling-stroke" />)}
+              {layers.slice().reverse().map((l) => <path key={l.key} d={l.d} className={`${l.cls} rtrend-fill`} />)}
+              {layers.map((l) => <path key={`${l.key}-line`} d={l.line} className={`${l.cls} rtrend-line`} vectorEffect="non-scaling-stroke" />)}
+              {hover !== null && <line x1={x(hover)} x2={x(hover)} y1="0" y2={CHART_H} className="rtrend-cursor" vectorEffect="non-scaling-stroke" />}
+              {trends.map((t, i) => (
+                <rect key={t.label} x={x(i) - CHART_W / span / 2} y="0" width={CHART_W / span} height={CHART_H}
+                  fill="transparent" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} />
+              ))}
+            </svg>
+            {shown && (
+              <div className="rtrend-tip" style={{ left: `${Math.min(88, Math.max(12, (100 * hover) / span))}%` }} role="status">
+                <strong>{shown.label}</strong>
+                {shown.future ? <span>Chưa tới</span> : (
+                  <>
+                    <span>{shown.total} hồ sơ</span>
+                    {TREND_SERIES.map(([key, label]) => <span key={key}>{label}: {shown[key] || 0}</span>)}
+                  </>
+                )}
+              </div>
+            )}
+            <div className="rtrend-xaxis" aria-hidden="true">
+              {trends.map((t, i) => (i % step === 0 || i === n - 1) && (
+                <span key={t.label} style={{ left: `${(100 * i) / span}%` }}>{t.label}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : <EmptyState title="Chưa có hồ sơ trong khoảng thời gian này" />}
+    </section>
+  );
+}
+
 export function AdminDashboard({ navigate, workspace = false, intro = null }) {
   const apiBase = useApiBase();
   const [period, setPeriod] = useState("month");
@@ -681,6 +764,8 @@ export function AdminDashboard({ navigate, workspace = false, intro = null }) {
           </div>
         </div>
       </div>
+
+      <RequestTrendChart trends={aData?.trends || []} period={aData?.period || period} />
 
       {/* 2. TỐC ĐỘ XỬ LÝ TRUNG BÌNH THEO PHÂN LOẠI (A, B, C) */}
       <section className="panel admin-category-section">
