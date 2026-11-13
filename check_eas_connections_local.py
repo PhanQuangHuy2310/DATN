@@ -139,7 +139,7 @@ def main(argv=None):
     local = read_env(dbfile)
     root = read_env(ROOT / ".env")
     worker = read_env(ROOT / ".env")
-    ai = read_env(ROOT / "ai_service" / ".env")
+    ai = root  # one shared .env at the repository root
     effective = os.environ.copy()
     for k, v in local.items():
         effective.setdefault(k, v)
