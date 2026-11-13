@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api.js";
 import { getPrimaryRoleBadge, POSITION_CODES, roles } from "../domain.js";
-import { PageHeader } from "./design.jsx";
+import { InfoHint, PageHeader } from "./design.jsx";
 import { ActionForm } from "./ui.jsx";
 import { PasswordField } from "./ux.jsx";
 
@@ -109,10 +109,9 @@ export function Profile({ user, onChanged }) {
         <section className="panel ds-profile-security-card" aria-label="Đổi mật khẩu">
           <div className="section-head">
             <div>
-              <h2>Đổi mật khẩu bảo mật</h2>
-              <p className="muted">
+              <h2>Đổi mật khẩu bảo mật<InfoHint>
                 Áp dụng tiêu chuẩn mật khẩu doanh nghiệp để bảo vệ chữ ký phê duyệt của bạn.
-              </p>
+              </InfoHint></h2>
             </div>
           </div>
 

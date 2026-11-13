@@ -1,3 +1,4 @@
+import { PageInfo } from "./design.jsx";
 import { useState, useMemo } from "react";
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
@@ -200,10 +201,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       <div className="page-heading">
         <div>
           <p className="eyebrow">TỔ CHỨC & NHÂN SỰ</p>
-          <h1>Quản lý Người dùng & Trạng thái làm việc</h1>
-          <p className="muted">
-            Theo dõi trạng thái làm việc thực tế (08:00 - 17:30 T2-T6), quản lý chức danh và tra cứu tiến độ 5 giai đoạn hồ sơ.
-          </p>
+          <h1>Quản lý Người dùng & Trạng thái làm việc<PageInfo>Theo dõi trạng thái làm việc thực tế (08:00 - 17:30 T2-T6), quản lý chức danh và tra cứu tiến độ 5 giai đoạn hồ sơ.</PageInfo></h1>
         </div>
         <div className="page-heading-actions">
           {onNavigateOrgChart && (

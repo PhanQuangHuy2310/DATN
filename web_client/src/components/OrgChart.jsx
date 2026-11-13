@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useApiBase } from "../apiBase.js";
 import { canBrowseDepartmentRoster } from "../rolePolicy.js";
-import { CardGridSkeleton } from "./design.jsx";
+import { CardGridSkeleton, PageInfo } from "./design.jsx";
 import { useResource, ResourceState } from "./ui.jsx";
 
 const DEPT_COLORS = {
@@ -94,10 +94,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
       <div className="page-heading org-chart-header">
         <div>
           <p className="eyebrow">{portal === "admin" ? "QUẢN TRỊ TỔ CHỨC" : "CƠ CẤU DOANH NGHIỆP"}</p>
-          <h1>SƠ ĐỒ TỔ CHỨC CÔNG TY</h1>
-          <p className="muted">
-            Cơ cấu hình cây trực quan từ Ban Giám Đốc xuống các phòng ban chức năng. Dữ liệu thời gian thực đồng bộ trực tiếp từ CSDL.
-          </p>
+          <h1>SƠ ĐỒ TỔ CHỨC CÔNG TY<PageInfo>Cơ cấu hình cây trực quan từ Ban Giám Đốc xuống các phòng ban chức năng. Dữ liệu thời gian thực đồng bộ trực tiếp từ CSDL.</PageInfo></h1>
         </div>
         <div className="org-chart-actions" style={{ display: "flex", gap: "10px" }}>
           {canOpenUsers && (

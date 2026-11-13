@@ -1,3 +1,4 @@
+import { PageInfo } from "./design.jsx";
 import { useState } from "react";
 import { api } from "../api.js";
 import { errorText, date, types } from "../domain.js";
@@ -32,8 +33,7 @@ export default function AuditorWorkspace({ onOpen }) {
       <header className="page-heading">
         <div>
           <p className="eyebrow">KIỂM TOÁN HỆ THỐNG</p>
-          <h1>Tra cứu và xác minh kiểm toán</h1>
-          <p className="muted">Chế độ chỉ đọc; danh sách được Backend giới hạn theo vai trò, loại hồ sơ và phòng ban có hiệu lực.</p>
+          <h1>Tra cứu và xác minh kiểm toán<PageInfo>Chế độ chỉ đọc; danh sách được Backend giới hạn theo vai trò, loại hồ sơ và phòng ban có hiệu lực.</PageInfo></h1>
         </div>
       </header>
       <section className="panel audit-scope-banner" aria-label="Nguyên tắc kiểm toán">

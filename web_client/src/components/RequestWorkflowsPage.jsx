@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { InfoHint, PageInfo } from "./design.jsx";
 import { errorText } from "../domain.js";
 import { useApiBase } from "../apiBase.js";
 import { api } from "../api.js";
@@ -219,15 +220,14 @@ export default function RequestWorkflowsPage() {
       )}
 
       {/* Page Header */}
-      <div className="rw-header-banner">
-        <div>
+      <div className="page-heading ds-page-header">
+        <div className="ds-page-header-text">
           <span className="eyebrow">QUẢN TRỊ LUỒNG DOANH NGHIỆP</span>
-          <h1 className="rw-title">Yêu cầu & Quy trình</h1>
-          <p className="rw-subtitle">
+          <h1 className="rw-title">Yêu cầu & Quy trình<PageInfo>
             Cấu hình 3 phân loại quy trình chuẩn (A, B, C), trọng số tự động hóa AI và danh mục mẫu yêu cầu toàn hệ thống.
-          </p>
+          </PageInfo></h1>
         </div>
-        <div className="rw-header-actions">
+        <div className="rw-header-actions ds-page-header-actions">
           {/* "create" on this module means creating business requests; adding a
               request type is configuration, so it needs "update". */}
           <PermissionGuard module="requests_workflows" action="update">
@@ -251,10 +251,9 @@ export default function RequestWorkflowsPage() {
       <section className="rw-section">
         <div className="rw-section-header">
           <div>
-            <h2 className="rw-section-title">Khu vực 1: Quy trình chuẩn 3 Phân loại lớn (A, B, C)</h2>
-            <p className="rw-section-desc">
+            <h2 className="rw-section-title">Khu vực 1: Quy trình chuẩn 3 Phân loại lớn (A, B, C)<InfoHint>
               Mỗi phân loại đại diện cho một cấp độ rủi ro và phương thức phê duyệt. Thay đổi tại đây sẽ tự động lan truyền đến tất cả các mẫu yêu cầu thuộc phân loại đó.
-            </p>
+            </InfoHint></h2>
           </div>
         </div>
 
@@ -326,10 +325,9 @@ export default function RequestWorkflowsPage() {
       <section className="rw-section" style={{ marginTop: 32 }}>
         <div className="rw-section-header">
           <div>
-            <h2 className="rw-section-title">Khu vực 2: Danh sách các Mẫu Yêu cầu (Form Templates)</h2>
-            <p className="rw-section-desc">
+            <h2 className="rw-section-title">Khu vực 2: Danh sách các Mẫu Yêu cầu (Form Templates)<InfoHint>
               Quản lý các biểu mẫu yêu cầu, gán phân loại A/B/C, điều chỉnh thanh trượt trọng số tự động hóa và liên kết API tích hợp.
-            </p>
+            </InfoHint></h2>
           </div>
           <div className="rw-filter-bar">
             {/* Category tabs filter */}

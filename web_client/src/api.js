@@ -148,6 +148,9 @@ export function getResource(path) {
 export function invalidateResource(path) { generation += 1; cached.delete(path); inFlight.delete(path); }
 
 export function peekResource(path) { return cached.get(path)?.data ?? null; }
+/** Keep a GET result from api() so the next visit paints it at once while
+ * the page refreshes it in the background (mutations still clear it). */
+export function rememberResource(path, data) { cached.set(path, { timestamp: Date.now(), data }); return data; }
 export function onDataChanged(listener) {
   window.addEventListener(DATA_EVENT, listener);
   return () => window.removeEventListener(DATA_EVENT, listener);

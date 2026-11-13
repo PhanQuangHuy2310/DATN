@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { InfoHint } from "./design.jsx";
 import { date, types } from "../domain.js";
 import { Badge, ResourceState, useResource } from "./ui.jsx";
 import { PageControls } from "./ux.jsx";
@@ -6,6 +7,11 @@ import { PeriodChooser } from "./DashboardOverview.jsx";
 import { ClientPageHeader } from "./clientDesign.jsx";
 
 function localDay(value) { return new Date(value).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }); }
+/** Report URL for a day range; the default (last 30 days) is also prefetched. */
+export function teamReportUrl(from = localDay(Date.now() - 29 * 86400000), to = localDay(Date.now())) {
+  const params = new URLSearchParams({ created_from: `${from}T00:00:00+07:00`, created_to: `${to}T23:59:59+07:00` });
+  return `/api/v1/reports/team?${params}`;
+}
 
 export function formatHours(hours) {
   if (hours === null || hours === undefined) return "—";
@@ -22,7 +28,7 @@ function EmployeeRequests({ employee, from, to, onOpen }) {
   const list = useResource(`/api/v1/requests?${params}`);
   const items = (list.data?.items || []).filter((item) => item.status !== "DRAFT");
   return <section className="panel table-panel" id="team-employee-requests">
-    <div className="section-head"><div><h2>Hồ sơ của {employee.requester_name}</h2><p className="muted">Chỉ gồm hồ sơ bạn được phép xem.</p></div></div>
+    <div className="section-head"><div><h2>Hồ sơ của {employee.requester_name}<InfoHint>Chỉ gồm hồ sơ bạn được phép xem.</InfoHint></h2></div></div>
     <ResourceState resource={list}>
       <div className="table-wrap"><table className="responsive-records"><thead><tr><th>Mã hồ sơ</th><th>Loại yêu cầu</th><th>Trạng thái</th><th>Người đang xử lý</th><th>Hạn xử lý</th><th></th></tr></thead>
         <tbody>{items.map((item) => <tr key={item.id}>
@@ -142,8 +148,7 @@ export default function TeamDashboard({ onOpen, mode = "departments" }) {
   const [department, setDepartment] = useState(null);
   const [employee, setEmployee] = useState(null);
   const valid = Boolean(from && to && from <= to && Date.parse(to) - Date.parse(from) <= 366 * 86400000);
-  const params = new URLSearchParams({ created_from: `${from}T00:00:00+07:00`, created_to: `${to}T23:59:59+07:00` });
-  const report = useResource(valid ? `/api/v1/reports/team?${params}` : "");
+  const report = useResource(valid ? teamReportUrl(from, to) : "");
   const data = report.data?.report;
   const totals = data?.totals || {};
   const employees = (data?.employees || []).filter((row) => !department || row.department_id === department.department_id);
@@ -151,7 +156,8 @@ export default function TeamDashboard({ onOpen, mode = "departments" }) {
 
   return <div className="client-dashboard team-dashboard">
     <ClientPageHeader eyebrow="QUẢN LÝ PHÒNG BAN" title={employeeMode ? "Nhân viên phòng ban" : "Tổng quan phòng ban"}
-      description={employeeMode ? "Hiệu suất xử lý hồ sơ theo từng nhân viên trong phạm vi bạn tham gia phê duyệt hoặc kiểm toán." : "Theo dõi hồ sơ của nhân viên mà bạn tham gia phê duyệt hoặc được cấp quyền kiểm toán."} />
+      description={employeeMode ? "Hiệu suất xử lý hồ sơ theo từng nhân viên trong phạm vi bạn tham gia phê duyệt hoặc kiểm toán." : "Theo dõi hồ sơ của nhân viên mà bạn tham gia phê duyệt hoặc được cấp quyền kiểm toán."}
+      note="Số liệu không gồm hồ sơ của chính bạn và chỉ tính hồ sơ bạn tham gia xử lý hoặc thuộc phạm vi kiểm toán được cấp. Thời gian hoàn thành tính từ lần gửi đầu tiên đến khi hoàn tất." />
     <PeriodChooser start={from} end={to} setStart={setFrom} setEnd={setTo} reload={report.reload} />
     {!valid && <p role="alert" className="error">Khoảng thời gian không hợp lệ hoặc dài hơn 12 tháng.</p>}
     {valid && <ResourceState resource={report}>{data && <>
@@ -178,7 +184,6 @@ export default function TeamDashboard({ onOpen, mode = "departments" }) {
       </section>}
 
       {employee && <EmployeeRequests key={employee.requester_id} employee={employee} from={from} to={to} onOpen={onOpen} />}
-      <p className="muted client-org-footnote">Số liệu không gồm hồ sơ của chính bạn và chỉ tính hồ sơ bạn tham gia xử lý hoặc thuộc phạm vi kiểm toán được cấp. Thời gian hoàn thành tính từ lần gửi đầu tiên đến khi hoàn tất.</p>
     </>}</ResourceState>}
   </div>;
 }

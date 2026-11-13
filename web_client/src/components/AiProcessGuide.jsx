@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { InfoHint } from "./design.jsx";
 import { types, resolverLabels } from "../domain.js";
 import { resolveLifecycle } from "../flowDiagrams.js";
 import { useResource, ResourceState, Badge } from "./ui.jsx";
@@ -33,7 +34,7 @@ export default function AiProcessGuide({ user, onOpen, navigate, portal = "clien
     <section className="panel"><div className="section-head"><h2>Quy trình trong hệ thống</h2><span className="muted">Dữ liệu hồ sơ được đọc trực tiếp từ Backend</span></div>
       <ol className="ai-workflow-track">{FLOW.map(([title,desc],i)=><li key={title}><span className="ai-workflow-number">{i+1}</span><strong>{title}</strong><p>{desc}</p></li>)}</ol>
     </section>
-    <section className="panel"><div className="section-head"><div><h2>Theo dõi hồ sơ và kiểm tra AI</h2><p className="muted">Chọn một hồ sơ thực tế để xem tuyến duyệt và chạy phân tích khi cần.</p></div><button type="button" className="secondary" onClick={()=>{list.reload();if(currentId) detail.reload();}}>Làm mới</button></div>
+    <section className="panel"><div className="section-head"><div><h2>Theo dõi hồ sơ và kiểm tra AI<InfoHint>Chọn một hồ sơ thực tế để xem tuyến duyệt và chạy phân tích khi cần.</InfoHint></h2></div><button type="button" className="secondary" onClick={()=>{list.reload();if(currentId) detail.reload();}}>Làm mới</button></div>
       <div className="ai-workflow-chooser">
         {!isAdmin&&canCreate&&canApprove&&<label>Nguồn hồ sơ<select value={queue} onChange={e=>{setQueue(e.target.value);setPicked("");}}><option value="mine">Yêu cầu của tôi</option><option value="approval">Đang chờ tôi duyệt</option></select></label>}
         <ResourceState resource={list}><label>Hồ sơ<select value={currentId} onChange={e=>setPicked(e.target.value)} disabled={!list.data?.items?.length}><option value="">{list.data?.items?.length?"Chọn hồ sơ":"Chưa có hồ sơ"}</option>{(list.data?.items||[]).map(item=><option value={item.id} key={item.id}>{item.code} · {types[item.type_code]||"Yêu cầu"}</option>)}</select></label></ResourceState>

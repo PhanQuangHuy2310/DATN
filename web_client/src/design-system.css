@@ -4814,3 +4814,133 @@ dialog, [role="dialog"] { box-shadow: var(--ds-shadow-pop); }
 .page-heading.is-page-root { justify-content: space-between !important; }
 @media (max-width: 860px) { .page-heading.is-page-root .ds-page-header-actions { justify-content: flex-start; } }
 .page-heading.is-page-root { align-items: flex-start !important; }
+
+/* Explanatory copy behind an (i) button (InfoHint / PageInfo). */
+.topbar-title-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.topbar-title-row .topbar-page-title { min-width: 0; }
+.topbar-page-info:empty { display: none; }
+.ds-info { position: relative; display: inline-flex; vertical-align: middle; margin-left: 6px; font-family: var(--ds-font-body); font-weight: 400; letter-spacing: 0; text-transform: none; }
+.topbar-page-info .ds-info { margin-left: 0; }
+.ds-info-button {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; min-height: 0; padding: 0;
+  border: 0; border-radius: 999px; background: transparent; color: var(--ds-muted); box-shadow: none; cursor: help;
+  transition: color var(--ds-motion, .16s) var(--ds-ease, ease), background-color var(--ds-motion, .16s) var(--ds-ease, ease);
+}
+.ds-info .ds-info-button:hover, .ds-info.is-open .ds-info-button { color: var(--ds-primary); background: var(--ds-primary-soft); border: 0; box-shadow: none; transform: none; }
+.ds-info-button:focus-visible { outline: 2px solid var(--ds-focus, var(--ds-primary)); outline-offset: 2px; }
+.ds-info-pop {
+  position: absolute; z-index: 60; top: calc(100% + 6px); left: -6px; width: max-content; max-width: min(360px, calc(100vw - 32px));
+  padding: 10px 12px; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-sm, 8px); background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-pop); color: var(--ds-ink); font-size: 13.5px; line-height: 1.5; white-space: normal; text-align: left;
+  display: none;
+}
+/* Closed popovers take no layout space (display: none), so they never widen
+   the page; aria-describedby still exposes the text to screen readers. */
+.ds-info:hover .ds-info-pop, .ds-info:focus-within .ds-info-pop, .ds-info.is-open .ds-info-pop {
+  display: block; animation: ds-info-in .14s ease-out;
+}
+.ds-info.is-flip .ds-info-pop { left: auto; right: -6px; }
+@keyframes ds-info-in { from { opacity: 0; transform: translateY(-2px); } }
+.ds-info-pop p, .ds-info-pop ul { margin: 0; }
+.ds-info-pop p + p, .ds-info-pop p + ul, .ds-info-pop ul + p { margin-top: 6px; }
+.ds-info-pop ul { padding-left: 18px; }
+/* The top bar clips its left column; pin the popover just under the bar
+   (the bar's backdrop-filter makes it the containing block). */
+.topbar .ds-info-pop { position: fixed; top: calc(100% - 6px); left: var(--ds-space-5, 24px); max-width: min(440px, calc(100% - 32px)); }
+@media (max-width: 860px) {
+  .topbar .ds-info .ds-info-pop, .topbar .ds-info.is-flip .ds-info-pop { left: 12px; right: 12px; width: auto; max-width: none; }
+  /* Keep the page title readable (wraps by word) next to its (i). */
+  .app-shell .topbar-title-row .topbar-page-title { min-width: min-content; white-space: normal; text-overflow: clip; }
+}
+@media (prefers-reduced-motion: reduce) { .ds-info-pop { animation: none !important; } .ds-info-button { transition: none; } }
+.ds-info-line { display: block; }
+.ds-info-line + .ds-info-line { margin-top: 6px; color: var(--ds-muted); }
+
+/* Regulations: versioning rules collapse into one quiet disclosure row. */
+details.versioning-rules-notice-box { display: block; padding: 0; border: 1px solid var(--ds-line); border-left-width: 1px; border-radius: var(--ds-radius, 12px); background: var(--ds-surface); }
+details.versioning-rules-notice-box > summary {
+  display: flex; align-items: center; gap: 8px; padding: 12px 16px; cursor: pointer; list-style: none;
+  font-size: 14px; font-weight: 650; color: var(--ds-ink);
+}
+details.versioning-rules-notice-box > summary::-webkit-details-marker { display: none; }
+details.versioning-rules-notice-box > summary::before {
+  content: ""; width: 7px; height: 7px; border-right: 2px solid var(--ds-muted); border-bottom: 2px solid var(--ds-muted);
+  transform: rotate(-45deg); transition: transform .15s ease-out; flex: none;
+}
+details.versioning-rules-notice-box[open] > summary::before { transform: rotate(45deg); }
+details.versioning-rules-notice-box > summary:focus-visible { outline: 2px solid var(--ds-focus, var(--ds-primary)); outline-offset: -2px; border-radius: inherit; }
+details.versioning-rules-notice-box .notice-body { padding: 0 16px 14px 31px; }
+[data-theme="dark"] details.versioning-rules-notice-box { background: var(--ds-surface); border-color: var(--ds-line); }
+/* A root heading whose title and description now live in the top bar keeps
+   only its screen-reader h1: drop the empty band it would leave behind. */
+.page-heading.is-page-root:not(:has(button:not(.ds-info-button), a, select, input, .muted, p:not(.eyebrow))) {
+  position: absolute !important; width: 1px; height: 1px; margin: 0 !important; padding: 0 !important;
+  overflow: hidden; clip: rect(0 0 0 0); border: 0 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Sibling cards line up row by row. Each card spans N rows of its parent grid
+   and adopts them (subgrid), so a title that wraps in one card never pushes
+   that card's later rows out of line with the cards beside it.
+   --------------------------------------------------------------------------- */
+.admin-cat-perf-card, .service-health-card, .rw-category-card, .eas-meta-stat-card,
+.regulation-card, .request-catalog-card, .admin-analytics-grid > .panel {
+  display: grid; grid-template-rows: subgrid; align-content: start;
+}
+/* Category A/B/C: badge, name, speed chip, metrics, SLA bar. */
+.admin-cat-perf-card { grid-row: span 5; row-gap: 8px; }
+.admin-cat-perf-card > .cat-card-header, .admin-cat-perf-card > .cat-card-header > div { display: contents; }
+.admin-cat-perf-card .cat-badge-code, .admin-cat-perf-card .cat-speed-tag { justify-self: start; align-self: start; margin: 0; }
+.admin-cat-perf-card .cat-name { margin: 0; align-self: start; }
+.admin-cat-perf-card > .cat-metrics-row { margin-top: 8px; }
+.admin-cat-perf-card > .cat-progress-box { align-self: end; }
+/* Service health: name + status pill, endpoint, detail, links. */
+.service-health-card { grid-row: span 4; row-gap: 4px; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; }
+.service-health-card > .service-card-top, .service-health-card > .service-card-top > div { display: contents; }
+.service-health-card .service-card-name { grid-row: 1; grid-column: 1; margin: 0; align-self: start; }
+.service-health-card .service-status-pill { grid-row: 1; grid-column: 2; align-self: start; }
+.service-health-card .service-card-endpoint { grid-row: 2; grid-column: 1 / -1; align-self: start; }
+.service-health-card > .service-card-detail { grid-row: 3; grid-column: 1 / -1; margin: 6px 0 0; align-self: start; }
+.service-health-card > .service-card-actions { grid-row: 4; grid-column: 1 / -1; align-self: end; margin: 6px 0 0; }
+/* Workflow categories A/B/C: name, SLA, description, condition, steps. */
+.rw-category-card { grid-row: span 5; row-gap: 4px; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 12px; }
+.rw-category-card > .rw-cat-header, .rw-category-card .rw-cat-badge-wrap, .rw-category-card .rw-cat-badge-wrap > div { display: contents; }
+.rw-category-card .rw-cat-letter { grid-row: 1 / span 2; grid-column: 1; align-self: start; }
+.rw-category-card .rw-cat-name { grid-row: 1; grid-column: 2; margin: 0; align-self: start; }
+.rw-category-card .rw-cat-sla { grid-row: 2; grid-column: 2; align-self: start; }
+.rw-category-card .rw-cat-header > button { grid-row: 1; grid-column: 3; align-self: start; }
+.rw-category-card > :not(.rw-cat-header) { grid-column: 1 / -1; margin: 8px 0 0; align-self: start; }
+/* Meta stats (regulations, AI, API): label row, value, caption. */
+.eas-meta-stat-card { grid-row: span 3; row-gap: 8px; }
+.eas-meta-stat-card > * { margin-top: 0 !important; margin-bottom: 0 !important; align-self: start; }
+/* Regulations: tags, title, content, footer. Actions stay top-right so the
+   tag row starts at the same height whether or not the tags wrap. */
+.regulation-card { grid-row: span 4; row-gap: 10px; }
+.regulation-card > .regulation-card-header { display: flex; flex-wrap: nowrap; align-items: flex-start; justify-content: space-between; gap: 8px; margin: 0 0 2px; align-self: start; }
+.regulation-card .regulation-code-tag { flex-wrap: wrap; min-width: 0; }
+.regulation-card .regulation-actions { flex: none; }
+.regulation-card > .regulation-card-footer { align-self: end; }
+/* Dashboard status / popular panels: heading row, body. */
+.admin-analytics-grid > .panel { grid-row: span 2; row-gap: 12px; }
+.admin-analytics-grid > .panel > * { margin-top: 0 !important; margin-bottom: 0 !important; }
+/* Request catalogue: optional parts keep fixed rows, so the button always
+   sits on the same line across a row of cards. */
+.request-catalog-card { grid-row: span 6; row-gap: 0; }
+.request-catalog-card > .section-head { grid-row: 1; margin: 0 0 6px; }
+.request-catalog-card > p.muted:first-of-type { grid-row: 2; }
+.request-catalog-card > ol { grid-row: 3; }
+.request-catalog-card > p.muted:not(:first-of-type) { grid-row: 4; margin: 0 0 8px; }
+.request-catalog-card > .request-catalog-warning { grid-row: 5; margin: 0 0 8px; }
+.request-catalog-card > button { grid-row: 6; align-self: end; justify-self: start; }
+
+/* Header identity block: static in the admin portal (no hover at all); in the
+   employee portal it opens the profile, so it gets a light, readable hover. */
+.app-shell .topbar .client-account-link.is-static,
+.app-shell .topbar .client-account-link.is-static:hover { background: transparent; box-shadow: none; cursor: default; transform: none; }
+.app-shell .topbar button.client-account-link:hover,
+.app-shell .topbar button.client-account-link:focus-visible { background: var(--ds-primary-soft); color: var(--ds-ink); box-shadow: none; transform: none; }
+.app-shell .topbar button.client-account-link:hover .topbar-display-name { color: var(--ds-ink); }
+[data-theme="dark"] .app-shell .topbar .client-account-link.is-static,
+[data-theme="dark"] .app-shell .topbar .client-account-link.is-static:hover { background: transparent; }
+[data-theme="dark"] .app-shell .topbar button.client-account-link:hover { background: #1e293b; }
+[data-theme="dark"] .app-shell .topbar button.client-account-link:hover .topbar-display-name { color: #f1f5f9; }

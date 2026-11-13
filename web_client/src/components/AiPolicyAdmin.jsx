@@ -1,3 +1,4 @@
+import { PageInfo } from "./design.jsx";
 import { useState } from "react";
 import { date, errorText } from "../domain.js";
 import { ResourceState, command, useResource } from "./ui.jsx";
@@ -57,8 +58,7 @@ export default function AiPolicyAdmin() {
       <div className="page-heading">
         <div>
           <p className="eyebrow">EAS / QUY ĐỊNH AI</p>
-          <h1>Bộ luật quy định AI</h1>
-          <p className="muted">Bộ luật lưu trong cơ sở dữ liệu; phiên bản đang kích hoạt được AI áp dụng ngay ở yêu cầu kế tiếp.</p>
+          <h1>Bộ luật quy định AI<PageInfo>Bộ luật lưu trong cơ sở dữ liệu; phiên bản đang kích hoạt được AI áp dụng ngay ở yêu cầu kế tiếp.</PageInfo></h1>
         </div>
       </div>
       <form className="panel" onSubmit={upload} aria-label="Tải bộ luật mới">

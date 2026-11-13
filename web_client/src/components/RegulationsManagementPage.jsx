@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useApiBase } from "../apiBase.js";
 import { usePermission } from "../hooks/usePermission.jsx";
-import { api } from "../api.js";
+import { api, peekResource, rememberResource } from "../api.js";
 import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
 
@@ -23,9 +23,9 @@ export function RegulationsManagementPage() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   };
-  const [regulations, setRegulations] = useState([]);
-  const [aiState, setAiState] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [regulations, setRegulations] = useState(() => peekResource(`${apiBase}/regulations`)?.regulations || []);
+  const [aiState, setAiState] = useState(() => peekResource(`${apiBase}/regulations`)?.ai_state ?? null);
+  const [loading, setLoading] = useState(() => !peekResource(`${apiBase}/regulations`));
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
 
@@ -45,7 +45,7 @@ export function RegulationsManagementPage() {
 
   const loadData = async (silent = false) => {
     try {
-      const res = await api(`${apiBase}/regulations`);
+      const res = rememberResource(`${apiBase}/regulations`, await api(`${apiBase}/regulations`));
       setRegulations(res.regulations || []);
       setAiState(res.ai_state || {});
     } catch (err) {
@@ -58,13 +58,19 @@ export function RegulationsManagementPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader sets state only after its await
     void loadData();
-    // Auto-refresh periodically if AI is currently syncing/learning
-    const timer = setInterval(() => {
-      void loadData(true);
-    }, 2500);
-    return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refresh only while the AI is relearning the rules, one call at a time.
+  const relearning = Boolean(
+    aiState?.client_maintenance_lock || ["SYNCING", "LEARNING", "APPLYING", "QUEUED"].includes(aiState?.sync_status),
+  );
+  useEffect(() => {
+    if (!relearning) return undefined;
+    const timer = setTimeout(() => { void loadData(true); }, 2500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relearning, aiState]);
 
   const openCreateModal = () => {
     const nextMajor = (aiState?.global_major_version || 1) + 1;
@@ -369,10 +375,9 @@ export function RegulationsManagementPage() {
       </div>
 
       {/* Semantic Versioning Rules Card Info */}
-      <div className="versioning-rules-notice-box">
-        <div className="notice-icon">💡</div>
+      <details className="versioning-rules-notice-box">
+        <summary>Quy tắc đánh số phiên bản tự động (Semantic Versioning)</summary>
         <div className="notice-body">
-          <h4>Quy tắc đánh số phiên bản tự động (Semantic Versioning):</h4>
           <ul>
             <li>
               <strong>Sửa nội dung điều khoản hiện có:</strong> Tự động tăng <strong>Phiên bản nhỏ (Minor Version)</strong> (Ví dụ: từ <code>{activeVersion}</code> lên <code>v{aiState?.global_major_version || 1}.{(aiState?.global_minor_version || 0) + 1}</code>).
@@ -385,7 +390,7 @@ export function RegulationsManagementPage() {
             </li>
           </ul>
         </div>
-      </div>
+      </details>
 
       {/* MODAL: Thêm quy định mới */}
       {showCreateModal && (

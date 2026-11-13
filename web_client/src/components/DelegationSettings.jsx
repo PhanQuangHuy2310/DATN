@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { date, errorText } from "../domain.js";
 import { delegationActive, delegationBody } from "../actionPayload.js";
-import { ConfirmDialog, EmptyState } from "./design.jsx";
+import { InfoHint, ConfirmDialog, EmptyState } from "./design.jsx";
 import { Badge, ResourceState, command, useResource } from "./ui.jsx";
 
 /** Approver hands approval steps to a colleague for a time window. */
@@ -88,13 +88,10 @@ export default function DelegationSettings() {
 
   return (
     <section className="panel" aria-label="Ủy quyền duyệt">
-      <h2>Ủy quyền phê duyệt khi vắng mặt</h2>
-      <p className="muted">
-        Khi ủy quyền bắt đầu có hiệu lực, các hồ sơ đang chờ bạn duyệt và hồ sơ mới đến lượt bạn
+      <h2>Ủy quyền phê duyệt khi vắng mặt<InfoHint>Khi ủy quyền bắt đầu có hiệu lực, các hồ sơ đang chờ bạn duyệt và hồ sơ mới đến lượt bạn
         đều được giao cho đồng nghiệp nhận ủy quyền (trong vòng khoảng 1 phút). Nếu bạn nghỉ
         phép đã được duyệt mà chưa thiết lập ủy quyền, bước duyệt tự động chuyển lên quản lý trực
-        tiếp; khi đi công tác, bạn vẫn giữ bước duyệt.
-      </p>
+        tiếp; khi đi công tác, bạn vẫn giữ bước duyệt.</InfoHint></h2>
       <form onSubmit={submit} className="form-grid">
         <label>
           Người nhận ủy quyền

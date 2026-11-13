@@ -1,6 +1,7 @@
+import { PageInfo } from "./design.jsx";
 import { useState, useEffect } from "react";
 import { errorText } from "../domain.js";
-import { api } from "../api.js";
+import { api, peekResource, rememberResource } from "../api.js";
 import { useResource } from "./ui.jsx";
 import { notifyPermissionsChanged } from "../sessionRefresh.js";
 
@@ -40,8 +41,13 @@ export default function RolePermissionMatrixPage() {
   // Fetch role matrix whenever the role changes
   useEffect(() => {
     if (!roleId) return;
-    api(`/api/v1/admin/rbac/matrix?role_id=${roleId}`)
-      .then(setMatrixData)
+    const url = `/api/v1/admin/rbac/matrix?role_id=${roleId}`;
+    // Paint the matrix seen on the last visit at once, then refresh it.
+    const seen = peekResource(url);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- cached snapshot, replaced by the fetch below
+    if (seen) setMatrixData(seen);
+    api(url)
+      .then((res) => setMatrixData(rememberResource(url, res)))
       .catch((err) => {
         showToast("Không thể tải ma trận phân quyền: " + errorText(err), "error");
       });
@@ -203,10 +209,7 @@ export default function RolePermissionMatrixPage() {
       <div className="page-heading">
         <div>
           <p className="eyebrow">TỔ CHỨC & NHÂN SỰ</p>
-          <h1>Ma trận Phân quyền (RBAC Matrix)</h1>
-          <p className="muted">
-            Quản trị quyền Xem (can_view), Thêm (can_create), Sửa (can_update) và Xóa (can_delete) cho 9 chức năng hệ thống theo Chức vụ hoặc cấp quyền riêng cho từng nhân viên.
-          </p>
+          <h1>Ma trận Phân quyền (RBAC Matrix)<PageInfo>Quản trị quyền Xem (can_view), Thêm (can_create), Sửa (can_update) và Xóa (can_delete) cho 9 chức năng hệ thống theo Chức vụ hoặc cấp quyền riêng cho từng nhân viên.</PageInfo></h1>
         </div>
         <div className="page-heading-actions">
           <div className="tab-group-pills">

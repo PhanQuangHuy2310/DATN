@@ -5,7 +5,7 @@ import { ActionForm, Badge, Modal, Reason, ResourceState, command, useResource }
 import { PageControls } from "./ux.jsx";
 import { useApiBase } from "../apiBase.js";
 import { PeriodChooser } from "./DashboardOverview.jsx";
-import { CardGridSkeleton, EmptyState, PageHeader, PageTabs, StatCard, useDebounced } from "./design.jsx";
+import { CardGridSkeleton, EmptyState, InfoHint, PageHeader, PageTabs, StatCard, useDebounced } from "./design.jsx";
 import { Policy, AdminEvents } from "./Admin.jsx";
 import PlanCatalog from "./PlanCatalog.jsx";
 import AuditorWorkspace from "./AuditorWorkspace.jsx";
@@ -419,8 +419,7 @@ function SystemServicesPanel({ ready, diagnostics, aiStatus, mockApis, navigate,
         <div className="service-api-strip">
           <div className="service-api-strip-head">
             <div>
-              <strong>Chi tiết 8 API hệ thống nghiệp vụ ({apiData.enabled_count}/{apiData.total_count} đang hoạt động)</strong>
-              <small className="muted">Trạng thái kết nối thực tế tới các hệ thống HRM, Tài chính, CNTT, Tài sản, Mua sắm…</small>
+              <strong>Chi tiết 8 API hệ thống nghiệp vụ ({apiData.enabled_count}/{apiData.total_count} đang hoạt động)<InfoHint>Trạng thái kết nối thực tế tới các hệ thống HRM, Tài chính, CNTT, Tài sản, Mua sắm…</InfoHint></strong>
             </div>
             {navigate && (
               <button type="button" className="secondary" onClick={() => navigate("api-admin")}>
@@ -521,8 +520,7 @@ function RequestTrendChart({ trends = [], period }) {
     <section className="panel rtrend-panel">
       <div className="section-head">
         <div>
-          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Xu hướng yêu cầu</h2>
-          <p className="muted" style={{ margin: "4px 0 0" }}>Số hồ sơ phát sinh {PERIOD_TREND[period] || ""}, chia theo kết quả</p>
+          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Xu hướng yêu cầu<InfoHint>Số hồ sơ phát sinh {PERIOD_TREND[period] || ""}, chia theo kết quả</InfoHint></h2>
         </div>
         <ul className="rtrend-legend">
           {TREND_SERIES.map(([key, label, cls]) => <li key={key}><i className={cls} aria-hidden="true" />{label}</li>)}
@@ -771,10 +769,9 @@ export function AdminDashboard({ navigate, workspace = false, intro = null }) {
       <section className="panel admin-category-section">
         <div className="section-head">
           <div>
-            <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Tốc độ xử lý trung bình theo Phân loại (A, B, C)</h2>
-            <small className="muted">
+            <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Tốc độ xử lý trung bình theo Phân loại (A, B, C)<InfoHint>
               So sánh thời gian xử lý trung bình và tỷ lệ đúng hạn cam kết SLA của 3 phân loại yêu cầu lớn
-            </small>
+            </InfoHint></h2>
           </div>
           <button
             type="button"
@@ -847,10 +844,9 @@ export function AdminDashboard({ navigate, workspace = false, intro = null }) {
         <section className="panel admin-status-panel">
           <div className="section-head">
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Trạng thái yêu cầu</h2>
-              <small className="muted">
+              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Trạng thái yêu cầu<InfoHint>
                 Cơ cấu phân bổ theo từng trạng thái xử lý ({period === "day" ? "hôm nay" : period === "week" ? "tuần này" : period === "year" ? "năm nay" : "tháng này"})
-              </small>
+              </InfoHint></h2>
             </div>
             {Number(kpis.total_requests || 0) > 0 && (
               <span className="status-panel-summary-pill">
@@ -869,8 +865,7 @@ export function AdminDashboard({ navigate, workspace = false, intro = null }) {
         <section className="panel admin-popular-panel">
           <div className="section-head">
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Loại yêu cầu phổ biến nhất</h2>
-              <small className="muted">Thống kê cơ cấu các loại yêu cầu phát sinh</small>
+              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Loại yêu cầu phổ biến nhất<InfoHint>Thống kê cơ cấu các loại yêu cầu phát sinh</InfoHint></h2>
             </div>
           </div>
           {topTypes?.length ? (
@@ -904,8 +899,7 @@ export function AdminDashboard({ navigate, workspace = false, intro = null }) {
         <section className="panel admin-rank-panel">
           <div className="section-head">
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Top Phòng ban gửi yêu cầu</h2>
-              <small className="muted">Khối lượng yêu cầu theo từng phòng ban trong doanh nghiệp</small>
+              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Top Phòng ban gửi yêu cầu<InfoHint>Khối lượng yêu cầu theo từng phòng ban trong doanh nghiệp</InfoHint></h2>
             </div>
           </div>
           {topDepartments.length ? (
@@ -960,8 +954,7 @@ export function AdminDashboard({ navigate, workspace = false, intro = null }) {
         <section className="panel admin-rank-panel">
           <div className="section-head">
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Top Cá nhân gửi nhiều yêu cầu</h2>
-              <small className="muted">Nhân viên khởi tạo yêu cầu nhiều nhất</small>
+              <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Top Cá nhân gửi nhiều yêu cầu<InfoHint>Nhân viên khởi tạo yêu cầu nhiều nhất</InfoHint></h2>
             </div>
           </div>
           {topUsers.length ? (
@@ -1029,8 +1022,7 @@ export function AdminDashboard({ navigate, workspace = false, intro = null }) {
       {!workspace && <section className="panel" style={{ marginTop: 16 }}>
         <div className="section-head">
           <div>
-            <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Tình trạng dịch vụ hệ thống</h2>
-            <small className="muted">Giám sát chi tiết trạng thái các dịch vụ lõi, AI Engine, Outbox Worker và 8 API nghiệp vụ</small>
+            <h2 style={{ margin: 0, fontSize: "1.05rem" }}>Tình trạng dịch vụ hệ thống<InfoHint>Giám sát chi tiết trạng thái các dịch vụ lõi, AI Engine, Outbox Worker và 8 API nghiệp vụ</InfoHint></h2>
           </div>
           <button
             type="button"
@@ -1154,8 +1146,7 @@ export function SlaNotificationsPage({ navigate }) {
           <ul className="ds-health-list">{Object.entries(OUTBOX_STATES).map(([k, v]) => <li key={k}><span>{v}</span><strong>{counts[k] || 0}</strong></li>)}</ul>
           <p className="muted">Lần gửi gần nhất: {d.outbox?.last_sent_at ? date(d.outbox.last_sent_at) : "chưa có"}. {typeof d.worker?.backlog_ok !== "boolean" ? "Chưa có dữ liệu worker." : d.worker.backlog_ok ? "Không có thông báo tồn đọng quá 5 phút." : `Có thông báo chờ quá ${Math.round((d.outbox?.oldest_pending_seconds || 0) / 60)} phút — kiểm tra worker (start_worker_local.cmd).`}</p>
         </section>
-        <section className="panel"><h2>Quá hạn cần xử lý</h2>
-          <p className="muted">Danh sách chi tiết người đang xử lý và hạn nằm ở trang vận hành.</p>
+        <section className="panel"><h2>Quá hạn cần xử lý<InfoHint>Danh sách chi tiết người đang xử lý và hạn nằm ở trang vận hành.</InfoHint></h2>
           <button type="button" onClick={() => navigate("ops")}>Mở theo dõi vận hành →</button>
         </section>
       </div>

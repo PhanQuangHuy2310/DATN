@@ -1,3 +1,4 @@
+import { InfoHint, PageInfo } from "./design.jsx";
 import { useState } from "react";
 import { useResource, ResourceState, Badge } from "./ui.jsx";
 import { statuses, types } from "../domain.js";
@@ -44,10 +45,10 @@ export function DashboardStats({byStatus={}, total=0, overdue=null, topTypes=[]}
         <article className="stat" key={title}><span>{title}</span><strong>{n}</strong><small>Trong thời gian đã chọn</small></article>)}
     </div>
     <div className="overview-grid">
-      <section className="panel"><h2>Trạng thái hồ sơ</h2><p className="muted">Đếm theo hồ sơ, trong phạm vi quyền truy cập của bạn.</p>
+      <section className="panel"><h2>Trạng thái hồ sơ<InfoHint>Đếm theo hồ sơ, trong phạm vi quyền truy cập của bạn.</InfoHint></h2>
         <div className="overview-status-grid">{Object.entries(statuses).map(([key])=><div key={key}><Badge value={key}/><strong>{byStatus[key]||0}</strong></div>)}</div>
       </section>
-      <section className="panel"><h2>Loại yêu cầu được xử lý nhiều</h2><p className="muted">Xếp theo số hồ sơ trong khoảng thời gian đã chọn.</p><Trend rows={topTypes}/></section>
+      <section className="panel"><h2>Loại yêu cầu được xử lý nhiều<InfoHint>Xếp theo số hồ sơ trong khoảng thời gian đã chọn.</InfoHint></h2><Trend rows={topTypes}/></section>
     </div>
   </>;
 }
@@ -58,14 +59,14 @@ export function SystemOverview({navigate}) {
   const r = useResource(`/api/v1/admin/overview?${params}`);
   const health = useResource("/health/ready");
   return <>
-    <div className="page-heading"><div><p className="eyebrow">TRUNG TÂM ĐIỀU HÀNH</p><h1>Tình hình toàn hệ thống</h1><p className="muted">Theo dõi khối lượng công việc, hạn xử lý và các loại yêu cầu thường phát sinh theo quyền quản trị được cấp.</p></div></div>
+    <div className="page-heading"><div><p className="eyebrow">TRUNG TÂM ĐIỀU HÀNH</p><h1>Tình hình toàn hệ thống<PageInfo>Theo dõi khối lượng công việc, hạn xử lý và các loại yêu cầu thường phát sinh theo quyền quản trị được cấp.</PageInfo></h1></div></div>
     <PeriodChooser start={start} end={end} setStart={setStart} setEnd={setEnd} reload={r.reload}/>
     {!valid && <p role="alert" className="error">Vui lòng chọn khoảng thời gian hợp lệ (không quá 12 tháng).</p>}
     {valid && <ResourceState resource={r}>
       {r.data && <DashboardStats byStatus={r.data.by_status} total={r.data.total} overdue={r.data.overdue} topTypes={r.data.top_types}/>}
     </ResourceState>}
     <div className="overview-grid">
-      <section className="panel"><h2>Sức khỏe dịch vụ</h2><p className="muted">Đọc trạng thái từ Backend, không tự suy đoán tình trạng Supabase hoặc dịch vụ AI.</p>
+      <section className="panel"><h2>Sức khỏe dịch vụ<InfoHint>Đọc trạng thái từ Backend, không tự suy đoán tình trạng Supabase hoặc dịch vụ AI.</InfoHint></h2>
         <span className={`health-indicator ${health.data?.status === "ready" ? "healthy" : "warning"}`} role="status">{health.loading ? "Đang kiểm tra…" : health.error ? "Chưa kết nối được Backend" : health.data?.status === "ready" ? "Dịch vụ sẵn sàng" : "Cần kiểm tra dịch vụ"}</span>
         <div className="dashboard-quick"><button className="secondary" type="button" onClick={health.reload}>Kiểm tra lại</button><button type="button" onClick={()=>navigate("ops")}>Đi đến vận hành →</button></div>
       </section>

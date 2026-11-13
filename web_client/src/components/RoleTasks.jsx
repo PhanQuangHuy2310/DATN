@@ -1,4 +1,5 @@
 import { roleTasks } from "../rolePolicy.js";
+import { InfoHint } from "./design.jsx";
 import { roles } from "../domain.js";
 
 /** Role-aware action cards, not an authorization boundary. */
@@ -9,8 +10,7 @@ export default function RoleTasks({ user, navigate }) {
       <div className="section-head">
         <div>
           <p className="eyebrow">KHÔNG GIAN THEO VAI TRÒ</p>
-          <h2 id="role-task-title">Công việc và quyền hạn của bạn</h2>
-          <p className="muted">Chỉ hiển thị các module thuộc vai trò hiện tại. Mọi hành động còn được máy chủ kiểm tra scope, người phụ trách và trạng thái.</p>
+          <h2 id="role-task-title">Công việc và quyền hạn của bạn<InfoHint>Chỉ hiển thị các module thuộc vai trò hiện tại. Mọi hành động còn được máy chủ kiểm tra scope, người phụ trách và trạng thái.</InfoHint></h2>
         </div>
       </div>
       <div className="role-badges" aria-label="Vai trò đang có hiệu lực">

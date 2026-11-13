@@ -29,16 +29,26 @@ export function AiEngineManagementPage() {
 
   useEffect(() => {
     let active = true;
-    // Poll every 1.5s for real-time stepper updates.
-    const poll = () =>
-      api("/api/v1/admin/ai-engine/status")
-        .then((res) => active && setAiState(res))
-        .catch(() => {});
+    let timer;
+    // Live stepper while the AI is learning (every 2 s); otherwise a quiet
+    // 30 s check. Each poll starts only after the previous one returned, so
+    // a slow status call never piles requests onto the API.
+    const poll = async () => {
+      let busy = false;
+      if (document.visibilityState === "visible") {
+        try {
+          const res = await api("/api/v1/admin/ai-engine/status");
+          if (!active) return;
+          setAiState(res);
+          busy = Boolean(res?.client_maintenance_lock) || ["SYNCING", "LEARNING", "APPLYING", "QUEUED"].includes(res?.sync_status);
+        } catch { /* keep the last state */ }
+      }
+      if (active) timer = setTimeout(poll, busy ? 2000 : 30000);
+    };
     void poll();
-    const interval = setInterval(() => { void poll(); }, 1500);
     return () => {
       active = false;
-      clearInterval(interval);
+      clearTimeout(timer);
     };
   }, []);
 

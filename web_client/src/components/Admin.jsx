@@ -3,6 +3,7 @@ import { PageControls, useLocalPagination } from "./ux.jsx";
 import { api } from "../api.js";
 import PolicyBindings from "./PolicyBindings.jsx";
 import { date, types, errorText } from "../domain.js";
+import { InfoHint, PageInfo } from "./design.jsx";
 import {
   ActionForm,
   Badge,
@@ -54,10 +55,7 @@ export function Policy({onManageAccess, canManageAccess=false}) {
       <div className="page-heading">
         <div>
           <p className="eyebrow">POLICY ADMIN</p>
-          <h1>Phiên bản cấu hình</h1>
-          <p className="muted">
-            Soạn thảo, kiểm tra và công bố quy trình nghiệp vụ.
-          </p>
+          <h1>Phiên bản cấu hình<PageInfo>Soạn thảo, kiểm tra và công bố quy trình nghiệp vụ.</PageInfo></h1>
         </div>
         <button type="button" onClick={() => setModal("create")}>＋ Tạo bản nháp</button>
       </div>
@@ -345,10 +343,7 @@ export function Operations({ items, onRefresh }) {
         </div>
       </div>
       <section className="panel">
-        <h2>Thử lại sự kiện gửi thông báo</h2>
-        <p className="muted">
-          Chỉ áp dụng sự kiện DEAD đã được xác định trong vận hành.
-        </p>
+        <h2>Thử lại sự kiện gửi thông báo<InfoHint>Chỉ áp dụng sự kiện DEAD đã được xác định trong vận hành.</InfoHint></h2>
         <ActionForm
           submitLabel="Gửi xử lý lại"
           onSubmit={async (values) => {

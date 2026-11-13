@@ -1,3 +1,4 @@
+import { PageInfo } from "./design.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api.js";
 import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
@@ -84,8 +85,7 @@ export default function PlanCatalog() {
   return <>
     <header className="page-heading">
       <div><p className="eyebrow">QUẢN TRỊ QUY CHẾ / PHÂN CẤP 5 TẦNG</p>
-        <h1>Danh mục loại yêu cầu</h1>
-        <p className="muted">Bảng danh mục 53 loại yêu cầu toàn doanh nghiệp theo mô hình phân quyền 5 cấp (Cấp 1–5). Phải có quy chế đã công bố và role hợp lệ mới tạo đơn được.</p>
+        <h1>Danh mục loại yêu cầu<PageInfo>Bảng danh mục 53 loại yêu cầu toàn doanh nghiệp theo mô hình phân quyền 5 cấp (Cấp 1–5). Phải có quy chế đã công bố và role hợp lệ mới tạo đơn được.</PageInfo></h1>
       </div>
     </header>
     <section className="panel plan-catalog-overview">

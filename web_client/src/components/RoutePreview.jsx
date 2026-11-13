@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { InfoHint } from "./design.jsx";
 import { api } from "../api.js";
 import { errorText, resolverLabels } from "../domain.js";
 
@@ -51,7 +52,7 @@ export default function RoutePreview({ type, getValues }) {
   const preview = state.preview;
   return <section className="route-preview" aria-label="Tuyến phê duyệt dự kiến" aria-busy={loading}>
     <div className="section-head">
-      <div><h3>Tuyến xử lý dự kiến</h3><p className="muted">Tính theo quy chế đang công bố, phòng ban và quản lý trực tiếp của bạn.</p></div>
+      <div><h3>Tuyến xử lý dự kiến<InfoHint>Tính theo quy chế đang công bố, phòng ban và quản lý trực tiếp của bạn.</InfoHint></h3></div>
       <button type="button" className="secondary" onClick={refresh} disabled={loading}>{loading ? "Đang tính…" : "Cập nhật theo nội dung"}</button>
     </div>
     {state.error && <p className="error" role="alert">Không xem trước được tuyến duyệt: {state.error}</p>}

@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from "react";
+import { InfoHint } from "./design.jsx";
 import { riskLevels, approvalLevels, typeLevels } from "../domain";
 
 const GROUP_ICONS = {
@@ -98,11 +99,8 @@ export default function RequestTypeMenu({
     <div className="request-menu" aria-label="Chọn loại yêu cầu">
       <div className="request-menu-intro">
         <p className="eyebrow">BƯỚC 1 / DANH MỤC BIỂU MẪU</p>
-        <h2>Chọn nhóm nghiệp vụ hoặc tìm biểu mẫu cần tạo</h2>
-        <p className="muted">
-          Chọn nhóm nghiệp vụ bên dưới hoặc gõ từ khóa để tìm nhanh biểu mẫu phù hợp.
-          Hệ thống tự động áp dụng đúng tuyến phê duyệt theo quy chế hiện hành.
-        </p>
+        <h2>Chọn nhóm nghiệp vụ hoặc tìm biểu mẫu cần tạo<InfoHint>Chọn nhóm nghiệp vụ bên dưới hoặc gõ từ khóa để tìm nhanh biểu mẫu phù hợp.
+          Hệ thống tự động áp dụng đúng tuyến phê duyệt theo quy chế hiện hành.</InfoHint></h2>
         <div className="request-menu-counts" aria-label="Tổng quan danh mục">
           <span>{options.length} biểu mẫu nghiệp vụ</span>
           <span>{available} biểu mẫu sẵn sàng tạo</span>

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, useContext, useEffect, useRef, useState } from "react";
 import { PermissionProvider } from "./hooks/usePermission.jsx";
 import { api, initializeCsrf, invalidateResources, notify, SESSION_EXPIRED_EVENT } from "./api.js";
 import ToastCenter from "./components/ToastCenter.jsx";
@@ -28,17 +28,19 @@ function AdminDashboard(props) {
   return <AdminScreen name="AdminDashboard" {...props} />;
 }
 // Screens opened after the first page load are split into their own chunks.
-const RequestEditor = lazy(() => import("./components/RequestEditor.jsx"));
-const RequestDetail = lazy(() => import("./components/RequestDetail.jsx"));
-const WorkflowDiagrams = lazy(() => import("./components/WorkflowDiagrams.jsx"));
-const AiProcessGuide = lazy(() => import("./components/AiProcessGuide.jsx"));
-const ClientOrgChart = lazy(() => import("./components/ClientOrgChart.jsx"));
-const DelegationSettings = lazy(() => import("./components/DelegationSettings.jsx"));
+const RequestEditor = lazyWithPreload(() => import("./components/RequestEditor.jsx"));
+const RequestDetail = lazyWithPreload(() => import("./components/RequestDetail.jsx"));
+const WorkflowDiagrams = lazyWithPreload(() => import("./components/WorkflowDiagrams.jsx"));
+const AiProcessGuide = lazyWithPreload(() => import("./components/AiProcessGuide.jsx"));
+const ClientOrgChart = lazyWithPreload(() => import("./components/ClientOrgChart.jsx"));
+const DelegationSettings = lazyWithPreload(() => import("./components/DelegationSettings.jsx"));
 import TeamDashboard from "./components/TeamDashboard.jsx";
 import { GlobalSearch, NotificationBell } from "./components/AppHeader.jsx";
-import { PageHeader, ShellSkeleton, TableSkeleton } from "./components/design.jsx";
+import { InfoHint, PageHeader, PageInfo, ShellSkeleton, TableSkeleton } from "./components/design.jsx";
 import MyWorkPanel from "./components/MyWorkPanel.jsx";
 import { usePageTitleDedupe } from "./usePageTitleDedupe.js";
+import { prefetchPages } from "./prefetch.js";
+import { lazyWithPreload } from "./lazyWithPreload.jsx";
 function getRealtimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return "Chào buổi sáng!";
@@ -693,10 +695,7 @@ function RequestList({ page, user, onOpen, onNew, revision, canCreate = true }) 
       <div className="page-heading">
         <div>
           <p className="eyebrow">CỔNG DỊCH VỤ EAS / QUẢN LÝ HỒ SƠ</p>
-          <h1>{menu.find((m) => m[0] === page)?.[1]}</h1>
-          <p className="muted">
-            Theo dõi tiến độ, người gửi, phòng ban, người đang phụ trách và hạn xử lý SLA của từng hồ sơ.
-          </p>
+          <h1>{menu.find((m) => m[0] === page)?.[1]}<PageInfo>Theo dõi tiến độ, người gửi, phòng ban, người đang phụ trách và hạn xử lý SLA của từng hồ sơ.</PageInfo></h1>
         </div>
         {canCreate && user.roles.includes("REQUESTER") && (
           <button type="button" onClick={onNew}>+ Tạo yêu cầu mới</button>
@@ -934,14 +933,13 @@ function Overview({ navigate, onOpen, user }) {
   const recent = useResource("/api/v1/requests?limit=5&offset=0");
   const report = r.data?.report;
   return <>
-    <div className="page-heading"><div><p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p><h1>Tổng quan yêu cầu</h1>
-      <p className="muted">Nắm nhanh tiến độ, trạng thái hồ sơ và những loại yêu cầu phổ biến trong phạm vi bạn được phép xem.</p></div></div>
+    <div className="page-heading"><div><p className="eyebrow">KHÔNG GIAN LÀM VIỆC</p><h1>Tổng quan yêu cầu<PageInfo>Nắm nhanh tiến độ, trạng thái hồ sơ và những loại yêu cầu phổ biến trong phạm vi bạn được phép xem.</PageInfo></h1></div></div>
     <PeriodChooser start={from} end={to} setStart={setFrom} setEnd={setTo} reload={r.reload}/>
     {!valid && <p className="error" role="alert">Vui lòng chọn khoảng thời gian hợp lệ, không quá 12 tháng.</p>}
     {valid && <ResourceState resource={r}>{report && <PersonalOverviewStats report={report}/>}</ResourceState>}
     <RoleTasks user={user} navigate={navigate}/>
     <div className="dashboard-board"><section className="panel" aria-label="Hồ sơ cập nhật gần đây">
-      <div className="section-head"><div><h2>Hồ sơ mới cập nhật</h2><p className="muted">Thông tin bạn được phép xem.</p></div><button type="button" className="secondary" onClick={()=>navigate("history")}>Xem danh sách →</button></div>
+      <div className="section-head"><div><h2>Hồ sơ mới cập nhật<InfoHint>Thông tin bạn được phép xem.</InfoHint></h2></div><button type="button" className="secondary" onClick={()=>navigate("history")}>Xem danh sách →</button></div>
       <ResourceState resource={recent}>{recent.data?.items?.length ? <ul className="dashboard-list">{recent.data.items.map(item=><li key={item.id}>
         <div><strong>{item.code}</strong><small>{types[item.type_code] || item.type_name || "Yêu cầu"} · {date(item.updated_at)}</small><Badge value={item.status}/></div>
         <button type="button" className="link" onClick={()=>onOpen(item.id)}>Xem chi tiết →</button>
@@ -1152,12 +1150,23 @@ export function AdminOverview({ navigate, user }) {
 function readFlag(key) { try { return window.localStorage.getItem(key) === "1"; } catch { return false; } }
 // Screens shared with the admin portal, opened in the employee portal through
 // /api/v1/workspace (module rights granted by the admin). Loaded on demand.
-const WorkspaceDashboard = lazy(() => import("./components/AdminPages.jsx").then((m) => ({ default: m.AdminDashboard })));
-const WorkspaceUsers = lazy(() => import("./components/UserManagementPage.jsx"));
-const WorkspaceRegulations = lazy(() => import("./components/RegulationsManagementPage.jsx"));
-const WorkspaceOrgChart = lazy(() => import("./components/OrgChart.jsx"));
+const WorkspaceDashboard = lazyWithPreload(() => import("./components/AdminPages.jsx").then((m) => ({ default: m.AdminDashboard })));
+const WorkspaceUsers = lazyWithPreload(() => import("./components/UserManagementPage.jsx"));
+const WorkspaceRegulations = lazyWithPreload(() => import("./components/RegulationsManagementPage.jsx"));
+const WorkspaceOrgChart = lazyWithPreload(() => import("./components/OrgChart.jsx"));
 // Read-only audit lookup (employee APIs only), loaded on demand in the employee portal.
-const ClientAuditorWorkspace = lazy(() => import("./components/AuditorWorkspace.jsx"));
+const ClientAuditorWorkspace = lazyWithPreload(() => import("./components/AuditorWorkspace.jsx"));
+
+/** Lazy page code per nav key, preloaded after sign-in (see prefetch.js). */
+const PAGE_CODE = {
+  home: [WorkspaceDashboard],
+  requests: [RequestDetail, RequestEditor, WorkflowDiagrams],
+  people: [WorkspaceUsers],
+  "regulations-view": [WorkspaceRegulations],
+  "org-client": [WorkspaceOrgChart, ClientOrgChart],
+  profile: [DelegationSettings],
+  audit: [ClientAuditorWorkspace],
+};
 const ADMIN_PORTAL_URL = import.meta.env.VITE_ADMIN_PORTAL_URL || "http://localhost:8081";
 
 function writeFlag(key, value) { try { window.localStorage.setItem(key, value ? "1" : "0"); } catch { /* storage unavailable */ } }
@@ -1236,9 +1245,29 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
     setClosedGroups((prev) => { const next = new Set(prev); if (next.has(name)) next.delete(name); else next.add(name); return next; });
   }
   const primaryRole = getPrimaryRoleBadge(user.roles);
-  const currentGroup = groups.find(([, keys]) => keys.includes(page))?.[0];
+  const adminScreensPreload = useContext(AdminScreensContext).preload;
+  function isNavVisible(m) {
+    if (!m) return false;
+    if (!allowedPages.has(m[0])) return false;
+    if (!canNavigate(user.roles, m[0], user.capabilities)) return false;
+    const mod = pageToModuleCode(m[0], portal);
+    // Employee portal: a module page appears only after the admin grants "Xem".
+    if (mod && portal === "client") return Boolean(user?.permissions?.by_module?.[mod]?.can_view);
+    if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
+      return Boolean(user.permissions.by_module[mod].can_view);
+    }
+    return true;
+  }
+  const navKeysVisible = groups.flatMap(([, keys]) => keys).filter((key) => isNavVisible(menu.find((m) => m[0] === key))).join(",");
+  // Once per sign-in, load every page the user can open into the caches
+  // (browser + server Redis) so later page switches paint without waiting.
+  useEffect(() => {
+    if (navKeysVisible) prefetchPages(navKeysVisible.split(","), portal, user.roles || [], () => {
+      for (const key of navKeysVisible.split(",")) for (const page of PAGE_CODE[key] || []) page.preload();
+      adminScreensPreload?.();
+    });
+  }, [user.id, user.roles, portal, navKeysVisible]);
   const activeTitle = editor ? (editor.id ? "Chỉnh sửa hồ sơ" : "Tạo yêu cầu mới") : selected ? "Chi tiết hồ sơ" : pageLabel(page, portal);
-  const crumbs = [portal === "admin" ? "Quản trị" : "Không gian làm việc", currentGroup, pageLabel(page, portal), editor ? (editor.id ? "Chỉnh sửa hồ sơ" : "Tạo yêu cầu") : selected ? "Chi tiết hồ sơ" : null].filter(Boolean);
   // OPS admins only see request metadata (UC05), so admin search lands on the operations table.
   const adminSearch = portal === "admin" && user.roles.includes("OPS_ADMIN");
   const canSearch = portal !== "admin" || adminSearch;
@@ -1286,18 +1315,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
         )}
         <nav aria-label="Điều hướng chính" className="sidebar-nav">
           {groups.map(([group, keys]) => {
-            const visible = keys.map((key) => menu.find((m) => m[0] === key)).filter((m) => {
-              if (!m) return false;
-              if (!allowedPages.has(m[0])) return false;
-              if (!canNavigate(user.roles, m[0], user.capabilities)) return false;
-              const mod = pageToModuleCode(m[0], portal);
-              // Employee portal: a module page appears only after the admin grants "Xem".
-              if (mod && portal === "client") return Boolean(user?.permissions?.by_module?.[mod]?.can_view);
-              if (mod && user?.permissions?.by_module && user.permissions.by_module[mod]) {
-                return Boolean(user.permissions.by_module[mod].can_view);
-              }
-              return true;
-            });
+            const visible = keys.map((key) => menu.find((m) => m[0] === key)).filter(isNavVisible);
             if (!visible.length) return null;
             const isClosed = closedGroups.has(group);
             return (
@@ -1328,10 +1346,10 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
           <div className="topbar-left">
             <button type="button" className="secondary menu-toggle" aria-label="Mở điều hướng" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
             <div className="topbar-page-identity">
-              <span className="topbar-page-title">{activeTitle}</span>
-              <nav className="ds-breadcrumb" aria-label="Vị trí hiện tại"><ol>
-                {crumbs.map((crumb, index) => <li key={crumb} aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb}</li>)}
-              </ol></nav>
+              <div className="topbar-title-row">
+                <span className="topbar-page-title">{activeTitle}</span>
+                <span id="page-title-info" className="topbar-page-info" />
+              </div>
             </div>
           </div>
           {canSearch && <GlobalSearch portal={portal} onOpen={(id, item) => {
@@ -1372,14 +1390,20 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
               </span>
             )}
             <NotificationBell onOpen={portal === "admin" && !user.roles.includes("AUDITOR") ? () => navigate("notifications") : openRequest} onViewAll={() => navigate("notifications")} />
-            <button type="button" className="client-account-link" disabled={portal === "admin"} onClick={() => navigate("profile")} aria-label={`Tài khoản ${user.display_name || "người dùng"}`}>
-              <span className="client-avatar">{user.display_name?.slice(0, 1) || "U"}</span>
-              <div className="topbar-user-pill">
-                <strong className="topbar-display-name">{user.display_name || "Người dùng"}</strong>
-                <span className={`topbar-role-badge ${primaryRole.tone}`}>{user.job_title || primaryRole.name}</span>
-                {user.department_name && <small className="topbar-department">{user.department_name}</small>}
-              </div>
-            </button>
+            {(() => {
+              const identity = <>
+                <span className="client-avatar">{user.display_name?.slice(0, 1) || "U"}</span>
+                <div className="topbar-user-pill">
+                  <strong className="topbar-display-name">{user.display_name || "Người dùng"}</strong>
+                  <span className={`topbar-role-badge ${primaryRole.tone}`}>{user.job_title || primaryRole.name}</span>
+                  {user.department_name && <small className="topbar-department">{user.department_name}</small>}
+                </div>
+              </>;
+              // Admin portal has no profile page here: show identity as plain text, not a dead button.
+              return portal === "admin"
+                ? <div className="client-account-link is-static">{identity}</div>
+                : <button type="button" className="client-account-link" onClick={() => navigate("profile")} aria-label={`Tài khoản ${user.display_name || "người dùng"}`}>{identity}</button>;
+            })()}
             <button type="button" className="secondary ds-icon-button" aria-label="Đăng xuất" title="Đăng xuất" onClick={onLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
           </div>
         </header>

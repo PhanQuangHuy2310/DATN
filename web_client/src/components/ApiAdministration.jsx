@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { errorText } from "../domain.js";
-import { api } from "../api.js";
+import { api, peekResource, rememberResource } from "../api.js";
 import { PageHeader } from "./design.jsx";
 
+const MOCK_APIS = "/api/v1/admin/mock-apis";
+
 export function ApiAdministration() {
-  const [apis, setApis] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [apis, setApis] = useState(() => peekResource(MOCK_APIS)?.apis || []);
+  const [loading, setLoading] = useState(() => !peekResource(MOCK_APIS));
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
 
@@ -23,7 +25,7 @@ export function ApiAdministration() {
 
   const loadApis = async (silent = false) => {
     try {
-      const res = await api("/api/v1/admin/mock-apis");
+      const res = rememberResource(MOCK_APIS, await api(MOCK_APIS));
       setApis(res.apis || []);
     } catch (err) {
       if (!silent) showToast("Không thể tải danh sách API: " + errorText(err), "error");

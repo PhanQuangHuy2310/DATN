@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { errorText } from "../domain.js";
-import { api } from "../api.js";
+import { api, peekResource, rememberResource } from "../api.js";
+
+const CHANGELOG = "/api/v1/admin/system-versions/changelog";
 import { PageHeader } from "./design.jsx";
 
 const CHANGE_TYPE_LABELS = {
@@ -23,8 +25,8 @@ const CHANGE_TYPE_COLORS = {
 };
 
 export function SystemVersionsPage() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => peekResource(CHANGELOG));
+  const [loading, setLoading] = useState(() => !peekResource(CHANGELOG));
   const [filterType, setFilterType] = useState("ALL");
   const [search, setSearch] = useState("");
   const [diffModal, setDiffModal] = useState(null);
@@ -37,13 +39,13 @@ export function SystemVersionsPage() {
 
   const loadChangelog = async (silent = false) => {
     try {
-      let url = "/api/v1/admin/system-versions/changelog";
+      let url = CHANGELOG;
       const params = new URLSearchParams();
       if (filterType !== "ALL") params.append("type", filterType);
       if (search.trim()) params.append("q", search.trim());
       if (params.toString()) url += `?${params.toString()}`;
 
-      const res = await api(url);
+      const res = rememberResource(url, await api(url));
       setData(res);
     } catch (err) {
       if (!silent) showToast("Không thể tải nhật ký phiên bản: " + errorText(err), "error");

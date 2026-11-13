@@ -1,15 +1,73 @@
 /** Shared design-system primitives for both portals (see design-system.css). */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { date } from "../domain.js";
 import { ActionForm, Badge } from "./ui.jsx";
 
-export function PageHeader({ eyebrow, title, description, action }) {
+/** Explanatory copy behind an (i) button: shown on hover, keyboard focus or
+ * tap, and always announced to screen readers through aria-describedby. */
+export function InfoHint({ children, label = "Giải thích" }) {
+  const [open, setOpen] = useState(false);
+  const [flip, setFlip] = useState(false);
+  const id = useId();
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (event) => { if (!ref.current?.contains(event.target)) setOpen(false); };
+    const onKey = (event) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  if (!children) return null;
+  // Open toward the side with room, so a hint near the right edge never
+  // pushes the page wider than the viewport.
+  const place = () => {
+    const left = ref.current?.getBoundingClientRect().left ?? 0;
+    setFlip(left + 380 > window.innerWidth);
+  };
+  return (
+    <span className={`ds-info${open ? " is-open" : ""}${flip ? " is-flip" : ""}`} ref={ref}
+      onPointerEnter={place} onFocus={place}>
+      <button type="button" className="ds-info-button" aria-label={label} aria-describedby={id}
+        aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" />
+        </svg>
+      </button>
+      <span className="ds-info-pop" role="tooltip" id={id}>{children}</span>
+    </span>
+  );
+}
+
+/** Page description: on the page's first heading it moves next to the page
+ * title in the top bar; anywhere else it stays inline as an InfoHint. */
+export function PageInfo({ children }) {
+  const ref = useRef(null);
+  const [slot, setSlot] = useState(null);
+  useEffect(() => {
+    const heading = ref.current?.closest(".page-heading");
+    const first = document.querySelector("main#main .page-heading:not(.ds-detail-header)");
+    setSlot(heading && heading === first ? document.getElementById("page-title-info") : null);
+  }, [children]);
+  if (!children) return null;
+  const hint = <InfoHint label="Về trang này">{children}</InfoHint>;
+  return <span ref={ref} className="ds-page-info">{slot ? createPortal(hint, slot) : hint}</span>;
+}
+
+export function PageHeader({ eyebrow, title, description, note, action }) {
   return (
     <div className="page-heading ds-page-header">
       <div className="ds-page-header-text">
         {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-        <h1>{title}</h1>
-        {description && <p className="muted">{description}</p>}
+        <h1>{title}{(description || note) && <PageInfo>
+          {description && <span className="ds-info-line">{description}</span>}
+          {note && <span className="ds-info-line">{note}</span>}
+        </PageInfo>}</h1>
       </div>
       {action && <div className="ds-page-header-actions">{action}</div>}
     </div>

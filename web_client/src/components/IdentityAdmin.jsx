@@ -1,3 +1,4 @@
+import { InfoHint, PageInfo } from "./design.jsx";
 import { CATALOG_GROUPS, CATEGORY_LABELS } from "../catalogV2.js";
 import { notifyPermissionsChanged } from "../sessionRefresh.js";
 import { useEffect, useState } from "react";
@@ -148,7 +149,7 @@ function MembershipOverview({ items = [] }) {
     return {key, name, total: matching.length, counts: Object.fromEntries(membershipStates.map((state) => [state.key, matching.filter((item) => membershipState(item) === state.key).length]))};
   }).filter((row) => row.total > 0);
   return <div className="membership-chart" aria-label="Biểu đồ số lượng phân quyền theo vai trò trên trang hiện tại">
-    <div className="membership-chart-head"><div><h3>Phân bổ quyền theo vai trò</h3><p className="muted">{items.length} bản ghi trên trang hiện tại, không phải toàn hệ thống</p></div>
+    <div className="membership-chart-head"><div><h3>Phân bổ quyền theo vai trò<InfoHint>{items.length} bản ghi trên trang hiện tại, không phải toàn hệ thống</InfoHint></h3></div>
       <div className="membership-chart-legend">{membershipStates.map((state) => <span key={state.key}><i className={`membership-chart-key ${state.key}`}/>{state.label}</span>)}</div></div>
     <div className="membership-chart-rows">{rows.map((row) => <div className="membership-chart-row" key={row.key}>
       <span>{row.name}</span><div className="membership-chart-track" role="img" aria-label={`${row.name}: ${membershipStates.map((state) => `${row.counts[state.key]} ${state.label}`).join(", ")}`}>
@@ -185,8 +186,7 @@ function PasswordResetApprovals({ onNotice }) {
   return <>
     <section className="panel" aria-label="Yêu cầu đặt lại mật khẩu cần xác minh">
       <div className="section-head">
-        <div><h2>Yêu cầu đặt lại mật khẩu</h2>
-          <p className="muted">Xác minh danh tính qua kênh độc lập trước khi duyệt. Mật khẩu tạm được tạo ngẫu nhiên, gửi riêng đến email nhân viên và buộc đổi khi đăng nhập.</p>
+        <div><h2>Yêu cầu đặt lại mật khẩu<InfoHint>Xác minh danh tính qua kênh độc lập trước khi duyệt. Mật khẩu tạm được tạo ngẫu nhiên, gửi riêng đến email nhân viên và buộc đổi khi đăng nhập.</InfoHint></h2>
         </div>
         <button type="button" className="secondary" onClick={resource.reload}>Làm mới</button>
       </div>
@@ -256,7 +256,7 @@ export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users
     setKind(k); setOffset(0); setSearch(""); setDebounced(""); setStatus(""); setRole(""); setSelectedRole(""); setModal(null); setNotice("");
   }
   return <>
-    <div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ DANH TÍNH</p><h1>{kind === "users" ? "Quản lý người dùng" : kind === "memberships" ? "Vai trò & phân quyền" : kind === "request-types" ? "Danh mục yêu cầu" : "Quản lý phòng ban"}</h1><p className="muted">Thực hiện thêm, sửa hoặc vô hiệu hóa với lý do và nhật ký kiểm toán. Không xóa dữ liệu hồ sơ đã phát sinh.</p></div>
+    <div className="page-heading"><div><p className="eyebrow">QUẢN TRỊ DANH TÍNH</p><h1>{kind === "users" ? "Quản lý người dùng" : kind === "memberships" ? "Vai trò & phân quyền" : kind === "request-types" ? "Danh mục yêu cầu" : "Quản lý phòng ban"}<PageInfo>Thực hiện thêm, sửa hoặc vô hiệu hóa với lý do và nhật ký kiểm toán. Không xóa dữ liệu hồ sơ đã phát sinh.</PageInfo></h1></div>
       <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
         {onNavigateOrgChart && (
           <button type="button" className="secondary" onClick={onNavigateOrgChart}>
@@ -289,7 +289,7 @@ export default function IdentityAdmin({ onNavigateOrgChart, initialKind = "users
         <div className="identity-filter-reset"><button className="secondary" type="button" onClick={() => { setSearch(""); setStatus(""); setRole(""); setOffset(0); }}>Đặt lại bộ lọc</button></div>
       </div>
     </section>
-    <section className="panel" id="identity-results"><div className="section-head identity-result-head"><div><h2>Danh sách {entities[kind].toLowerCase()}</h2><p className="muted">{total} bản ghi theo bộ lọc hiện tại.</p></div></div>
+    <section className="panel" id="identity-results"><div className="section-head identity-result-head"><div><h2>Danh sách {entities[kind].toLowerCase()}<InfoHint>{total} bản ghi theo bộ lọc hiện tại.</InfoHint></h2></div></div>
       <ResourceState resource={r}>
         {kind === "memberships" && <MembershipOverview items={r.data?.items || []}/>}
         <div className="table-wrap"><table className="responsive-records identity-table"><thead><tr><th>Thông tin</th><th>Phòng ban / scope</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>

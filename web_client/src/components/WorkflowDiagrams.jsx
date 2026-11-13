@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { InfoHint } from "./design.jsx";
 import { FLOW_DIAGRAMS, relevantDiagrams, resolveLifecycle } from "../flowDiagrams.js";
 import "../workflow-diagrams.css";
 
@@ -85,10 +86,9 @@ export default function WorkflowDiagrams({ request = null, lifecycle = null, emb
       <div className="flow-library-heading">
         <div>
           <p className="eyebrow">TRỰC QUAN HÓA QUY TRÌNH</p>
-          <h2>{inContext ? "Sơ đồ luồng của hồ sơ" : "Thư viện sơ đồ luồng"}</h2>
-          <p className="muted">{inContext
+          <h2>{inContext ? "Sơ đồ luồng của hồ sơ" : "Thư viện sơ đồ luồng"}<InfoHint>{inContext
             ? `Xem quy trình liên quan${effectiveLifecycle ? ` đến vòng đời ${effectiveLifecycle}` : " đến hồ sơ"} và các tình huống xử lý.`
-            : "Xem các bước phê duyệt, thực hiện, nghiệm thu và những luồng xử lý liên quan."}</p>
+            : "Xem các bước phê duyệt, thực hiện, nghiệm thu và những luồng xử lý liên quan."}</InfoHint></h2>
         </div>
         <span className="flow-count">{baseList.length} sơ đồ</span>
       </div>

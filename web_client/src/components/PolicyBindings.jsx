@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { InfoHint } from "./design.jsx";
 import { errorText } from "../domain.js";
 import { useResource } from "./ui.jsx";
 
@@ -48,8 +49,7 @@ export default function PolicyBindings({ release, jsonText, onChange }) {
     } catch (error) { setMessage(errorText(error)); }
   }
   return <div className="policy-bindings-assistant">
-    <h3>Hỗ trợ phân công theo role</h3>
-    <p className="muted">Chỉ hiển thị người đang có quyền APPROVER / EXECUTOR / ACCEPTOR hợp lệ cho loại đơn và phòng ban. Việc chọn không cấp thêm quyền; OPS_ADMIN phải cấp nếu thiếu.</p>
+    <h3>Hỗ trợ phân công theo role<InfoHint>Chỉ hiển thị người đang có quyền APPROVER / EXECUTOR / ACCEPTOR hợp lệ cho loại đơn và phòng ban. Việc chọn không cấp thêm quyền; OPS_ADMIN phải cấp nếu thiếu.</InfoHint></h3>
     {candidates.loading && <p>Đang tải người được phân quyền…</p>}
     {candidates.error && <p className="error" role="alert">{candidates.error}</p>}
     {departments.length > 0 && <>
