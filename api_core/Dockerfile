@@ -20,4 +20,5 @@ EXPOSE 8000
 # ~240 ms round trips to the Sydney pooler: 8 threads per worker keep them from
 # queueing. --timeout stays above the DB statement timeout (30 s on the pooler)
 # so a slow query ends as a clean 503, not a killed worker and an nginx 502.
-CMD ["gunicorn", "api_core.config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "8", "--timeout", "45", "--access-logfile", "-", "--error-logfile", "-"]
+# Warm the Redis read cache in the background, then hand PID 1 to gunicorn.
+CMD ["sh", "-c", "(python manage.py warm_read_cache || true) & exec gunicorn api_core.config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 8 --timeout 45 --access-logfile - --error-logfile -"]

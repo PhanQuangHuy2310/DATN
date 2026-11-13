@@ -28,23 +28,43 @@ def is_throttled(
     )
 
 
-def incr_window(store, key: str, window_seconds: int) -> int:
-    """Fixed-window counter that never leaves a key without an expiry.
+def _redis(store, key: str):
+    """(client, raw key) for Django's RedisCache, else (None, None)."""
+    backend = getattr(store, "_cache", None)
+    if not hasattr(backend, "get_client"):
+        return None, None
+    raw = store.make_and_validate_key(key)
+    return backend.get_client(raw, write=True), raw
 
-    If the key expires between ``add`` and ``incr``, Redis INCRBY recreates it
-    with no TTL and the client would stay blocked forever; re-arm the window.
+
+def incr_window(store, key: str, window_seconds: int) -> int:
+    """Fixed-window counter whose key always carries an expiry.
+
+    Django's RedisCache.incr runs EXISTS then INCRBY; when the key expires in
+    between, INCRBY recreates it with no TTL and the client stays blocked
+    forever. On Redis, INCR and EXPIRE NX run in one MULTI/EXEC instead.
     """
+    client, raw = _redis(store, key)
+    if client is not None:
+        pipe = client.pipeline(transaction=True)
+        pipe.incr(raw)
+        pipe.expire(raw, window_seconds, nx=True)
+        return int(pipe.execute()[0])
+    # Local-memory cache (tests, single-process demo): no cross-process race.
     if store.add(key, 1, timeout=window_seconds):
         return 1
     try:
-        value = store.incr(key)
+        return store.incr(key)
     except ValueError:
         store.add(key, 1, timeout=window_seconds)
         return 1
-    ttl = getattr(store, "ttl", None)  # django-redis only; LocMem has no TTL API
-    if ttl is not None and ttl(key) is None:
-        store.expire(key, window_seconds)
-    return value
+
+
+def ensure_window(store, key: str, window_seconds: int) -> None:
+    """Give a counter left without expiry by an older build its window back."""
+    client, raw = _redis(store, key)
+    if client is not None:
+        client.expire(raw, window_seconds, nx=True)
 
 
 def register_login_failure(

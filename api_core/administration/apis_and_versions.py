@@ -268,38 +268,27 @@ def system_versions_changelog_view(request: HttpRequest) -> JsonResponse:
     search_q = request.GET.get("q", "").strip()
 
     with connection.cursor() as cur:
-        # 1. Fetch AI & Regulation system state
+        # 1-3. AI state, API stats and regulation count in one round trip
+        # (each round trip to the Supabase pooler costs ~250 ms).
         cur.execute(
             """
-            SELECT active_regulation_version, provider_name, model_name, global_major_version, global_minor_version
-            FROM eas.ai_system_state
-            WHERE id = 1
+            SELECT s.active_regulation_version, s.provider_name, s.model_name,
+                   (SELECT COUNT(*)::int FROM eas.mock_apis),
+                   (SELECT COUNT(*) FILTER (WHERE is_enabled = true)::int FROM eas.mock_apis),
+                   (SELECT COUNT(*)::int FROM eas.company_regulations WHERE is_deleted = false)
+            FROM (SELECT 1) AS one
+            LEFT JOIN eas.ai_system_state s ON s.id = 1
             """
         )
-        ai_row = cur.fetchone()
-        active_reg_v = str(ai_row[0] or "2.0") if ai_row else "2.0"
+        row = cur.fetchone()
+        active_reg_v = str(row[0] or "2.0")
         if not active_reg_v.startswith("v"):
             active_reg_v = f"v{active_reg_v}"
-        provider_name = (
-            ai_row[1] if ai_row else None
-        ) or "Google Gemini + Scikit-Learn Hybrid"
-        model_name = (
-            ai_row[2] if ai_row else None
-        ) or "gemini-2.5-flash & nlp_risk_pipeline_v2"
-
-        # 2. Fetch API stats
-        cur.execute(
-            "SELECT COUNT(*)::int, COUNT(*) FILTER (WHERE is_enabled = true)::int FROM eas.mock_apis"
-        )
-        api_row = cur.fetchone()
-        total_apis = api_row[0] or 8
-        enabled_apis = api_row[1] or 8
-
-        # 3. Fetch Regulations count
-        cur.execute(
-            "SELECT COUNT(*)::int FROM eas.company_regulations WHERE is_deleted = false"
-        )
-        total_regs = cur.fetchone()[0] or 0
+        provider_name = row[1] or "Google Gemini + Scikit-Learn Hybrid"
+        model_name = row[2] or "gemini-2.5-flash & nlp_risk_pipeline_v2"
+        total_apis = row[3] or 8
+        enabled_apis = row[4] or 8
+        total_regs = row[5] or 0
 
         # 4. Changelog = admin_event rows carrying details.change_type (schema v2).
         query = """

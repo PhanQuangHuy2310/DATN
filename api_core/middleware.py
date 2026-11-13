@@ -15,7 +15,7 @@ from django.core.cache import cache
 from django.db import DatabaseError
 from redis.exceptions import RedisError
 
-from api_core.authn.login_throttle import incr_window
+from api_core.authn.login_throttle import ensure_window, incr_window
 from api_core.db_diagnostics import api_db_failure, failure_category, sqlstate
 from api_core.http import api_error, correlation_id
 from api_core.read_cache import invalidate as invalidate_read_cache
@@ -92,9 +92,7 @@ class ApiRateLimitMiddleware:
             if current is not None and int(current) >= limit:
                 # A counter left without expiry (older builds) would block this
                 # client forever; give it its window back.
-                ttl = getattr(cache, "ttl", None)
-                if ttl is not None and ttl(cache_key) is None:
-                    cache.expire(cache_key, 60)
+                ensure_window(cache, cache_key, 60)
                 return api_error(
                     request,
                     "RATE_LIMIT_EXCEEDED",
@@ -134,7 +132,9 @@ class ApiDatabaseErrorMiddleware:
             request.method not in ("GET", "HEAD", "OPTIONS")
             and 200 <= response.status_code < 300
             and request.path.startswith("/api/v1/")
-            and not request.path.startswith(("/api/v1/auth/", "/api/v1/internal/"))
+            and not request.path.startswith(
+                ("/api/v1/auth/", "/api/v1/internal/delegations/tick")
+            )
         ):
             invalidate_read_cache()  # the write has committed by now
         duration_ms = round((time.perf_counter() - start) * 1000, 1)

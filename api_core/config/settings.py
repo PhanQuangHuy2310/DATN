@@ -56,6 +56,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "api_core.middleware.ApiRateLimitMiddleware",
     "api_core.middleware.ApiDatabaseErrorMiddleware",
+    "api_core.response_cache.ApiResponseCacheMiddleware",
 ]
 
 # One codebase, two services. EAS_SERVICE=mock runs the simulated external
@@ -86,12 +87,13 @@ else:
     except DatabaseUrlError as exc:
         raise RuntimeError(str(exc)) from None
 
-    # Reuse connections for 60s by default: opening a TLS session through the
-    # Supabase pooler costs seconds, so per-request connects dominate latency.
+    # Reuse connections for 10 min by default: opening a TLS session through the
+    # Supabase pooler costs ~1.5 s, and with 16 gunicorn threads a 60 s age
+    # made a reconnect land on a large share of requests.
     # CONN_HEALTH_CHECKS discards a stale reused connection before first use.
     # Set 0 only when diagnosing stale pooler connections locally.
     try:
-        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "60"))
+        _db_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "600"))
         if not 0 <= _db_max_age <= 3600:
             raise ValueError
     except ValueError:
