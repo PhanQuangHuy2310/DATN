@@ -60,7 +60,8 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
     if (token) headers.set("X-CSRFToken", decodeURIComponent(token));
   }
   // Only replay safe, idempotent reads. Never retry a non-idempotent command.
-  const attempts = isRead ? 2 : 1;
+  // Two retries ride out a pooler blip that outlasts the first back-off.
+  const attempts = isRead ? 3 : 1;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     // Reads wait past the server statement timeout (20 s) so a slow query that
     // still succeeds is not thrown away and replayed onto an already busy DB.
@@ -92,7 +93,8 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
           window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
         }
         if (isRead && [502, 503, 504].includes(response.status) && attempt < attempts - 1) {
-          await pause(300 * (2 ** attempt));
+          const retryAfterMs = Number(response.headers.get("Retry-After")) * 1000;
+          await pause(Math.min(3000, retryAfterMs || 400 * (3 ** attempt)));
           continue;
         }
         throw error;
@@ -112,7 +114,7 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
       const isTimeoutAbort = error.name === "AbortError" || error.name === "TimeoutError";
       // Retry only a dropped connection; a timed-out read would double the load.
       if (isRead && attempt < attempts - 1 && !isTimeoutAbort && error instanceof TypeError) {
-        await pause(300 * (2 ** attempt));
+        await pause(400 * (3 ** attempt));
         continue;
       }
       if (!isRead && !silent && !isAuthPath(path)) notify(isTimeoutAbort ? "Yêu cầu quá thời gian phản hồi. Kiểm tra trạng thái trước khi thử lại." : "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại.", "error");

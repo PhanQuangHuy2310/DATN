@@ -28,18 +28,31 @@ def is_throttled(
     )
 
 
+def incr_window(store, key: str, window_seconds: int) -> int:
+    """Fixed-window counter that never leaves a key without an expiry.
+
+    If the key expires between ``add`` and ``incr``, Redis INCRBY recreates it
+    with no TTL and the client would stay blocked forever; re-arm the window.
+    """
+    if store.add(key, 1, timeout=window_seconds):
+        return 1
+    try:
+        value = store.incr(key)
+    except ValueError:
+        store.add(key, 1, timeout=window_seconds)
+        return 1
+    ttl = getattr(store, "ttl", None)  # django-redis only; LocMem has no TTL API
+    if ttl is not None and ttl(key) is None:
+        store.expire(key, window_seconds)
+    return value
+
+
 def register_login_failure(
     store, keys: tuple[str, str], *, window_seconds: int
 ) -> None:
     """Atomic counter increment on Redis/Django cache, fixed window for each key."""
     for key in keys:
-        if store.add(key, 1, timeout=window_seconds):
-            continue
-        try:
-            store.incr(key)
-        except ValueError:
-            # Key expired between add and incr. Do not lose this failure.
-            store.add(key, 1, timeout=window_seconds)
+        incr_window(store, key, window_seconds)
 
 
 def clear_account_failures(store, keys: tuple[str, str]) -> None:

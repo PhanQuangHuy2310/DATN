@@ -16,6 +16,7 @@ from api_core.authn.module_access import can, require_module
 from api_core.authn.service import require_actor
 from api_core.catalog import integrations
 from api_core.http import api_error
+from api_core.read_cache import cached
 
 from . import analytics, org_users_rbac, regulations_ai, workflows
 
@@ -47,6 +48,18 @@ def request_catalog_view(request):
     """Active request types with linked integrations and availability."""
     if request.method != "GET":
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    items = cached("request-catalog", _catalog_items)
+    return JsonResponse(
+        {
+            "items": items,
+            "count": len(items),
+            "can_configure": can(request, "requests_workflows", "update")
+            or can(request, "requests_workflows", "delete"),
+        }
+    )
+
+
+def _catalog_items() -> list[dict]:
     with connection.cursor() as cur:
         cur.execute(
             "SELECT api_code, api_name, COALESCE(source_system, api_name), lower(COALESCE(domain_key, '')), is_enabled "
@@ -79,14 +92,7 @@ def request_catalog_view(request):
                 ),
             }
         )
-    return JsonResponse(
-        {
-            "items": items,
-            "count": len(items),
-            "can_configure": can(request, "requests_workflows", "update")
-            or can(request, "requests_workflows", "delete"),
-        }
-    )
+    return items
 
 
 _requests_detail = getattr(

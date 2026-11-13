@@ -16,4 +16,8 @@ COPY api_core /app/api_core
 
 USER eas
 EXPOSE 8000
-CMD ["gunicorn", "api_core.config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "30", "--access-logfile", "-", "--error-logfile", "-"]
+# A page load or post-save sync fires ~8 reads at once, each waiting on several
+# ~240 ms round trips to the Sydney pooler: 8 threads per worker keep them from
+# queueing. --timeout stays above the DB statement timeout (30 s on the pooler)
+# so a slow query ends as a clean 503, not a killed worker and an nginx 502.
+CMD ["gunicorn", "api_core.config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "8", "--timeout", "45", "--access-logfile", "-", "--error-logfile", "-"]

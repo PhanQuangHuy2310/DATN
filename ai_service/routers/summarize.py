@@ -202,7 +202,7 @@ def _cache_put(key: str, value: SummarizeResult) -> None:
 )
 def summarize_request(body: SummarizeRequest):
     """
-    Tóm tắt yêu cầu bằng Gemini 1.5 Flash (fallback về trích xuất cục bộ nếu thiếu API key hoặc lỗi).
+    Tóm tắt yêu cầu bằng Gemini Flash-Lite (fallback về trích xuất cục bộ nếu thiếu API key hoặc lỗi).
 
     Trả về:
     - **summary**: 2-3 câu tóm tắt
@@ -225,8 +225,9 @@ def summarize_request(body: SummarizeRequest):
     try:
         import google.generativeai as genai
 
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # REST + a deadline under the API's 10 s AI timeout: gRPC could hang.
+        genai.configure(api_key=settings.gemini_api_key, transport="rest")
+        model = genai.GenerativeModel(settings.gemini_model)
         prompt = build_summarize_prompt(body)
 
         response = model.generate_content(
@@ -235,6 +236,7 @@ def summarize_request(body: SummarizeRequest):
                 temperature=0.3,
                 max_output_tokens=512,
             ),
+            request_options={"timeout": 8},
         )
 
         raw = response.text.strip()

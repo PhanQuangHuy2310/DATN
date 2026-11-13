@@ -20,6 +20,7 @@ from api_core.authn.module_access import ACTION_BY_METHOD, can
 from api_core.authn.service import require_actor
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
 from api_core.maintenance import get_ai_maintenance_state
+from api_core.read_cache import cached
 from api_core.workflow.ai_learning import _ai_http, enqueue_learning, steps_detail
 from api_core.workflow.service import _append_admin_audit
 
@@ -163,16 +164,20 @@ def _forbidden_unless_writer(request: HttpRequest):
     return None
 
 
+def _list_regulations() -> list[dict]:
+    with connection.cursor() as cur:
+        cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
+            f"SELECT {REGULATION_COLUMNS} FROM eas.company_regulations "
+            "WHERE NOT is_deleted ORDER BY code"
+        )
+        return [_serialize_regulation(r) for r in cur.fetchall()]
+
+
 @require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
 def regulations_list_create(request: HttpRequest) -> JsonResponse:
     """GET list (+ AI state) / POST create (major version, AI relearns)."""
     if request.method == "GET":
-        with connection.cursor() as cur:
-            cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
-                f"SELECT {REGULATION_COLUMNS} FROM eas.company_regulations "
-                "WHERE NOT is_deleted ORDER BY code"
-            )
-            regulations = [_serialize_regulation(r) for r in cur.fetchall()]
+        regulations = cached("regulations", _list_regulations)
         return JsonResponse(
             {
                 "regulations": regulations,

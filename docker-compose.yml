@@ -104,7 +104,8 @@ services:
       LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/0
       # Kết nối nội bộ tới AI service (api_core/integrations/ai_service.py)
-      EAS_AI_SERVICE_URL: ${EAS_AI_SERVICE_URL:-http://ai-service:8001}
+      # Cố định: EAS_AI_SERVICE_URL trong .env là địa chỉ dành cho chạy terminal.
+      EAS_AI_SERVICE_URL: http://ai-service:8001
       EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
       EAS_WORKER_INTERNAL_SECRET: ${EAS_WORKER_INTERNAL_SECRET:-}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5}

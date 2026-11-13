@@ -22,6 +22,7 @@ from api_core.middleware import client_ip
 
 from .login_throttle import (
     clear_account_failures,
+    incr_window,
     is_throttled,
     register_login_failure,
     throttle_keys,
@@ -346,18 +347,14 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
         "sha256",
     ).hexdigest()
     ip_key = f"eas:password-reset:ip:{ip_digest}"
-    if not cache.add(ip_key, 1, timeout=3600):
-        try:
-            if cache.incr(ip_key) > 20:
-                return JsonResponse(
-                    {
-                        "status": "accepted",
-                        "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
-                    },
-                    status=202,
-                )
-        except ValueError:
-            cache.add(ip_key, 1, timeout=3600)
+    if incr_window(cache, ip_key, 3600) > 20:
+        return JsonResponse(
+            {
+                "status": "accepted",
+                "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+            },
+            status=202,
+        )
     if not cache.add(cooldown_key, "1", timeout=300):
         return JsonResponse(
             {

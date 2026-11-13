@@ -101,12 +101,12 @@ else:
     # process-wide pool reuses connections across requests and runserver
     # threads. Django forbids pooling together with CONN_MAX_AGE > 0.
     if _db_max_age == 0:
-        # With a pool, CONN_HEALTH_CHECKS pings the DB on every checkout (one
-        # extra ~300ms round trip). TCP keepalives + max_idle retire dead
-        # connections instead; psycopg_pool discards broken ones on return.
-        # ponytail: a connection killed server-side can fail one request (503
-        # + Retry-After); re-enable checks if the pooler drops idle clients.
-        DATABASES["default"]["CONN_HEALTH_CHECKS"] = False
+        # After a laptop sleep, Wi-Fi switch or pooler restart every pooled
+        # connection is dead at once, and a page firing 8 reads would fail
+        # them all. With a pool, Django turns CONN_HEALTH_CHECKS into psycopg's
+        # check_connection: a ping on checkout (one ~240 ms round trip, far
+        # cheaper than the 1.5 s reconnect) that swaps a dead one silently.
+        DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
         DATABASES["default"]["OPTIONS"].update(
             pool={
                 "min_size": int(os.getenv("EAS_DB_POOL_MIN_SIZE", "2")),

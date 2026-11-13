@@ -15,8 +15,10 @@ from django.core.cache import cache
 from django.db import DatabaseError
 from redis.exceptions import RedisError
 
+from api_core.authn.login_throttle import incr_window
 from api_core.db_diagnostics import api_db_failure, failure_category, sqlstate
 from api_core.http import api_error, correlation_id
+from api_core.read_cache import invalidate as invalidate_read_cache
 
 log = logging.getLogger("eas.database")
 
@@ -88,6 +90,11 @@ class ApiRateLimitMiddleware:
         try:
             current = cache.get(cache_key)
             if current is not None and int(current) >= limit:
+                # A counter left without expiry (older builds) would block this
+                # client forever; give it its window back.
+                ttl = getattr(cache, "ttl", None)
+                if ttl is not None and ttl(cache_key) is None:
+                    cache.expire(cache_key, 60)
                 return api_error(
                     request,
                     "RATE_LIMIT_EXCEEDED",
@@ -95,11 +102,7 @@ class ApiRateLimitMiddleware:
                     headers={"Retry-After": "60"},
                 )
 
-            if not cache.add(cache_key, 1, timeout=60):
-                try:
-                    cache.incr(cache_key)
-                except ValueError:
-                    cache.set(cache_key, 1, timeout=60)
+            incr_window(cache, cache_key, 60)
         except Exception:  # noqa: BLE001
             # Availability first: a cache outage must never take the API down.
             log.warning("Rate limiter cache unavailable; request allowed (fail-open)")
@@ -127,6 +130,13 @@ class ApiDatabaseErrorMiddleware:
                 message="Phương thức HTTP không được phép cho đường dẫn này.",
                 headers={"Allow": allow} if allow else None,
             )
+        if (
+            request.method not in ("GET", "HEAD", "OPTIONS")
+            and 200 <= response.status_code < 300
+            and request.path.startswith("/api/v1/")
+            and not request.path.startswith(("/api/v1/auth/", "/api/v1/internal/"))
+        ):
+            invalidate_read_cache()  # the write has committed by now
         duration_ms = round((time.perf_counter() - start) * 1000, 1)
         if request.path.startswith("/api/v1/"):
             response["Server-Timing"] = f"app;dur={duration_ms}"

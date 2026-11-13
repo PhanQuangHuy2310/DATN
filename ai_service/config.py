@@ -39,6 +39,10 @@ class Settings(BaseSettings):
 
     # --- Gemini ---
     gemini_api_key: str = ""
+    # Google retires old versions (gemini-1.5-flash now 404s). Flash-Lite
+    # answers in ~2 s; full Flash / flash-latest take > 25 s and would always
+    # hit the API's 10 s AI timeout. Override with GEMINI_MODEL.
+    gemini_model: str = "gemini-3.5-flash-lite"
 
     # --- Supabase ---
     supabase_url: str = ""

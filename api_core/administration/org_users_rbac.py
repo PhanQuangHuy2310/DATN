@@ -20,6 +20,7 @@ from django.http import JsonResponse
 from api_core.authn.module_access import ADMIN_ROLES, NEVER_FOR_EMPLOYEES, can
 from api_core.authn.service import require_actor
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
+from api_core.read_cache import cached
 from api_core.workflow.service import CommandError, _append_admin_audit
 
 from .service import mutate, read_record, system_account_sql
@@ -265,6 +266,15 @@ def _assert_employee(cur, user_id: str) -> None:
 # ==============================================================================
 
 
+def _org_chart_rows():
+    with connection.cursor() as cur:
+        raw_users = _fetch_users(cur, " AND u.is_active")
+        cur.execute(
+            "SELECT id::text, code, name, parent_id::text FROM eas.department WHERE is_active ORDER BY code"
+        )
+        return raw_users, cur.fetchall()
+
+
 @require_actor(
     "OPS_ADMIN",
     "POLICY_ADMIN",
@@ -284,12 +294,7 @@ def org_chart_tree_view(request):
     if request.method != "GET":
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
 
-    with connection.cursor() as cur:
-        raw_users = _fetch_users(cur, " AND u.is_active")
-        cur.execute(
-            "SELECT id::text, code, name, parent_id::text FROM eas.department WHERE is_active ORDER BY code"
-        )
-        departments = cur.fetchall()
+    raw_users, departments = cached("org-chart-tree", _org_chart_rows)
 
     is_privileged = bool(
         request.actor.roles

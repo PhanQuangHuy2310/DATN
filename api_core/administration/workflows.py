@@ -24,6 +24,7 @@ from api_core.authn.module_access import can
 from api_core.authn.service import require_actor
 from api_core.catalog.plan_catalog import catalog_v2
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
+from api_core.read_cache import cached
 from api_core.workflow.service import CommandError, record_system_change
 
 from .service import mutate, read_record
@@ -309,7 +310,7 @@ def _categories() -> list[dict]:
 def workflow_categories_list(request):
     if request.method != "GET":
         return api_error(request, "METHOD_NOT_ALLOWED", status=405)
-    items = _categories()
+    items = cached("workflow-categories", _categories)
     return JsonResponse({"items": items, "count": len(items)})
 
 
@@ -331,10 +332,14 @@ def workflow_category_detail(request, code):
 def request_templates_list(request):
     if request.method == "GET":
         category = request.GET.get("category_code", "").upper().strip()
-        items = (
-            _fetch_types(" WHERE rt.lifecycle = %s", [category])
-            if category
-            else _fetch_types()
+        items = cached(
+            "request-templates",
+            lambda: (
+                _fetch_types(" WHERE rt.lifecycle = %s", [category])
+                if category
+                else _fetch_types()
+            ),
+            category,
         )
         return JsonResponse({"items": items, "count": len(items)})
     if request.method != "POST":

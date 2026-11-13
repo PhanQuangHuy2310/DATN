@@ -301,8 +301,8 @@ async def ocr_with_gemini_vision(
     def _call_gemini() -> tuple[str, float]:
         import google.generativeai as genai
 
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        genai.configure(api_key=settings.gemini_api_key, transport="rest")
+        model = genai.GenerativeModel(settings.gemini_model)
 
         b64 = base64.b64encode(image_bytes).decode()
         prompt = (
@@ -314,7 +314,8 @@ async def ocr_with_gemini_vision(
             [
                 {"mime_type": mime_type, "data": b64},
                 prompt,
-            ]
+            ],
+            request_options={"timeout": 20},
         )
         return response.text, 0.75  # Gemini không trả confidence nên hardcode 0.75
 

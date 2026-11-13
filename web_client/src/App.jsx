@@ -1194,7 +1194,10 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const main = document.getElementById("main");
-      main?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Back to the top of the page, not main.scrollIntoView(): that slides
+      // main under the sticky top bar (two rows on phones) and hides content.
+      window.scrollTo({ top: 0 });
+      main?.closest(".workspace")?.scrollTo?.({ top: 0 });
       const heading = main?.querySelector("h1");
       if (heading) { heading.setAttribute("tabindex", "-1"); heading.focus({ preventScroll: true }); }
     });
