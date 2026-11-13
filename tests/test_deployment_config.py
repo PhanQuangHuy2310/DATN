@@ -251,8 +251,10 @@ class PortalCodeSplitTests(unittest.TestCase):
         ):
             with self.subTest(screen=name):
                 self.assertFalse([line for line in static if f"/{name}.jsx" in line])
+                # lazyWithPreload wraps React.lazy: still a separate chunk.
                 self.assertIn(
-                    f'const {name} = lazy(() => import("./components/{name}.jsx"))', app
+                    f'const {name} = lazyWithPreload(() => import("./components/{name}.jsx"))',
+                    app,
                 )
 
     def test_only_admin_entry_injects_admin_screens(self):
