@@ -44,6 +44,10 @@ def parse_database_url(url: str) -> dict[str, object]:
         if sslmode not in {"require", "verify-ca", "verify-full", "disable"}:
             raise DatabaseUrlError("Unsupported sslmode")
 
+        conn_max_age = int(os.getenv("EAS_DB_CONN_MAX_AGE", "300"))
+        conn_health_checks = (
+            os.getenv("EAS_DB_CONN_HEALTH_CHECKS", "false").lower() == "true"
+        )
         return {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": unquote(database),
@@ -51,9 +55,9 @@ def parse_database_url(url: str) -> dict[str, object]:
             "PASSWORD": unquote(password),
             "HOST": host,
             "PORT": int(port_text),
-            "CONN_MAX_AGE": int(os.getenv("EAS_DB_CONN_MAX_AGE", "60")),
+            "CONN_MAX_AGE": conn_max_age,
             "DISABLE_SERVER_SIDE_CURSORS": True,
-            "CONN_HEALTH_CHECKS": True,
+            "CONN_HEALTH_CHECKS": conn_health_checks,
             "OPTIONS": {
                 "sslmode": sslmode,
                 "connect_timeout": int(

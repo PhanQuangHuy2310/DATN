@@ -8,6 +8,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
+from django.core.cache import cache
 from django.db import connection
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
@@ -132,6 +133,10 @@ def approval_type_name(code):
 @require_GET
 def request_types(request):
     """Public list of active type codes; does not reveal policy internals."""
+    cache_key = "eas:catalog:request_types"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return JsonResponse(cached)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT rt.code, rt.lifecycle, rt.name, rt.description, rt.category,
@@ -160,9 +165,9 @@ def request_types(request):
                     "approval_level": app_lvl,
                 }
             )
-    return JsonResponse(
-        {"items": items, "five_level_framework": five_level_framework()}
-    )
+    payload = {"items": items, "five_level_framework": five_level_framework()}
+    cache.set(cache_key, payload, timeout=60)
+    return JsonResponse(payload)
 
 
 def _fetch_requester_form_items(cursor, actor):
