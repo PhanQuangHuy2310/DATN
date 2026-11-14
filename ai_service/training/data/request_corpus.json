@@ -1,0 +1,1598 @@
+{
+  "schema_version": 1,
+  "about": "Tệp huấn luyện duy nhất cho bộ phân loại yêu cầu. Mỗi loại là một mã đang ACTIVE trong api_core/catalog/catalog_v2.json. train.py ghép tiêu đề + mô tả, thay {slot} bằng giá trị ngẫu nhiên có seed cố định nên mỗi lần train ra cùng một bộ dữ liệu. Thêm tình huống mới: thêm câu vào titles/details của đúng loại, rồi chạy lại train.py.",
+  "slots": {
+    "so_ngay": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "nửa",
+      "một",
+      "hai",
+      "ba"
+    ],
+    "ngay": [
+      "ngày mai",
+      "thứ hai tuần sau",
+      "15/12",
+      "20/11",
+      "thứ 6 này",
+      "28/11",
+      "đầu tháng sau",
+      "cuối tuần này",
+      "hôm nay",
+      "02/01",
+      "thứ 3 tới",
+      "25/12"
+    ],
+    "buoi": [
+      "buổi sáng",
+      "buổi chiều",
+      "nửa ngày",
+      "cả ngày"
+    ],
+    "thang": [
+      "1",
+      "3",
+      "6",
+      "9",
+      "10",
+      "11",
+      "12"
+    ],
+    "so_tien": [
+      "2 triệu",
+      "5.000.000 đồng",
+      "8 triệu",
+      "15 triệu",
+      "35 triệu",
+      "120 triệu",
+      "450.000đ",
+      "3tr",
+      "60 triệu",
+      "1,2 tỷ"
+    ],
+    "phong_ban": [
+      "phòng Kế toán",
+      "phòng Nhân sự",
+      "team Dev",
+      "phòng Kinh doanh",
+      "phòng Marketing",
+      "bộ phận CSKH",
+      "phòng Hành chính",
+      "team Data",
+      "phòng Pháp chế",
+      "bộ phận Kho vận",
+      "team QA",
+      "phòng Mua hàng"
+    ],
+    "du_an": [
+      "dự án ERP",
+      "dự án Mobile App",
+      "dự án CRM",
+      "dự án website mới",
+      "dự án kho thông minh",
+      "dự án hóa đơn điện tử",
+      "dự án chuyển đổi số",
+      "dự án EAS"
+    ],
+    "thiet_bi": [
+      "laptop",
+      "màn hình 27 inch",
+      "bàn phím",
+      "chuột không dây",
+      "tai nghe",
+      "webcam",
+      "ổ cứng di động",
+      "điện thoại test",
+      "iPad",
+      "dock sạc"
+    ],
+    "tai_san": [
+      "máy chiếu",
+      "máy photocopy",
+      "điều hòa",
+      "tủ lạnh pantry",
+      "ghế công thái học",
+      "bàn làm việc",
+      "máy lọc không khí",
+      "tủ hồ sơ",
+      "máy chấm công",
+      "camera an ninh",
+      "bộ phát wifi",
+      "máy hủy tài liệu",
+      "máy pha cà phê",
+      "bảng trắng thông minh"
+    ],
+    "hang_hoa": [
+      "linh kiện điện tử",
+      "vật tư tiêu hao",
+      "đồng phục nhân viên",
+      "quà tặng khách hàng",
+      "cây xanh văn phòng",
+      "nước uống đóng bình",
+      "bao bì đóng gói",
+      "đồ bảo hộ lao động",
+      "hộp mực in",
+      "dây cáp mạng",
+      "nguyên vật liệu sản xuất",
+      "vật tư trang trí sự kiện"
+    ],
+    "phan_mem": [
+      "Figma",
+      "JetBrains",
+      "Microsoft 365",
+      "Adobe Creative Cloud",
+      "Zoom Pro",
+      "Jira",
+      "Notion",
+      "GitHub Copilot",
+      "AutoCAD",
+      "Canva Pro",
+      "Slack",
+      "Postman"
+    ],
+    "he_thong": [
+      "ERP",
+      "CRM",
+      "Jira",
+      "GitLab",
+      "server staging",
+      "database production",
+      "phần mềm kế toán MISA",
+      "email công ty",
+      "Google Drive",
+      "VPN",
+      "hệ thống HRM",
+      "cổng thanh toán"
+    ],
+    "dia_diem": [
+      "Hà Nội",
+      "Đà Nẵng",
+      "TP.HCM",
+      "Hải Phòng",
+      "Cần Thơ",
+      "Singapore",
+      "Bình Dương",
+      "Nha Trang",
+      "Bắc Ninh",
+      "Tokyo"
+    ],
+    "doi_tac": [
+      "công ty ABC",
+      "Viettel",
+      "FPT",
+      "nhà cung cấp Minh Phát",
+      "đối tác Samsung",
+      "khách hàng Vinamilk",
+      "công ty Hoàng Long",
+      "đại lý Phú Thái",
+      "công ty TNHH Sao Việt",
+      "tập đoàn Hòa Bình"
+    ],
+    "ten": [
+      "Nguyễn Văn An",
+      "Trần Thị Bình",
+      "Lê Minh Châu",
+      "Phạm Quốc Dũng",
+      "Hoàng Thu Hà",
+      "Vũ Đức Huy",
+      "Đặng Mai Linh",
+      "Bùi Thanh Tùng",
+      "bạn Nam",
+      "chị Hương"
+    ],
+    "vi_tri": [
+      "Lập trình viên Backend",
+      "Kế toán tổng hợp",
+      "Nhân viên kinh doanh",
+      "Chuyên viên Marketing",
+      "Tester",
+      "Trưởng nhóm",
+      "Chuyên viên tuyển dụng",
+      "Thủ kho",
+      "Designer",
+      "Nhân viên CSKH"
+    ],
+    "phong_hop": [
+      "phòng họp tầng 3",
+      "phòng họp lớn",
+      "phòng Sky",
+      "phòng họp 501",
+      "hội trường",
+      "phòng họp nhỏ tầng 2",
+      "phòng Ocean"
+    ],
+    "gio": [
+      "9h-11h",
+      "14h-16h",
+      "8h30",
+      "15h",
+      "10h đến 12h",
+      "13h30-15h"
+    ],
+    "so_nguoi": [
+      "5",
+      "8",
+      "12",
+      "20",
+      "30",
+      "50",
+      "100"
+    ],
+    "su_kien": [
+      "year end party",
+      "team building",
+      "hội thảo khách hàng",
+      "lễ kỷ niệm 10 năm thành lập",
+      "workshop ra mắt sản phẩm",
+      "ngày hội gia đình",
+      "giải bóng đá nội bộ",
+      "tiệc tất niên",
+      "hội chợ triển lãm",
+      "sự kiện tri ân khách hàng",
+      "lễ khai trương chi nhánh",
+      "đêm gala cuối năm"
+    ],
+    "su_co_vp": [
+      "điều hòa không mát",
+      "bóng đèn bị cháy",
+      "trần nhà bị dột",
+      "ổ điện bị chập",
+      "cửa kính bị nứt",
+      "nhà vệ sinh bị tắc",
+      "máy lọc nước bị hỏng",
+      "thang máy kêu to",
+      "rèm cửa bị gãy",
+      "camera hành lang không lên hình",
+      "mất điện một khu",
+      "khóa cửa phòng bị kẹt",
+      "sàn bị bong gạch",
+      "vòi nước rò rỉ",
+      "quạt thông gió không chạy",
+      "tường bị thấm nước"
+    ],
+    "khu_vuc": [
+      "tầng 2",
+      "tầng 5",
+      "khu pantry",
+      "phòng họp lớn",
+      "khu open space",
+      "sảnh lễ tân",
+      "kho tầng hầm",
+      "nhà vệ sinh nam tầng 4",
+      "phòng server",
+      "khu làm việc team Sale"
+    ],
+    "su_co_it": [
+      "máy tính không khởi động được",
+      "không vào được mạng",
+      "máy in không nhận lệnh in",
+      "Outlook không gửi được mail",
+      "laptop bị màn hình xanh",
+      "không đăng nhập được Windows",
+      "wifi chập chờn",
+      "máy nghi bị nhiễm virus",
+      "bàn phím laptop bị liệt phím",
+      "không cài được phần mềm",
+      "máy chạy rất chậm",
+      "quên mật khẩu email",
+      "loa máy tính không có tiếng",
+      "màn hình bị sọc"
+    ],
+    "van_phong_pham": [
+      "giấy A4",
+      "bút bi",
+      "sổ tay",
+      "bìa hồ sơ",
+      "kẹp ghim",
+      "băng dính",
+      "giấy note",
+      "file còng",
+      "pin AA",
+      "bút dạ bảng trắng",
+      "phong bì"
+    ],
+    "khoan_chi": [
+      "taxi đi gặp khách",
+      "ăn trưa tiếp đối tác",
+      "vé máy bay",
+      "khách sạn 2 đêm",
+      "phí gửi xe",
+      "in ấn tài liệu hội thảo",
+      "cước chuyển phát nhanh",
+      "mua nước tiếp khách"
+    ],
+    "khoa_hoc": [
+      "tiếng Anh giao tiếp",
+      "quản lý dự án PMP",
+      "AWS Solutions Architect",
+      "kỹ năng thuyết trình",
+      "Excel nâng cao",
+      "Scrum Master",
+      "kế toán thuế",
+      "lãnh đạo cho quản lý cấp trung",
+      "an toàn thông tin ISO 27001",
+      "Data Analysis với Python"
+    ],
+    "tinh_nang": [
+      "xuất báo cáo Excel",
+      "thông báo qua email",
+      "duyệt đơn trên điện thoại",
+      "tìm kiếm nâng cao",
+      "chữ ký số",
+      "đăng nhập một lần SSO",
+      "dashboard theo phòng ban",
+      "nhắc hạn tự động",
+      "chế độ tối"
+    ],
+    "kho": [
+      "kho Bình Dương",
+      "kho Long Biên",
+      "kho tổng",
+      "kho Đà Nẵng",
+      "showroom quận 1",
+      "kho chi nhánh Cần Thơ"
+    ],
+    "port": [
+      "443",
+      "8080",
+      "5432",
+      "22",
+      "3389"
+    ],
+    "ly_do_nghi": [
+      "về quê thăm bố mẹ",
+      "đi du lịch cùng gia đình",
+      "giải quyết việc gia đình",
+      "đi khám sức khỏe",
+      "đưa con đi tiêm phòng",
+      "làm thủ tục giấy tờ",
+      "nghỉ ngơi sau đợt dự án",
+      "đi đám cưới bạn thân"
+    ],
+    "thiet_bi_vp": [
+      "Điều hòa",
+      "Đèn trần",
+      "Quạt thông gió",
+      "Vòi nước",
+      "Cửa ra vào",
+      "Bình nóng lạnh",
+      "Máy lọc nước",
+      "Ổ cắm điện",
+      "Rèm cửa",
+      "Loa thông báo"
+    ],
+    "loi_hong": [
+      "chảy nước",
+      "không chạy",
+      "kêu rất to",
+      "bị hỏng",
+      "chập chờn",
+      "rò rỉ",
+      "bị gãy",
+      "có mùi khét"
+    ]
+  },
+  "prefixes": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "Kính gửi anh/chị, ",
+    "Em chào chị, ",
+    "[Gấp] ",
+    "Đề xuất: ",
+    "Nhờ anh chị duyệt giúp: ",
+    "Dear anh, ",
+    "Chào sếp, ",
+    "Em cần ",
+    "Nhờ anh chị hỗ trợ: ",
+    "Cho em đề xuất: "
+  ],
+  "suffixes": [
+    "",
+    "",
+    "",
+    "",
+    " Em cảm ơn.",
+    " Mong anh chị xem xét.",
+    " Rất mong được phê duyệt sớm.",
+    " Thanks!",
+    " Trân trọng."
+  ],
+  "types": {
+    "ADVANCE_SMALL": {
+      "slots": {
+        "so_tien": [
+          "2 triệu",
+          "3.500.000đ",
+          "5 triệu",
+          "7 triệu",
+          "8tr",
+          "9.500.000 đồng",
+          "4 triệu",
+          "1,5 triệu",
+          "6 triệu",
+          "500 nghìn"
+        ],
+        "ly_do": [
+          "mua vật tư văn phòng gấp",
+          "tiếp khách đối tác",
+          "phí gửi hàng mẫu",
+          "in ấn tài liệu",
+          "thuê xe đưa đón khách",
+          "đi lại khảo sát thị trường",
+          "mua quà thăm hỏi nhân viên ốm"
+        ]
+      },
+      "titles": [
+        "Tạm ứng {so_tien} để {ly_do}",
+        "Xin tạm ứng {so_tien} đi công tác {dia_diem}",
+        "Đề nghị tạm ứng {so_tien} chi phí tiếp khách",
+        "Tạm ứng tiền mặt {so_tien}",
+        "Xin tạm ứng nhỏ {so_tien} cho chi phí phát sinh",
+        "Ứng trước {so_tien} để chi trả {ly_do}",
+        "Tạm ứng chi phí dưới 10 triệu",
+        "Đề nghị tạm ứng {so_tien} mua đồ dùng cho {su_kien}"
+      ],
+      "details": [
+        "Em xin tạm ứng {so_tien} để chi trước, sẽ hoàn ứng kèm hóa đơn trong 7 ngày.",
+        "Khoản tạm ứng nhỏ {so_tien} dùng cho {ly_do}.",
+        "Số tiền {so_tien}, sẽ quyết toán khi có chứng từ.",
+        "Cần tiền mặt {so_tien} chi trước cho {ly_do}, nhận tiền qua chuyển khoản."
+      ]
+    },
+    "ADVANCE_MEDIUM": {
+      "slots": {
+        "so_tien": [
+          "12 triệu",
+          "15.000.000 đồng",
+          "20 triệu",
+          "25tr",
+          "30 triệu",
+          "35 triệu",
+          "40 triệu",
+          "45 triệu",
+          "18 triệu",
+          "48.000.000đ"
+        ],
+        "ly_do": [
+          "tổ chức hội thảo khách hàng",
+          "chi phí công tác dài ngày",
+          "đặt cọc thuê địa điểm",
+          "mua vật tư cho dự án",
+          "chi phí triển khai tại chi nhánh",
+          "đặt cọc in ấn ấn phẩm",
+          "thuê thiết bị âm thanh sự kiện"
+        ]
+      },
+      "titles": [
+        "Tạm ứng {so_tien} cho {ly_do}",
+        "Đề nghị tạm ứng chi phí {so_tien}",
+        "Xin tạm ứng {so_tien} để {ly_do}",
+        "Tạm ứng chi phí công tác {dia_diem} {so_tien}",
+        "Tạm ứng đặt cọc {so_tien}",
+        "Đề nghị tạm ứng {so_tien} tổ chức {su_kien}"
+      ],
+      "details": [
+        "Khoản tạm ứng {so_tien} (từ 10 đến 50 triệu) để {ly_do}, quyết toán sau khi kết thúc.",
+        "Em đề nghị tạm ứng {so_tien} cho {ly_do}, dự kiến hoàn ứng trong 15 ngày.",
+        "Chi phí dự toán {so_tien}, có bảng dự trù đính kèm.",
+        "Tạm ứng để đặt cọc trước cho nhà cung cấp, tổng {so_tien}."
+      ]
+    },
+    "ADVANCE_LARGE": {
+      "slots": {
+        "so_tien": [
+          "60 triệu",
+          "80.000.000 đồng",
+          "120 triệu",
+          "150tr",
+          "200 triệu",
+          "350 triệu",
+          "500 triệu",
+          "1 tỷ",
+          "1,5 tỷ",
+          "75 triệu"
+        ],
+        "ly_do": [
+          "triển khai dự án",
+          "đặt cọc nhà thầu thi công",
+          "mua thiết bị cho dự án",
+          "chi phí giai đoạn 1",
+          "thuê đơn vị tư vấn",
+          "nhập lô hàng đầu tiên"
+        ]
+      },
+      "titles": [
+        "Tạm ứng {so_tien} cho {du_an}",
+        "Đề nghị tạm ứng dự án {so_tien}",
+        "Tạm ứng lớn {so_tien} để {ly_do}",
+        "Xin tạm ứng {so_tien} đặt cọc nhà thầu",
+        "Tạm ứng kinh phí {du_an} giai đoạn 1",
+        "Tạm ứng dự án trên 50 triệu"
+      ],
+      "details": [
+        "Đề nghị tạm ứng {so_tien} để {ly_do} thuộc {du_an}, quyết toán theo tiến độ.",
+        "Khoản tạm ứng dự án lớn {so_tien}, đã có kế hoạch ngân sách được duyệt.",
+        "Số tiền {so_tien} dùng để {ly_do}, cần giám đốc phê duyệt.",
+        "Tạm ứng theo hợp đồng nguyên tắc, giá trị {so_tien}."
+      ]
+    },
+    "EXPENSE_CLAIM": {
+      "titles": [
+        "Thanh toán chi phí {khoan_chi}",
+        "Đề nghị thanh toán tiền {khoan_chi}",
+        "Thanh toán chi phí công tác {dia_diem}",
+        "Thanh toán hóa đơn tiếp khách",
+        "Xin thanh toán các khoản đã tự chi",
+        "Đề nghị kế toán thanh toán chi phí phát sinh",
+        "Thanh toán chi phí đi lại tháng {thang}",
+        "Thanh toán tiền mua đồ cho {su_kien}",
+        "Đề nghị thanh toán chi phí sửa xe công tác"
+      ],
+      "details": [
+        "Em đã tự chi trước {so_tien} cho {khoan_chi}, gửi kèm hóa đơn VAT đề nghị thanh toán.",
+        "Chi phí phát sinh thực tế, có hóa đơn đỏ đính kèm.",
+        "Đề nghị thanh toán lại các khoản: {khoan_chi}.",
+        "Tổng chi {so_tien}, chứng từ gốc đã nộp cho kế toán.",
+        "Không tạm ứng trước, xin thanh toán theo hóa đơn."
+      ]
+    },
+    "REFUND_COMPENSATION": {
+      "titles": [
+        "Hoàn tiền cho khách hàng do giao hàng lỗi",
+        "Đền bù khách hàng vì đơn hàng bị trễ",
+        "Hoàn phí dịch vụ cho khách hủy đơn",
+        "Bồi thường hàng hóa bị vỡ khi vận chuyển",
+        "Hoàn tiền đặt cọc cho {doi_tac}",
+        "Đề nghị bồi hoàn cho khách khiếu nại",
+        "Hoàn tiền thanh toán trùng cho khách",
+        "Đền bù sự cố dịch vụ cho khách hàng",
+        "Hoàn tiền cho khách hủy đơn hàng",
+        "Bồi thường cho khách do giao hàng bị lỗi",
+        "Trả lại tiền cho khách hàng khiếu nại",
+        "Đền bù thiệt hại cho khách theo cam kết dịch vụ"
+      ],
+      "details": [
+        "Khách hàng phản ánh sản phẩm bị lỗi, đề nghị hoàn lại {so_tien}.",
+        "Do sự cố bên mình giao trễ, đề xuất đền bù {so_tien} để giữ khách.",
+        "Khách đã chuyển khoản hai lần, cần hoàn lại một lần thanh toán.",
+        "Biên bản xác nhận hàng hư hỏng đính kèm, mức bồi thường {so_tien}.",
+        "Khách hàng đã thanh toán, cần hoàn lại theo chính sách đổi trả."
+      ]
+    },
+    "REIMBURSEMENT": {
+      "titles": [
+        "Quyết toán tạm ứng đợt công tác {dia_diem}",
+        "Hoàn ứng khoản tạm ứng tháng {thang}",
+        "Quyết toán tạm ứng {du_an}",
+        "Nộp chứng từ quyết toán tạm ứng",
+        "Hoàn trả tiền tạm ứng còn thừa",
+        "Bổ sung chứng từ cho khoản đã tạm ứng",
+        "Quyết toán tạm ứng tổ chức {su_kien}",
+        "Hoàn ứng chuyến công tác {dia_diem}",
+        "Hoàn ứng và nộp bổ sung hóa đơn"
+      ],
+      "details": [
+        "Em đã tạm ứng {so_tien} trước đó, nay nộp hóa đơn để quyết toán.",
+        "Tổng chi thực tế thấp hơn tạm ứng, xin nộp lại phần tiền thừa.",
+        "Chi vượt tạm ứng, đề nghị bù phần chênh lệch sau khi quyết toán.",
+        "Kèm bảng kê chi tiết và hóa đơn để tất toán khoản tạm ứng.",
+        "Đã tạm ứng {so_tien}, thực chi ít hơn, xin hoàn ứng phần còn lại.",
+        "Khoản đã tạm ứng trước chuyến đi, nay nộp hóa đơn để hoàn ứng."
+      ]
+    },
+    "SALARY_ADVANCE": {
+      "titles": [
+        "Xin ứng lương tháng {thang}",
+        "Ứng trước {so_tien} lương do gia đình có việc gấp",
+        "Đề nghị ứng lương để đóng viện phí cho bố",
+        "Xin ứng 50% lương tháng này",
+        "Ứng lương trước kỳ trả",
+        "Xin ứng lương vì nhà có biến cố"
+      ],
+      "details": [
+        "Gia đình em có việc đột xuất, xin ứng trước {so_tien} và trừ vào lương cuối tháng.",
+        "Người thân nằm viện cần tiền gấp, em xin ứng một phần lương.",
+        "Em xin ứng lương tháng {thang}, đồng ý khấu trừ vào kỳ lương kế tiếp.",
+        "Nhà bị ảnh hưởng do bão, cần ứng trước lương để sửa chữa."
+      ]
+    },
+    "TAX_INVOICE_ISSUE": {
+      "titles": [
+        "Xuất hóa đơn VAT cho {doi_tac}",
+        "Điều chỉnh hóa đơn GTGT sai mã số thuế",
+        "Phát hành hóa đơn điện tử cho hợp đồng",
+        "Hủy và xuất lại hóa đơn sai thông tin",
+        "Đề nghị xuất hóa đơn đỏ cho đơn hàng tháng {thang}",
+        "Lập hóa đơn điều chỉnh sai đơn giá",
+        "Xuất hóa đơn cho khách lẻ",
+        "Xuất hóa đơn VAT cho khách hàng {doi_tac}",
+        "Đề nghị xuất hóa đơn đỏ cho đơn hàng đã giao",
+        "Xuất hóa đơn điện tử cho khách",
+        "Điều chỉnh thông tin trên hóa đơn GTGT đã phát hành"
+      ],
+      "details": [
+        "Khách hàng yêu cầu xuất hóa đơn VAT, thông tin công ty và MST đính kèm.",
+        "Hóa đơn đã xuất bị sai tên đơn vị, cần lập hóa đơn điều chỉnh.",
+        "Giá trị hóa đơn {so_tien}, xuất theo biên bản nghiệm thu.",
+        "Đề nghị kế toán phát hành hóa đơn điện tử trong ngày.",
+        "Khách hàng yêu cầu hóa đơn để hạch toán chi phí.",
+        "Thông tin xuất hóa đơn: tên công ty, mã số thuế, địa chỉ."
+      ]
+    },
+    "VENDOR_PAYMENT": {
+      "titles": [
+        "Thanh toán hợp đồng cho {doi_tac} đợt 2",
+        "Thanh toán công nợ nhà cung cấp",
+        "Thanh toán hợp đồng thuê văn phòng quý {thang}",
+        "Chuyển khoản thanh toán cho vendor phần mềm",
+        "Thanh toán nghiệm thu giai đoạn 1 cho nhà thầu",
+        "Thanh toán hóa đơn dịch vụ cloud tháng {thang}",
+        "Thanh toán theo hợp đồng bảo trì thang máy",
+        "Đề nghị thanh toán cho đơn vị tổ chức {su_kien}",
+        "Thanh toán công nợ đến hạn cho nhà cung cấp",
+        "Chuyển khoản cho vendor theo hóa đơn đã nhận",
+        "Thanh toán tiền hàng cho nhà cung cấp {doi_tac}",
+        "Đề nghị trả tiền đợt cuối hợp đồng dịch vụ"
+      ],
+      "details": [
+        "Thanh toán theo hợp đồng đã ký với {doi_tac}, giá trị {so_tien}, kèm biên bản nghiệm thu.",
+        "Nhà cung cấp đã giao đủ hàng, đề nghị thanh toán công nợ đến hạn.",
+        "Thanh toán đợt theo tiến độ hợp đồng, hóa đơn VAT đính kèm.",
+        "Hạn thanh toán ngày {ngay}, chuyển khoản vào tài khoản của vendor.",
+        "Nhà cung cấp đã giao hàng và gửi hóa đơn, đến hạn thanh toán."
+      ]
+    },
+    "BUDGET_REALLOCATION": {
+      "titles": [
+        "Điều chuyển ngân sách từ {phong_ban} sang {du_an}",
+        "Bổ sung ngân sách marketing quý 4",
+        "Xin tăng ngân sách dự án do phát sinh",
+        "Đề xuất bổ sung ngân sách đào tạo",
+        "Điều chỉnh kế hoạch ngân sách năm",
+        "Chuyển ngân sách chưa dùng sang hạng mục khác",
+        "Bổ sung ngân sách tổ chức {su_kien}"
+      ],
+      "details": [
+        "Ngân sách hiện tại không đủ, đề xuất bổ sung {so_tien} cho hạng mục này.",
+        "Điều chuyển {so_tien} ngân sách còn dư sang {phong_ban}.",
+        "Do phát sinh chi phí ngoài kế hoạch, cần điều chỉnh ngân sách đã duyệt.",
+        "Đề xuất tái phân bổ ngân sách giữa các bộ phận cho quý tới."
+      ]
+    },
+    "EQUIPMENT": {
+      "titles": [
+        "Mua mới {tai_san} cho {phong_ban}",
+        "Đề xuất mua sắm tài sản: {tai_san}",
+        "Mua thêm máy chiếu cho phòng họp",
+        "Trang bị điều hòa mới cho khu làm việc",
+        "Mua ghế công thái học cho nhân viên",
+        "Đầu tư máy photocopy mới",
+        "Mua máy lọc không khí cho văn phòng",
+        "Mua sắm thiết bị cho văn phòng mới",
+        "Thay {tai_san} cũ đã quá hạn sử dụng",
+        "Đề xuất mua thêm {thiet_bi_vp} cho văn phòng",
+        "Mua mới điều hòa cho khu làm việc",
+        "Trang bị thêm máy lạnh cho phòng làm việc"
+      ],
+      "details": [
+        "{tai_san} hiện tại đã xuống cấp, đề xuất mua mới, dự toán {so_tien}.",
+        "Văn phòng tăng thêm nhân sự, cần trang bị thêm {tai_san}.",
+        "Mua sắm tài sản cố định để cải thiện môi trường làm việc.",
+        "Đã khảo sát 3 báo giá, đề xuất mua {tai_san} giá {so_tien}.",
+        "Mua mới tài sản, không phải sửa thiết bị đang có."
+      ]
+    },
+    "PURCHASE_REQUEST": {
+      "titles": [
+        "Đề nghị mua {hang_hoa} cho {du_an}",
+        "Đề nghị mua sắm {hang_hoa}",
+        "Mua dịch vụ vệ sinh văn phòng",
+        "Mua quà tặng khách hàng dịp Tết",
+        "Mua linh kiện thay thế cho kho",
+        "Đề nghị mua cây xanh trang trí văn phòng",
+        "Mua nước uống, cà phê cho pantry",
+        "Đề nghị mua đồng phục nhân viên",
+        "Mua vật tư phục vụ {su_kien}",
+        "Đề nghị mua hàng theo báo giá",
+        "Đề nghị mua quà tặng cho khách hàng",
+        "Mua đồng phục cho nhân viên",
+        "Đặt mua {hang_hoa} cho {phong_ban}"
+      ],
+      "details": [
+        "Cần mua {hang_hoa}, số lượng theo bảng đính kèm, dự toán {so_tien}.",
+        "Đề nghị phòng Mua hàng lấy báo giá và mua {hang_hoa}.",
+        "Hàng dùng cho hoạt động thường xuyên, đã hết tồn kho.",
+        "Mua sắm theo kế hoạch quý, nhà cung cấp đề xuất: {doi_tac}.",
+        "Lấy báo giá và mua theo quy trình mua sắm."
+      ]
+    },
+    "SAAS_LICENSE_BUY": {
+      "titles": [
+        "Mua bản quyền {phan_mem} cho team",
+        "Gia hạn license {phan_mem}",
+        "Đề xuất mua gói {phan_mem} 12 tháng",
+        "Mua thêm user {phan_mem}",
+        "Nâng cấp gói Business cho {phan_mem}",
+        "Mua bản quyền phần mềm mới"
+      ],
+      "details": [
+        "Team cần {phan_mem} bản quyền để làm việc, chi phí {so_tien}/năm.",
+        "License {phan_mem} sắp hết hạn, đề nghị gia hạn.",
+        "Bản miễn phí bị giới hạn tính năng, đề xuất mua gói trả phí.",
+        "Mua thêm tài khoản {phan_mem} cho nhân sự mới."
+      ]
+    },
+    "SUPPLIER_ONBOARDING": {
+      "titles": [
+        "Thẩm định nhà cung cấp mới {doi_tac}",
+        "Đề xuất đưa {doi_tac} vào danh sách nhà cung cấp",
+        "Đánh giá năng lực vendor mới",
+        "Phê duyệt nhà cung cấp suất ăn công nghiệp",
+        "Đăng ký nhà cung cấp dịch vụ vận chuyển mới",
+        "Xét duyệt nhà cung cấp tổ chức sự kiện",
+        "Đánh giá nhà cung cấp mới trước khi ký hợp đồng",
+        "Khảo sát và thẩm định đơn vị cung cấp dịch vụ mới",
+        "Thẩm định đối tác cung ứng mới",
+        "Đánh giá năng lực đối tác in ấn mới",
+        "Xét duyệt hồ sơ đối tác cung cấp dịch vụ trước khi hợp tác",
+        "Kiểm tra pháp lý nhà cung cấp mới {doi_tac}"
+      ],
+      "details": [
+        "Đề nghị thẩm định hồ sơ pháp lý và năng lực của {doi_tac} trước khi hợp tác.",
+        "Nhà cung cấp mới có giá tốt hơn, cần đánh giá theo quy trình.",
+        "Hồ sơ gồm giấy phép kinh doanh, báo giá và danh sách khách hàng tham chiếu.",
+        "Bổ sung nhà cung cấp thứ hai để giảm phụ thuộc vào một vendor.",
+        "Cần thẩm định năng lực nhà cung cấp trước khi ký hợp đồng chính thức.",
+        "Đối tác mới chưa có trong danh sách nhà cung cấp được duyệt."
+      ]
+    },
+    "ACCESS": {
+      "titles": [
+        "Cấp tài khoản {he_thong} cho nhân viên mới",
+        "Xin quyền truy cập thư mục dự án trên Google Drive",
+        "Mở quyền {he_thong} cho {ten}",
+        "Cấp quyền VPN làm việc từ xa",
+        "Thêm em vào group email {phong_ban}",
+        "Xin quyền admin Jira dự án",
+        "Cấp tài khoản GitLab repo {du_an}",
+        "Mở thêm quyền xem báo cáo trên {he_thong}",
+        "Cấp quyền VPN cho {ten}",
+        "Xin tài khoản VPN truy cập hệ thống nội bộ",
+        "Mở quyền truy cập {he_thong} cho nhân viên mới",
+        "Cấp tài khoản {he_thong} theo vai trò công việc"
+      ],
+      "details": [
+        "Nhân viên mới cần tài khoản {he_thong} để bắt đầu làm việc từ {ngay}.",
+        "Em cần quyền truy cập để phối hợp với {phong_ban}.",
+        "Đề nghị IT cấp quyền phù hợp vai trò, không cần quyền quản trị.",
+        "Quyền dùng cho {du_an}, thời hạn đến hết dự án.",
+        "Cần cấp tài khoản và phân quyền theo vai trò công việc."
+      ]
+    },
+    "LAPTOP_PROVISION": {
+      "titles": [
+        "Cấp laptop cho nhân viên mới",
+        "Cấp máy tính làm việc cho {ten}",
+        "Xin cấp thêm màn hình phụ",
+        "Đổi laptop cũ cấu hình yếu",
+        "Cấp {thiet_bi} để làm việc",
+        "Cấp thiết bị làm việc cho thực tập sinh",
+        "Xin cấp máy tính có cấu hình cao để dựng video"
+      ],
+      "details": [
+        "Nhân sự mới vào làm ngày {ngay}, cần cấp laptop và {thiet_bi}.",
+        "Máy hiện tại quá cũ, chạy rất chậm, đề nghị cấp máy khác.",
+        "Xin cấp thiết bị từ kho IT, không cần mua mới.",
+        "Công việc thiết kế cần màn hình lớn hơn."
+      ]
+    },
+    "OFFICE_SUPPLIES": {
+      "titles": [
+        "Xin cấp văn phòng phẩm tháng {thang}",
+        "Cấp {van_phong_pham} cho {phong_ban}",
+        "Lĩnh {van_phong_pham} từ kho hành chính",
+        "Đề nghị cấp mực máy in",
+        "Bổ sung giấy A4 cho máy in tầng 4",
+        "Cấp văn phòng phẩm cho nhân viên mới"
+      ],
+      "details": [
+        "Phòng em hết {van_phong_pham}, nhờ hành chính cấp thêm.",
+        "Danh sách văn phòng phẩm cần lĩnh: {van_phong_pham}, {van_phong_pham}.",
+        "Cấp theo định mức hàng tháng của phòng.",
+        "Cần gấp để in hồ sơ cho khách."
+      ]
+    },
+    "RESOURCE_REVOKE": {
+      "titles": [
+        "Thu hồi tài khoản của nhân viên nghỉ việc {ten}",
+        "Khóa quyền truy cập {he_thong} sau khi chuyển bộ phận",
+        "Thu hồi laptop và thẻ từ nhân viên đã nghỉ",
+        "Vô hiệu hóa email người đã thôi việc",
+        "Thu hồi quyền admin tạm thời",
+        "Thu hồi thiết bị đã cấp cho cộng tác viên"
+      ],
+      "details": [
+        "{ten} nghỉ việc từ {ngay}, đề nghị khóa toàn bộ tài khoản và thu hồi thiết bị.",
+        "Nhân viên đã chuyển sang {phong_ban}, cần gỡ quyền {he_thong} cũ.",
+        "Dự án kết thúc, thu hồi quyền truy cập đã cấp tạm thời.",
+        "Danh sách tài sản cần thu hồi: laptop, thẻ ra vào, {thiet_bi}."
+      ]
+    },
+    "ACCESS_FACILITY": {
+      "titles": [
+        "Cấp thẻ ra vào cho nhân viên mới",
+        "Làm lại thẻ từ do bị mất",
+        "Mở quyền thẻ vào khu server",
+        "Cấp thẻ gửi xe tầng hầm",
+        "Đăng ký vân tay cửa văn phòng",
+        "Kích hoạt thẻ ra vào ngoài giờ"
+      ],
+      "details": [
+        "Em làm mất thẻ nhân viên, xin cấp lại thẻ ra vào tòa nhà.",
+        "Nhân viên mới cần thẻ từ để vào văn phòng từ {ngay}.",
+        "Cần quyền vào {khu_vuc} để làm việc ngoài giờ.",
+        "Đăng ký thẻ xe máy tháng cho nhân viên."
+      ]
+    },
+    "VISITOR_SECURITY_PASS": {
+      "titles": [
+        "Đăng ký khách đến làm việc ngày {ngay}",
+        "Cấp thẻ khách cho đối tác {doi_tac}",
+        "Đăng ký đoàn khách {so_nguoi} người thăm văn phòng",
+        "Xin thẻ tạm cho nhà thầu thi công",
+        "Đăng ký ứng viên đến phỏng vấn",
+        "Đăng ký khách ra vào tòa nhà"
+      ],
+      "details": [
+        "Đoàn {so_nguoi} khách của {doi_tac} đến lúc {gio}, nhờ lễ tân chuẩn bị thẻ khách.",
+        "Nhà thầu vào thi công {khu_vuc} trong 3 ngày, cần thẻ tạm.",
+        "Danh sách khách và số CCCD gửi kèm để bảo vệ đối chiếu.",
+        "Ứng viên đến phỏng vấn {gio} ngày {ngay}."
+      ]
+    },
+    "PROD_DATA_ACCESS": {
+      "titles": [
+        "Xin quyền đọc database production",
+        "Cấp quyền truy cập dữ liệu khách hàng nhạy cảm",
+        "Truy cập server production để điều tra lỗi",
+        "Cấp quyền SSH vào máy chủ thật",
+        "Xin quyền xem dữ liệu lương trên hệ thống",
+        "Quyền truy cập log production chứa dữ liệu cá nhân",
+        "Xin quyền xem dữ liệu khách hàng thật trên production",
+        "Cấp quyền đọc bảng dữ liệu nhạy cảm",
+        "Truy cập database production để điều tra lỗi"
+      ],
+      "details": [
+        "Cần quyền read-only vào {he_thong} trong 3 ngày để điều tra sự cố.",
+        "Dữ liệu chứa thông tin cá nhân khách hàng, cam kết không sao chép ra ngoài.",
+        "Truy cập máy chủ production phục vụ xử lý lỗi của {du_an}.",
+        "Quyền tạm thời, đề nghị tự động thu hồi khi hết hạn.",
+        "Dữ liệu có thông tin cá nhân, chỉ cần quyền read-only có thời hạn."
+      ]
+    },
+    "SERVER_FIREWALL": {
+      "titles": [
+        "Cấp server mới cho {du_an}",
+        "Mở port {port} trên firewall",
+        "Tạo máy ảo staging",
+        "Xin cấp thêm RAM và ổ đĩa cho server",
+        "Whitelist IP đối tác vào API",
+        "Cấp domain và chứng chỉ SSL cho môi trường test",
+        "Mở firewall kết nối tới hệ thống ngân hàng",
+        "Xin cấp máy chủ ảo để chạy {he_thong}",
+        "Tạo VM mới cho môi trường {du_an}",
+        "Cấp thêm CPU và RAM cho máy chủ ứng dụng",
+        "Xin cấp máy chủ cho dịch vụ báo cáo nội bộ",
+        "Cấp server database cho môi trường staging"
+      ],
+      "details": [
+        "Môi trường mới cần 4 vCPU, 16GB RAM, hệ điều hành Ubuntu.",
+        "Đề nghị mở port {port} từ dải IP của {doi_tac}.",
+        "Server hiện tại quá tải, cần nâng cấp tài nguyên.",
+        "Cấu hình firewall cho tích hợp {he_thong}.",
+        "Cần máy chủ 8 vCPU, 32GB RAM, đặt trong vùng mạng nội bộ."
+      ]
+    },
+    "EQUIPMENT_BORROW": {
+      "slots": {
+        "do_muon": [
+          "máy chiếu di động",
+          "loa kéo và micro",
+          "máy ảnh",
+          "laptop dự phòng",
+          "bộ phát wifi 4G",
+          "chân máy quay",
+          "màn chiếu",
+          "bàn gấp",
+          "bộ đàm"
+        ]
+      },
+      "titles": [
+        "Mượn {do_muon} cho {su_kien}",
+        "Mượn {do_muon} đi gặp khách",
+        "Mượn loa và micro tổ chức họp toàn công ty",
+        "Mượn máy ảnh chụp sự kiện",
+        "Mượn laptop dự phòng {so_ngay} ngày",
+        "Mượn {do_muon} đi công tác {dia_diem}"
+      ],
+      "details": [
+        "Em mượn {do_muon} từ {ngay}, sẽ trả lại sau {so_ngay} ngày.",
+        "Thiết bị dùng tạm cho {su_kien}, cam kết bàn giao lại nguyên trạng.",
+        "Mượn của kho tài sản, không cần mua mới.",
+        "Cần mượn gấp vì thiết bị của em đang đi bảo hành."
+      ]
+    },
+    "ROOM_BOOKING": {
+      "titles": [
+        "Đặt {phong_hop} lúc {gio} ngày {ngay}",
+        "Book phòng họp cho {so_nguoi} người",
+        "Đặt phòng họp online với khách hàng",
+        "Đặt hội trường tổ chức đào tạo nội bộ",
+        "Đặt phòng họp giao ban tuần",
+        "Giữ phòng họp phỏng vấn ứng viên",
+        "Đặt phòng họp cho buổi review {du_an}",
+        "Giữ phòng họp cho buổi phỏng vấn {ngay}",
+        "Đặt phòng họp online có màn hình lớn"
+      ],
+      "details": [
+        "Cần phòng có máy chiếu và màn hình cho {so_nguoi} người, thời gian {gio}.",
+        "Họp với {doi_tac}, nhờ chuẩn bị nước uống.",
+        "Đặt {phong_hop} định kỳ sáng thứ hai hàng tuần.",
+        "Buổi họp kéo dài khoảng 2 tiếng.",
+        "Đặt lịch sử dụng phòng, không phải báo hỏng thiết bị."
+      ]
+    },
+    "VEHICLE_BOOKING": {
+      "titles": [
+        "Đặt xe công ty đi {dia_diem}",
+        "Mượn xe 7 chỗ đón khách sân bay",
+        "Đăng ký xe đưa đoàn đi khảo sát",
+        "Xin xe công vụ chở hàng mẫu",
+        "Đặt xe đi gặp khách hàng {doi_tac}",
+        "Mượn xe công vụ ngày {ngay}"
+      ],
+      "details": [
+        "Đoàn {so_nguoi} người, khởi hành {gio} ngày {ngay}, cần tài xế.",
+        "Đón đối tác tại sân bay Nội Bài lúc {gio}.",
+        "Chở hàng mẫu đến {doi_tac}, đi và về trong ngày.",
+        "Đi khảo sát công trình tại {dia_diem}, cần xe 2 ngày."
+      ]
+    },
+    "CROSS_DEPT_SUPPORT": {
+      "titles": [
+        "Nhờ {phong_ban} hỗ trợ số liệu báo cáo",
+        "Đề nghị IT hỗ trợ setup âm thanh cho {su_kien}",
+        "Cần {phong_ban} phối hợp kiểm kê",
+        "Mượn nhân sự team khác hỗ trợ đợt cao điểm",
+        "Phối hợp liên phòng ban chuẩn bị {su_kien}",
+        "Nhờ phòng Pháp chế góp ý tài liệu",
+        "Đề nghị {phong_ban} cử người hỗ trợ",
+        "Xin hỗ trợ nhân lực từ phòng khác cho {su_kien}",
+        "Mượn tạm nhân sự {phong_ban} trong đợt cao điểm",
+        "Đề nghị {phong_ban} cung cấp số liệu cho báo cáo",
+        "Cần {phong_ban} phối hợp gửi dữ liệu trước {ngay}"
+      ],
+      "details": [
+        "Team em cần {phong_ban} hỗ trợ trước ngày {ngay}.",
+        "Đề nghị cử 2 bạn hỗ trợ trong 1 tuần.",
+        "Công việc cần sự phối hợp giữa {phong_ban} và {phong_ban}.",
+        "Nhờ hỗ trợ đầu mối để kịp tiến độ {du_an}.",
+        "Cần người hỗ trợ trực tiếp, không mượn thiết bị."
+      ]
+    },
+    "PROJECT_INITIATION": {
+      "titles": [
+        "Đề xuất khởi tạo {du_an}",
+        "Khởi động dự án chuyển đổi số",
+        "Đề xuất dự án cải tiến quy trình kho",
+        "Xin phê duyệt dự án mở chi nhánh mới",
+        "Đề xuất dự án nâng cấp hạ tầng mạng toàn công ty",
+        "Khởi tạo dự án số hóa hồ sơ nhân sự",
+        "Đề xuất dự án tự động hóa báo cáo",
+        "Đề xuất triển khai dự án {du_an}",
+        "Khởi tạo dự án xây dựng ứng dụng nội bộ",
+        "Trình kế hoạch và ngân sách dự án mới"
+      ],
+      "details": [
+        "Mục tiêu dự án: giảm 30% thời gian xử lý, ngân sách dự kiến {so_tien}.",
+        "Dự án kéo dài 6 tháng, cần thành lập ban dự án và PM phụ trách.",
+        "Đính kèm đề cương, phạm vi, nguồn lực và rủi ro chính.",
+        "Đề nghị phê duyệt chủ trương và ngân sách giai đoạn 1.",
+        "Thời gian thực hiện dự kiến {so_ngay} tháng, cần phê duyệt phạm vi và nguồn lực."
+      ]
+    },
+    "TASK_REQUEST": {
+      "titles": [
+        "Giao việc chuẩn bị hồ sơ thầu",
+        "Nhờ hành chính sắp xếp lại khu để đồ",
+        "Đề xuất cải thiện chỗ ngồi khu open space",
+        "Yêu cầu dọn dẹp kho lưu trữ hồ sơ",
+        "Góp ý cải thiện quy trình gửi báo cáo tuần",
+        "Đề nghị bố trí thêm khu nghỉ trưa cho nhân viên",
+        "Yêu cầu xử lý công việc tồn đọng",
+        "Đề xuất sắp xếp lại chỗ ngồi theo nhóm dự án",
+        "Soạn thông báo nội bộ gửi toàn công ty",
+        "Giao {ten} tổng hợp số liệu báo cáo tháng {thang}",
+        "Phân công {ten} chuẩn bị tài liệu cho cuộc họp",
+        "Nhờ cập nhật lại danh bạ liên hệ của phòng",
+        "Yêu cầu hoàn thiện biên bản họp và gửi lại",
+        "Giao việc theo dõi tiến độ đầu việc tuần này",
+        "Nhờ soạn kế hoạch công việc tháng {thang}"
+      ],
+      "details": [
+        "Nhờ hỗ trợ hoàn thành trước {ngay}.",
+        "Khu vực hiện tại khá chật và lộn xộn, ảnh hưởng chất lượng làm việc.",
+        "Đề xuất bố trí lại để nhân viên làm việc thoải mái và hiệu quả hơn.",
+        "Đầu việc cụ thể như mô tả, người nhận việc nghiệm thu khi xong.",
+        "Giao cho {ten}, hạn hoàn thành {ngay}.",
+        "Đầu việc nội bộ, không phát sinh chi phí mua sắm."
+      ]
+    },
+    "DATA_UAT_EXPORT": {
+      "titles": [
+        "Trích xuất dữ liệu bán hàng quý 3",
+        "Xuất danh sách khách hàng phục vụ phân tích",
+        "Chuẩn bị dữ liệu UAT cho {du_an}",
+        "Export báo cáo từ {he_thong} theo yêu cầu kiểm toán",
+        "Sao chép dữ liệu test sang môi trường UAT",
+        "Trích xuất log giao dịch tháng {thang}"
+      ],
+      "details": [
+        "Cần file Excel gồm các trường mã khách, doanh thu, ngày giao dịch.",
+        "Dữ liệu đã ẩn danh thông tin cá nhân trước khi chuyển.",
+        "Phục vụ kiểm thử chấp nhận người dùng trước khi go-live.",
+        "Kiểm toán yêu cầu số liệu trước ngày {ngay}."
+      ]
+    },
+    "FEATURE_RELEASE": {
+      "titles": [
+        "Đề xuất bổ sung tính năng {tinh_nang} trên {he_thong}",
+        "Yêu cầu cải tiến giao diện màn hình duyệt đơn",
+        "Release phiên bản mới lên production",
+        "Đề xuất tối ưu tốc độ tải trang báo cáo",
+        "Cải thiện hệ thống: thêm {tinh_nang}",
+        "Yêu cầu thêm bộ lọc theo phòng ban trên dashboard",
+        "Góp ý cải thiện trải nghiệm phần mềm nội bộ"
+      ],
+      "details": [
+        "Người dùng phản ánh hệ thống chậm và khó dùng, đề xuất cải tiến.",
+        "Tính năng giúp giảm thao tác thủ công cho {phong_ban}.",
+        "Phiên bản đã qua UAT, đề nghị phê duyệt lịch release {ngay}.",
+        "Đề xuất bổ sung {tinh_nang} để nâng cao hiệu quả làm việc."
+      ]
+    },
+    "BUSINESS_TRIP": {
+      "titles": [
+        "Đăng ký đi công tác {dia_diem} {so_ngay} ngày",
+        "Công tác gặp khách hàng {doi_tac} tại {dia_diem}",
+        "Đi công tác khảo sát chi nhánh",
+        "Đăng ký công tác nước ngoài dự hội thảo",
+        "Lịch công tác tuần sau tại nhà máy",
+        "Xin đi công tác hỗ trợ triển khai {du_an}",
+        "Đi {dia_diem} {so_ngay} ngày gặp khách hàng",
+        "Công tác {dia_diem} ký hợp đồng với đối tác",
+        "Đi công tác nhà máy {dia_diem}",
+        "Xuống chi nhánh {dia_diem} làm việc {so_ngay} ngày",
+        "Đăng ký lịch công tác gặp đối tác tại {dia_diem}"
+      ],
+      "details": [
+        "Thời gian công tác từ {ngay}, phương tiện máy bay, lưu trú khách sạn.",
+        "Mục đích: làm việc với {doi_tac} về hợp đồng mới.",
+        "Dự trù chi phí công tác {so_tien} gồm vé, phòng và phụ cấp.",
+        "Công tác {so_ngay} ngày tại {dia_diem}.",
+        "Chuyến đi để gặp khách hàng và ký hợp đồng tại {dia_diem}.",
+        "Cần đặt vé và phòng khách sạn trong thời gian công tác."
+      ]
+    },
+    "ATTENDANCE_ADJUSTMENT": {
+      "titles": [
+        "Điều chỉnh chấm công ngày {ngay} do quên chấm",
+        "Bổ sung công do máy chấm công lỗi",
+        "Quên check-in buổi sáng",
+        "Đi muộn do kẹt xe, xin điều chỉnh công",
+        "Sửa giờ ra về bị ghi sai",
+        "Xác nhận công ngày làm việc bên ngoài",
+        "Quên chấm công ra về"
+      ],
+      "details": [
+        "Hôm {ngay} em có đi làm đầy đủ nhưng quên quẹt thẻ.",
+        "Máy chấm công tầng 3 bị lỗi nên không ghi nhận giờ vào.",
+        "Em đi gặp khách cả ngày nên không chấm công tại văn phòng.",
+        "Đường ngập do mưa lớn nên em đến muộn 30 phút."
+      ]
+    },
+    "LEAVE": {
+      "titles": [
+        "Xin nghỉ phép {so_ngay} ngày",
+        "Nghỉ phép năm ngày {ngay}",
+        "Xin nghỉ {buoi} ngày {ngay}",
+        "Đơn xin nghỉ phép về quê",
+        "Nghỉ phép đi du lịch cùng gia đình",
+        "Xin nghỉ nửa ngày đi khám bệnh",
+        "Xin nghỉ không lương {so_ngay} ngày",
+        "Xin nghỉ ốm 1 ngày",
+        "Đăng ký nghỉ phép năm",
+        "Xin nghỉ {buoi} nay vì có việc cá nhân",
+        "Xin nghỉ hôm nay vì bận việc riêng",
+        "Em xin nghỉ {buoi} {ngay} để giải quyết việc riêng",
+        "Xin nghỉ 1 hôm đi làm giấy tờ",
+        "Xin vắng mặt {buoi} {ngay}"
+      ],
+      "details": [
+        "Em xin nghỉ phép {so_ngay} ngày từ {ngay} để {ly_do_nghi}.",
+        "Công việc đã bàn giao cho {ten}, có việc gấp vẫn liên hệ được.",
+        "Em còn đủ ngày phép năm, mong anh chị duyệt.",
+        "Xin nghỉ {buoi} để {ly_do_nghi}.",
+        "Em xin nghỉ {buoi} vì có việc cá nhân, công việc đã sắp xếp xong.",
+        "Trừ vào ngày phép năm còn lại của em."
+      ]
+    },
+    "LEAVE_SPECIAL": {
+      "titles": [
+        "Xin nghỉ cưới {so_ngay} ngày",
+        "Nghỉ chế độ thai sản",
+        "Nghỉ tang lễ ông nội",
+        "Nghỉ phép đặc biệt do người thân qua đời",
+        "Nghỉ chăm vợ sinh con",
+        "Nghỉ điều trị dài ngày sau phẫu thuật",
+        "Xin nghỉ do con nhỏ ốm nằm viện",
+        "Nghỉ do thiên tai, nhà bị ngập",
+        "Nghỉ phép đặc biệt theo chế độ",
+        "Xin nghỉ {so_ngay} ngày về chịu tang",
+        "Nghỉ hiếu theo chế độ do người thân mất",
+        "Xin nghỉ có hưởng lương theo chế độ hiếu hỉ",
+        "Xin nghỉ thai sản theo chế độ",
+        "Đăng ký nghỉ thai sản từ {ngay}"
+      ],
+      "details": [
+        "Gia đình em có tang, xin nghỉ {so_ngay} ngày theo chế độ.",
+        "Em tổ chức đám cưới ngày {ngay}, xin nghỉ cưới theo quy định.",
+        "Vợ em sinh con, xin nghỉ chế độ để chăm sóc.",
+        "Bác sĩ chỉ định nằm viện điều trị, giấy ra viện đính kèm.",
+        "Nhà em bị ảnh hưởng do bão lũ, cần nghỉ để khắc phục.",
+        "Nghỉ theo chế độ đặc biệt của Bộ luật Lao động, không trừ phép năm."
+      ]
+    },
+    "OVERTIME_REQ": {
+      "titles": [
+        "Đăng ký làm thêm giờ ngày {ngay}",
+        "OT cuối tuần để kịp deadline {du_an}",
+        "Tăng ca tối nay xử lý sự cố",
+        "Làm thêm giờ kiểm kê kho cuối năm",
+        "Đăng ký OT chuẩn bị {su_kien}",
+        "Xin làm ngoài giờ hoàn thành báo cáo"
+      ],
+      "details": [
+        "Team cần làm thêm từ 18h đến 21h trong {so_ngay} ngày.",
+        "Làm thêm thứ 7 để kịp bàn giao cho khách.",
+        "Số giờ OT dự kiến 4 tiếng, danh sách nhân sự đính kèm.",
+        "Tăng ca theo yêu cầu của quản lý để kịp tiến độ."
+      ]
+    },
+    "WFH_REQ": {
+      "titles": [
+        "Xin làm việc từ xa {so_ngay} ngày",
+        "Đăng ký WFH ngày {ngay}",
+        "Làm việc tại nhà do con ốm",
+        "Xin remote vì đang sửa nhà",
+        "Làm online do mưa bão ngập đường",
+        "Đăng ký làm việc từ xa định kỳ thứ 6",
+        "{ngay} em làm ở nhà",
+        "Xin làm việc ở nhà vì có việc cá nhân",
+        "Làm ở nhà chờ thợ đến sửa"
+      ],
+      "details": [
+        "Em vẫn online đầy đủ trên Slack và tham gia họp qua Zoom.",
+        "Công việc không cần có mặt tại văn phòng, đảm bảo tiến độ.",
+        "Đường ngập không di chuyển được, em xin làm tại nhà.",
+        "Xin WFH {so_ngay} ngày từ {ngay}.",
+        "Em ở nhà chờ thợ sửa nhưng vẫn làm việc online bình thường."
+      ]
+    },
+    "DISCIPLINE_REQ": {
+      "titles": [
+        "Đề xuất kỷ luật nhân viên {ten} vi phạm nội quy",
+        "Xử lý kỷ luật do đi muộn nhiều lần",
+        "Kỷ luật khiển trách vì làm lộ thông tin",
+        "Đề nghị xử lý vi phạm an toàn lao động",
+        "Đề xuất hình thức kỷ luật sau biên bản vi phạm",
+        "Xử lý nhân viên gian lận chấm công",
+        "Xử lý vi phạm của nhân viên theo nội quy",
+        "Đề xuất hình thức kỷ luật cho nhân viên vi phạm",
+        "Lập biên bản vi phạm quy định bảo mật"
+      ],
+      "details": [
+        "Nhân viên đã vi phạm nhiều lần dù đã được nhắc nhở, biên bản đính kèm.",
+        "Đề xuất hình thức khiển trách bằng văn bản.",
+        "Hành vi gây thiệt hại cho công ty, đề nghị HR xem xét.",
+        "Vi phạm quy định bảo mật thông tin khách hàng.",
+        "Đề nghị hội đồng kỷ luật xem xét hình thức xử lý."
+      ]
+    },
+    "EMPLOYEE_ONBOARDING": {
+      "titles": [
+        "Tiếp nhận nhân viên mới {ten} vị trí {vi_tri}",
+        "Chuẩn bị onboarding cho 3 nhân sự mới",
+        "Đón nhân viên mới ngày đầu đi làm",
+        "Hồ sơ tiếp nhận thực tập sinh",
+        "Kế hoạch hội nhập cho nhân viên mới",
+        "Tiếp nhận nhân sự mới vào {phong_ban}"
+      ],
+      "details": [
+        "Nhân viên bắt đầu làm việc ngày {ngay}, nhờ chuẩn bị hợp đồng và chỗ ngồi.",
+        "Lịch onboarding gồm giới thiệu công ty, đào tạo nội quy và bàn giao công việc.",
+        "Chuẩn bị đầy đủ hồ sơ, tài khoản, thiết bị cho người mới.",
+        "Người hướng dẫn: {ten}."
+      ]
+    },
+    "HR_CERTIFICATE": {
+      "titles": [
+        "Xin giấy xác nhận công tác để làm visa",
+        "Xác nhận thu nhập để vay ngân hàng",
+        "Xin giấy xác nhận đang làm việc tại công ty",
+        "Cấp giấy xác nhận lương bổ sung hồ sơ",
+        "Giấy xác nhận nhân viên cho con đi học",
+        "Xin xác nhận thời gian công tác"
+      ],
+      "details": [
+        "Em cần giấy xác nhận để nộp hồ sơ xin visa du lịch.",
+        "Ngân hàng yêu cầu xác nhận thu nhập 6 tháng gần nhất.",
+        "Xin bản có dấu đỏ, cần trước ngày {ngay}.",
+        "Mục đích: bổ sung hồ sơ cá nhân."
+      ]
+    },
+    "INTERNAL_TRANSFER": {
+      "titles": [
+        "Điều chuyển {ten} sang {phong_ban}",
+        "Đề nghị chuyển công tác sang chi nhánh {dia_diem}",
+        "Luân chuyển nhân sự giữa hai dự án",
+        "Xin chuyển bộ phận",
+        "Điều động tạm thời nhân viên hỗ trợ chi nhánh"
+      ],
+      "details": [
+        "Nhân viên có nguyện vọng chuyển sang {phong_ban} phù hợp chuyên môn.",
+        "Điều chuyển từ ngày {ngay}, giữ nguyên mức lương.",
+        "Chi nhánh {dia_diem} đang thiếu người, đề xuất điều động 3 tháng.",
+        "Hai trưởng bộ phận đã thống nhất."
+      ]
+    },
+    "PROMOTION_REQ": {
+      "titles": [
+        "Đề xuất thăng chức {ten} lên {vi_tri}",
+        "Đề bạt trưởng nhóm",
+        "Bổ nhiệm phó phòng",
+        "Nâng bậc chức danh lên senior",
+        "Đề xuất thăng cấp sau đánh giá năm"
+      ],
+      "details": [
+        "Nhân viên đạt kết quả xuất sắc 2 năm liên tiếp, đủ điều kiện thăng chức.",
+        "Đề xuất bổ nhiệm từ ngày {ngay}, kèm bản đánh giá năng lực.",
+        "Vị trí trưởng nhóm đang trống, {ten} là ứng viên phù hợp.",
+        "Thăng chức từ {vi_tri} lên vị trí quản lý."
+      ]
+    },
+    "RECRUITMENT_REQ": {
+      "titles": [
+        "Tuyển dụng thêm {vi_tri}",
+        "Đề xuất tuyển thay thế nhân sự nghỉ việc",
+        "Bổ sung headcount cho {phong_ban}",
+        "Tuyển thực tập sinh mùa hè",
+        "Mở vị trí tuyển dụng mới",
+        "Tuyển gấp 2 {vi_tri} cho {du_an}"
+      ],
+      "details": [
+        "Khối lượng công việc tăng, cần tuyển thêm 2 {vi_tri}.",
+        "Tuyển thay thế {ten} đã nghỉ việc, mô tả công việc đính kèm.",
+        "Mức lương đề xuất trong khung ngân sách nhân sự năm.",
+        "Cần người onboard trước ngày {ngay}."
+      ]
+    },
+    "RESIGNATION": {
+      "titles": [
+        "Đơn xin nghỉ việc",
+        "Xin thôi việc từ ngày {ngay}",
+        "Thông báo nghỉ việc và kế hoạch bàn giao",
+        "Chấm dứt hợp đồng lao động",
+        "Bàn giao công việc trước khi nghỉ việc",
+        "Xin nghỉ việc vì lý do cá nhân",
+        "Xin nghỉ việc hẳn để chuyển sang công ty khác",
+        "Đơn xin thôi việc và bàn giao tài sản",
+        "Thông báo không gia hạn hợp đồng lao động",
+        "Xin chấm dứt hợp đồng lao động trước thời hạn"
+      ],
+      "details": [
+        "Em xin nghỉ việc từ ngày {ngay} vì lý do cá nhân, đã báo trước 30 ngày.",
+        "Công việc sẽ được bàn giao đầy đủ cho {ten}.",
+        "Em cảm ơn công ty trong thời gian qua và xin chấm dứt hợp đồng.",
+        "Danh sách tài sản, tài khoản cần bàn giao đính kèm.",
+        "Ngày làm việc cuối cùng là {ngay}, em sẽ bàn giao đầy đủ."
+      ]
+    },
+    "REWARD_REQ": {
+      "titles": [
+        "Đề xuất khen thưởng {ten} hoàn thành xuất sắc",
+        "Thưởng nóng cho team {du_an}",
+        "Khen thưởng nhân viên xuất sắc quý",
+        "Thưởng sáng kiến cải tiến",
+        "Đề xuất thưởng cho đội trực xử lý sự cố"
+      ],
+      "details": [
+        "Team đã hoàn thành dự án trước hạn, đề xuất thưởng {so_tien}.",
+        "Nhân viên có sáng kiến giúp tiết kiệm chi phí đáng kể.",
+        "Đề xuất khen thưởng kèm giấy khen.",
+        "Đội đã trực xuyên đêm khắc phục sự cố hệ thống."
+      ]
+    },
+    "SALARY_ADJUSTMENT": {
+      "titles": [
+        "Đề xuất tăng lương cho {ten}",
+        "Điều chỉnh lương sau thử việc",
+        "Xét tăng lương định kỳ",
+        "Điều chỉnh phụ cấp trách nhiệm",
+        "Đề xuất tăng lương do kiêm nhiệm thêm việc"
+      ],
+      "details": [
+        "Đề xuất điều chỉnh lương tăng {so_tien}/tháng từ ngày {ngay}.",
+        "Nhân viên đã qua thử việc và đạt yêu cầu.",
+        "Mức lương hiện tại thấp hơn mặt bằng thị trường.",
+        "Kiêm nhiệm thêm vai trò trưởng nhóm, đề xuất phụ cấp."
+      ]
+    },
+    "TRAINING_COURSE": {
+      "titles": [
+        "Đăng ký khóa học {khoa_hoc}",
+        "Xin tài trợ học chứng chỉ {khoa_hoc}",
+        "Tham gia hội thảo chuyên môn",
+        "Đăng ký đào tạo kỹ năng quản lý",
+        "Tổ chức đào tạo nội bộ về an toàn thông tin",
+        "Cử nhân viên đi học {khoa_hoc}"
+      ],
+      "details": [
+        "Khóa học kéo dài 2 tháng, học phí {so_tien}, cam kết làm việc sau đào tạo.",
+        "Kiến thức áp dụng trực tiếp cho công việc tại {phong_ban}.",
+        "Đăng ký cho {so_nguoi} nhân viên tham gia.",
+        "Lịch học buổi tối, không ảnh hưởng giờ làm."
+      ]
+    },
+    "IT_SUPPORT": {
+      "titles": [
+        "Hỗ trợ IT: {su_co_it}",
+        "Máy tính của em bị lỗi: {su_co_it}",
+        "Nhờ IT cài phần mềm {phan_mem}",
+        "Không kết nối được máy in tầng 3",
+        "Hỗ trợ reset mật khẩu email",
+        "Laptop bị hỏng cần IT kiểm tra",
+        "Báo lỗi: {su_co_it}"
+      ],
+      "details": [
+        "Từ sáng nay {su_co_it}, ảnh hưởng công việc, nhờ IT hỗ trợ.",
+        "Em đã thử khởi động lại nhưng vẫn không được.",
+        "Vị trí ngồi {khu_vuc}, máy số 12.",
+        "Cần hỗ trợ gấp để kịp gửi báo cáo."
+      ]
+    },
+    "SECURITY_INCIDENT_HOTFIX": {
+      "titles": [
+        "Khẩn cấp: phát hiện lỗ hổng bảo mật trên {he_thong}",
+        "Hotfix lỗi thanh toán trên production",
+        "Sự cố rò rỉ dữ liệu khách hàng",
+        "Tài khoản bị chiếm quyền, cần khóa gấp",
+        "Email lừa đảo giả mạo giám đốc",
+        "Hệ thống bị tấn công DDoS",
+        "Phát hiện mã độc ransomware trên máy chủ",
+        "Website sập cần vá gấp",
+        "Phát hiện đăng nhập trái phép vào {he_thong}",
+        "Tài khoản quản trị có dấu hiệu bị xâm nhập",
+        "Cảnh báo truy cập bất thường cần xử lý gấp"
+      ],
+      "details": [
+        "Sự cố nghiêm trọng đang ảnh hưởng khách hàng, cần triển khai bản vá ngay.",
+        "Phát hiện truy cập bất thường vào {he_thong}, đề nghị cô lập hệ thống.",
+        "Nhiều nhân viên nhận email phishing yêu cầu chuyển tiền.",
+        "Cần phê duyệt khẩn để deploy hotfix ngoài lịch release.",
+        "Sự cố bảo mật, cần khóa tài khoản và điều tra ngay."
+      ]
+    },
+    "FACILITY_REPAIR": {
+      "titles": [
+        "Sửa {su_co_vp} tại {khu_vuc}",
+        "Báo hỏng: {su_co_vp}",
+        "Sự cố văn phòng: {su_co_vp}",
+        "Cải thiện ánh sáng khu làm việc tầng 5",
+        "Khu pantry bị rò rỉ nước",
+        "Sửa ghế ngồi bị gãy",
+        "Khắc phục sự cố mất điện tầng 2",
+        "Xử lý mùi hôi khu vệ sinh",
+        "Cải thiện cách âm phòng họp",
+        "Sửa chữa cơ sở vật chất {khu_vuc}",
+        "{thiet_bi_vp} {khu_vuc} {loi_hong}",
+        "{thiet_bi_vp} ở {khu_vuc} {loi_hong}, nhờ kiểm tra",
+        "{thiet_bi_vp} phòng họp bị hỏng",
+        "Máy lạnh phòng họp không mát",
+        "Sửa điều hòa trong phòng họp",
+        "Bóng đèn phòng họp bị cháy"
+      ],
+      "details": [
+        "{khu_vuc} đang bị {su_co_vp}, ảnh hưởng tới nhân viên làm việc.",
+        "Nhờ bộ phận cơ sở vật chất kiểm tra và sửa chữa sớm.",
+        "Khu làm việc quá tối và nóng, đề nghị cải thiện điều kiện làm việc.",
+        "Sự cố có thể gây nguy hiểm, cần xử lý gấp.",
+        "{thiet_bi_vp} {loi_hong} từ hôm qua, nhờ kỹ thuật tòa nhà xử lý.",
+        "Phòng họp vẫn đặt được nhưng thiết bị bên trong cần sửa."
+      ]
+    },
+    "CONTRACT_APPROVAL": {
+      "titles": [
+        "Duyệt hợp đồng với {doi_tac}",
+        "Rà soát hợp đồng thuê văn phòng mới",
+        "Phê duyệt hợp đồng mua bán {hang_hoa}",
+        "Ký phụ lục gia hạn hợp đồng",
+        "Thẩm định điều khoản hợp đồng dịch vụ",
+        "Trình ký hợp đồng nguyên tắc với nhà cung cấp"
+      ],
+      "details": [
+        "Hợp đồng giá trị {so_tien}, thời hạn 12 tháng, dự thảo đính kèm.",
+        "Đề nghị Pháp chế rà soát điều khoản phạt và thanh toán.",
+        "Đối tác đã ký trước, chờ phía công ty phê duyệt.",
+        "Gia hạn hợp đồng thêm 1 năm với điều kiện không đổi."
+      ]
+    },
+    "DOCUMENT_SEAL": {
+      "titles": [
+        "Xin đóng dấu công văn gửi {doi_tac}",
+        "Đóng dấu hồ sơ dự thầu",
+        "Ký và đóng dấu biên bản nghiệm thu",
+        "Xin chữ ký giám đốc lên tờ trình",
+        "Đóng dấu giáp lai hợp đồng",
+        "Xin dấu công ty cho giấy giới thiệu"
+      ],
+      "details": [
+        "Cần đóng dấu 3 bản gốc trước {gio} ngày {ngay}.",
+        "Văn bản đã được trưởng phòng ký nháy.",
+        "Hồ sơ nộp cho {doi_tac}, cần bản có dấu đỏ.",
+        "Số lượng bản cần đóng dấu: 5."
+      ]
+    },
+    "NDA_PRIVACY_CLEARANCE": {
+      "titles": [
+        "Thẩm định NDA với {doi_tac}",
+        "Ký thỏa thuận bảo mật trước khi chia sẻ dữ liệu",
+        "Xin phép chia sẻ dữ liệu khách hàng cho đối tác",
+        "Đánh giá tuân thủ bảo vệ dữ liệu cá nhân khi tích hợp",
+        "Rà soát điều khoản bảo mật thông tin"
+      ],
+      "details": [
+        "Đối tác yêu cầu dữ liệu khách hàng để triển khai, cần NDA trước.",
+        "Đánh giá theo Nghị định 13 về bảo vệ dữ liệu cá nhân.",
+        "Phạm vi dữ liệu chia sẻ: tên, số điện thoại, lịch sử mua hàng.",
+        "Dự thảo NDA của {doi_tac} đính kèm."
+      ]
+    },
+    "POLICY_ISSUANCE": {
+      "titles": [
+        "Ban hành quy chế làm việc từ xa",
+        "Ban hành quy định chi tiêu nội bộ mới",
+        "Cập nhật nội quy lao động",
+        "Ban hành quy trình phê duyệt mua sắm",
+        "Đề xuất chính sách phúc lợi mới",
+        "Ban hành quy chế an toàn thông tin",
+        "Đề xuất chính sách mới cho nhân viên",
+        "Sửa đổi quy định nội bộ về {khoan_chi}",
+        "Ban hành hướng dẫn quy trình mới"
+      ],
+      "details": [
+        "Dự thảo quy chế áp dụng toàn công ty từ ngày {ngay}.",
+        "Quy định cũ không còn phù hợp, đề xuất sửa đổi.",
+        "Đã lấy ý kiến các phòng ban, bản tổng hợp đính kèm.",
+        "Phạm vi áp dụng: toàn bộ nhân viên chính thức.",
+        "Văn bản áp dụng toàn công ty sau khi ban hành."
+      ]
+    },
+    "FLASH_SALE_VOUCHER": {
+      "titles": [
+        "Chạy flash sale cuối tuần",
+        "Phát hành voucher giảm giá 20%",
+        "Mã giảm giá cho chiến dịch 11/11",
+        "Tạo chương trình khuyến mãi Black Friday",
+        "Voucher tri ân khách hàng thân thiết",
+        "Flash sale giờ vàng trên app"
+      ],
+      "details": [
+        "Phát hành 1.000 voucher giảm 50.000đ, ngân sách {so_tien}.",
+        "Flash sale trong 2 giờ, giảm tối đa 30%.",
+        "Áp dụng cho khách hàng thành viên hạng vàng.",
+        "Chương trình chạy từ {ngay} trên website và app."
+      ]
+    },
+    "MARKETING_CAMPAIGN": {
+      "titles": [
+        "Ngân sách chiến dịch quảng cáo Facebook",
+        "Tổ chức {su_kien}",
+        "Đề xuất ngân sách {su_kien}",
+        "Chiến dịch ra mắt sản phẩm mới",
+        "Kế hoạch sự kiện tri ân khách hàng",
+        "Tổ chức hội nghị khách hàng",
+        "Thuê KOL quảng bá thương hiệu",
+        "Tham gia triển lãm thương mại",
+        "Tổ chức team building cho toàn công ty",
+        "Kế hoạch tổ chức {su_kien} cho {so_nguoi} người"
+      ],
+      "details": [
+        "Dự kiến {so_nguoi} người tham gia, ngân sách {so_tien}, địa điểm {dia_diem}.",
+        "Kế hoạch gồm thuê địa điểm, âm thanh ánh sáng, MC và quà tặng.",
+        "Chiến dịch chạy 1 tháng trên Facebook, TikTok và Google.",
+        "Mục tiêu tăng nhận diện thương hiệu và gắn kết nhân viên."
+      ]
+    },
+    "SPECIAL_DISCOUNT": {
+      "titles": [
+        "Phê duyệt chiết khấu 15% cho {doi_tac}",
+        "Giá đặc biệt cho đơn hàng lớn",
+        "Xin chiết khấu thương mại cho đại lý",
+        "Giảm giá ngoài chính sách cho khách VIP",
+        "Đề xuất mức giá ưu đãi hợp đồng năm"
+      ],
+      "details": [
+        "Khách đặt đơn {so_tien}, đề xuất chiết khấu vượt khung chính sách.",
+        "Đối thủ đang chào giá thấp hơn, cần giá đặc biệt để giữ khách.",
+        "Chiết khấu áp dụng cho đơn hàng trong quý.",
+        "Biên lợi nhuận sau chiết khấu vẫn đảm bảo."
+      ]
+    },
+    "ASSET_DISPOSAL": {
+      "slots": {
+        "tai_san_cu": [
+          "máy tính cũ",
+          "bàn ghế hỏng",
+          "xe ô tô cũ",
+          "máy photocopy hết khấu hao",
+          "điều hòa hỏng",
+          "server cũ",
+          "lô màn hình cũ"
+        ]
+      },
+      "titles": [
+        "Thanh lý {tai_san_cu}",
+        "Bán thanh lý xe công ty cũ",
+        "Hủy tài sản cố định hết khấu hao",
+        "Thanh lý lô máy tính cũ",
+        "Đề xuất bán phế liệu",
+        "Thanh lý tài sản không còn sử dụng",
+        "Đề xuất hủy {tai_san} hư hỏng không còn sử dụng",
+        "Thanh lý thiết bị cũ đã hết khấu hao",
+        "Xử lý tài sản hỏng tồn trong kho",
+        "Bán thanh lý tài sản không còn nhu cầu sử dụng"
+      ],
+      "details": [
+        "Tài sản đã hết khấu hao và hư hỏng, đề xuất bán thanh lý thu hồi {so_tien}.",
+        "Danh sách tài sản thanh lý và biên bản đánh giá đính kèm.",
+        "Xóa dữ liệu ổ cứng trước khi bán cho đơn vị thu mua.",
+        "Tài sản chiếm diện tích kho, không còn giá trị sử dụng.",
+        "Tài sản đã kiểm tra, không thể sửa chữa, đề nghị ghi giảm tài sản."
+      ]
+    },
+    "WAREHOUSE_TRANSFER": {
+      "titles": [
+        "Luân chuyển hàng từ {kho} sang {kho}",
+        "Điều chuyển tồn kho giữa các chi nhánh",
+        "Chuyển vật tư từ kho tổng về công trình",
+        "Xuất kho chuyển hàng mẫu sang showroom",
+        "Luân chuyển hàng tồn chậm",
+        "Chuyển kho cuối tháng {thang}"
+      ],
+      "details": [
+        "Chuyển 200 thùng hàng từ {kho} sang {kho} trước ngày {ngay}.",
+        "Chi nhánh thiếu hàng trong khi kho tổng còn tồn nhiều.",
+        "Phiếu xuất kho và danh sách mã hàng đính kèm.",
+        "Cần xe tải và nhân sự bốc xếp."
+      ]
+    }
+  }
+}

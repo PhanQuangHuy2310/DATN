@@ -72,11 +72,10 @@ extract_orig_images.py
 map_images.py
 plantuml.jar
 
-# AI Generated Training Big Data (>100MB, exceeds GitHub limit)
-ai_service/training/data/partitions/
-ai_service/training/data/enterprise_requests_dataset_large.csv
-ai_service/models/.training-staging-*/
-ai_service/models/.training-backup-*/
+# AI training: data is generated in memory by ai_service/training/train.py;
+# only its temporary staging/backup folders can be left behind after a crash.
+ai_service/models/.staging-*/
+ai_service/models/.backup-*/
 
 
 # Diagnostic logs (may contain sensitive traces)

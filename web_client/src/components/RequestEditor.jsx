@@ -846,6 +846,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                   : {}
               }
               onSuggestType={record ? undefined : setType}
+              allowedTypes={catalog.map((entry) => entry.code)}
             />
             <RoutePreview
               type={type}

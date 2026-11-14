@@ -2,7 +2,7 @@
 Unit & Integration Tests for AI Service & Client (tests/integration/test_ai_service.py)
 
 Kiểm thử:
-1. Nạp và kiểm tra tính toàn vẹn của 15 model artifacts trong ai_service/models/
+1. Nạp và kiểm tra tính toàn vẹn của các model artifacts trong ai_service/models/
 2. Đọc và cấu trúc của 8 snapshot mock data trong ai_service/data/mock/
 3. Logic định tuyến và suy luận XGBoost đa miền (Finance, HR, IT, Master)
 4. Đánh giá quy tắc Auto-Approve & ngưỡng rủi ro
@@ -52,11 +52,9 @@ class TestAIModelArtifacts(unittest.TestCase):
 
     def test_required_model_files_exist(self):
         required_files = [
-            "nlp_vectorizer.pkl",
-            "nlp_request_type_model.pkl",
-            "nlp_department_model.pkl",
-            "nlp_template_model.pkl",
+            "nlp_classifier.pkl",
             "nlp_labels.json",
+            "model_metadata.json",
             "risk_model.pkl",
             "risk_model_finance.pkl",
             "risk_model_hr.pkl",
@@ -238,9 +236,8 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
         amount = 80_000_000
         budget = 30_000_000
         feat_map = {
-            "request_type_enc": float(
-                self.encoders.get("request_type", {}).get("advance_payment", 0)
-            ),
+            "request_type_enc": float(self.encoders["request_type"]["ADVANCE_LARGE"]),
+            "risk_weight": 4.0,
             "department_enc": float(
                 self.encoders.get("department", {}).get("finance", 0)
             ),
@@ -288,9 +285,8 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
         # Case: Nghỉ phép năm bình thường, không tốn tiền -> Risk thấp (1 hoặc 2)
         budget = 200_000_000
         feat_map = {
-            "request_type_enc": float(
-                self.encoders.get("request_type", {}).get("leave_annual", 0)
-            ),
+            "request_type_enc": float(self.encoders["request_type"]["LEAVE"]),
+            "risk_weight": 1.0,
             "department_enc": float(self.encoders.get("department", {}).get("hr", 0)),
             "user_role_enc": 2.0,
             "priority_level_enc": 2.0,
@@ -319,6 +315,51 @@ class TestMultiDomainXGBoostInference(unittest.TestCase):
         self.assertLessEqual(
             risk_score, 2, "Nghỉ phép năm bình thường phải có risk <= 2"
         )
+
+
+@unittest.skipUnless(HAS_ML_DEPS, "ML dependencies are required for NLP inference tests")
+class TestRequestClassifierModel(unittest.TestCase):
+    """Bộ phân loại trả về mã catalog v2 cho các câu viết tự nhiên."""
+
+    @classmethod
+    def setUpClass(cls):
+        from nlp_text import normalize_text, refine_advance_tier
+
+        models_dir = os.path.join(AI_SERVICE_DIR, "models")
+        cls.model = joblib.load(os.path.join(models_dir, "nlp_classifier.pkl"))
+        with open(os.path.join(models_dir, "nlp_labels.json"), encoding="utf-8") as f:
+            cls.labels = json.load(f)
+        cls.normalize = staticmethod(normalize_text)
+        cls.refine = staticmethod(refine_advance_tier)
+
+    def predict(self, text):
+        code = str(self.model.predict([self.normalize(text)])[0])
+        return self.refine(code, text)
+
+    def test_labels_cover_active_catalog(self):
+        with open(
+            os.path.join(REPO_ROOT, "api_core", "catalog", "catalog_v2.json"),
+            encoding="utf-8",
+        ) as f:
+            catalog = json.load(f)
+        active = {i["code"] for i in catalog["items"] if i["status"] == "ACTIVE"}
+        self.assertEqual(set(self.model.classes_), active)
+        self.assertEqual(set(self.labels["catalog"]), active)
+
+    def test_common_requests(self):
+        cases = {
+            "Xin nghỉ phép 2 ngày về quê thăm bố mẹ": "LEAVE",
+            "xin nghi viec tu thang sau": "RESIGNATION",
+            "Bà ngoại em mất, xin nghỉ về chịu tang": "LEAVE_SPECIAL",
+            "Điều hòa khu làm việc tầng 4 bị chảy nước": "FACILITY_REPAIR",
+            "Lên kế hoạch tổ chức tiệc tất niên cho toàn công ty": "MARKETING_CAMPAIGN",
+            "Tạm ứng 25 triệu đặt cọc địa điểm hội thảo": "ADVANCE_MEDIUM",
+            "Gia hạn bản quyền Microsoft 365 cho phòng": "SAAS_LICENSE_BUY",
+            "Phát hiện máy chủ bị nhiễm mã độc, cần xử lý khẩn": "SECURITY_INCIDENT_HOTFIX",
+        }
+        for text, expected in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(self.predict(text), expected)
 
 
 class TestAIServiceClientFallback(unittest.TestCase):

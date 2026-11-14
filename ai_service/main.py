@@ -158,7 +158,7 @@ app.include_router(policy.router, prefix="/ai/policy", tags=["Policy Rules"])
 def _warm_up_models() -> None:
     """Load NLP and risk models once so the first user request is not slow."""
     try:
-        classify.get_nlp_models()
+        classify.get_nlp_model()
         for domain in risk.MODEL_FILES:
             risk._load_model(domain)
         logger.info("AI models warmed up")

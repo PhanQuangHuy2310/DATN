@@ -78,19 +78,19 @@ ai_service/
 ├── README.md                   # ← Tài liệu này
 ├── AI_ARCHITECTURE.md          # Đặc tả kiến trúc kỹ thuật chi tiết
 │
-├── models/                     # ★ 15 Pre-trained Model Artifacts
-│   ├── nlp_vectorizer.pkl          # TF-IDF tiếng Việt (512 KB)
-│   ├── nlp_request_type_model.pkl  # Phân loại 16 request types (1.7 MB)
-│   ├── nlp_department_model.pkl    # Phân loại phòng ban (768 KB)
-│   ├── nlp_template_model.pkl      # Phân loại Template A/B/C (330 KB)
-│   ├── nlp_labels.json             # Nhãn tiếng Việt
-│   ├── risk_model.pkl              # XGBoost Master (5.7 MB)
-│   ├── risk_model_finance.pkl      # XGBoost Finance (2.5 MB)
-│   ├── risk_model_hr.pkl           # XGBoost HR (2.9 MB)
-│   ├── risk_model_it.pkl           # XGBoost IT (1.9 MB)
+├── nlp_text.py                 # Chuẩn hóa văn bản; mã loại cũ → mã catalog v2
+│
+├── models/                     # ★ Model do training/train.py sinh ra
+│   ├── nlp_classifier.pkl          # TF-IDF (từ + ký tự không dấu) → Logistic Regression, 58 loại catalog v2
+│   ├── nlp_labels.json             # Catalog (nhóm, bộ phận, template) đi kèm bộ phân loại
+│   ├── risk_model.pkl              # XGBoost master (mọi loại)
+│   ├── risk_model_finance.pkl      # XGBoost Finance
+│   ├── risk_model_hr.pkl           # XGBoost HR
+│   ├── risk_model_it.pkl           # XGBoost IT
 │   ├── domain_model_registry.json  # Mapping domain -> model
-│   ├── encoders.json               # One-hot / Label encoders
-│   └── feature_cols_*.json         # Danh sách cột đặc trưng từng domain
+│   ├── encoders.json               # Mã hóa loại yêu cầu / phòng ban / vai trò
+│   ├── feature_cols_*.json         # Danh sách cột đặc trưng từng domain
+│   └── model_metadata.json         # Metrics của lần train gần nhất
 │
 ├── data/mock/                  # ★ Snapshots dữ liệu mock đã chuẩn hóa
 │   ├── mock_hr.json                # HRIS: phòng ban, nhân viên, ngày phép
@@ -111,21 +111,12 @@ ai_service/
 │   ├── summarize.py                # POST /ai/summarize/request
 │   └── mock_context.py             # GET /ai/mock/* (Tra cứu context snapshot)
 │
-└── training/                   # Bộ công cụ huấn luyện mô hình
-    ├── data/                       # Dataset huấn luyện
-    │   ├── enterprise_requests_dataset_large.csv  # Dữ liệu NLP tổng hợp
-    │   ├── eapproval_risk_10000.csv               # 10K mẫu Risk
-    │   └── partitions/                            # 1.75 triệu mẫu Big Data
-    ├── generate_enterprise_requests.py # Sinh dữ liệu mẫu doanh nghiệp
-    ├── enterprise_bigdata_generator.py # Sinh partition Big Data 1.75M dòng
-    ├── train_all_models.py             # Huấn luyện toàn bộ NLP và risk models
-    ├── train_nlp_classifier.py         # Pipeline cũ; ưu tiên train_all_models.py
-    ├── train_risk_model.py             # Pipeline cũ; ưu tiên train_all_models.py
-    ├── train_domain_models.py          # Pipeline cũ; ưu tiên train_all_models.py
-    ├── train_bigdata_models.py         # Pipeline cũ; ưu tiên train_all_models.py
-    ├── inspect_models.py               # Kiểm tra feature importance & tham số
-    ├── test_inference.py               # Test suy luận đa domain
-    └── run_training_pipeline.py        # Pipeline cũ; ưu tiên train_all_models.py
+└── training/                   # Huấn luyện mô hình (một lệnh duy nhất)
+    ├── train.py                    # Train NLP + risk, đánh giá, ghi models/ và báo cáo
+    └── data/
+        ├── request_corpus.json         # Mẫu câu huấn luyện 58 loại (sinh câu với seed cố định)
+        ├── request_eval_realistic.json # Câu viết tay để đánh giá: dev (được xem khi bổ sung dữ liệu) / test (chỉ để báo cáo)
+        └── training_report.md          # Báo cáo, train.py ghi đè mỗi lần chạy
 ```
 
 ---
@@ -139,18 +130,20 @@ py -3.11 -m venv ai_service\.venv-ai
 ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-local.txt
 # Cài đặt thêm PaddleOCR để chạy nhận dạng hóa đơn tiếng Việt cục bộ (PP-OCRv6):
 ai_service\.venv-ai\Scripts\python.exe -m pip install -r ai_service\requirements-paddle.txt
-ai_service\.venv-ai\Scripts\python.exe ai_service\training\train_all_models.py
+ai_service\.venv-ai\Scripts\python.exe ai_service\training\train.py             # toàn bộ (~30 phút)
+ai_service\.venv-ai\Scripts\python.exe ai_service\training\train.py --only nlp  # chỉ bộ phân loại (~15 phút)
 ```
 
-Pipeline huấn luyện ba bộ phân loại NLP và bốn mô hình rủi ro (master, Finance, HR, IT) **lần lượt** để giới hạn tải RAM. Mặc định XGBoost dùng tối đa 4 threads; có thể điều chỉnh bằng `--threads 2`. Việc chia train/validation/test giữ các tiêu đề đã chuẩn hóa trong cùng một nhóm để tránh cùng một yêu cầu lặp xuất hiện ở cả train và test. Các model cũ chỉ được thay sau khi tất cả tác vụ huấn luyện hoàn tất thành công.
+Pipeline train bộ phân loại văn bản rồi bốn mô hình rủi ro (master, Finance, HR, IT) **lần lượt** để giới hạn RAM; XGBoost dùng tối đa 4 threads (`--threads 2` để giảm). Dữ liệu được sinh lại từ `request_corpus.json` với seed cố định: cùng seed cho cùng model. Model cũ chỉ được thay khi mọi bước train xong (ghi vào thư mục tạm rồi mới chuyển sang `models/`).
 
-Kết quả metrics và phạm vi đánh giá nằm trong `models/model_metadata.json`. Bộ dữ liệu hiện có là dữ liệu **tổng hợp**; accuracy/F1 chỉ mô tả khả năng khớp bộ dữ liệu đó, không phải tỷ lệ đúng trong vận hành thực. Không nên dùng điểm đó làm căn cứ tự động phê duyệt; cần tập test thực tế, độc lập, có nhãn do chuyên gia xác nhận.
+Dữ liệu huấn luyện là **tổng hợp** từ mẫu câu. Con số đáng tin nhất là độ chính xác trên **câu viết tay split `test`** trong `training/data/training_report.md`, vì các câu này không dùng để train hay để chỉnh dữ liệu. Thêm tình huống mới: thêm câu vào `titles`/`details` của đúng loại trong `request_corpus.json`, kiểm tra bằng split `dev`, rồi chạy lại `train.py`.
 
-### 4.1. Kiểm Tra Tham Số & Test Suy Luận (Inference):
+### 4.1. Kiểm tra model và kiểm thử chức năng
 ```powershell
-ai_service\.venv-ai\Scripts\python.exe ai_service\training\inspect_models.py
-
-ai_service\.venv-ai\Scripts\python.exe ai_service\training\test_inference.py
+# Nạp model hiện có và chạy thử vài câu
+ai_service\.venv-ai\Scripts\python.exe ai_service\training\train.py --check
+# Kiểm thử chức năng mọi endpoint trên service đang chạy (chỉ đọc, không ghi DB)
+.\.venv\Scripts\python.exe test_ai_benchmark.py
 ```
 
 ---

@@ -31,15 +31,12 @@ ai_service/
 ├── AI_ARCHITECTURE.md      # ← File này
 │
 ├── models/                 # ★ Các model đã train — KHÔNG XÓA
-│   ├── nlp_vectorizer.pkl          # TF-IDF vectorizer (512KB)
-│   ├── nlp_request_type_model.pkl  # NLP classifier — loại yêu cầu (1.7MB)
-│   ├── nlp_department_model.pkl    # NLP classifier — phòng ban (768KB)
-│   ├── nlp_template_model.pkl      # NLP classifier — template A/B/C (330KB)
-│   ├── nlp_labels.json             # Label mappings cho NLP
-│   ├── risk_model.pkl              # XGBoost Master (5.7MB)
-│   ├── risk_model_finance.pkl      # XGBoost Finance domain (2.5MB)
-│   ├── risk_model_hr.pkl           # XGBoost HR domain (2.9MB)
-│   ├── risk_model_it.pkl           # XGBoost IT domain (1.9MB)
+│   ├── nlp_classifier.pkl          # TF-IDF + Logistic Regression, 58 loại catalog v2
+│   ├── nlp_labels.json             # Catalog (nhóm, bộ phận, template) cho bộ phân loại
+│   ├── risk_model.pkl              # XGBoost Master
+│   ├── risk_model_finance.pkl      # XGBoost Finance domain
+│   ├── risk_model_hr.pkl           # XGBoost HR domain
+│   ├── risk_model_it.pkl           # XGBoost IT domain
 │   ├── encoders.json               # Label encoders cho risk
 │   ├── feature_columns.json        # Feature cols — master model
 │   ├── feature_cols_finance.json   # Feature cols — finance domain
@@ -54,17 +51,13 @@ ai_service/
 │   ├── ocr.py              # POST /ai/ocr/extract-url
 │   └── summarize.py        # POST /ai/summarize/request
 │
-└── training/               # Scripts & data huấn luyện
-    ├── data/               # Training datasets
-    │   ├── enterprise_requests_dataset_large.csv  # 100K+ mẫu NLP
-    │   ├── eapproval_risk_10000.csv               # 10K mẫu risk
-    │   └── vietnam_vat_ocr_samples.json           # OCR samples
-    ├── train_nlp_classifier.py        # Train NLP models
-    ├── train_risk_model.py            # Train XGBoost master
-    ├── train_domain_models.py         # Train domain-specific models
-    ├── train_bigdata_models.py        # Train trên dataset lớn
-    ├── generate_synthetic_data.py     # Tạo dữ liệu tổng hợp
-    └── evaluate_model.py             # Đánh giá model performance
+└── training/               # Huấn luyện (một lệnh: train.py)
+    ├── train.py            # Train NLP + 4 model risk, đánh giá, ghi models/ và báo cáo
+    └── data/
+        ├── request_corpus.json          # Mẫu câu huấn luyện 58 loại
+        ├── request_eval_realistic.json  # Câu viết tay: dev / test (test chỉ để báo cáo)
+        ├── training_report.md           # Báo cáo lần train gần nhất
+        └── vietnam_vat_ocr_samples.json # OCR samples
 ```
 
 ---
@@ -75,16 +68,17 @@ ai_service/
 
 | Thuộc tính | Chi tiết |
 |---|---|
-| **Mô hình** | TF-IDF Vectorizer + CalibratedClassifier (SGD) |
-| **File model** | `nlp_vectorizer.pkl` + `nlp_request_type_model.pkl` + `nlp_department_model.pkl` + `nlp_template_model.pkl` |
-| **Dữ liệu train** | ~100.000 mẫu văn bản tiếng Việt |
+| **Mô hình** | TF-IDF (từ 1-2 gram + ký tự không dấu 2-5 gram) → Logistic Regression; nhóm, bộ phận và template suy ra từ catalog |
+| **File model** | `nlp_classifier.pkl` + `nlp_labels.json` |
+| **Dữ liệu train** | 34.800 câu tổng hợp từ `training/data/request_corpus.json` (58 loại catalog v2) |
 | **Input** | `title` (tiêu đề) + `description` (mô tả yêu cầu) |
-| **Output** | `predicted_request_type` (16 loại), `predicted_department`, `predicted_template` (A/B/C), `confidence` |
+| **Output** | `predicted_request_type` (58 loại catalog v2), nhóm, bộ phận, template A/B/C, độ tin cậy, `low_confidence`, 3 khả năng hàng đầu |
+| **Độ chính xác** | Xem `training/data/training_report.md`: câu viết tay split `test` (không dùng để train) |
 
-**TẠI SAO DÙNG TF-IDF + SGD thay vì LLM:**
-- Inference nhanh (< 50ms) — không cần GPU
-- Không tốn chi phí API call (Gemini)
-- Độ chính xác đủ tốt cho classification task (~92% accuracy)
+**TẠI SAO DÙNG TF-IDF + Logistic Regression thay vì LLM:**
+- Inference nhanh (< 100 ms) — không cần GPU
+- Không tốn chi phí API call (Gemini), dữ liệu không rời hệ thống
+- Ký tự n-gram không dấu chịu được gõ không dấu và lỗi chính tả
 - LLM chỉ dùng cho summarize (task phức tạp hơn)
 
 **TẠI SAO ĐẶT Ở `models/`:**
@@ -224,9 +218,6 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8001
 # Docker
 docker compose up ai-service
 
-# Train lại model (nếu cần)
-cd training
-python train_nlp_classifier.py
-python train_risk_model.py
-python train_domain_models.py
+# Train lại model (nếu cần), từ thư mục gốc repo
+ai_service\.venv-ai\Scripts\python.exe ai_service\training\train.py
 ```

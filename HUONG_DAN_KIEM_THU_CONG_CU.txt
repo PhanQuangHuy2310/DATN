@@ -391,7 +391,7 @@ lệnh bảo vệ ở đầu file sẽ dừng lại với thông báo:
    Chạy trực tiếp trong container eas-ai-service-1 (chỉ cần 1 dòng trên PowerShell):
 
    - Benchmark phân loại NLP (TF-IDF + Classifier, 200 lượt):
-     docker exec eas-ai-service-1 python -c "import time, joblib, statistics; vec = joblib.load('models/nlp_vectorizer.pkl'); clf = joblib.load('models/nlp_request_type_model.pkl'); t = []; [(t0 := time.perf_counter(), clf.predict(vec.transform(['Mua 2 man hinh Dell'])), t.append((time.perf_counter() - t0)*1000)) for _ in range(200)]; print(f'NLP 200 runs: avg={statistics.mean(t):.3f}ms, max={max(t):.3f}ms')"
+     docker exec eas-ai-service-1 python -c "import time, joblib, statistics; clf = joblib.load('models/nlp_classifier.pkl'); t = []; [(t0 := time.perf_counter(), clf.predict(['mua 2 man hinh dell']), t.append((time.perf_counter() - t0)*1000)) for _ in range(200)]; print(f'NLP 200 runs: avg={statistics.mean(t):.3f}ms, max={max(t):.3f}ms')"
 
    - Benchmark chấm điểm rủi ro XGBoost (Finance, 200 lượt):
      docker exec eas-ai-service-1 python -c "import time, joblib, statistics, numpy as np; xgb = joblib.load('models/risk_model_finance.pkl'); X = np.zeros((1, xgb.n_features_in_)); t = []; [(t0 := time.perf_counter(), xgb.predict_proba(X), t.append((time.perf_counter() - t0)*1000)) for _ in range(200)]; print(f'XGBoost Finance 200 runs: avg={statistics.mean(t):.3f}ms, max={max(t):.3f}ms')"
