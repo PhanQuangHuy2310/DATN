@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **15/11 — AI kiểm thử đầy đủ + sửa giao diện thu phóng** (9 commit, mô tả trong PR_DESCRIPTION.md): train lại theo catalog v2, phân loại trên câu viết tay test 89,8% → 95,3% (top-3 99,2%); sửa tự duyệt bỏ qua quy tắc nghỉ phép/phòng họp/hoàn tiền với mã catalog v2; sửa OCR làm worker uvicorn bị kill (chạy ở process riêng); test_ai_benchmark.py 37/37 trên Docker; sửa vỡ bố cục ở zoom 125–150%. Toàn bộ test: Django 590, run_tests 183, AI 34, web 72, lint/secret sạch. Không commit workspace/ và training_report.md (báo cáo).
 - [x] **Kiểm thử Đóng giả Người dùng (Live Impersonation E2E Testing) & Hoàn tất 8 Phase Kế hoạch**: Đã viết đầy đủ 8 file kế hoạch vào plans/completed/ (Phase 0 đến Phase 7), kiểm thử trực tiếp trên trình duyệt bằng cách đóng giả 4 vai trò người dùng thực tế (dmin@eas.com, lan.ngo@eas.com, n.pham@eas.com, n.do@eas.com), xác nhận tính hợp lệ của dữ liệu chỉnh sửa mới nhất (137 tài khoản người dùng, loại bỏ tài khoản +admin, kiểm soát bảo mật Cổng Quản trị và Cổng Nhân viên đạt chuẩn 100%), lưu trữ báo cáo kiểm thử vào plans/reports/2026-11-03_live_impersonation_audit_report.md.
 - [x] Giai đoạn 7 (Phase 7): E2E Audit toàn diện 9 chức năng, đồng bộ Header/Sidebar/Dark Mode, kiểm tra chéo 6 luồng nghiệp vụ cốt lõi, hoàn tất Definition of Done (64/64 Unit tests pass, 0 linter errors, build Vite 294ms/324ms).
 - [x] Giai đoạn 6 (Phase 6): Xây dựng module "Quản lý API" (Mock API 8 hệ thống, Circuit Breaker ngắt kết nối và tự động khóa biểu mẫu trên Web Client, Backend guard 503) và "Phiên bản hệ thống" (Audit Changelog Timeline, Before/After Diff comparison modal, xuất báo cáo JSON).
@@ -50,6 +51,8 @@ Số migration trong các mục cũ là số trước khi gộp: 08, 09, 10, 14 
 - [ ] Tạo PR trên GitHub: máy không có gh CLI, tạo tay qua https://github.com/PhanQuangHuy2310/DATN/compare/main...dat?expand=1
 
 ## Quyết định cần tôi xác nhận
+- 15/11: AI tự duyệt giờ kiểm tra đúng quy tắc theo loại, nên sẽ chuyển người duyệt nhiều hơn trước: đơn LEAVE thiếu ngày hoặc ≥ 3 ngày hoặc quá số phép, ROOM_BOOKING không tra được tình trạng phòng, hoàn tiền > 2 triệu. Đây là hành vi đúng theo quy tắc đã ghi trong code; nếu nhóm muốn nới (ví dụ phòng không tra được vẫn duyệt) cần quyết định.
+- 15/11: OCR hóa đơn chạy đúng nhưng mất 30–60 giây mỗi ảnh trên CPU (Docker máy dev). Hiện chưa luồng nghiệp vụ nào gọi OCR; nếu sắp dùng thì cân nhắc model nhẹ hơn hoặc xử lý nền.
 - 4.5: dữ liệu HRM giả lập (mock_hr.employee_directory, 55 người, email @example.test) không trùng 42 tài khoản @eas.com; sync chỉ khớp 2 theo tên, 40 tài khoản không khớp. Chấm công vẫn chạy nhờ dự phòng email. Muốn khớp mã thật cần seed lại HRM theo 42 tài khoản.
 - 4.2: `api_core/workflow/maintenance.py` không còn nơi gọi sau khi xóa các hàm cũ (khác `api_core/maintenance.py` đang dùng). Giữ lại vì ngoài phạm vi; có thể xóa nếu bạn đồng ý.
 - 1.5: hàm DB `eas.ai_revocable` ghi cứng id tài khoản AI `00000002-0000-4000-8000-0000000000a1` (khớp migration 08 và mặc định `EAS_AI_SYSTEM_USER_ID`). Nếu đổi biến này phải sửa hàm.
