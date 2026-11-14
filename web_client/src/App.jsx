@@ -1400,9 +1400,10 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
                 </div>
               </>;
               // Admin portal has no profile page here: show identity as plain text, not a dead button.
+              const who = `${user.display_name || "Người dùng"} · ${user.job_title || primaryRole.name}`;
               return portal === "admin"
-                ? <div className="client-account-link is-static">{identity}</div>
-                : <button type="button" className="client-account-link" onClick={() => navigate("profile")} aria-label={`Tài khoản ${user.display_name || "người dùng"}`}>{identity}</button>;
+                ? <div className="client-account-link is-static" title={who}>{identity}</div>
+                : <button type="button" className="client-account-link" title={who} onClick={() => navigate("profile")} aria-label={`Tài khoản ${user.display_name || "người dùng"}`}>{identity}</button>;
             })()}
             <button type="button" className="secondary ds-icon-button" aria-label="Đăng xuất" title="Đăng xuất" onClick={onLogout}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
           </div>
