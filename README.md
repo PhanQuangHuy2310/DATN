@@ -17,7 +17,7 @@ Tài liệu này hướng dẫn **chạy hệ thống trên máy Windows**.
 | API (backend) | http://127.0.0.1:8000 | Có |
 | Worker nền (thông báo, SLA, tự trả đồ mượn) | — | Có |
 | Web nhân viên | http://127.0.0.1:5173 (local dev) / http://127.0.0.1:8080 (Docker Nginx) | Có |
-| Web quản trị | http://127.0.0.1:5174 (local dev) / http://127.0.0.1:8081 (Docker Nginx) | Có |
+| Web quản trị | http://127.0.0.1:8081 (local dev và Docker Nginx; không chạy cả hai cùng lúc) | Có |
 | AI service | http://127.0.0.1:8001 | Không: thiếu AI thì hệ thống dùng quy tắc dự phòng |
 
 Dữ liệu nằm trên **một database Supabase** có sẵn, không cần cài database trên máy.
@@ -71,7 +71,7 @@ docker compose up -d redis
 Sau đó mở trình duyệt:
 
 - **Web nhân viên:** http://127.0.0.1:5173
-- **Web quản trị:** http://127.0.0.1:5174
+- **Web quản trị:** http://127.0.0.1:8081
 
 Đăng nhập bằng email và mật khẩu do chủ dự án cung cấp. Lần đầu đăng nhập bằng mật khẩu tạm, hệ thống yêu cầu đổi mật khẩu.
 
@@ -104,7 +104,7 @@ Web nhân viên mở ở http://127.0.0.1:8080, web quản trị ở http://127.
 | Gửi đơn mượn phòng/xe/thiết bị, nghỉ phép, mua sắm, cấp quyền báo `INTEGRATION_UNAVAILABLE` | Cửa sổ `start_mock_local.cmd` chưa chạy hoặc đã tắt |
 | Đăng nhập báo "Hệ thống bảo mật tạm thời gián đoạn" (`CACHE_UNAVAILABLE`) | Redis chưa chạy: mở Docker Desktop rồi chạy `docker compose up -d redis` |
 | Báo `INTEGRATION_DISABLED` | Quản trị đã tắt kết nối hệ thống đó: vào web quản trị → Cấu hình hệ thống → API & tích hợp |
-| Cổng 8000 / 8100 / 5173 / 5174 đã bị dùng | Tắt chương trình đang chiếm cổng, hoặc cửa sổ cũ của chính hệ thống này |
+| Cổng 8000 / 8100 / 5173 / 8081 đã bị dùng | Tắt chương trình đang chiếm cổng, hoặc cửa sổ cũ của chính hệ thống này |
 | Quên mật khẩu quản trị | `.\.venv\Scripts\python.exe set_temporary_admin_password.py` để tạo mật khẩu tạm (bắt buộc đổi khi đăng nhập) |
 | Thông báo, nhắc hạn, trả đồ mượn không chạy | Cửa sổ `start_worker_local.cmd` chưa chạy |
 

@@ -143,6 +143,12 @@ def main(argv=None):
     effective = os.environ.copy()
     for k, v in local.items():
         effective.setdefault(k, v)
+    # Same EAS_* -> runtime name aliases the services apply (project_env.py).
+    from project_env import ALIASES
+
+    for destination, source in ALIASES.items():
+        if effective.get(source):
+            effective.setdefault(destination, effective[source])
     print("=== EAS LOCAL CONNECTIVITY AUDIT (read-only; credentials hidden) ===")
     for f in [
         "connect_database.py",
@@ -197,7 +203,11 @@ def main(argv=None):
             "Supabase Storage",
             "Backend chưa được cấp đủ SUPABASE_URL và SUPABASE_SECRET_KEY (có thể đang tắt yêu cầu Storage)",
         )
-    if not effective.get("REDIS_URL"):
+    if not (
+        effective.get("REDIS_URL")
+        or effective.get("EAS_REDIS_HOST")
+        or effective.get("EAS_REDIS_PORT")
+    ):
         c.add(
             "WARN",
             "Redis/cache",
@@ -312,10 +322,8 @@ def main(argv=None):
     model_dir = ROOT / "ai_service" / "models"
     for model in [
         "risk_model.pkl",
-        "nlp_vectorizer.pkl",
-        "nlp_request_type_model.pkl",
-        "nlp_department_model.pkl",
-        "nlp_template_model.pkl",
+        "nlp_classifier.pkl",
+        "nlp_labels.json",
     ]:
         c.add(
             "PASS" if (model_dir / model).is_file() else "WARN",
@@ -426,7 +434,8 @@ def main(argv=None):
             ),
             ("AI /health", "http://127.0.0.1:8001/health", {200}),
         ]:
-            status, payload = req(url)
+            # /health/ready probes the DB pooler and the Mock API: allow longer.
+            status, payload = req(url, timeout=20 if url.endswith("/health/ready") else 3)
             isok = status in valid
             if (
                 name == "Backend /health/ready"
