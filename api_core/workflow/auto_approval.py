@@ -10,7 +10,7 @@ audit rule of a human decision still applies.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any
 from uuid import NAMESPACE_URL, uuid4, uuid5
@@ -42,7 +42,8 @@ SQL_AUTO_APPROVE_CONTEXT = """
              SELECT 1 FROM eas.audit_event e
              WHERE e.request_id = r.id AND e.action = 'AI_AUTO_APPROVE_REVOKED'
            ),
-           u.email, v.payload->>'room_code'
+           u.email, v.payload->>'room_code',
+           v.payload->>'start_date', v.payload->>'end_date'
     FROM eas.request r
     JOIN eas.request_type rt ON rt.id = r.type_id
     JOIN eas.request_revision v ON v.id = r.current_revision_id
@@ -91,8 +92,20 @@ def _load_context(request_id: str) -> dict[str, Any] | None:
         "ai_allowed",
         "requester_email",
         "room_code",
+        "start_date",
+        "end_date",
     )
     return dict(zip(keys, row, strict=True))
+
+
+def _requested_days(context: dict[str, Any]) -> int:
+    """Inclusive day span of start_date..end_date, 0 when not a date range."""
+    try:
+        begin = date.fromisoformat(str(context.get("start_date"))[:10])
+        end = date.fromisoformat(str(context.get("end_date"))[:10])
+    except ValueError:
+        return 0
+    return max((end - begin).days + 1, 0)
 
 
 def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | None:
@@ -121,6 +134,8 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         requester_email=context.get("requester_email"),
         room_code=context.get("room_code"),
         amount=float(context["amount_vnd"] or 0),
+        # Leave rules (balance, < 3 days) need the requested span.
+        days_requested=_requested_days(context),
         correlation_id=correlation_id,
     )
     if verdict.get("decision") != "auto_approve":
