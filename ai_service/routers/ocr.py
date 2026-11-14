@@ -11,9 +11,11 @@ Fallback: nếu PaddleOCR chưa cài được thì trả về raw text từ Gemi
 
 import asyncio
 import base64
+import concurrent.futures
 import contextlib
 import io
 import ipaddress
+import multiprocessing
 import os
 import re
 import socket
@@ -197,6 +199,8 @@ _ocr_engine = None
 
 
 _ocr_engine_lock = threading.Lock()
+# One Paddle predictor per process is not safe to call from several threads.
+_ocr_predict_lock = threading.Lock()
 
 
 def get_ocr_engine():
@@ -247,6 +251,48 @@ def _model_download_lock():
             fcntl.flock(handle, fcntl.LOCK_UN)
 
 
+# PaddleOCR holds the GIL for seconds at a time. Inside a uvicorn worker that
+# starves the thread answering the supervisor's health ping, and with
+# --workers > 1 the worker is killed mid-request ("Child process died"). The
+# engine therefore lives in one child process per worker; requests queue there.
+_ocr_pool: concurrent.futures.ProcessPoolExecutor | None = None
+_ocr_pool_lock = threading.Lock()
+
+
+def _get_ocr_pool() -> concurrent.futures.ProcessPoolExecutor:
+    global _ocr_pool
+    with _ocr_pool_lock:
+        if _ocr_pool is None:
+            _ocr_pool = concurrent.futures.ProcessPoolExecutor(
+                max_workers=1, mp_context=multiprocessing.get_context("spawn")
+            )
+        return _ocr_pool
+
+
+def _reset_ocr_pool() -> None:
+    global _ocr_pool
+    with _ocr_pool_lock:
+        if _ocr_pool is not None:
+            _ocr_pool.shutdown(wait=False, cancel_futures=True)
+        _ocr_pool = None
+
+
+def _warm_engine() -> None:
+    """Runs in the OCR process: load the models once."""
+    get_ocr_engine()
+
+
+async def run_paddle_ocr(image_bytes: bytes) -> tuple[str, float]:
+    """ocr_with_paddle in the OCR process; errors propagate (Gemini fallback)."""
+    loop = asyncio.get_running_loop()
+    try:
+        return await loop.run_in_executor(_get_ocr_pool(), ocr_with_paddle, image_bytes)
+    except concurrent.futures.process.BrokenProcessPool:
+        # The OCR process crashed: start a fresh one on the next request.
+        _reset_ocr_pool()
+        raise
+
+
 def start_ocr_warmup() -> threading.Thread | None:
     """Initialise the OCR engine in a background thread (non-blocking)."""
     if not settings.ocr_warmup:
@@ -255,7 +301,7 @@ def start_ocr_warmup() -> threading.Thread | None:
     def _warm():
         started = time.perf_counter()
         try:
-            get_ocr_engine()
+            _get_ocr_pool().submit(_warm_engine).result()
             logger.info(f"OCR engine warmed up in {time.perf_counter() - started:.1f}s")
         except Exception as exc:  # noqa: BLE001 - OCR stays lazy; requests retry
             logger.warning(f"OCR warm-up skipped: {type(exc).__name__}")
@@ -275,7 +321,8 @@ def ocr_with_paddle(image_bytes: bytes) -> tuple[str, float]:
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         img_array = np.array(img)
 
-        result = ocr_engine.predict(img_array)
+        with _ocr_predict_lock:
+            result = ocr_engine.predict(img_array)
         if not result:
             return "", 0.0
         page = result[0]
@@ -361,7 +408,7 @@ async def extract_from_upload(
     # Thử PaddleOCR trước, fallback sang Gemini Vision
     engine = "paddleocr"
     try:
-        raw_text, confidence = ocr_with_paddle(image_bytes)
+        raw_text, confidence = await run_paddle_ocr(image_bytes)
     except Exception:  # noqa: BLE001
         engine = "gemini-vision"
         raw_text, confidence = await ocr_with_gemini_vision(
@@ -476,7 +523,7 @@ async def extract_from_url(body: OCRUrlRequest):
 
     engine = "paddleocr"
     try:
-        raw_text, confidence = ocr_with_paddle(image_bytes)
+        raw_text, confidence = await run_paddle_ocr(image_bytes)
     except Exception:  # noqa: BLE001
         engine = "gemini-vision"
         raw_text, confidence = await ocr_with_gemini_vision(image_bytes, content_type)
