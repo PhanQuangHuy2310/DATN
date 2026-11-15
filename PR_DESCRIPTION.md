@@ -1,6 +1,6 @@
-# Duy trì đăng nhập (refresh token), AI hiểu câu ngắn và tự chuyển biểu mẫu, sửa ô số tiền, đặt lại mật khẩu, sửa AI học quy định
+# Duy trì đăng nhập (refresh token), AI hiểu câu ngắn và tự chuyển biểu mẫu, sửa ô số tiền, đặt lại mật khẩu, sửa AI học quy định, dọn dự án
 
-Nhánh `dat` → `main`. 10 commit (kể cả commit mô tả này), nằm sau merge PR #10. Đã thử gộp với `main`: không xung đột.
+Nhánh `dat` → `main`. 17 commit (kể cả các commit tài liệu), nằm sau merge PR #10. Đã thử gộp với `main`: không xung đột.
 **Không có migration database.** Refresh token lưu trong Redis.
 
 ## Tóm tắt
@@ -13,6 +13,7 @@ Nhánh `dat` → `main`. 10 commit (kể cả commit mô tả này), nằm sau m
 | Ô số tiền | Sửa lỗi đảo chữ số | Gõ 1500000000 ra đúng 1.500.000.000. Con trỏ không nhảy khi sửa giữa số. |
 | Đặt lại mật khẩu | Admin xử lý tại trang Người dùng | Admin chọn hệ thống tự sinh mật khẩu tạm hoặc tự nhập, hoặc từ chối kèm lý do. Nhân viên nhận email. |
 | AI học quy định | Worker gọi được dịch vụ AI | Hết lỗi "AI chưa học được quy định … giữ bộ luật cũ". Giao diện báo đúng lượt học thất bại. |
+| Dọn dự án | Xóa mobile, mã chết, file trùng; gộp tài liệu | Repo gọn hơn (629 → 549 file). Không đổi hành vi ứng dụng. |
 
 ## Chi tiết
 
@@ -59,9 +60,22 @@ Khi ô đang hiện "1.000" và người dùng gõ thêm "0", chuỗi "1.0000" b
   - Không có mật khẩu mặc định cố định.
 - `ab9be66`: trang Quản trị AI báo đúng lượt học thất bại và giải thích công cụ mô phỏng; sửa vỡ bố cục bảng mẫu yêu cầu và thông báo đổi mật khẩu.
 
+### 6. Dọn dự án (`60a27d4`, `c486fd4`, `72a9213`, `d83b908`, `f49c399`)
+Repo giảm từ 629 xuống 549 file, thư mục gốc từ 45 xuống 30 file. Không đổi hành vi ứng dụng.
+- Xóa `mobile_app/` (Flutter), test hợp đồng Flutter và job CI `mobile` vì nhóm không làm mobile nữa.
+- Bỏ `workspace/` khỏi git (42 file báo cáo nháp) và thêm vào `.gitignore`. File vẫn nằm trên máy.
+- Xóa `ClientDashboard.jsx`, `AssignedWorkDashboard.jsx`: không còn được import ở đâu.
+- Thư mục gốc:
+  - Xóa 7 file lỗi thời hoặc trùng: 2 file `.ps1` trùng `.cmd`, `actions.md`, script kiểm danh mục 18 mã cũ, script đối chiếu luận văn, 2 công cụ mật khẩu trùng `set_temporary_admin_password.py`.
+  - Chuyển 7 công cụ chẩn đoán và bảo trì vào `scripts/` (đã chạy thử từ vị trí mới); `test_logger.py` vào `api_core/tests/`; hướng dẫn kiểm thử vào `docs/`.
+- Gộp tài liệu:
+  - 7 file changelog gộp thành `CHANGELOG.md`.
+  - Mỗi `security/plans/X_PLAN.md` gộp vào `security/reports/X_REPORT.md`.
+- Sửa lỗi CI: `api_core/config/settings.py` chưa đạt `ruff format --check`.
+
 ## Kiểm thử
-- Django `manage.py test api_core`: 421 đạt, trong đó 11 test refresh token mới.
-- `tests/run_tests.py`: 188 đạt (41 bỏ qua do venv API không có thư viện AI, như trước).
+- Django `manage.py test api_core`: 426 đạt, trong đó 11 test refresh token mới và 5 test logger chuyển từ thư mục gốc vào.
+- `tests/run_tests.py`: 186 đạt (41 bỏ qua do venv API không có thư viện AI, như trước; bớt 2 test Flutter đã xóa).
 - Web `npm test`: 85 đạt. ESLint không có lỗi mới. `npm run build` đạt.
 - `test_ai_benchmark.py` trên dịch vụ AI thật: **43/43**.
 - Kiểm tra trên trình duyệt (bản sao CSDL tạm, không ghi vào Supabase): 23/23.
@@ -70,7 +84,7 @@ Khi ô đang hiện "1.000" và người dùng gõ thêm "0", chuỗi "1.0000" b
   - "bố mất" tự chuyển biểu mẫu, giữ tiêu đề, giữ con trỏ; nút quay lại hoạt động.
   - Biểu mẫu đã nhập số tiền thì AI chỉ gợi ý.
   - Đăng xuất: email còn, token cũ bị từ chối; bỏ "Ghi nhớ" thì cookie hết khi đóng trình duyệt.
-- Ruff sạch trên các file mới.
+- Các lệnh lint của CI (`ruff check`, `ruff format --check`, `compileall`), `validate_docs`, quét bí mật, `docker compose config`, build `web_client` và `web_admin` đều đạt.
 
 ## Triển khai
 1. Build lại image `api`, `worker`, `web`, `web-admin`: `docker compose --env-file .env up -d --build api worker web web-admin`

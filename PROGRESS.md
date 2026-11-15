@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **16/11 — Dọn dự án** (5 commit, trong PR #11): xóa mobile_app/ (Flutter) và job CI mobile; bỏ workspace/ khỏi git (file vẫn trên máy, đã thêm .gitignore); xóa 2 component dashboard chết; thư mục gốc 45 → 30 file (xóa 7 file lỗi thời/trùng, chuyển 7 công cụ chẩn đoán vào scripts/, test_logger vào api_core/tests, hướng dẫn kiểm thử vào docs/); gộp 7 changelog thành CHANGELOG.md, gộp 17 cặp plan/report bảo mật; xóa 13 file rỗng và cache. Repo 629 → 549 file. Test: Django 426, run_tests 186, web 85, ruff/docs/secret gate sạch.
 - [x] **16/11 — Duy trì đăng nhập + AI câu ngắn + sửa ô tiền** (mô tả trong PR_DESCRIPTION.md):
   - Refresh token xoay vòng trong Redis (cookie `eas_refresh` HttpOnly), ô "Ghi nhớ đăng nhập", email điền sẵn sau đăng xuất. Mật khẩu chỉ lưu ở trình quản lý mật khẩu của trình duyệt.
   - AI phân loại câu rất ngắn: câu ngắn test 96,7%, câu đầy đủ test 93,7%.
