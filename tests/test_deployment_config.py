@@ -285,5 +285,22 @@ class PortalCodeSplitTests(unittest.TestCase):
         self.assertEqual(module.main(), 0)
 
 
+class WorkerComposeTests(unittest.TestCase):
+    """The worker runs AI policy learning and auto-approval jobs."""
+
+    def worker_block(self):
+        compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+        start = compose.index("\n  worker:\n")
+        end = compose.index("\n  redis:\n", start)
+        return compose[start:end]
+
+    def test_worker_reaches_the_ai_container(self):
+        # Without it the worker falls back to its own 127.0.0.1:8001 (ConnectError).
+        self.assertIn("EAS_AI_SERVICE_URL: http://ai-service:8001", self.worker_block())
+
+    def test_worker_sends_the_internal_ai_secret(self):
+        self.assertIn("EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET", self.worker_block())
+
+
 if __name__ == "__main__":
     unittest.main()
