@@ -12,7 +12,7 @@ docs
 database/EAS_Supabase_SQL/validation/node_modules
 **/node_modules
 **/dist
-changelogs
+CHANGELOG.md
 
 # Root-context images (api, worker, web, web-admin) copy only api_core/,
 # manage.py, project_env.py, web_client/ and web_admin/. Everything below is

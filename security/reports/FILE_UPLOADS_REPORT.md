@@ -2,7 +2,7 @@
 
 ## Status: PASS
 
-Trạng thái trước khắc phục: **LOW**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/completed/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [FILE_UPLOADS_PLAN.md](../plans/FILE_UPLOADS_PLAN.md).
+Trạng thái trước khắc phục: **LOW**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/active/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [mục Kế hoạch khắc phục](#kế-hoạch-khắc-phục).
 
 ## Findings
 
@@ -31,3 +31,24 @@ Hạ `image/svg+xml` về octet-stream khi tải (đã làm cùng XSS).
 - [x] Đổi tên UUID phía server
 - [x] Lưu ở bucket riêng
 - [x] Giới hạn kích thước phía server
+
+## Kế hoạch khắc phục
+
+### Changes
+
+- `api_core/workflow/views.py` — như XSS.
+
+### New files
+
+- `api_core/tests/test_attachment_download_headers.py`.
+
+### Verification goals
+
+- [x] Kiểu tệp theo magic bytes
+- [x] Đổi tên UUID phía server
+- [x] Lưu ở bucket riêng
+- [x] Giới hạn kích thước phía server
+
+### Manual verification (for the human)
+
+- Tải lên một tệp `.exe` đổi đuôi thành `.pdf`: phải nhận 422 `FILE_TYPE_NOT_ALLOWED`.

@@ -2,7 +2,7 @@
 
 ## Status: PASS
 
-Trạng thái trước khắc phục: **PASS**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/completed/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [FRONTEND_SECRETS_PLAN.md](../plans/FRONTEND_SECRETS_PLAN.md).
+Trạng thái trước khắc phục: **PASS**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/active/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [mục Kế hoạch khắc phục](#kế-hoạch-khắc-phục).
 
 ## Findings
 
@@ -30,3 +30,26 @@ Khai báo `build.sourcemap: false` tường minh để không vô tình bật l�
 - [x] Chỉ có khóa công khai phía client (thực tế: không có khóa nào)
 - [x] Không biến `VITE_*` nào chứa secret
 - [x] `<bundle>.js.map` trả 404
+
+## Kế hoạch khắc phục
+
+### Changes
+
+- `web_client/vite.config.js`, `web_admin/vite.config.js` — `build: { sourcemap: false }`.
+- `web_client/nginx.conf` — `/assets/` thiếu file trả 404; đuôi `.map` trả 404.
+
+### New files
+
+- Không có.
+
+### Verification goals
+
+- [x] Không có secret trong file frontend
+- [x] Lời gọi nhạy cảm đi qua backend
+- [x] Chỉ có khóa công khai phía client (thực tế: không có khóa nào)
+- [x] Không biến `VITE_*` nào chứa secret
+- [x] `<bundle>.js.map` trả 404
+
+### Manual verification (for the human)
+
+- Mở DevTools → Network trên trang đăng nhập: mọi request đi tới cùng origin.
