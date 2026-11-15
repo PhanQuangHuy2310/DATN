@@ -20,6 +20,7 @@ from django.views.decorators.http import require_GET, require_POST
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
 from api_core.middleware import client_ip
 
+from . import refresh as refresh_tokens
 from .login_throttle import (
     clear_account_failures,
     incr_window,
@@ -31,6 +32,7 @@ from .service import (
     PasswordChangeError,
     change_password,
     find_user,
+    find_user_by_id,
     load_actor_from_session,
     require_actor,
     verify_login_password,
@@ -71,6 +73,9 @@ def _parse_credentials(
         body = parse_json_object(request, max_bytes=8 * 1024)
     except JsonBodyError as exc:
         return api_error(request, str(exc), status=400)
+    # "remember": keep the user signed in for days (refresh token cookie).
+    remember = body.pop("remember", True)
+    request.eas_remember = remember is not False
     valid_keys = {"email", "password", "portal"}
     if not (
         {"email", "password"}.issubset(set(body)) and set(body).issubset(valid_keys)
@@ -257,17 +262,99 @@ def login(request: HttpRequest) -> JsonResponse:
     _establish_user_session(request, user)
 
     payload = {
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "display_name": user.display_name,
-            "must_change_password": user.must_change_password,
-        },
+        "user": _login_user_payload(user),
         "correlation_id": correlation_id(request),
     }
     if m_payload:
         payload["maintenance"] = m_payload
-    return JsonResponse(payload)
+    response = JsonResponse(payload)
+    refresh_tokens.issue(
+        response,
+        user_id=user.id,
+        auth_version=user.auth_version,
+        remember=getattr(request, "eas_remember", True),
+        portal=portal,
+    )
+    return response
+
+
+def _login_user_payload(user) -> dict[str, Any]:
+    return {
+        "id": user.id,
+        "email": user.email,
+        "display_name": user.display_name,
+        "must_change_password": user.must_change_password,
+    }
+
+
+@require_POST
+def refresh(request: HttpRequest) -> JsonResponse:
+    """Exchange the refresh-token cookie for a new session and a rotated token."""
+    ip_key = f"eas:refresh:ip:{client_ip(request)}"
+    if incr_window(cache, ip_key, 60) > getattr(
+        settings, "EAS_REFRESH_MAX_PER_MINUTE", 30
+    ):
+        return api_error(
+            request, "LOGIN_RATE_LIMITED", status=429, headers={"Retry-After": "60"}
+        )
+    try:
+        grant = refresh_tokens.consume(request)
+    except refresh_tokens.RefreshRaced:
+        # Another tab of this browser has just refreshed; its cookies are set.
+        return JsonResponse(
+            {"status": "refreshed_elsewhere", "correlation_id": correlation_id(request)}
+        )
+    except refresh_tokens.RefreshRejected:
+        response = api_error(request, "AUTHENTICATION_REQUIRED", status=401)
+        refresh_tokens.clear_cookie(response)
+        return response
+
+    user = find_user_by_id(grant.user_id)
+    if (
+        user is None
+        or not user.is_active
+        or user.auth_version != grant.auth_version
+        or (grant.portal and not _portal_allowed(_active_roles(user.id), grant.portal))
+    ):
+        # Password changed, account locked or rights revoked since login.
+        refresh_tokens.revoke_family(grant.family)
+        response = api_error(request, "AUTHENTICATION_REQUIRED", status=401)
+        refresh_tokens.clear_cookie(response)
+        return response
+
+    m_err, m_payload = _check_maintenance_login(request, user.id)
+    if m_err:
+        # Keep the token: the user signs back in silently after maintenance.
+        refresh_tokens.issue(
+            m_err,
+            user_id=user.id,
+            auth_version=user.auth_version,
+            remember=grant.remember,
+            portal=grant.portal,
+            family=grant.family,
+            family_expires_at=grant.family_expires_at,
+        )
+        return m_err
+
+    _establish_user_session(request, user)
+    payload = {
+        "status": "refreshed",
+        "user": _login_user_payload(user),
+        "correlation_id": correlation_id(request),
+    }
+    if m_payload:
+        payload["maintenance"] = m_payload
+    response = JsonResponse(payload)
+    refresh_tokens.issue(
+        response,
+        user_id=user.id,
+        auth_version=user.auth_version,
+        remember=grant.remember,
+        portal=grant.portal,
+        family=grant.family,
+        family_expires_at=grant.family_expires_at,
+    )
+    return response
 
 
 def _password_reset_request_key(email: str) -> str:
@@ -786,10 +873,13 @@ def logout(request: HttpRequest) -> JsonResponse:
             "1",
             timeout=settings.SESSION_COOKIE_AGE,
         )
+    refresh_tokens.revoke_from_request(request)
     request.session.flush()
-    return JsonResponse(
+    response = JsonResponse(
         {"status": "logged_out", "correlation_id": correlation_id(request)}
     )
+    refresh_tokens.clear_cookie(response)
+    return response
 
 
 def _is_valid_uuid(val: Any) -> bool:
@@ -1201,6 +1291,12 @@ def password(request: HttpRequest) -> JsonResponse:
         timeout=settings.EAS_SESSION_IDLE_SECONDS,
     )
     request.session.cycle_key()
-    return JsonResponse(
+    response = JsonResponse(
         {"status": "password_changed", "correlation_id": correlation_id(request)}
     )
+    # Tokens issued before the change carry the old auth_version and are now
+    # refused; this browser gets a fresh one so the user is not signed out.
+    refresh_tokens.reissue(
+        request, response, user_id=actor.id, auth_version=new_version
+    )
+    return response

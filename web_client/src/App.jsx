@@ -22,6 +22,7 @@ import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
 import { ApiBaseContext, WORKSPACE_API } from "./apiBase.js";
 import ClientRequestsHub from "./components/ClientRequestsHub.jsx";
 import { formatVnd } from "./formatters.js";
+import { loadRemembered, readBrowserCredential, saveRemembered, storeBrowserCredential } from "./rememberLogin.js";
 import easLogoUrl from "./assets/logo.png";
 
 function AdminDashboard(props) {
@@ -55,11 +56,36 @@ function Login({ onLogin, portal = "client", aiStatus }) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [greeting, setGreeting] = useState(getRealtimeGreeting);
+  const [remembered] = useState(() => loadRemembered(portal));
+  const [remember, setRemember] = useState(remembered.remember);
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
 
   useEffect(() => {
     const timer = setInterval(() => setGreeting(getRealtimeGreeting()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // After a logout the form comes back filled: email from this portal's last
+  // login, password from the browser's password manager (never localStorage).
+  useEffect(() => {
+    let alive = true;
+    if (remembered.email && emailRef.current && !emailRef.current.value) {
+      emailRef.current.value = remembered.email;
+    }
+    if (remembered.remember) {
+      readBrowserCredential().then((saved) => {
+        if (!alive || !saved || !emailRef.current || !passwordRef.current) return;
+        const typed = emailRef.current.value;
+        if (typed && typed.toLowerCase() !== String(saved.email).toLowerCase()) return;
+        emailRef.current.value = saved.email;
+        if (!passwordRef.current.value) passwordRef.current.value = saved.password;
+      });
+    }
+    return () => {
+      alive = false;
+    };
+  }, [remembered]);
 
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState("");
@@ -119,8 +145,12 @@ function Login({ onLogin, portal = "client", aiStatus }) {
       const result = await api("/api/v1/auth/login", {
         method: "POST",
         headers: { "X-EAS-Portal": portal },
-        body: JSON.stringify({ ...values, email, portal }),
+        body: JSON.stringify({ email, password: values.password, portal, remember }),
       });
+      saveRemembered(portal, { remember, email });
+      if (remember) {
+        void storeBrowserCredential({ email, password: String(values.password || ""), name: result.user?.display_name });
+      }
       await onLogin(result.user);
     } catch (err) {
       if (err?.serverMessage) {
@@ -200,11 +230,12 @@ function Login({ onLogin, portal = "client", aiStatus }) {
                     </svg>
                   </span>
                   <input
+                    ref={emailRef}
                     id="login-email"
                     name="email"
                     type="email"
                     placeholder="Email nhân viên"
-                    autoComplete="email"
+                    autoComplete="username"
                     required
                     className="auth-pill-input"
                   />
@@ -223,6 +254,7 @@ function Login({ onLogin, portal = "client", aiStatus }) {
                     </svg>
                   </span>
                   <input
+                    ref={passwordRef}
                     id="login-password"
                     name="password"
                     type={showPassword ? "text" : "password"}
@@ -261,6 +293,16 @@ function Login({ onLogin, portal = "client", aiStatus }) {
                   <small>Bạn sẽ đăng nhập lại được ngay khi quá trình cập nhật tự động hoàn tất.</small>
                 </div>
               )}
+              <label className="auth-remember">
+                <input
+                  type="checkbox"
+                  name="remember"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                />
+                <span>Ghi nhớ đăng nhập</span>
+                <small>Giữ đăng nhập 7 ngày và lưu tài khoản trên trình duyệt này</small>
+              </label>
               <button
                 type="submit"
                 disabled={busy || (portal === "client" && aiStatus?.client_maintenance_lock)}

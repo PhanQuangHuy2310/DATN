@@ -195,6 +195,23 @@ def find_user(email: str) -> AuthUser | None:
     return AuthUser(*row) if row else None
 
 
+def find_user_by_id(user_id: str) -> AuthUser | None:
+    """Same row as find_user, looked up by id (refresh-token sign-in)."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id::text, email, display_name, department_id::text,
+                   password_hash, auth_version, is_active, must_change_password
+            FROM eas.app_user
+            WHERE id = %s
+              AND NOT COALESCE((to_jsonb(app_user) ->> 'is_system_account')::boolean, false)
+            """,
+            [user_id],
+        )
+        row = cursor.fetchone()
+    return AuthUser(*row) if row else None
+
+
 def load_actor_from_session(request: HttpRequest) -> Actor | None:
     user_id = request.session.get("user_id")
     auth_version = request.session.get("auth_version")

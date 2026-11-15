@@ -47,10 +47,40 @@ function mutationMessage(path) {
 
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const ME_PATH = "/api/v1/auth/me";
+let refreshing = null;
+
+/** Exchange the HttpOnly refresh-token cookie for a new session (one call at a
+ * time; concurrent 401s wait for the same refresh). Resolves true on success. */
+export function refreshSession() {
+  if (!refreshing) {
+    refreshing = (async () => {
+      try {
+        if (!cookie("csrftoken")) {
+          await fetch(`${API_BASE}/api/v1/auth/csrf`, { credentials: "include" });
+        }
+        const token = cookie("csrftoken");
+        const headers = new Headers({ "Content-Type": "application/json" });
+        if (token) headers.set("X-CSRFToken", decodeURIComponent(token));
+        const response = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
+          method: "POST", headers, credentials: "include", body: "{}",
+        });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      // Let callers that started together share the answer, then allow a new one.
+      setTimeout(() => { refreshing = null; }, 0);
+    });
+  }
+  return refreshing;
+}
+
 /** `silent`: a read-only POST (preview) or a call whose caller refreshes its own
  * view; skip the generic toast and global cache invalidation.
  * `timeoutMs`: override the default wait for long server-side work. */
-export async function api(path, { silent = false, timeoutMs, ...options } = {}) {
+export async function api(path, { silent = false, timeoutMs, retriedAuth = false, ...options } = {}) {
   const method = (options.method || "GET").toUpperCase();
   const isRead = method === "GET" || method === "HEAD";
   const headers = new Headers(options.headers || {});
@@ -90,6 +120,12 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
         error.serverMessage = body?.error?.message || body?.message || "";
         error.correlationId = body?.correlation_id || response.headers.get("X-Correlation-ID") || "";
         if (response.status === 401 && !isAuthPath(path)) {
+          // The short session expired: renew it with the refresh token and
+          // replay once. A 401 is returned before any handler runs, so even a
+          // write is safe to send again.
+          if (!retriedAuth && await refreshSession()) {
+            return api(path, { silent, timeoutMs, retriedAuth: true, ...options });
+          }
           window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
         }
         if (isRead && [502, 503, 504].includes(response.status) && attempt < attempts - 1) {
@@ -98,6 +134,9 @@ export async function api(path, { silent = false, timeoutMs, ...options } = {}) 
           continue;
         }
         throw error;
+      }
+      if (path === ME_PATH && body?.authenticated === false && !retriedAuth && await refreshSession()) {
+        return api(path, { silent, timeoutMs, retriedAuth: true, ...options });
       }
       if (body === null) {
         const error = new Error("INVALID_RESPONSE");
