@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, idempotencyKey, notify } from "../api.js";
 import {
   fields,
@@ -12,9 +12,11 @@ import {
   enumLabels,
 } from "../domain.js";
 import {
+  caretAfterDigits,
   formatThousandDots,
   isCurrencyField,
   parseDigits,
+  typedDigits,
   vndToVietnameseWords,
 } from "../formatters.js";
 import { Badge, command } from "./ui.jsx";
@@ -54,20 +56,40 @@ export function orderFormFields(entries) {
 }
 
 function CurrencyInput({ name, initialValue, isRequired, min, max }) {
-  const [digits, setDigits] = useState(() => parseDigits(initialValue));
+  const [digits, setDigits] = useState(() => typedDigits(parseDigits(initialValue)));
+  const inputRef = useRef(null);
+  // Digits left of the caret after the last edit; the caret is put back after
+  // the same digit once the dots are re-inserted, wherever the user typed.
+  const caretDigits = useRef(null);
+  const [edit, setEdit] = useState(0);
   const words = vndToVietnameseWords(digits);
 
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (caretDigits.current === null || !input || document.activeElement !== input) return;
+    const position = caretAfterDigits(input.value, caretDigits.current);
+    input.setSelectionRange(position, position);
+    caretDigits.current = null;
+  }, [digits, edit]);
+
   function handleChange(e) {
-    const next = parseDigits(e.target.value);
-    if (next.length <= 15) {
-      setDigits(next);
-    }
+    const { value, selectionStart } = e.target;
+    // Never re-parse the dotted display as a decimal number.
+    const next = typedDigits(value);
+    if (next.length > 15) return;
+    const allDigits = value.replace(/\D+/g, "");
+    const leadingZeros = allDigits.length - next.length;
+    const digitsBefore = value.slice(0, selectionStart ?? value.length).replace(/\D+/g, "").length;
+    caretDigits.current = digitsBefore - Math.min(leadingZeros, digitsBefore);
+    setDigits(next);
+    setEdit((n) => n + 1);
   }
 
   return (
     <div className="ds-currency-field">
       <div className="ds-currency-input-wrap">
         <input
+          ref={inputRef}
           type="text"
           inputMode="numeric"
           autoComplete="off"

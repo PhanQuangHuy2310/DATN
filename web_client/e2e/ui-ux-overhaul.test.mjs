@@ -8,6 +8,8 @@ import {
   isCurrencyField,
   isUuid,
   parseDigits,
+  typedDigits,
+  caretAfterDigits,
   vndToVietnameseWords,
 } from "../src/formatters.js";
 import { errorText, resolveFieldLabel, types } from "../src/domain.js";
@@ -26,6 +28,31 @@ test("currency formatters render thousand dots, VND suffix, and Vietnamese finan
   assert.ok(isCurrencyField("total_amount"));
   assert.ok(isCurrencyField("amount_vnd"));
   assert.equal(isCurrencyField("days_count"), false);
+});
+
+test("typing 1500000000 digit by digit into the money box keeps every digit in order", () => {
+  // Bug: "1.000" + a typed "0" became "1.0000", which was read as the decimal 1.0.
+  let shown = "";
+  for (const key of "1500000000") {
+    shown = formatThousandDots(typedDigits(shown + key));
+  }
+  assert.equal(shown, "1.500.000.000");
+  assert.equal(parseDigits("1.0000"), "10000");
+  assert.equal(parseDigits("1.000"), "1000");
+  assert.equal(parseDigits("50000000.0"), "50000000");
+  assert.equal(parseDigits("50000000.00"), "50000000");
+  assert.equal(typedDigits("007"), "7");
+  assert.equal(typedDigits("0"), "0");
+});
+
+test("the caret stays after the same digit when dots are re-inserted", () => {
+  // "1.500|" + "0" -> "15.000|": caret after 5 digits stays at the end.
+  assert.equal(caretAfterDigits("15.000", 5), 6);
+  // Inserting "2" after the first digit of "1.500" -> "12.500", caret after "12".
+  assert.equal(caretAfterDigits("12.500", 2), 2);
+  // Deleting the first digit of "15.000" -> "5.000", caret at the start.
+  assert.equal(caretAfterDigits("5.000", 0), 0);
+  assert.equal(caretAfterDigits("1.234.567", 4), 5);
 });
 
 test("UUID and ISO date helpers detect technical tokens accurately", () => {

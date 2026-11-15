@@ -42,11 +42,32 @@ export function parseDigits(raw) {
   if (raw === null || raw === undefined) return "";
   const str = String(raw).trim();
   if (!str) return "";
-  // Handle numeric float strings like "50000000.0" safely
-  if (/^\d+(\.0+)?$/.test(str)) {
+  // Vietnamese thousand groups ("1.000", "15.000.000") are digits, not decimals.
+  if (/^\d{1,3}(\.\d{3})+$/.test(str)) return str.replace(/\./g, "");
+  // A numeric value serialised by the API ("50000000.0", "50000000.00").
+  // "1.0000" is NOT one of these: it is "1.000" plus a typed zero.
+  if (/^\d+\.0{1,2}$/.test(str)) {
     return str.split(".")[0];
   }
   return str.replace(/\D+/g, "");
+}
+
+/** Keep only the digits a user typed into a formatted money box, without leading zeros. */
+export function typedDigits(raw) {
+  return String(raw ?? "").replace(/\D+/g, "").replace(/^0+(?=\d)/, "");
+}
+
+/** Caret index in `formatted` that sits right after its `count`-th digit. */
+export function caretAfterDigits(formatted, count) {
+  if (count <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < formatted.length; i += 1) {
+    if (/\d/.test(formatted[i])) {
+      seen += 1;
+      if (seen === count) return i + 1;
+    }
+  }
+  return formatted.length;
 }
 
 export function formatThousandDots(raw) {
