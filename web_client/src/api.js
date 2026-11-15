@@ -65,7 +65,12 @@ export function refreshSession() {
         const response = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
           method: "POST", headers, credentials: "include", body: "{}",
         });
-        return response.ok;
+        if (!response.ok) return false;
+        const body = await response.json().catch(() => null);
+        // Another tab refreshed with the same token a moment earlier: give its
+        // response time to store the new cookies before this tab retries.
+        if (body?.status === "refreshed_elsewhere") await pause(800);
+        return true;
       } catch {
         return false;
       }
