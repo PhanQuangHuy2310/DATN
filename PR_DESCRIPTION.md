@@ -1,6 +1,6 @@
 # Duy trì đăng nhập (refresh token), AI hiểu câu ngắn và tự chuyển biểu mẫu, sửa ô số tiền, đặt lại mật khẩu, sửa AI học quy định
 
-Nhánh `dat` → `main`. 8 commit (kể cả commit mô tả này), nằm sau merge PR #10.
+Nhánh `dat` → `main`. 10 commit (kể cả commit mô tả này), nằm sau merge PR #10. Đã thử gộp với `main`: không xung đột.
 **Không có migration database.** Refresh token lưu trong Redis.
 
 ## Tóm tắt
@@ -16,11 +16,11 @@ Nhánh `dat` → `main`. 8 commit (kể cả commit mô tả này), nằm sau me
 
 ## Chi tiết
 
-### 1. Refresh token (`b4f91c2`)
+### 1. Refresh token (`b4f91c2`, `f511b51`)
 - Khi đăng nhập, ngoài phiên cũ (30 phút không thao tác, tối đa 8 giờ), hệ thống đặt thêm cookie `eas_refresh`. Cookie này HttpOnly, SameSite=Lax, Secure ở production và chỉ được gửi tới `/api/v1/auth/`. Token lưu trong Redis dưới dạng băm SHA-256.
 - `POST /api/v1/auth/refresh` cấp phiên mới và đổi sang token mới; token cũ dùng một lần.
   - Nếu token cũ bị gửi lại sau 30 giây, cả chuỗi token bị thu hồi (dấu hiệu bị đánh cắp).
-  - Hai tab làm mới cùng lúc không bị đăng xuất.
+  - Hai tab làm mới cùng lúc không bị đăng xuất: tab đến sau chờ 0,8 giây để cookie mới của tab kia được lưu rồi mới gửi lại.
 - Token bị từ chối khi tài khoản bị khóa, khi đổi mật khẩu, khi admin reset mật khẩu hoặc thu hồi quyền (`auth_version` tăng), hoặc khi không còn quyền vào cổng đó. Giới hạn 30 lần/phút/IP.
 - Người dùng tự đổi mật khẩu thì trình duyệt đang dùng nhận token mới. Đăng xuất thu hồi token.
 - Web: gặp 401 thì tự làm mới phiên rồi gửi lại yêu cầu một lần. Yêu cầu bị chặn trước handler nên gửi lại cả lệnh ghi cũng an toàn.
