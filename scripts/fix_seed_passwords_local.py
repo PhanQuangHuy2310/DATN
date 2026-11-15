@@ -3,7 +3,7 @@ r"""Replace seed placeholder password hashes in eas.app_user (local/dev only).
 The password is read from EAS_SEED_PASSWORD (never stored in the repo), hashed
 with Argon2, and every updated account must change it at first sign-in.
 
-Usage: set EAS_SEED_PASSWORD in .env, then python fix_seed_passwords_local.py
+Usage: set EAS_SEED_PASSWORD in .env, then python scripts/fix_seed_passwords_local.py
 """
 
 from __future__ import annotations
@@ -11,6 +11,11 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+
+# Lives in scripts/: .env, manage.py and connect_database.py are in the repo root.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from connect_database import database_url, load_environment
 
@@ -36,7 +41,7 @@ def seed_password_hash() -> str:
 
 
 def main():
-    load_environment(Path(__file__).with_name(".env"))
+    load_environment(ROOT / ".env")
     os.environ["DATABASE_URL"] = database_url()
     target_hash = seed_password_hash()
 
@@ -46,7 +51,7 @@ def main():
         print("psycopg is required. Install: pip install psycopg")
         return 2
 
-    with psycopg.connect(
+    with psycopg.connect(  # noqa: SIM117
         os.environ["DATABASE_URL"], connect_timeout=10, prepare_threshold=None
     ) as conn:
         with conn.cursor() as cur:

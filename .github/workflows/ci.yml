@@ -32,15 +32,14 @@ jobs:
           cache: pip
           cache-dependency-path: api_core/requirements.txt
       - run: python -m pip install --requirement api_core/requirements-dev.txt  # NOSONAR
-      - run: ruff check api_core manage.py test_logger.py scripts tests
+      - run: ruff check api_core manage.py scripts tests
       - run: ruff check ai_service/*.py ai_service/routers/*.py
-      - run: ruff format --check api_core manage.py test_logger.py scripts
+      - run: ruff format --check api_core manage.py scripts
       - run: python -m pip_audit --requirement api_core/requirements.txt
       - run: coverage run --source=api_core manage.py test -v 2
       - run: coverage xml
-      - run: python -m unittest -v test_logger.py
       - run: python tests/run_tests.py
-      - run: python -m compileall -q api_core ai_service manage.py test_logger.py scripts tests
+      - run: python -m compileall -q api_core ai_service manage.py scripts tests
 
   database:
     runs-on: ubuntu-latest

@@ -1,18 +1,24 @@
 """Safe diagnostic for DATN/connect_database.py. Does not print database passwords or URLs.
 
 Place beside connect_database.py and .env, then run:
-    .\\.venv\\Scripts\\python.exe diagnose_supabase.py
+    .\\.venv\\Scripts\\python.exe scripts\\diagnose_supabase.py
 """
 
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
 
+# Lives in scripts/: .env, manage.py and connect_database.py are in the repo root.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 
 def main() -> int:
-    root = Path(__file__).resolve().parent
+    root = ROOT
     if not (root / "connect_database.py").is_file():
         print(
             "ERROR: Dat file diagnose_supabase.py cung thu muc voi connect_database.py"
@@ -70,7 +76,7 @@ def main() -> int:
         print("ERROR: Chua cai psycopg")
         return 2
     try:
-        with psycopg.connect(uri, connect_timeout=10, prepare_threshold=None) as conn:
+        with psycopg.connect(uri, connect_timeout=10, prepare_threshold=None) as conn:  # noqa: SIM117
             with conn.cursor() as cur:
                 cur.execute("SELECT current_user")
                 user = cur.fetchone()[0]

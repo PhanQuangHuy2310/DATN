@@ -22,6 +22,12 @@ if sys.platform == "win32":
             sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
+# Lives in scripts/: .env, manage.py and connect_database.py are in the repo root.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+
 def mask_url(url: str) -> str:
     """Mask password and user in database URL."""
     try:
@@ -35,7 +41,7 @@ def mask_url(url: str) -> str:
 
 
 def run_diagnostics() -> int:
-    root = Path(__file__).resolve().parent
+    root = ROOT
     env_file = root / ".env"
 
     print("=== CHẨN ĐOÁN LỖI EAS-002 & EAS-003 (READ ONLY) ===")
@@ -45,9 +51,7 @@ def run_diagnostics() -> int:
         and not os.getenv("DATABASE_URL")
         and not os.getenv("EAS_API_DATABASE_URL")
     ):
-        print(
-            "[SKIP] Không tìm thấy file .env hoặc biến môi trường DATABASE_URL."
-        )
+        print("[SKIP] Không tìm thấy file .env hoặc biến môi trường DATABASE_URL.")
         print("       Vui lòng cấu hình .env trước khi chạy chẩn đoán SQL.")
         return 0
 
@@ -143,7 +147,11 @@ def run_diagnostics() -> int:
             try:
                 # Dynamic WHERE clauses matching fixed api_core/workflow/views.py
                 for test_tab in ["mine", "approval", "execution", "acceptance", "all"]:
-                    valid_tab = test_tab if test_tab in ("mine", "approval", "execution", "acceptance") else None
+                    valid_tab = (
+                        test_tab
+                        if test_tab in ("mine", "approval", "execution", "acceptance")
+                        else None
+                    )
                     tab_params = [
                         None,  # status_filter
                         None,

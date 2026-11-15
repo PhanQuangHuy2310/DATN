@@ -121,7 +121,7 @@ def collect_snapshot(include_sql: bool = False) -> int:
     # 2. Run SQL diagnostics if requested
     if include_sql:
         print("[-] Đang thực thi chẩn đoán SQL READ ONLY...")
-        diag_script = ROOT_DIR / "diagnose_eas_500.py"
+        diag_script = ROOT_DIR / "scripts" / "diagnose_eas_500.py"
         if diag_script.is_file():
             try:
                 res = subprocess.run(

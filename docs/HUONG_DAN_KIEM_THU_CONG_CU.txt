@@ -34,8 +34,8 @@ MỤC LỤC NHANH
      * Web Client (dev) : start_frontend_local.cmd      (chạy tại 127.0.0.1:5173)
      * Web Admin (dev)  : start_admin_local.cmd         (chạy tại 127.0.0.1:8081)
      Lưu ý: File start_backend_local.cmd mặc định tìm ".venv\Scripts\python.exe".
-     Nếu chưa tạo .venv, chạy ".\start_backend.ps1 -Install" một lần hoặc chạy
-     trực tiếp bằng Python global (3.12): "python manage.py runserver 127.0.0.1:8000".
+     Nếu chưa tạo .venv, chạy một lần: "py -3.12 -m venv .venv" rồi
+     ".venv\Scripts\python.exe -m pip install -r api_core\requirements.txt".
 
 3) Tài khoản kiểm thử trên môi trường dev/seed (lấy mật khẩu dev trong bộ seed của bạn):
    - Nhân viên (Client Portal) : hung.nguyen@eas.com

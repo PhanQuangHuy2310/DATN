@@ -142,8 +142,12 @@ SESSION_SAVE_EVERY_REQUEST = True
 # new password. "Ghi nhớ đăng nhập" keeps it for 7 days, otherwise until the
 # browser closes (and at most 12 hours).
 EAS_REFRESH_COOKIE_NAME = "eas_refresh"
-EAS_REFRESH_REMEMBER_SECONDS = int(os.getenv("EAS_REFRESH_REMEMBER_SECONDS", str(7 * 24 * 3600)))
-EAS_REFRESH_SESSION_SECONDS = int(os.getenv("EAS_REFRESH_SESSION_SECONDS", str(12 * 3600)))
+EAS_REFRESH_REMEMBER_SECONDS = int(
+    os.getenv("EAS_REFRESH_REMEMBER_SECONDS", str(7 * 24 * 3600))
+)
+EAS_REFRESH_SESSION_SECONDS = int(
+    os.getenv("EAS_REFRESH_SESSION_SECONDS", str(12 * 3600))
+)
 EAS_REFRESH_MAX_PER_MINUTE = int(os.getenv("EAS_REFRESH_MAX_PER_MINUTE", "30"))
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"

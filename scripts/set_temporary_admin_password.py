@@ -1,8 +1,8 @@
 r"""Create a one-time temporary password using EAS's existing audited reset.
 
-Run in the EAS project root (same directory as manage.py):
+Run from the EAS project root (the script lives in scripts/):
 
-  .\.venv\Scripts\python.exe set_temporary_admin_password.py --email admin@eas.com \
+  .\.venv\Scripts\python.exe scripts\set_temporary_admin_password.py --email admin@eas.com \
       --operator admin --approval LOCAL-RECOVERY-20261027
 
 Requirements:
@@ -11,6 +11,7 @@ Requirements:
 - Relies on the project's api_core management command `account_reset`.
 - The plaintext temporary password is printed ONCE after a confirmed DB commit.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -19,6 +20,11 @@ import secrets
 import string
 import sys
 from pathlib import Path
+
+# Lives in scripts/: .env, manage.py and connect_database.py are in the repo root.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 def generate_password(length: int = 24) -> str:
@@ -45,27 +51,42 @@ def _obtain_valid_password(email: str) -> str:
         try:
             validate_new_password(candidate, email)
             return candidate
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S112
             continue
     return ""
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Generate an EAS temporary password, reset account with audit, force password change"
     )
-    parser.add_argument("--email", "--user", dest="email", default="admin@eas.com", help="Account email to reset")
-    parser.add_argument("--operator", required=True, help="Authorized operator email or UUID, for audit")
-    parser.add_argument("--approval", required=True, help="Authorized recovery ticket/reference")
+    parser.add_argument(
+        "--email",
+        "--user",
+        dest="email",
+        default="admin@eas.com",
+        help="Account email to reset",
+    )
+    parser.add_argument(
+        "--operator", required=True, help="Authorized operator email or UUID, for audit"
+    )
+    parser.add_argument(
+        "--approval", required=True, help="Authorized recovery ticket/reference"
+    )
     args = parser.parse_args()
     email = args.email.strip().lower()
     operator = args.operator.strip()
     approval = args.approval.strip()
     if not email or not operator or len(approval) < 10:
-        parser.error("--email/--operator cannot be blank; --approval needs at least 10 characters")
+        parser.error(
+            "--email/--operator cannot be blank; --approval needs at least 10 characters"
+        )
 
-    root = Path(__file__).resolve().parent
+    root = ROOT
     if not (root / "manage.py").exists():
-        parser.error("Copy this script into the DATN project root beside manage.py")
+        parser.error(
+            "Keep this script in scripts/ of the DATN repository (manage.py not found)"
+        )
 
     try:
         from connect_database import database_url, load_environment
@@ -77,14 +98,19 @@ def main() -> int:
 
         django.setup()
         from django.core.management import call_command
-        from api_core.authn.service import validate_new_password
         from django.db import connection
-    except Exception as exc:
-        print(f"[ERROR] Khong tai duoc cau hinh EAS: {type(exc).__name__}", file=sys.stderr)
+
+    except Exception as exc:  # noqa: BLE001
+        print(
+            f"[ERROR] Khong tai duoc cau hinh EAS: {type(exc).__name__}",
+            file=sys.stderr,
+        )
         return 2
 
     print(f"Tai khoan dich: {email}")
-    print("Canh bao: Lenh thay doi mat khau tren DATABASE dang ket noi, vo hieu hoa phien cu.")
+    print(
+        "Canh bao: Lenh thay doi mat khau tren DATABASE dang ket noi, vo hieu hoa phien cu."
+    )
     print("Chi thuc hien neu ban co quyen quan tri database nay.")
     if input("Nhap RESET de xac nhan: ").strip() != "RESET":
         print("Da huy, khong thay doi gi.")
@@ -110,7 +136,7 @@ def main() -> int:
             if exc.code not in (0, None):
                 print("[ERROR] Reset khong thanh cong.", file=sys.stderr)
                 raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         # Do not print exception content; it may contain database connectivity details.
         print(f"[ERROR] Reset that bai: {type(exc).__name__}", file=sys.stderr)
         return 3
@@ -126,11 +152,17 @@ def main() -> int:
             )
             state = cursor.fetchone()
         if not state or not state[0]:
-            print("[WARNING] Khong xac minh duoc co bat buoc doi mat khau; kiem tra database.")
+            print(
+                "[WARNING] Khong xac minh duoc co bat buoc doi mat khau; kiem tra database."
+            )
         if state and not state[1]:
-            print("[WARNING] Tai khoan van dang bi khoa. Can kich hoat qua quy trinh quan tri.")
-    except Exception:
-        print("[WARNING] Khong doc duoc trang thai sau reset. Kiem tra lai truoc khi dang nhap.")
+            print(
+                "[WARNING] Tai khoan van dang bi khoa. Can kich hoat qua quy trinh quan tri."
+            )
+    except Exception:  # noqa: BLE001
+        print(
+            "[WARNING] Khong doc duoc trang thai sau reset. Kiem tra lai truoc khi dang nhap."
+        )
 
     print("\n=== MAT KHAU TAM THOI (CHI HIEN THI MOT LAN) ===")
     print(password)

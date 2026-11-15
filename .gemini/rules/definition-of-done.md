@@ -18,13 +18,13 @@ Trước mỗi lệnh `git push`, bạn PHẢI chạy thực tế trong terminal
 2. **Docs & RTM Gate**: `python scripts/validate_docs.py` -> Phải in ra `DOCS_GATE=PASS`.
 3. **Environment Templates Gate**: Chạy `python scripts/validate_env.py` với `--allow-placeholders` cho cả 5 file `.env.example` (`compose`, `api`, `worker`, `web_client`, `web_admin`).
 4. **Linter, Formatter & Complexity Gate (SonarQube Pre-check)**:
-   - `ruff check api_core ai_service manage.py test_logger.py scripts tests` (0 errors)
-   - `ruff format --check api_core manage.py test_logger.py scripts` (100% formatted)
-   - `python -m compileall -q api_core ai_service manage.py test_logger.py scripts tests`
+   - `ruff check api_core ai_service manage.py scripts tests` (0 errors)
+   - `ruff format --check api_core manage.py scripts` (100% formatted)
+   - `python -m compileall -q api_core ai_service manage.py scripts tests`
    - Mọi hàm mới hoặc sửa đổi trong `api_core/` và `ai_service/routers/` phải có Cognitive Complexity <= 15, không lặp lại string literals >= 4 lần (Sonar Rule `S1192`), không có biến/import thừa (`S1481`), không có khối `except` rỗng.
 5. **Backend & AI Automated Tests Gate**:
    - `EAS_ENV=test python manage.py test -v 2` -> 100% PASS.
-   - `python -m unittest -v test_logger.py` -> 100% PASS.
+   - `python manage.py test api_core.tests.test_logger` -> 100% PASS.
    - `python tests/run_tests.py` -> 100% PASS (0 failed).
 6. **Database Validation Gate**:
    - `cd database/EAS_Supabase_SQL/validation && npm test` -> `"result": "PASS"`.
