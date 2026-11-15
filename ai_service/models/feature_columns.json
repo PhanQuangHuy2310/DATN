@@ -1,5 +1,6 @@
 [
   "request_type_enc",
+  "risk_weight",
   "department_enc",
   "user_role_enc",
   "priority_level_enc",

@@ -1,6 +1,7 @@
 {
   "feature_cols": [
     "request_type_enc",
+    "risk_weight",
     "department_enc",
     "user_role_enc",
     "priority_level_enc",
@@ -21,15 +22,17 @@
     "is_template_matched"
   ],
   "label_remap": {
-    "2": 0,
-    "3": 1,
-    "4": 2,
-    "5": 3
+    "1": 0,
+    "2": 1,
+    "3": 2,
+    "4": 3,
+    "5": 4
   },
   "reverse_remap": {
-    "0": 2,
-    "1": 3,
-    "2": 4,
-    "3": 5
+    "0": 1,
+    "1": 2,
+    "2": 3,
+    "3": 4,
+    "4": 5
   }
 }

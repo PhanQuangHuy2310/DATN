@@ -82,7 +82,8 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
         aria-autocomplete="list"
         value={text}
         autoComplete="off"
-        placeholder="Tìm mã REQ, tiêu đề đơn, người gửi, chức năng…"
+        placeholder="Tìm hồ sơ, chức năng…"
+        title="Tìm theo mã REQ, tiêu đề đơn, người gửi hoặc tên chức năng"
         aria-expanded={open && query.length >= 2}
         aria-controls="ds-global-search-results"
         onChange={(e) => {

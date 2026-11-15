@@ -126,10 +126,8 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
+      # Root .env.example is the only environment template of the project.
       - run: python scripts/validate_env.py --file .env.example --profile compose --allow-placeholders
-      - run: python scripts/validate_env.py --file api_core/.env.example --profile api --allow-placeholders
-      - run: python scripts/validate_env.py --file api_core/.env.worker.example --profile worker --allow-placeholders
-      - run: python scripts/validate_env.py --file web_client/.env.example --profile web --allow-placeholders
       - run: docker compose config --quiet
       - run: docker compose build api web
 

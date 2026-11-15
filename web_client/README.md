@@ -18,7 +18,7 @@ npm ci
 npm run build
 ```
 
-Khi phát triển local, khởi động API trước, sau đó chạy `npm run dev` trong `web_client` và `web_admin`. Cổng nhân viên và quản trị lần lượt dùng port 5173 và 5174.
+Khi phát triển local, khởi động API trước, sau đó chạy `npm run dev` trong `web_client` và `web_admin`. Cổng nhân viên và quản trị lần lượt dùng port 5173 và 8081.
 
 Hai ứng dụng dùng chung [`.env.example`](./.env.example) cho cấu hình Vite công khai; không đặt secret vào biến `VITE_*`. Docker của cả hai cổng cũng dùng chung [`nginx.conf`](./nginx.conf).
 

@@ -14,8 +14,10 @@ from datetime import datetime, timezone
 
 try:
     from config import get_settings
+    from nlp_text import canonical_request_type
 except (ImportError, AttributeError):
     from ai_service.config import get_settings
+    from ai_service.nlp_text import canonical_request_type
 
 from fastapi import APIRouter
 from loguru import logger
@@ -170,13 +172,17 @@ class AutoApproveChecker:
         ]
 
     def evaluate(self, inp: AutoApproveInput) -> tuple[bool, list[str]]:
+        # Keyed by catalog v2 code: the API sends catalog codes (LEAVE,
+        # ROOM_BOOKING...); legacy names (leave_short, room_booking, refund,
+        # late_checkin) are mapped onto them by canonical_request_type.
         handlers = {
-            "leave_short": self.check_leave_short,
-            "room_booking": self.check_room_booking,
-            "late_checkin": self.check_late_checkin,
-            "refund": self.check_refund,
+            "LEAVE": self.check_leave_short,
+            "ROOM_BOOKING": self.check_room_booking,
+            "ATTENDANCE_ADJUSTMENT": self.check_late_checkin,
+            "REFUND_COMPENSATION": self.check_refund,
         }
-        handler = handlers.get(inp.request_type, self.check_generic)
+        code = canonical_request_type(inp.request_type)
+        handler = handlers.get(code, self.check_generic)
         return handler(inp)
 
 

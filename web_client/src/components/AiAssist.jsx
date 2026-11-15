@@ -8,18 +8,37 @@ function riskLevel(score) {
   return "high";
 }
 
-function mapPredictedType(predicted) {
-  const pred = String(predicted || "").toUpperCase();
-  if (pred.includes("LEAVE")) return "LEAVE";
-  if (["ACCESS", "VPN", "PERMISSION"].some((k) => pred.includes(k)))
-    return "ACCESS";
-  if (["EQUIPMENT", "DEVICE"].some((k) => pred.includes(k))) return "EQUIPMENT";
-  return null;
+// Bộ phận xử lý do AI suy ra từ catalog (executor của loại yêu cầu).
+const departmentLabels = {
+  HR: "Nhân sự",
+  FINANCE: "Tài chính - Kế toán",
+  IT: "Công nghệ thông tin",
+  TECH: "Kỹ thuật phát triển",
+  ADMIN: "Hành chính",
+  ASSET: "Quản lý tài sản",
+  PROCUREMENT: "Mua hàng",
+  FACILITY: "Cơ sở vật chất",
+  LEGAL: "Pháp chế",
+  MARKETING: "Marketing",
+  SALES: "Kinh doanh",
+  WAREHOUSE: "Kho vận",
+};
+
+// AI trả về mã catalog; chỉ gợi ý khi model chắc chắn và người dùng được tạo loại đó.
+function suggestedType(result, allowedTypes) {
+  const code = String(result?.predicted_request_type || "").toUpperCase();
+  if (!code || result?.fallback_used || result?.low_confidence) return null;
+  if (Array.isArray(allowedTypes) && !allowedTypes.includes(code)) return null;
+  return code;
+}
+
+function typeName(code, fallback) {
+  return types[code] || fallback || code;
 }
 
 function riskPayload(type, amount, lifecycle, riskWeight) {
   return {
-    request_type: type.toLowerCase(),
+    request_type: type,
     lifecycle_template: lifecycle || "A",
     risk_weight: Number(riskWeight) || 3,
     amount_vnd: amount,
@@ -29,7 +48,7 @@ function riskPayload(type, amount, lifecycle, riskWeight) {
 /**
  * Hỗ trợ nội dung và phân tích rủi ro; không thay quyết định của người duyệt.
  */
-export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSuggestType }) {
+export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSuggestType, allowedTypes }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [classify, setClassify] = useState(null),
@@ -56,7 +75,7 @@ export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSugg
         setClassify(response.data);
         setSteps((prev) => ({ ...prev, classify: response.data?.fallback_used ? "fallback" : "done" }));
         // Only suggest: switching the form discards what the user typed.
-        const mapped = mapPredictedType(response.data?.predicted_request_type);
+        const mapped = suggestedType(response.data, allowedTypes);
         setSuggested(mapped && mapped !== type ? mapped : null);
         return response;
       }).catch((error) => {
@@ -106,10 +125,23 @@ export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSugg
       )}
       {classify && (
         <p>
-          Loại đề xuất: <strong>{types[classify.predicted_request_type] || "Yêu cầu được phân loại"}</strong> (độ
+          Loại đề xuất: <strong>{typeName(classify.predicted_request_type, classify.predicted_request_name || "Yêu cầu được phân loại")}</strong> (độ
           tin cậy{" "}
-          {Math.round((classify.confidence_request_type || 0) * 100)}%) · Phòng
-          ban: <strong>{({HR:"Nhân sự",FINANCE:"Tài chính",IT:"Công nghệ thông tin",OPS:"Vận hành",LEGAL:"Pháp chế",GENERAL:"Bộ phận liên quan"})[classify.predicted_department] || "Bộ phận liên quan"}</strong>
+          {Math.round((classify.confidence_request_type || 0) * 100)}%) · Bộ phận
+          xử lý: <strong>{departmentLabels[classify.predicted_department] || "Bộ phận liên quan"}</strong>
+          {classify.alternatives?.length > 1 && (
+            <>
+              <br />
+              <small className="muted">
+                {classify.low_confidence ? "AI chưa chắc chắn, có thể là: " : "Khả năng khác: "}
+                {classify.alternatives
+                  .filter((item) => item.request_type !== classify.predicted_request_type)
+                  .slice(0, 2)
+                  .map((item) => `${typeName(item.request_type, item.name)} (${Math.round(item.confidence * 100)}%)`)
+                  .join(", ")}
+              </small>
+            </>
+          )}
           {classify.workflow_suggestion && (
             <>
               <br />

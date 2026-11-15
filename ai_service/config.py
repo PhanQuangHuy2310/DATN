@@ -32,10 +32,7 @@ _AI_ENV_PATH = _AI_SERVICE_DIR.parent / ".env"
 
 
 class Settings(BaseSettings):
-    # --- Server ---
-    ai_service_host: str = "0.0.0.0"
-    ai_service_port: int = 8001
-    ai_service_reload: bool = True
+    # Host/port come from the uvicorn command line (Dockerfile, start_ai_local.cmd).
 
     # --- Gemini ---
     gemini_api_key: str = ""
@@ -44,14 +41,7 @@ class Settings(BaseSettings):
     # hit the API's 10 s AI timeout. Override with GEMINI_MODEL.
     gemini_model: str = "gemini-3.5-flash-lite"
 
-    # --- Supabase ---
-    supabase_url: str = ""
-    supabase_anon_key: str = ""
-
-    # --- Model paths ---
-    risk_model_path: str = "models/risk_model.pkl"
-    risk_label_encoder_path: str = "models/label_encoder.pkl"
-    risk_feature_columns_path: str = "models/feature_columns.json"
+    # Model files are fixed names under models/ written by training/train.py.
 
     # --- Security ---
     internal_api_secret: str = ""

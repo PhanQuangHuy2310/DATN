@@ -210,3 +210,41 @@ class RoutingAdjustmentTests(SimpleTestCase):
         # answers ROUTE_SOD_ESCALATION_UNRESOLVED when none exists.
         with self.assertRaisesRegex(RoutingError, "own request"):
             self.resolve(["FINANCE"], manager=None)
+
+
+class AutoApproveLeaveDaysTests(SimpleTestCase):
+    """The AI leave rules (balance, < 3 days) need the requested day span."""
+
+    def _days_sent(self, start, end):
+        context = {
+            "status": "PENDING_APPROVAL",
+            "lock_version": 1,
+            "risk_weight": 1,
+            "type_code": "LEAVE",
+            "lifecycle": "A",
+            "requester_name": "Staff",
+            "department_code": "TECH",
+            "step_id": str(uuid4()),
+            "assignee_id": str(uuid4()),
+            "amount_vnd": None,
+            "ai_allowed": True,
+            "start_date": start,
+            "end_date": end,
+        }
+        with (
+            patch(
+                "api_core.workflow.auto_approval._load_context", return_value=context
+            ),
+            patch(
+                "api_core.integrations.ai_service.ai_client_sync.evaluate_auto_approve",
+                return_value={"decision": "escalate_to_human"},
+            ) as evaluate,
+        ):
+            self.assertIsNone(try_auto_approve(str(uuid4()), "corr"))
+        return evaluate.call_args.kwargs["days_requested"]
+
+    def test_inclusive_day_span_is_sent(self):
+        self.assertEqual(self._days_sent("2026-11-16", "2026-11-18"), 3)
+
+    def test_missing_dates_send_zero(self):
+        self.assertEqual(self._days_sent(None, None), 0)

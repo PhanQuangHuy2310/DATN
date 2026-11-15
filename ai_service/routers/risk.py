@@ -6,7 +6,7 @@ POST /ai/risk/score
   - Output: risk_score (1-5), explanation, auto_approve_eligible
 
 Kiến trúc Model Ensemble:
-  - Master Model (risk_model.pkl):         Mô hình tổng quát 1.000.000 mẫu — fallback
+  - Master Model (risk_model.pkl):         Mô hình tổng quát mọi loại yêu cầu — fallback
   - Finance Model (risk_model_finance.pkl): Chuyên phát hiện gian lận tài chính
   - HR Model (risk_model_hr.pkl):          Chuyên phát hiện bất thường nhân sự
   - IT Model (risk_model_it.pkl):          Chuyên phát hiện rủi ro bảo mật IT
@@ -26,8 +26,10 @@ import numpy as np
 
 try:
     from config import get_settings
+    from nlp_text import advance_tier, canonical_request_type
 except (ImportError, AttributeError):
     from ai_service.config import get_settings
+    from ai_service.nlp_text import advance_tier, canonical_request_type
 
 from fastapi import APIRouter
 from loguru import logger
@@ -36,34 +38,59 @@ from pydantic import BaseModel, Field, model_validator
 settings = get_settings()
 router = APIRouter()
 
+MODELS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models"
+)
+
 # ---------------------------------------------------------------------------
 # Phân nhóm request_type theo domain để định tuyến model
 # ---------------------------------------------------------------------------
+# Mặc định khi registry chưa có "type_domains"; training/train.py ghi bảng đầy đủ
+# (58 mã catalog v2) vào models/domain_model_registry.json.
 FINANCE_TYPES = {
-    "advance_payment",
-    "expense_reimbursement",
-    "budget_approval",
-    "contract_payment",
+    "ADVANCE_SMALL", "ADVANCE_MEDIUM", "ADVANCE_LARGE", "EXPENSE_CLAIM",
+    "REIMBURSEMENT", "VENDOR_PAYMENT", "BUDGET_REALLOCATION", "PURCHASE_REQUEST",
+    "EQUIPMENT", "CONTRACT_APPROVAL",
 }
 HR_TYPES = {
-    "leave_annual",
-    "leave_unpaid",
-    "overtime",
-    "remote_work",
-    "travel",
-    "stationery",
-    "vehicle_booking",
-    "meeting_room",
+    "LEAVE", "LEAVE_SPECIAL", "OVERTIME_REQ", "WFH_REQ", "BUSINESS_TRIP",
+    "ATTENDANCE_ADJUSTMENT", "SALARY_ADJUSTMENT", "RESIGNATION",
 }
-IT_TYPES = {"equipment_new", "equipment_repair", "access_permission", "vpn_access"}
+IT_TYPES = {"ACCESS", "PROD_DATA_ACCESS", "SERVER_FIREWALL", "IT_SUPPORT", "LAPTOP_PROVISION"}
+OTHER_TYPE = "__OTHER__"
+
+_registry: dict | None = None
+
+
+def _domain_registry() -> dict:
+    global _registry
+    if _registry is None:
+        path = os.path.join(MODELS_DIR, "domain_model_registry.json")
+        try:
+            with open(path, encoding="utf-8") as f:
+                _registry = json.load(f)
+        except (OSError, ValueError):
+            _registry = {}
+    return _registry
+
+
+def resolve_request_type(request_type: str, amount_vnd: float = 0.0) -> str:
+    """Catalog code for any accepted spelling; legacy 'advance_payment' uses the amount."""
+    if str(request_type or "").strip().lower() == "advance_payment" and amount_vnd > 0:
+        return advance_tier(amount_vnd)
+    return canonical_request_type(request_type)
 
 
 def resolve_domain(request_type: str) -> str:
-    if request_type in FINANCE_TYPES:
+    code = canonical_request_type(request_type)
+    type_domains = _domain_registry().get("type_domains")
+    if type_domains:
+        return type_domains.get(code, "master")
+    if code in FINANCE_TYPES:
         return "finance"
-    if request_type in HR_TYPES:
+    if code in HR_TYPES:
         return "hr"
-    if request_type in IT_TYPES:
+    if code in IT_TYPES:
         return "it"
     return "master"
 
@@ -73,10 +100,6 @@ def resolve_domain(request_type: str) -> str:
 # ---------------------------------------------------------------------------
 _model_cache: dict[str, Any] = {}
 _model_load_error: str | None = None
-
-MODELS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models"
-)
 
 MODEL_FILES = {
     "finance": ("risk_model_finance.pkl", "feature_cols_finance.json"),
@@ -149,7 +172,8 @@ def _load_model(domain: str):
 
 class RiskInput(BaseModel):
     request_type: str = Field(
-        "expense_reimbursement", description="Loại yêu cầu (16 loại chuẩn)"
+        "EXPENSE_CLAIM",
+        description="Mã loại yêu cầu catalog v2 (VD: LEAVE); vẫn nhận mã cũ như leave_annual",
     )
     lifecycle_template: str = Field("A", description="Template A/B/C")
     risk_weight: int = Field(2, ge=1, le=5, description="Trọng số rủi ro mặc định")
@@ -280,8 +304,10 @@ def rule_based_score(inp: RiskInput) -> tuple[int, dict]:
 def build_feature_vector(
     inp: RiskInput, feature_cols: list, encoders: dict
 ) -> np.ndarray:
-    req_enc = encoders.get("request_type", {}).get(inp.request_type, 0)
-    dept_enc = encoders.get("department", {}).get(inp.department, 0)
+    type_codes = encoders.get("request_type", {})
+    code = resolve_request_type(inp.request_type, inp.amount_vnd)
+    req_enc = type_codes.get(code, type_codes.get(OTHER_TYPE, 0))
+    dept_enc = encoders.get("department", {}).get(str(inp.department).lower(), 0)
     role_enc = encoders.get("user_role", {}).get(inp.user_role, 2)
     prio_enc = encoders.get("priority_level", {}).get(inp.urgency, 2)
 
@@ -290,6 +316,7 @@ def build_feature_vector(
 
     feat_map = {
         "request_type_enc": float(req_enc),
+        "risk_weight": float(inp.risk_weight),
         "department_enc": float(dept_enc),
         "user_role_enc": float(role_enc),
         "priority_level_enc": float(prio_enc),
@@ -330,12 +357,13 @@ def build_feature_vector(
 def score_risk(body: RiskInput):
     """
     Tự động chọn mô hình XGBoost phù hợp theo domain nghiệp vụ của yêu cầu:
-    - **Finance** (advance_payment, contract_payment, ...): mô hình phát hiện gian lận tài chính
-    - **HR** (leave, overtime, travel, ...): mô hình phát hiện bất thường nhân sự
-    - **IT** (equipment, vpn_access, ...): mô hình phát hiện rủi ro bảo mật
-    - **Master** (fallback tổng quát 1.000.000 mẫu)
+    - **Finance** (tạm ứng, thanh toán, mua sắm, bán hàng): rủi ro tài chính
+    - **HR** (nghỉ, làm thêm, nhân sự): bất thường nhân sự
+    - **IT** (quyền truy cập, server, sự cố bảo mật): rủi ro bảo mật
+    - **Master**: các loại còn lại và loại chưa có trong catalog
     """
-    domain = resolve_domain(body.request_type)
+    resolved_type = resolve_request_type(body.request_type, body.amount_vnd)
+    domain = resolve_domain(resolved_type)
     model, feature_cols, encoders, reverse_remap = _load_model(domain)
 
     if model is not None and feature_cols:
@@ -361,6 +389,7 @@ def score_risk(body: RiskInput):
             explanation = {
                 "method": f"xgboost_{domain}_model",
                 "domain_routing": domain,
+                "request_type_resolved": resolved_type,
                 "top_features": top_features,
                 "proba_per_class": [round(float(p), 4) for p in probs],
             }

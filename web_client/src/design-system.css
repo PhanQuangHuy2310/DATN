@@ -4944,3 +4944,63 @@ details.versioning-rules-notice-box .notice-body { padding: 0 16px 14px 31px; }
 [data-theme="dark"] .app-shell .topbar .client-account-link.is-static:hover { background: transparent; }
 [data-theme="dark"] .app-shell .topbar button.client-account-link:hover { background: #1e293b; }
 [data-theme="dark"] .app-shell .topbar button.client-account-link:hover .topbar-display-name { color: #f1f5f9; }
+
+/* ── Zoom / narrow-width fixes (browser zoom 125–150 %, ~900–1100 px) ──────
+   Global table rules force width 100 %, min-width 0 and break-word, so at
+   high zoom the wide admin tables squeezed until words broke letter by letter
+   and badges/buttons spilled over the next column. These two tables keep a
+   readable minimum width and scroll sideways inside their card instead. */
+.um-table-card,
+.rbac-table-card { overflow-x: auto; overscroll-behavior-x: contain; }
+.um-table-card table.user-management-table { min-width: 980px !important; }
+.rbac-table-card table.rbac-matrix-table { min-width: 540px !important; }
+.user-management-table th,
+.user-management-table td,
+.rbac-matrix-table th,
+.rbac-matrix-table td { word-break: normal; overflow-wrap: break-word; }
+.user-management-table thead th,
+.user-management-table tbody td { padding-left: 12px; padding-right: 12px; }
+/* Name + "Đã khóa" badge: the name wraps by word, the badge never squeezes it. */
+.user-management-table .user-profile-cell > div:last-child { min-width: 0; }
+.user-management-table .user-full-name { flex-wrap: wrap; row-gap: 4px; }
+.user-management-table .user-meta-sub { overflow-wrap: anywhere; }
+.user-management-table .badge.badge-role { max-width: 100%; white-space: normal; }
+.user-management-table .dept-tag { max-width: 100%; }
+.user-management-table .status-badge { max-width: 100%; white-space: normal; text-align: left; }
+.user-management-table .action-buttons-wrap { flex-wrap: nowrap; justify-content: flex-end; }
+/* Permission matrix: the "Khóa cứng" badge stays inside the module column. */
+.rbac-matrix-table .module-title-cell > div:last-child { min-width: 0; }
+.rbac-matrix-table .badge-locked { max-width: 100%; white-space: normal; }
+.rbac-matrix-table .th-toggle-header small { text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.rbac-matrix-table thead th:not(:first-child),
+.rbac-matrix-table tbody td:not(:first-child) { padding-left: 6px; padding-right: 6px; }
+
+/* Icon + label buttons in page headers ("Xem Sơ đồ tổ chức"). */
+.page-heading-actions > button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.page-heading-actions > button > svg { flex-shrink: 0; }
+
+/* Sidebar brand: one line; stays clear of the round collapse button. */
+.app-shell .brand { padding-right: 14px; min-width: 0; }
+.app-shell .brand > span { min-width: 0; }
+/* The global `small { 13.5px !important }` readability rule made the
+   tagline wrap to two lines under the collapse button; it is a brand mark. */
+.app-shell .brand small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px !important; letter-spacing: 0.03em; }
+
+/* Top bar: the page title ends with "…" instead of being cut mid-letter, and
+   the search box takes the free space (it used to stay at 180–280 px). */
+.app-shell .topbar-left { flex: 1 1 140px; }
+.app-shell .topbar-title-row .topbar-page-title { overflow: hidden; text-overflow: ellipsis; }
+.app-shell .topbar .ds-global-search { flex: 1 1 240px; min-width: 210px; max-width: 440px; }
+.app-shell .topbar .ds-global-search input { padding-left: 36px; text-overflow: ellipsis; }
+.app-shell .topbar .ds-global-search > span { left: 12px; }
+@media (max-width: 1200px) {
+  .app-shell .topbar .ds-global-search { flex: 1 1 210px; min-width: 200px; }
+  /* Name and role move into the avatar's tooltip area; the avatar stays. */
+  .app-shell .topbar .topbar-user-pill { display: none; }
+}
+@media (max-width: 860px) {
+  .app-shell .topbar-title-row .topbar-page-title { text-overflow: clip; }
+}
+@media (max-width: 480px) {
+  .app-shell .topbar .ds-global-search { flex: 1 1 100%; min-width: 0; max-width: none; }
+}

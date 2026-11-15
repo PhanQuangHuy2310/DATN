@@ -21,6 +21,8 @@ def _actor():
     )
 
 
+# require_actor checks maintenance mode, which reads the DB; SimpleTestCase has none.
+@patch("api_core.maintenance.is_maintenance_active", return_value=False)
 @patch(
     "api_core.authn.service.load_actor_from_session", side_effect=lambda _r: _actor()
 )
@@ -32,7 +34,7 @@ class AttachmentDownloadHeaderTests(SimpleTestCase):
         ):
             return self.client.get(f"/api/v1/attachments/{uuid4()}/download")
 
-    def test_unicode_and_quote_in_name_are_encoded(self, _load):
+    def test_unicode_and_quote_in_name_are_encoded(self, _load, _maintenance):
         response = self._get('Hóa đơn "x".pdf', "application/pdf")
         self.assertEqual(response.status_code, 200)
         disposition = response["Content-Disposition"]
@@ -41,7 +43,7 @@ class AttachmentDownloadHeaderTests(SimpleTestCase):
         self.assertEqual(response["X-Content-Type-Options"], "nosniff")
         self.assertEqual(response["Content-Security-Policy"], "default-src 'none'")
 
-    def test_active_content_types_are_downgraded(self, _load):
+    def test_active_content_types_are_downgraded(self, _load, _maintenance):
         for mime in ("text/html", "image/svg+xml", "application/xhtml+xml"):
             with self.subTest(mime=mime):
                 response = self._get("file.bin", mime)
