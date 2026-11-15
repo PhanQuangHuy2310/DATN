@@ -5035,3 +5035,22 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .password-reset-mode .radio-row { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; }
 .password-reset-mode .radio-row input { margin-top: 4px; width: auto; min-height: 0; }
 .ai-workflow-help { margin: 4px 0 0; font-size: 14px; }
+
+/* AI moved the user to another request form (RequestEditor + aiTypeSwitch.js). */
+.ai-type-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2) var(--ds-space-3);
+  margin: 0 0 var(--ds-space-4);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-left: 4px solid var(--ds-primary);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-primary-soft);
+  color: var(--ds-ink);
+  line-height: 1.5;
+}
+.ai-type-switch > span { flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere; }
+.ai-type-switch button { white-space: nowrap; }
+.ai-type-switch-suggest { border-left-color: var(--ds-warning); background: var(--ds-warning-soft); }

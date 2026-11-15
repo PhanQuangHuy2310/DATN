@@ -74,7 +74,7 @@ export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSugg
       }).then((response) => {
         setClassify(response.data);
         setSteps((prev) => ({ ...prev, classify: response.data?.fallback_used ? "fallback" : "done" }));
-        // Only suggest: switching the form discards what the user typed.
+        // Only suggest here; the editor carries title and reason into the new form.
         const mapped = suggestedType(response.data, allowedTypes);
         setSuggested(mapped && mapped !== type ? mapped : null);
         return response;
@@ -156,7 +156,7 @@ export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSugg
           <button type="button" className="secondary" onClick={() => { onSuggestType(suggested); setSuggested(null); }}>
             Chuyển sang biểu mẫu này
           </button>{" "}
-          <small className="muted">(dữ liệu đã nhập ở biểu mẫu hiện tại sẽ không được giữ)</small>
+          <small className="muted">(tiêu đề và nội dung đã nhập được giữ nguyên)</small>
         </p>
       )}
       {risk && (
