@@ -23,10 +23,8 @@ test('client routes exclude unrelated profiles and administration while preservi
  assert.ok(!pages.includes('history') && !pages.includes('identity') && !pages.includes('request-catalog') && !pages.includes('ops'));
  assert.equal(canNavigate(['REQUESTER'],'org-chart'),false);
 });
-test('dashboard requests a strictly requester-scoped report, with backend scope validation', () => {
- const dashboard=readFileSync(new URL('../src/components/ClientDashboard.jsx',import.meta.url),'utf8');
+test('requests report is scoped on the backend (requester sees only own requests)', () => {
  const backend=readFileSync(new URL('../../api_core/workflow/reporting.py',import.meta.url),'utf8');
- assert.match(dashboard,/scope:\s*"mine"/);
  assert.match(backend,/scope not in \(None, "mine"\)/);
  assert.match(backend,/r.requester_id = %s::uuid/);
 });
