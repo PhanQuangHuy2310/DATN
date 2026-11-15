@@ -15,7 +15,7 @@ Kiểm tra bằng truy vấn catalog chỉ đọc trên DB Supabase live (01/11/
 
 - Không có function `eas`/`mock_*` nào cho `anon`/`authenticated` EXECUTE; function `SECURITY DEFINER` đều `SET search_path=pg_catalog,eas`.
 - **LOW:** 24 bảng `mock_*` không bật RLS, chỉ được bảo vệ bằng GRANT (`database/mock_enterprise_sql/00_mock_enterprise_schemas.sql:384-397`).
-- Client (web_client, web_admin, mobile_app) không gọi Supabase trực tiếp; không có anon key ở frontend.
+- Client (web_client, web_admin) không gọi Supabase trực tiếp; không có anon key ở frontend.
 
 ## What's at risk
 

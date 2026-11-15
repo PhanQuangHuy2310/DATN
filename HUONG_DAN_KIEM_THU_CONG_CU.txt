@@ -48,10 +48,9 @@ MỤC LỤC NHANH
 
 1.1. Chạy bộ kiểm thử hợp đồng tự động (Contract Tests)
 --------------------------------------------------------------------------------
-Chạy 3 bộ test hợp đồng bằng Terminal tại thư mục gốc:
+Chạy 2 bộ test hợp đồng bằng Terminal tại thư mục gốc:
   python manage.py test api_core.tests.test_workflow_api -v 2
   python -m unittest tests.test_ai_payload_contract -v
-  python -m unittest tests.test_flutter_contract -v
 
 (Hoặc chạy gộp toàn bộ suite trong tests/: python tests/run_tests.py)
 

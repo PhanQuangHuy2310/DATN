@@ -20,7 +20,6 @@ changelogs
 # data alone are several GB). ai-service builds from ./ai_service with its own
 # ai_service/.dockerignore.
 ai_service/
-mobile_app/
 database/
 tests/
 scripts/

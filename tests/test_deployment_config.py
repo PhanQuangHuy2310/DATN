@@ -19,7 +19,7 @@ ROOT_CONTEXT_DOCKERFILES = (
     "web_client/Dockerfile",
     "web_admin/Dockerfile",
 )
-EXCLUDED = ("ai_service/", "mobile_app/", "database/", "tests/", "scripts/")
+EXCLUDED = ("ai_service/", "database/", "tests/", "scripts/")
 ADMIN_SCREENS = (
     "AuditorWorkspace",
     "IdentityAdmin",

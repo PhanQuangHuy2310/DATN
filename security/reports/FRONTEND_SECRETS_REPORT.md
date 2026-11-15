@@ -6,7 +6,7 @@ Trạng thái trước khắc phục: **PASS**. Ngày kiểm toán: 01/11/2026, 
 
 ## Findings
 
-- `web_client/src`, `web_admin/src`, `public/`, `mobile_app/lib`: không có khóa, token hay mật khẩu. Chỉ có `VITE_API_BASE_URL`, `VITE_EAS_PORTAL`, `VITE_ADMIN_PORTAL_URL` (không bí mật).
+- `web_client/src`, `web_admin/src`, `public/`: không có khóa, token hay mật khẩu. Chỉ có `VITE_API_BASE_URL`, `VITE_EAS_PORTAL`, `VITE_ADMIN_PORTAL_URL` (không bí mật).
 - Bundle `dist/assets/*.js`: grep `sk_|AKIA|sb_secret|eyJhbGci|AIza` chỉ ra `sk_description` (tên khóa i18n, dương tính giả).
 - Không có file `.map` trong `dist`; `GET /assets/<bundle>.js.map` trước sửa trả `200 text/html` (SPA fallback), sau sửa trả 404.
 - Trình duyệt chỉ gọi API cùng origin (`/api`), không gọi trực tiếp bên thứ ba (Gemini, Supabase).

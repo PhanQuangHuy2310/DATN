@@ -6,7 +6,7 @@
 
 web
 
-The employee portal (`web_client`) and the administration portal (`web_admin`) are React/Vite web apps. A separate Flutter app (`mobile_app`) exists; this record covers the web portals.
+The employee portal (`web_client`) and the administration portal (`web_admin`) are React/Vite web apps.
 
 ## Users
 

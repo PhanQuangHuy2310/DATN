@@ -113,5 +113,5 @@ Web nhân viên mở ở http://127.0.0.1:8080, web quản trị ở http://127.
 - Phân loại yêu cầu (12 nhóm): [docs/PHAN_LOAI_YEU_CAU.md](./docs/PHAN_LOAI_YEU_CAU.md)
 - Tích hợp hệ thống ngoài (Mock Systems): [docs/TICH_HOP_HE_THONG_NGOAI.md](./docs/TICH_HOP_HE_THONG_NGOAI.md)
 - Thiết kế cơ sở dữ liệu: [docs/THIET_KE_SCHEMA_EAS_V2.md](./docs/THIET_KE_SCHEMA_EAS_V2.md). Dựng database mới: [database/README.md](./database/README.md)
-- Theo phân hệ: [API](./api_core/README.md) · [AI](./ai_service/README.md) · [Web](./web_client/README.md) · [Mobile](./mobile_app/README.md) · [Kiểm thử](./tests/README.md) · [Triển khai](./deploy/README.md)
+- Theo phân hệ: [API](./api_core/README.md) · [AI](./ai_service/README.md) · [Web](./web_client/README.md) · [Kiểm thử](./tests/README.md) · [Triển khai](./deploy/README.md)
 - Lịch sử thay đổi: thư mục [changelogs/](./changelogs/)

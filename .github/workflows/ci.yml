@@ -139,17 +139,3 @@ jobs:
         with:
           python-version: "3.12"
       - run: python scripts/validate_docs.py
-
-  mobile:
-    # Static analysis of the Flutter app (same SDK as local development).
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@f2c4f6686ca8e8d6e6d0f28410eeef506ed66aff # v2.18.0
-        with:
-          flutter-version: "3.47.1"
-          channel: stable
-      - working-directory: mobile_app
-        run: flutter pub get --enforce-lockfile
-      - working-directory: mobile_app
-        run: flutter analyze
