@@ -1041,7 +1041,11 @@ function renderWorkspaceContent({
     case "events":
       return <AdminScreen name="AdminEvents" />;
     case "users":
-      return <AdminScreen name="UserManagementPage" onNavigateOrgChart={() => navigate("org-chart")} />;
+      // Password reset requests are handled here (the reset e-mail points admins to this page).
+      return <>
+        <AdminScreen name="PasswordResetRequests" />
+        <AdminScreen name="UserManagementPage" onNavigateOrgChart={() => navigate("org-chart")} />
+      </>;
     case "identity":
       return portal === "admin" ? (
         <AdminScreen name="IdentityAdmin" key="identity" initialKind="users" onNavigateOrgChart={() => navigate("org-chart")} />

@@ -25,4 +25,9 @@ urlpatterns = [
         views.password_reset_approve,
         name="password-reset-approve",
     ),
+    path(
+        "password-reset/requests/<uuid:request_id>/reject",
+        views.password_reset_reject,
+        name="password-reset-reject",
+    ),
 ]

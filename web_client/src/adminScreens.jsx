@@ -20,6 +20,7 @@ export const adminScreens = Object.freeze({
   PlanCatalog: lazyWithPreload(() => import("./components/PlanCatalog.jsx")),
   RequestWorkflowsPage: lazyWithPreload(() => import("./components/RequestWorkflowsPage.jsx")),
   UserManagementPage: lazyWithPreload(() => import("./components/UserManagementPage.jsx")),
+  PasswordResetRequests: lazyWithPreload(() => import("./components/PasswordResetRequests.jsx")),
   RolePermissionMatrixPage: lazyWithPreload(() => import("./components/RolePermissionMatrixPage.jsx")),
   RegulationsManagementPage: lazyWithPreload(() => import("./components/RegulationsManagementPage.jsx")),
   AiEngineManagementPage: lazyWithPreload(() => import("./components/AiEngineManagementPage.jsx")),

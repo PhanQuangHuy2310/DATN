@@ -272,6 +272,11 @@ EAS_ALLOW_ADMIN_DB = os.getenv("EAS_ALLOW_ADMIN_DB", "false").lower() == "true"
 if ENVIRONMENT == "production" and EAS_ALLOW_ADMIN_DB:
     raise RuntimeError("EAS_ALLOW_ADMIN_DB cannot be enabled in production")
 
+# Admin portal address used in e-mails (falls back to the Vite setting of the same .env).
+EAS_ADMIN_PORTAL_URL = (
+    os.getenv("EAS_ADMIN_PORTAL_URL") or os.getenv("VITE_ADMIN_PORTAL_URL") or ""
+).strip()
+
 # ── AI Service Integration ──
 EAS_AI_SERVICE_URL = os.getenv(
     "EAS_AI_SERVICE_URL",
