@@ -5004,3 +5004,34 @@ details.versioning-rules-notice-box .notice-body { padding: 0 16px 14px 31px; }
 @media (max-width: 480px) {
   .app-shell .topbar .ds-global-search { flex: 1 1 100%; min-width: 0; max-width: none; }
 }
+
+/* Inline <output> notices (e.g. password changed) must not overlap buttons. */
+output.success, output.error { display: block; margin-top: 14px; line-height: 1.5; }
+
+/* Admin › Yêu cầu & Quy trình: template table keeps readable columns. */
+.rw-table-card { overflow-x: auto; overscroll-behavior-x: contain; }
+.rw-table-card table.rw-table { min-width: 1120px !important; }
+.rw-table th, .rw-table td { word-break: normal; overflow-wrap: break-word; }
+.rw-table .rw-cat-select { min-width: 132px; }
+.rw-table .rw-weight-tag { white-space: nowrap; }
+.rw-table .rw-api-none, .rw-table .rw-api-badge, .rw-table .rw-btn-link { white-space: nowrap; }
+.rw-table .rw-code-badge { overflow-wrap: anywhere; }
+.rw-table .rw-actions-cell { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 6px; }
+
+/* Admin › Quản trị AI: failed learning run is shown as failed, not "ready". */
+.ai-progress-bar-fill.failed-fill { background: #dc2626; }
+.ai-learning-error { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; font-size: 14px; }
+.ai-step-card.step-failed { border-color: #fca5a5; background: #fef2f2; }
+.step-failed .ai-step-badge { background: #dc2626; color: #fff; }
+.step-failed .ai-step-status-tag { color: #b91c1c; }
+.step-failed .ai-step-mini-bar { background: #dc2626; }
+[data-theme="dark"] .ai-learning-error, [data-theme="dark"] .ai-step-card.step-failed { background: rgba(127, 29, 29, 0.25); color: #fecaca; border-color: #7f1d1d; }
+
+/* Admin › Người dùng: password reset requests. */
+.password-reset-panel { border-left: 4px solid #f59e0b; margin-bottom: 16px; }
+.password-reset-count { margin-left: 10px; vertical-align: middle; font-size: 12px; }
+.password-reset-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.password-reset-mode { border: 1px solid var(--ds-line); border-radius: 8px; padding: 10px 14px; margin: 0 0 12px; display: grid; gap: 8px; }
+.password-reset-mode .radio-row { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; }
+.password-reset-mode .radio-row input { margin-top: 4px; width: auto; min-height: 0; }
+.ai-workflow-help { margin: 4px 0 0; font-size: 14px; }

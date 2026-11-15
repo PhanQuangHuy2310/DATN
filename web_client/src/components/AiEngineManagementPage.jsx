@@ -105,6 +105,19 @@ export function AiEngineManagementPage() {
   const activeVersion = aiState?.active_regulation_version || "v1.0";
   const steps = aiState?.steps_detail || [];
   const jobs = aiState?.jobs || [];
+  // The backend reports a failed learning run as sync_status "ERROR" and marks
+  // the failing step FAILED; the active rules stay on the previous version.
+  const failed = !isLocked && aiState?.sync_status === "ERROR";
+  const lastError = failed ? (jobs.find((j) => j.status === "FAILED")?.error || "") : "";
+  const stepState = (st, stepNum) => {
+    if (st.status === "FAILED") return "failed";
+    if (st.status === "DONE") return "done";
+    if (st.status === "RUNNING") return isLocked ? "running" : "waiting";
+    if (st.status === "WAITING") return "waiting";
+    // Older payloads without per-step status.
+    if (stepNum < currentStep || (!isLocked && progressPercent === 100)) return "done";
+    return isLocked && stepNum === currentStep ? "running" : "waiting";
+  };
 
   return (
     <div className="page-container ai-engine-page">
@@ -176,7 +189,10 @@ export function AiEngineManagementPage() {
           <div>
             <h2 className="ai-stepper-title">Tiến trình Huấn luyện & Đồng bộ Quy định</h2>
             <p className="ai-stepper-subtitle">
-              Quy trình 4 giai đoạn tự động kích hoạt khi có thay đổi trong bộ quy chế công ty.
+              Mỗi khi quy định công ty được ban hành hoặc sửa đổi, hệ thống cho AI “học” lại: chụp bộ quy định hiện hành,
+              chuyển các điều khoản (hạn mức tiền, số ngày, loại yêu cầu) thành bộ luật máy đọc được, nạp vào AI rồi tự kiểm
+              tra AI đã thực thi đúng từng luật. Chỉ khi cả 4 bước thành công, bộ luật mới có hiệu lực; nếu thất bại, AI giữ
+              nguyên bộ luật cũ. Trong lúc học, cổng nhân viên tạm khóa gửi yêu cầu để tránh duyệt theo luật nửa cũ nửa mới.
             </p>
           </div>
           <div className="ai-stepper-status-group">
@@ -205,37 +221,44 @@ export function AiEngineManagementPage() {
             <span className="ai-progress-step-text">
               {isLocked
                 ? `Đang thực hiện bước ${currentStep}/4: ${aiState?.current_step_label || ""}`
-                : `Hệ thống sẵn sàng: ${aiState?.current_step_label || "Đã áp dụng quy định " + activeVersion}`}
+                : failed
+                  ? `Lần học gần nhất thất bại ở bước ${currentStep}/4 — AI vẫn dùng bộ quy định ${activeVersion} (bộ luật cũ)`
+                  : `Hệ thống sẵn sàng: ${aiState?.current_step_label || "Đã áp dụng quy định " + activeVersion}`}
             </span>
             <span className="ai-progress-percentage">{progressPercent}%</span>
           </div>
           <div className="ai-progress-track large">
             <div
-              className={`ai-progress-bar-fill large ${isLocked ? "active-stripes" : "completed-fill"}`}
+              className={`ai-progress-bar-fill large ${isLocked ? "active-stripes" : failed ? "failed-fill" : "completed-fill"}`}
               style={{ width: `${progressPercent}%` }}
             ></div>
           </div>
+          {failed && (
+            <p className="ai-learning-error" role="alert">
+              Nguyên nhân: {lastError || "AI service không phản hồi đúng ở bước kiểm chứng."} Kiểm tra AI service đang chạy
+              và kết nối được từ API/worker, sau đó bấm “Huấn luyện lại AI”.
+            </p>
+          )}
         </div>
 
         {/* 4-Step Cards */}
         <div className="ai-steps-grid">
           {steps.map((st, idx) => {
             const stepNum = st.step || idx + 1;
-            const isCompleted = stepNum < currentStep || (!isLocked && progressPercent === 100);
-            const isRunning = isLocked && stepNum === currentStep;
-
-            let cardStatusClass = "step-waiting";
-            if (isCompleted) cardStatusClass = "step-completed";
-            else if (isRunning) cardStatusClass = "step-running";
+            const state = stepState(st, stepNum);
+            const isCompleted = state === "done";
+            const isRunning = state === "running";
+            const isFailed = state === "failed";
+            const cardStatusClass = isCompleted ? "step-completed" : isRunning ? "step-running" : isFailed ? "step-failed" : "step-waiting";
 
             return (
               <div key={st.code || stepNum} className={`ai-step-card ${cardStatusClass}`}>
                 <div className="ai-step-card-top">
                   <div className="ai-step-badge">
-                    {isCompleted ? "✓" : stepNum}
+                    {isCompleted ? "✓" : isFailed ? "✕" : stepNum}
                   </div>
                   <span className="ai-step-status-tag">
-                    {isCompleted ? "ĐÃ HOÀN TẤT" : isRunning ? "ĐANG THỰC HIỆN" : "CHỜ"}
+                    {isCompleted ? "ĐÃ HOÀN TẤT" : isRunning ? "ĐANG THỰC HIỆN" : isFailed ? "THẤT BẠI" : "CHỜ"}
                   </span>
                 </div>
 
@@ -249,7 +272,7 @@ export function AiEngineManagementPage() {
                     <div
                       className="ai-step-mini-bar"
                       style={{
-                        width: isCompleted ? "100%" : isRunning ? "60%" : "0%",
+                        width: isCompleted || isFailed ? "100%" : isRunning ? "60%" : "0%",
                       }}
                     ></div>
                   </div>
@@ -265,9 +288,13 @@ export function AiEngineManagementPage() {
       <div className="ai-simulator-panel">
         <div className="ai-simulator-header">
           <div>
-            <h3>Công cụ Kiểm thử Quyết định AI (Quick Policy Simulator)</h3>
+            <h3>Công cụ kiểm thử quyết định tự duyệt của AI</h3>
             <p>
-              Nhập nội dung yêu cầu mẫu để xem AI diễn giải, phân loại rủi ro và áp dụng quy định <strong>{activeVersion}</strong>.
+              Dùng để kiểm tra nhanh bộ quy định <strong>{activeVersion}</strong> đã được AI áp dụng đúng chưa mà không cần tạo
+              hồ sơ thật. Chọn loại yêu cầu, nhập số tiền và số ngày rồi bấm chạy: hệ thống gửi một yêu cầu giả lập (không lưu)
+              tới AI và hiển thị AI sẽ <strong>tự duyệt</strong> hay <strong>chuyển người duyệt</strong>, kèm các điều kiện đã
+              đối chiếu (mẫu quy trình, điểm rủi ro, hạn mức trong quy định). Ví dụ: một khoản chi từ 50 triệu đồng trở lên luôn
+              phải chuyển người duyệt.
             </p>
           </div>
           <span className="ai-chip-active-version">Phiên bản: {activeVersion}</span>
