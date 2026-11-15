@@ -33,11 +33,14 @@ API_BASE = os.getenv("EAS_API_INTERNAL_URL", "http://127.0.0.1:8000").rstrip("/"
 SECRET = os.getenv("INTERNAL_API_SECRET") or os.getenv("EAS_AI_INTERNAL_SECRET", "")
 AUTH = {"X-Internal-Secret": SECRET}
 EVAL_PATH = ROOT / "ai_service" / "training" / "data" / "request_eval_realistic.json"
+EVAL_SHORT_PATH = ROOT / "ai_service" / "training" / "data" / "request_eval_short.json"
 OCR_DIR = ROOT / "tests" / "ocr_smoke"
 
-# Acceptance thresholds on the hand-written test split (never used for training).
-MIN_TEST_TOP1 = 0.88
+# Acceptance thresholds on the hand-written test splits (never used for training).
+MIN_TEST_TOP1 = 0.90
 MIN_TEST_TOP3 = 0.97
+# The web form switches automatically from this confidence (web_client/src/aiTypeSwitch.js).
+AUTO_SWITCH_CONFIDENCE = 0.6
 
 
 @dataclass
@@ -105,8 +108,28 @@ def check_health_and_auth() -> bool:
 # ---------------------------------------------------------------------------
 def check_classifier() -> None:
     group = "2. Classify"
-    items = json.loads(EVAL_PATH.read_text(encoding="utf-8"))["items"]
     latencies: list[float] = []
+    for path, label in ((EVAL_PATH, "Hand-written"), (EVAL_SHORT_PATH, "Very short (2-8 words)")):
+        _score_eval_file(group, path, label, latencies)
+    latencies.sort()
+    p95 = latencies[int(len(latencies) * 0.95) - 1]
+    record(group, "Latency p95 < 300 ms", p95 < 300, f"p95 {p95:.0f} ms over {len(latencies)} calls")
+
+    for text in ("bố mất", "bo mat", "mẹ em qua đời", "đám cưới của em"):
+        _status, data, ms = call("POST", f"{AI_BASE}/ai/classify/request", {"title": text, "description": ""}, AUTH)
+        conf = data.get("confidence_request_type") or 0
+        runner_up = max([a.get("confidence") or 0 for a in data.get("alternatives") or []
+                         if a.get("request_type") != data.get("predicted_request_type")] or [0])
+        # Same rule as web_client/src/aiTypeSwitch.js
+        sure = conf >= AUTO_SWITCH_CONFIDENCE or (conf >= 0.35 and conf >= 3 * runner_up)
+        record(group, f"'{text}' → LEAVE_SPECIAL, sure enough to switch the form",
+               data.get("predicted_request_type") == "LEAVE_SPECIAL" and sure,
+               f"got {data.get('predicted_request_type')} conf={conf} runner-up={runner_up}", ms)
+    _classifier_contract_checks(group)
+
+
+def _score_eval_file(group: str, path: Path, label: str, latencies: list[float]) -> None:
+    items = json.loads(path.read_text(encoding="utf-8"))["items"]
     for split in ("dev", "test"):
         subset = [i for i in items if i["split"] == split]
         top1 = top3 = 0
@@ -128,16 +151,15 @@ def check_classifier() -> None:
         n = len(subset)
         detail = f"top-1 {top1}/{n} = {top1 / n:.1%}, top-3 {top3 / n:.1%}"
         if split == "test":
-            record(group, f"Hand-written TEST split ({n})", top1 / n >= MIN_TEST_TOP1 and top3 / n >= MIN_TEST_TOP3,
+            record(group, f"{label} TEST split ({n})", top1 / n >= MIN_TEST_TOP1 and top3 / n >= MIN_TEST_TOP3,
                    f"{detail} (need ≥{MIN_TEST_TOP1:.0%} / ≥{MIN_TEST_TOP3:.0%})")
             for miss in misses:
                 print(f"      sai: {miss}")
         else:
-            record(group, f"Hand-written DEV split ({n})", top1 / n >= 0.95, detail)
-    latencies.sort()
-    p95 = latencies[int(len(latencies) * 0.95) - 1]
-    record(group, "Latency p95 < 300 ms", p95 < 300, f"p95 {p95:.0f} ms over {len(latencies)} calls")
+            record(group, f"{label} DEV split ({n})", top1 / n >= 0.95, detail)
 
+
+def _classifier_contract_checks(group: str) -> None:
     status, data, ms = call("POST", f"{AI_BASE}/ai/classify/request",
                             {"title": "Xin nghỉ phép 2 ngày về quê", "description": ""}, AUTH)
     fields = {"predicted_request_type", "predicted_request_name", "predicted_category", "predicted_department",

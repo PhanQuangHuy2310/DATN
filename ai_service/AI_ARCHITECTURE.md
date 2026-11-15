@@ -56,6 +56,7 @@ ai_service/
     └── data/
         ├── request_corpus.json          # Mẫu câu huấn luyện 58 loại
         ├── request_eval_realistic.json  # Câu viết tay: dev / test (test chỉ để báo cáo)
+        ├── request_eval_short.json      # Câu rất ngắn viết tay: dev / test
         ├── training_report.md           # Báo cáo lần train gần nhất
         └── vietnam_vat_ocr_samples.json # OCR samples
 ```

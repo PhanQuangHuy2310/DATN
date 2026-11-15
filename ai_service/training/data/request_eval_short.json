@@ -1,0 +1,1470 @@
+{
+  "schema_version": 1,
+  "about": "Câu rất ngắn kiểu người dùng gõ nhanh (2-8 từ, không mô tả), viết tay để đánh giá bộ phân loại; không dùng để train. dev dùng để chọn tham số, test chỉ dùng để báo cáo độ chính xác.",
+  "items": [
+    {
+      "split": "dev",
+      "label": "ACCESS",
+      "title": "cho em xin tài khoản vpn",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ACCESS",
+      "title": "chưa vào được drive dự án, xin cấp quyền",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ACCESS",
+      "title": "mở quyền gitlab giúp em",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ACCESS",
+      "title": "xin acc jira cho bạn mới",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "ACCESS_FACILITY",
+      "title": "thẻ từ của em bị mất",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ACCESS_FACILITY",
+      "title": "làm lại thẻ ra vào cho em",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ACCESS_FACILITY",
+      "title": "thẻ từ không quẹt được cửa",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ACCESS_FACILITY",
+      "title": "xin thẻ gửi xe máy",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "ADVANCE_LARGE",
+      "title": "tạm ứng 150 triệu đặt cọc thi công",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ADVANCE_LARGE",
+      "title": "ứng 300tr cho dự án ERP",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ADVANCE_LARGE",
+      "title": "xin tạm ứng 2 tỷ mua nguyên vật liệu",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ADVANCE_LARGE",
+      "title": "tạm ứng 90 triệu giai đoạn 1",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "ADVANCE_MEDIUM",
+      "title": "tạm ứng 25 triệu đi hội chợ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ADVANCE_MEDIUM",
+      "title": "ứng 40tr tổ chức hội thảo",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ADVANCE_MEDIUM",
+      "title": "xin tạm ứng 12 triệu công tác Sài Gòn",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ADVANCE_MEDIUM",
+      "title": "tạm ứng 18 triệu mua vật tư sự kiện",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "ADVANCE_SMALL",
+      "title": "tạm ứng 1 triệu mua nước",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ADVANCE_SMALL",
+      "title": "ứng 4tr tiền xăng đi khảo sát",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ADVANCE_SMALL",
+      "title": "xin tạm ứng 700k",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ADVANCE_SMALL",
+      "title": "tạm ứng 6 triệu tiếp khách",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "ASSET_DISPOSAL",
+      "title": "bán thanh lý bàn ghế cũ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ASSET_DISPOSAL",
+      "title": "thanh lý mấy cái máy in hỏng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ASSET_DISPOSAL",
+      "title": "hủy tài sản hết khấu hao",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ASSET_DISPOSAL",
+      "title": "thanh lý xe tải cũ",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "ATTENDANCE_ADJUSTMENT",
+      "title": "sáng nay quên chấm công",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ATTENDANCE_ADJUSTMENT",
+      "title": "hôm qua quên check out",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ATTENDANCE_ADJUSTMENT",
+      "title": "máy vân tay không nhận",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ATTENDANCE_ADJUSTMENT",
+      "title": "bị tính đi muộn sai",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "BUDGET_REALLOCATION",
+      "title": "xin thêm ngân sách quảng cáo",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "BUDGET_REALLOCATION",
+      "title": "hết ngân sách đào tạo cần bổ sung",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "BUDGET_REALLOCATION",
+      "title": "chuyển ngân sách phòng IT sang marketing",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "BUDGET_REALLOCATION",
+      "title": "dự án bị vượt ngân sách",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "BUSINESS_TRIP",
+      "title": "tuần sau bay vào Sài Gòn gặp khách",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "BUSINESS_TRIP",
+      "title": "đi Hải Phòng 3 ngày khảo sát",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "BUSINESS_TRIP",
+      "title": "công tác Nhật Bản",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "BUSINESS_TRIP",
+      "title": "ra Đà Nẵng hỗ trợ chi nhánh",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "CONTRACT_APPROVAL",
+      "title": "duyệt giúp hợp đồng với Viettel",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "CONTRACT_APPROVAL",
+      "title": "ký hợp đồng thuê kho",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "CONTRACT_APPROVAL",
+      "title": "rà soát hợp đồng dịch vụ bảo vệ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "CONTRACT_APPROVAL",
+      "title": "phụ lục gia hạn hợp đồng",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "CROSS_DEPT_SUPPORT",
+      "title": "nhờ phòng kế toán hỗ trợ số liệu",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "CROSS_DEPT_SUPPORT",
+      "title": "cần IT hỗ trợ âm thanh hội trường",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "CROSS_DEPT_SUPPORT",
+      "title": "mượn 2 người bên kinh doanh hỗ trợ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "CROSS_DEPT_SUPPORT",
+      "title": "phối hợp với nhân sự chuẩn bị sự kiện",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "DATA_UAT_EXPORT",
+      "title": "xuất danh sách khách hàng quý 3",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "DATA_UAT_EXPORT",
+      "title": "trích xuất log giao dịch",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "DATA_UAT_EXPORT",
+      "title": "lấy dữ liệu test cho UAT",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "DATA_UAT_EXPORT",
+      "title": "export báo cáo doanh thu từ ERP",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "DISCIPLINE_REQ",
+      "title": "kỷ luật nhân viên đi muộn nhiều",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "DISCIPLINE_REQ",
+      "title": "nhân viên vi phạm nội quy công ty",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "DISCIPLINE_REQ",
+      "title": "khiển trách vì làm lộ thông tin",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "DISCIPLINE_REQ",
+      "title": "xử lý nhân viên gian lận",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "DOCUMENT_SEAL",
+      "title": "xin đóng dấu hợp đồng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "DOCUMENT_SEAL",
+      "title": "đóng dấu giấy giới thiệu cho em",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "DOCUMENT_SEAL",
+      "title": "trình giám đốc ký công văn",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "DOCUMENT_SEAL",
+      "title": "xin dấu đỏ cho hồ sơ thầu",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "EMPLOYEE_ONBOARDING",
+      "title": "thứ 2 có bạn mới vào",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EMPLOYEE_ONBOARDING",
+      "title": "chuẩn bị đón nhân viên mới",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EMPLOYEE_ONBOARDING",
+      "title": "onboarding thực tập sinh",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EMPLOYEE_ONBOARDING",
+      "title": "tiếp nhận nhân sự mới phòng kế toán",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "EQUIPMENT",
+      "title": "mua thêm máy chiếu phòng họp",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EQUIPMENT",
+      "title": "trang bị điều hòa mới",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EQUIPMENT",
+      "title": "sắm thêm mấy cái ghế công thái học",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EQUIPMENT",
+      "title": "sắm máy photocopy mới",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "EQUIPMENT_BORROW",
+      "title": "mượn loa kéo",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EQUIPMENT_BORROW",
+      "title": "cho mượn máy ảnh chụp sự kiện",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EQUIPMENT_BORROW",
+      "title": "mượn micro không dây",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EQUIPMENT_BORROW",
+      "title": "mượn tạm laptop 2 hôm",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "EXPENSE_CLAIM",
+      "title": "thanh toán tiền taxi gặp khách",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EXPENSE_CLAIM",
+      "title": "thanh toán tiền vé máy bay",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EXPENSE_CLAIM",
+      "title": "em đã chi tiền tiếp khách xin thanh toán",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "EXPENSE_CLAIM",
+      "title": "thanh toán tiền khách sạn công tác",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "FACILITY_REPAIR",
+      "title": "điều hòa phòng họp không mát",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "FACILITY_REPAIR",
+      "title": "đèn tầng 3 bị cháy",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "FACILITY_REPAIR",
+      "title": "trần nhà dột",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "FACILITY_REPAIR",
+      "title": "bồn cầu bị tắc",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "FEATURE_RELEASE",
+      "title": "thêm nút xuất excel cho báo cáo",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "FEATURE_RELEASE",
+      "title": "release bản 2.0",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "FEATURE_RELEASE",
+      "title": "cải tiến màn hình duyệt đơn",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "FEATURE_RELEASE",
+      "title": "hệ thống nên có chữ ký số",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "FLASH_SALE_VOUCHER",
+      "title": "chạy flash sale cuối tháng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "FLASH_SALE_VOUCHER",
+      "title": "tạo voucher giảm 30%",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "FLASH_SALE_VOUCHER",
+      "title": "mã giảm giá black friday",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "FLASH_SALE_VOUCHER",
+      "title": "khuyến mãi 12/12",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "HR_CERTIFICATE",
+      "title": "xin giấy xác nhận lương",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "HR_CERTIFICATE",
+      "title": "giấy xác nhận công tác làm visa",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "HR_CERTIFICATE",
+      "title": "xác nhận thu nhập để vay mua nhà",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "HR_CERTIFICATE",
+      "title": "cần giấy xác nhận đang làm việc",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "INTERNAL_TRANSFER",
+      "title": "em muốn chuyển sang phòng marketing",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "INTERNAL_TRANSFER",
+      "title": "chuyển công tác vào chi nhánh Cần Thơ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "INTERNAL_TRANSFER",
+      "title": "điều chuyển nhân viên sang dự án mới",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "INTERNAL_TRANSFER",
+      "title": "xin đổi bộ phận",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "IT_SUPPORT",
+      "title": "máy tính không lên",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "IT_SUPPORT",
+      "title": "không kết nối được mạng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "IT_SUPPORT",
+      "title": "máy in không in được",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "IT_SUPPORT",
+      "title": "outlook báo lỗi không gửi mail được",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "LAPTOP_PROVISION",
+      "title": "nhân viên mới chưa có máy tính",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LAPTOP_PROVISION",
+      "title": "xin cấp laptop",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LAPTOP_PROVISION",
+      "title": "cấp thêm màn hình phụ cho em",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LAPTOP_PROVISION",
+      "title": "máy cũ quá xin đổi laptop",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "LEAVE",
+      "title": "mai em xin nghỉ",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "LEAVE",
+      "title": "hôm nay em mệt xin nghỉ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE",
+      "title": "em bị sốt cao",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE",
+      "title": "đau bụng quá xin nghỉ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE",
+      "title": "về quê 2 hôm",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE",
+      "title": "chiều nay em xin nghỉ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE",
+      "title": "đi khám răng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE",
+      "title": "nghỉ phép 3 ngày đi biển",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "LEAVE_SPECIAL",
+      "title": "bố em mới mất",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "LEAVE_SPECIAL",
+      "title": "em cưới vào tuần sau",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "ba em vừa mất tối qua",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "mẹ vợ em qua đời hôm nay",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "ông ngoại mất sáng nay",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "nhà có đám tang",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "em tổ chức đám cưới",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "vợ em sắp đẻ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "nghỉ sinh em bé",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "bà nội em từ trần, em xin nghỉ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "bố mẹ mất",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "LEAVE_SPECIAL",
+      "title": "về quê chịu tang bà",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "MARKETING_CAMPAIGN",
+      "title": "tổ chức tiệc cuối năm",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "MARKETING_CAMPAIGN",
+      "title": "chạy quảng cáo tiktok",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "MARKETING_CAMPAIGN",
+      "title": "thuê KOL review sản phẩm",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "MARKETING_CAMPAIGN",
+      "title": "tổ chức team building công ty",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "NDA_PRIVACY_CLEARANCE",
+      "title": "ký NDA với đối tác",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "NDA_PRIVACY_CLEARANCE",
+      "title": "chia sẻ dữ liệu khách hàng cho bên thứ ba",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "NDA_PRIVACY_CLEARANCE",
+      "title": "thỏa thuận bảo mật với FPT",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "NDA_PRIVACY_CLEARANCE",
+      "title": "rà soát điều khoản bảo mật",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "OFFICE_SUPPLIES",
+      "title": "hết giấy A4 rồi",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "OFFICE_SUPPLIES",
+      "title": "xin thêm bút bi",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "OFFICE_SUPPLIES",
+      "title": "máy in hết mực",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "OFFICE_SUPPLIES",
+      "title": "cấp sổ tay cho nhân viên mới",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "OVERTIME_REQ",
+      "title": "tối nay tăng ca",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "OVERTIME_REQ",
+      "title": "làm thêm thứ 7",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "OVERTIME_REQ",
+      "title": "OT chủ nhật kịp deadline",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "OVERTIME_REQ",
+      "title": "ở lại làm đến 10h tối",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "POLICY_ISSUANCE",
+      "title": "ban hành quy định mới",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "POLICY_ISSUANCE",
+      "title": "cập nhật nội quy công ty",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "POLICY_ISSUANCE",
+      "title": "chính sách phúc lợi mới",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "POLICY_ISSUANCE",
+      "title": "ra quy chế làm việc từ xa",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "PROD_DATA_ACCESS",
+      "title": "cho em quyền đọc db production",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PROD_DATA_ACCESS",
+      "title": "ssh vào server thật kiểm tra lỗi",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PROD_DATA_ACCESS",
+      "title": "xem dữ liệu lương trên hệ thống",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PROD_DATA_ACCESS",
+      "title": "truy cập log production",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "PROJECT_INITIATION",
+      "title": "đề xuất dự án mới",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PROJECT_INITIATION",
+      "title": "bắt đầu dự án chuyển đổi số",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PROJECT_INITIATION",
+      "title": "kick off dự án CRM",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PROJECT_INITIATION",
+      "title": "mở dự án chi nhánh mới",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "PROMOTION_REQ",
+      "title": "đề bạt An làm trưởng nhóm",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PROMOTION_REQ",
+      "title": "thăng chức cho An",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PROMOTION_REQ",
+      "title": "bổ nhiệm chị Hà làm phó phòng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PROMOTION_REQ",
+      "title": "đề xuất lên senior",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "PURCHASE_REQUEST",
+      "title": "mua quà Tết cho khách",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PURCHASE_REQUEST",
+      "title": "mua nước uống pantry",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PURCHASE_REQUEST",
+      "title": "đặt may đồng phục cho nhân viên",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "PURCHASE_REQUEST",
+      "title": "mua thêm vật tư tiêu hao cho xưởng",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "RECRUITMENT_REQ",
+      "title": "cần tuyển thêm 2 dev",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "RECRUITMENT_REQ",
+      "title": "tuyển người thay bạn nghỉ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "RECRUITMENT_REQ",
+      "title": "mở vị trí kế toán",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "RECRUITMENT_REQ",
+      "title": "tuyển thực tập sinh hè",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "REFUND_COMPENSATION",
+      "title": "khách hàng đòi trả lại tiền",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "REFUND_COMPENSATION",
+      "title": "đền bù khách vì giao trễ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "REFUND_COMPENSATION",
+      "title": "hoàn tiền khách hủy đơn",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "REFUND_COMPENSATION",
+      "title": "bồi thường hàng bị vỡ",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "REIMBURSEMENT",
+      "title": "quyết toán tạm ứng công tác",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "REIMBURSEMENT",
+      "title": "hoàn ứng tiền thừa",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "REIMBURSEMENT",
+      "title": "nộp chứng từ khoản đã ứng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "REIMBURSEMENT",
+      "title": "quyết toán tạm ứng sự kiện",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "RESIGNATION",
+      "title": "em xin nghỉ việc",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "RESIGNATION",
+      "title": "em muốn thôi việc",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "RESIGNATION",
+      "title": "nộp đơn nghỉ việc cuối tháng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "RESIGNATION",
+      "title": "chuyển sang công ty khác làm",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "RESOURCE_REVOKE",
+      "title": "khóa email người đã nghỉ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "RESOURCE_REVOKE",
+      "title": "thu hồi laptop nhân viên nghỉ việc",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "RESOURCE_REVOKE",
+      "title": "thu hồi quyền admin tạm",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "RESOURCE_REVOKE",
+      "title": "khóa tài khoản cộng tác viên",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "REWARD_REQ",
+      "title": "thưởng nóng cho team",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "REWARD_REQ",
+      "title": "khen thưởng nhân viên xuất sắc tháng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "REWARD_REQ",
+      "title": "thưởng sáng kiến",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "REWARD_REQ",
+      "title": "khen thưởng đội trực sự cố",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "ROOM_BOOKING",
+      "title": "đặt phòng họp 2h chiều",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ROOM_BOOKING",
+      "title": "book phòng họp 10 người",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ROOM_BOOKING",
+      "title": "giữ phòng họp phỏng vấn",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "ROOM_BOOKING",
+      "title": "cần phòng họp sáng thứ 3",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "SAAS_LICENSE_BUY",
+      "title": "mua license Figma cho designer",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SAAS_LICENSE_BUY",
+      "title": "gia hạn Microsoft 365 cho team",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SAAS_LICENSE_BUY",
+      "title": "mua bản quyền Adobe",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SAAS_LICENSE_BUY",
+      "title": "thêm user Jira",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "SALARY_ADJUSTMENT",
+      "title": "em xin được tăng lương",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SALARY_ADJUSTMENT",
+      "title": "hết thử việc điều chỉnh lương",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SALARY_ADJUSTMENT",
+      "title": "tăng phụ cấp trách nhiệm",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SALARY_ADJUSTMENT",
+      "title": "xét tăng lương định kỳ năm nay",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "SALARY_ADVANCE",
+      "title": "xin ứng lương tháng này",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SALARY_ADVANCE",
+      "title": "ứng trước nửa tháng lương",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SALARY_ADVANCE",
+      "title": "nhà có việc gấp xin ứng lương",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SALARY_ADVANCE",
+      "title": "ứng lương đóng viện phí",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "SECURITY_INCIDENT_HOTFIX",
+      "title": "web công ty bị hack",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SECURITY_INCIDENT_HOTFIX",
+      "title": "phát hiện email lừa đảo",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SECURITY_INCIDENT_HOTFIX",
+      "title": "lộ dữ liệu khách hàng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SECURITY_INCIDENT_HOTFIX",
+      "title": "máy chủ dính ransomware",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "SERVER_FIREWALL",
+      "title": "mở port 443 cho server web",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SERVER_FIREWALL",
+      "title": "tạo thêm một máy ảo staging",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SERVER_FIREWALL",
+      "title": "whitelist IP đối tác",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SERVER_FIREWALL",
+      "title": "xin thêm RAM cho server",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "SPECIAL_DISCOUNT",
+      "title": "chiết khấu 10% cho đại lý",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SPECIAL_DISCOUNT",
+      "title": "khách VIP xin giảm thêm giá",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SPECIAL_DISCOUNT",
+      "title": "giá ưu đãi đơn hàng lớn",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SPECIAL_DISCOUNT",
+      "title": "giảm giá ngoài chính sách",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "SUPPLIER_ONBOARDING",
+      "title": "thẩm định nhà cung cấp mới",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SUPPLIER_ONBOARDING",
+      "title": "đưa vendor mới vào danh sách",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SUPPLIER_ONBOARDING",
+      "title": "đánh giá nhà cung cấp suất ăn",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "SUPPLIER_ONBOARDING",
+      "title": "đăng ký nhà vận chuyển mới",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "TASK_REQUEST",
+      "title": "dọn kho hồ sơ tầng 2",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "TASK_REQUEST",
+      "title": "sắp xếp lại khu để đồ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "TASK_REQUEST",
+      "title": "xử lý việc tồn đọng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "TASK_REQUEST",
+      "title": "chuẩn bị hồ sơ thầu",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "TAX_INVOICE_ISSUE",
+      "title": "xuất hóa đơn VAT",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "TAX_INVOICE_ISSUE",
+      "title": "hóa đơn sai mã số thuế",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "TAX_INVOICE_ISSUE",
+      "title": "xuất hóa đơn đỏ cho khách",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "TAX_INVOICE_ISSUE",
+      "title": "hủy hóa đơn xuất lại",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "TRAINING_COURSE",
+      "title": "đăng ký học tiếng Anh",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "TRAINING_COURSE",
+      "title": "thi chứng chỉ AWS",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "TRAINING_COURSE",
+      "title": "học khóa quản lý dự án",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "TRAINING_COURSE",
+      "title": "cử em đi học Excel nâng cao",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "VEHICLE_BOOKING",
+      "title": "đặt xe đón khách sân bay",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "VEHICLE_BOOKING",
+      "title": "mượn xe 7 chỗ",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "VEHICLE_BOOKING",
+      "title": "cần xe đi Bắc Ninh",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "VEHICLE_BOOKING",
+      "title": "xe chở hàng mẫu",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "VENDOR_PAYMENT",
+      "title": "thanh toán công nợ nhà cung cấp tháng 10",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "VENDOR_PAYMENT",
+      "title": "trả tiền hợp đồng đợt 2 cho nhà thầu",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "VENDOR_PAYMENT",
+      "title": "chuyển khoản cho vendor phần mềm",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "VENDOR_PAYMENT",
+      "title": "thanh toán tiền thuê văn phòng quý 4",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "VISITOR_SECURITY_PASS",
+      "title": "mai có khách đến công ty",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "VISITOR_SECURITY_PASS",
+      "title": "đăng ký khách thăm văn phòng",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "VISITOR_SECURITY_PASS",
+      "title": "thẻ tạm cho nhà thầu",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "VISITOR_SECURITY_PASS",
+      "title": "ứng viên đến phỏng vấn sáng mai",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "WAREHOUSE_TRANSFER",
+      "title": "chuyển hàng sang kho Long Biên",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "WAREHOUSE_TRANSFER",
+      "title": "luân chuyển tồn kho",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "WAREHOUSE_TRANSFER",
+      "title": "xuất hàng mẫu sang showroom",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "WAREHOUSE_TRANSFER",
+      "title": "điều chuyển vật tư về công trình",
+      "description": ""
+    },
+    {
+      "split": "dev",
+      "label": "WFH_REQ",
+      "title": "mai em làm ở nhà",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "WFH_REQ",
+      "title": "xin wfh thứ 6",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "WFH_REQ",
+      "title": "làm online vì đường ngập",
+      "description": ""
+    },
+    {
+      "split": "test",
+      "label": "WFH_REQ",
+      "title": "remote 2 ngày tuần này",
+      "description": ""
+    }
+  ]
+}
