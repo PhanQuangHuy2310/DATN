@@ -88,3 +88,6 @@ ai_service/data/active_enterprise_policy.json
 
 # Impeccable detector cache (per machine)
 **/.impeccable/hook.cache.json
+
+# Báo cáo, ảnh chụp, bản nháp tài liệu của nhóm: chỉ lưu trên máy, không commit
+workspace/
