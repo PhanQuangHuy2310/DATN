@@ -55,7 +55,7 @@ Số migration trong các mục cũ là số trước khi gộp: 08, 09, 10, 14 
 ## Chưa làm
 - [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→10 và mock 004 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)
 - [ ] D. Chờ quyết định trưởng nhóm cho 4 mục bên dưới
-- [ ] Tạo PR trên GitHub: máy không có gh CLI, tạo tay qua https://github.com/PhanQuangHuy2310/DATN/compare/main...dat?expand=1
+- [ ] Chờ PM review và merge PR #11 (`dat` → `main`): https://github.com/PhanQuangHuy2310/DATN/pull/11
 
 ## Quyết định cần tôi xác nhận
 - 15/11: AI tự duyệt giờ kiểm tra đúng quy tắc theo loại, nên sẽ chuyển người duyệt nhiều hơn trước: đơn LEAVE thiếu ngày hoặc ≥ 3 ngày hoặc quá số phép, ROOM_BOOKING không tra được tình trạng phòng, hoàn tiền > 2 triệu. Đây là hành vi đúng theo quy tắc đã ghi trong code; nếu nhóm muốn nới (ví dụ phòng không tra được vẫn duyệt) cần quyết định.
