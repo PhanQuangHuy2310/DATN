@@ -3,6 +3,14 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **16/11 — Dọn dự án** (5 commit, trong PR #11): xóa mobile_app/ (Flutter) và job CI mobile; bỏ workspace/ khỏi git (file vẫn trên máy, đã thêm .gitignore); xóa 2 component dashboard chết; thư mục gốc 45 → 30 file (xóa 7 file lỗi thời/trùng, chuyển 7 công cụ chẩn đoán vào scripts/, test_logger vào api_core/tests, hướng dẫn kiểm thử vào docs/); gộp 7 changelog thành CHANGELOG.md, gộp 17 cặp plan/report bảo mật; xóa 13 file rỗng và cache. Repo 629 → 549 file. Test: Django 426, run_tests 186, web 85, ruff/docs/secret gate sạch.
+- [x] **16/11 — Duy trì đăng nhập + AI câu ngắn + sửa ô tiền** (mô tả trong PR_DESCRIPTION.md):
+  - Refresh token xoay vòng trong Redis (cookie `eas_refresh` HttpOnly), ô "Ghi nhớ đăng nhập", email điền sẵn sau đăng xuất. Mật khẩu chỉ lưu ở trình quản lý mật khẩu của trình duyệt.
+  - AI phân loại câu rất ngắn: câu ngắn test 96,7%, câu đầy đủ test 93,7%.
+  - AI tự chuyển biểu mẫu khi gõ tiêu đề (ví dụ "bố mất" → Nghỉ phép đặc biệt).
+  - Sửa ô số tiền đảo chữ số (1500000000).
+  - Test: Django 421, run_tests 188, web 85, AI benchmark 43/43, trình duyệt 23/23.
+- [x] **15/11 — Đặt lại mật khẩu tại trang Người dùng, sửa worker gọi AI, sửa giao diện AI** (`5792128`, `84f4ad6`, `ab9be66`).
 - [x] **15/11 — AI kiểm thử đầy đủ + sửa giao diện thu phóng** (9 commit, mô tả trong PR_DESCRIPTION.md): train lại theo catalog v2, phân loại trên câu viết tay test 89,8% → 95,3% (top-3 99,2%); sửa tự duyệt bỏ qua quy tắc nghỉ phép/phòng họp/hoàn tiền với mã catalog v2; sửa OCR làm worker uvicorn bị kill (chạy ở process riêng); test_ai_benchmark.py 37/37 trên Docker; sửa vỡ bố cục ở zoom 125–150%. Toàn bộ test: Django 590, run_tests 183, AI 34, web 72, lint/secret sạch. Không commit workspace/ và training_report.md (báo cáo).
 - [x] **Kiểm thử Đóng giả Người dùng (Live Impersonation E2E Testing) & Hoàn tất 8 Phase Kế hoạch**: Đã viết đầy đủ 8 file kế hoạch vào plans/completed/ (Phase 0 đến Phase 7), kiểm thử trực tiếp trên trình duyệt bằng cách đóng giả 4 vai trò người dùng thực tế (dmin@eas.com, lan.ngo@eas.com, n.pham@eas.com, n.do@eas.com), xác nhận tính hợp lệ của dữ liệu chỉnh sửa mới nhất (137 tài khoản người dùng, loại bỏ tài khoản +admin, kiểm soát bảo mật Cổng Quản trị và Cổng Nhân viên đạt chuẩn 100%), lưu trữ báo cáo kiểm thử vào plans/reports/2026-11-03_live_impersonation_audit_report.md.
 - [x] Giai đoạn 7 (Phase 7): E2E Audit toàn diện 9 chức năng, đồng bộ Header/Sidebar/Dark Mode, kiểm tra chéo 6 luồng nghiệp vụ cốt lõi, hoàn tất Definition of Done (64/64 Unit tests pass, 0 linter errors, build Vite 294ms/324ms).
@@ -48,7 +56,7 @@ Số migration trong các mục cũ là số trước khi gộp: 08, 09, 10, 14 
 ## Chưa làm
 - [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→10 và mock 004 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)
 - [ ] D. Chờ quyết định trưởng nhóm cho 4 mục bên dưới
-- [ ] Tạo PR trên GitHub: máy không có gh CLI, tạo tay qua https://github.com/PhanQuangHuy2310/DATN/compare/main...dat?expand=1
+- [ ] Chờ PM review và merge PR #11 (`dat` → `main`): https://github.com/PhanQuangHuy2310/DATN/pull/11
 
 ## Quyết định cần tôi xác nhận
 - 15/11: AI tự duyệt giờ kiểm tra đúng quy tắc theo loại, nên sẽ chuyển người duyệt nhiều hơn trước: đơn LEAVE thiếu ngày hoặc ≥ 3 ngày hoặc quá số phép, ROOM_BOOKING không tra được tình trạng phòng, hoàn tiền > 2 triệu. Đây là hành vi đúng theo quy tắc đã ghi trong code; nếu nhóm muốn nới (ví dụ phòng không tra được vẫn duyệt) cần quyết định.

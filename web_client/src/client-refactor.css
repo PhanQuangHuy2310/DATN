@@ -8,7 +8,6 @@
 .client-metric > span {font-size:14.5px;color:var(--client-muted);font-weight:650;}
 .client-metric > strong {font-size:clamp(2rem,2.5vw,2.75rem);font-weight:800;color:var(--client-ink);overflow-wrap:anywhere;line-height:1.2;}
 .client-metric > small {color:var(--client-muted);font-size:13.5px;line-height:1.45;}
-.client-dashboard-charts {display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .client-chart-list {display:grid;gap:16px;margin-top:18px;}
 .client-chart-row {display:grid;grid-template-columns:minmax(140px,1fr) minmax(70px,1.1fr) 40px;align-items:center;gap:14px;font-size:14.5px;}
 .client-chart-row > span:first-child {overflow-wrap:anywhere;font-weight:550;}
@@ -73,7 +72,7 @@
 .request-menu-option>button {align-self:flex-start;}
 .request-menu-option-main p {min-height:33px;}
 @media(max-width:1150px){.client-quick-search {max-width:250px;}.client-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.client-org-list{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media(max-width:800px){.client-quick-search {max-width:210px;}.client-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr));}.client-dashboard-charts{grid-template-columns:1fr;}.request-menu-results{grid-template-columns:1fr;}}
+@media(max-width:800px){.client-quick-search {max-width:210px;}.client-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr));}.request-menu-results{grid-template-columns:1fr;}}
 @media(max-width:650px){.client-quick-search{order:3;flex:1 1 100%;max-width:none;}.client-metric-grid,.client-org-list{grid-template-columns:1fr 1fr;}.client-filter-fields{grid-template-columns:1fr;}.client-chart-row{grid-template-columns:110px 1fr 25px;}.client-account-link{max-width:115px;}.client-stage-tabs{margin-right:-12px;}.client-kanban-column{flex-basis:83vw;max-width:83vw;}}
 @media(max-width:420px){.client-metric-grid,.client-org-list{grid-template-columns:1fr;}.client-account-link strong{display:none;}.client-chart-row{grid-template-columns:80px 1fr 25px;gap:7px;}.client-filter-footer .actions{width:100%;}.client-quick-search{max-width:none;}}
 @media(prefers-reduced-motion:reduce){.client-recent-row,.client-request-entry,.client-stage-tabs button{transition:none!important;}}

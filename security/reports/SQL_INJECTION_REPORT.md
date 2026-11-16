@@ -2,7 +2,7 @@
 
 ## Status: PASS
 
-Trạng thái trước khắc phục: **PASS**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/completed/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [SQL_INJECTION_PLAN.md](../plans/SQL_INJECTION_PLAN.md).
+Trạng thái trước khắc phục: **PASS**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/active/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [mục Kế hoạch khắc phục](#kế-hoạch-khắc-phục).
 
 ## Findings
 
@@ -27,3 +27,23 @@ Giữ quy tắc: định danh động chỉ lấy từ allowlist, không bao gi�
 - [x] Mọi truy vấn dùng tham số
 - [x] Không nối chuỗi/f-string với dữ liệu người dùng trong SQL
 - [x] grep mẫu nguy hiểm chỉ ra các chỗ dùng allowlist đã rà
+
+## Kế hoạch khắc phục
+
+### Changes
+
+- Không có thay đổi mã.
+
+### New files
+
+- Không có.
+
+### Verification goals
+
+- [x] Mọi truy vấn dùng tham số
+- [x] Không nối chuỗi/f-string với dữ liệu người dùng trong SQL
+- [x] grep mẫu nguy hiểm chỉ ra các chỗ dùng allowlist đã rà
+
+### Manual verification (for the human)
+
+- Không có.

@@ -1,7 +1,7 @@
 {
   "pipeline_version": "catalog-v2-unified-1",
-  "trained_at": "2026-11-14T17:57:42+00:00",
-  "training_duration_seconds": 988.1,
+  "trained_at": "2026-11-15T16:47:13+00:00",
+  "training_duration_seconds": 254.4,
   "status": "READY_FOR_INFERENCE",
   "random_state": 42,
   "catalog": "api_core\\catalog\\catalog_v2.json",
@@ -9,74 +9,76 @@
   "nlp_metrics": {
     "corpus": "training\\data\\request_corpus.json",
     "evaluation_set": "training\\data\\request_eval_realistic.json",
+    "short_evaluation_set": "training\\data\\request_eval_short.json",
     "types": 58,
-    "synthetic_rows": 34800,
+    "synthetic_rows": 37701,
     "rows_per_type": 600,
     "corpus_templates": {
       "titles": 484,
-      "details": 265
+      "details": 265,
+      "short": 442
     },
     "model": "TF-IDF từ (1-2 gram) + ký tự không dấu (2-5 gram) → Logistic Regression",
     "c_search": [
       {
         "C": 2.0,
-        "heldout_accuracy": 0.9682258064516129,
-        "dev_accuracy": 0.9712643678160919
+        "heldout_accuracy": 0.9736881224914523,
+        "dev_accuracy": 0.9871794871794872
       },
       {
         "C": 5.0,
-        "heldout_accuracy": 0.9685483870967742,
-        "dev_accuracy": 0.9712643678160919
+        "heldout_accuracy": 0.9759179426192954,
+        "dev_accuracy": 0.9786324786324786
       },
       {
         "C": 10.0,
-        "heldout_accuracy": 0.9651612903225807,
-        "dev_accuracy": 0.9712643678160919
+        "heldout_accuracy": 0.9754719785937268,
+        "dev_accuracy": 0.9786324786324786
       },
       {
         "C": 20.0,
-        "heldout_accuracy": 0.9616129032258065,
-        "dev_accuracy": 0.9540229885057471
+        "heldout_accuracy": 0.9779991080719489,
+        "dev_accuracy": 0.9829059829059829
       }
     ],
-    "chosen_c": 5.0,
+    "chosen_c": 2.0,
     "heldout_templates": {
-      "rows": 6200,
-      "accuracy": 0.9685483870967742,
-      "top3_accuracy": 0.9908064516129033,
-      "f1_macro": 0.9679993038202783,
+      "rows": 6727,
+      "accuracy": 0.9736881224914523,
+      "top3_accuracy": 0.9936078489668501,
+      "f1_macro": 0.9738628080938259,
       "weakest_types": [
         {
-          "type": "ROOM_BOOKING",
-          "accuracy": 0.8346456692913385
+          "type": "SPECIAL_DISCOUNT",
+          "accuracy": 0.85
         },
         {
-          "type": "NDA_PRIVACY_CLEARANCE",
-          "accuracy": 0.8780487804878049
+          "type": "TRAINING_COURSE",
+          "accuracy": 0.8797814207650273
         },
         {
-          "type": "DATA_UAT_EXPORT",
-          "accuracy": 0.8863636363636364
+          "type": "CONTRACT_APPROVAL",
+          "accuracy": 0.8807339449541285
         },
         {
-          "type": "INTERNAL_TRANSFER",
-          "accuracy": 0.8888888888888888
+          "type": "WAREHOUSE_TRANSFER",
+          "accuracy": 0.9203980099502488
         },
         {
-          "type": "RESOURCE_REVOKE",
-          "accuracy": 0.8962264150943396
+          "type": "TASK_REQUEST",
+          "accuracy": 0.9243243243243243
         },
         {
-          "type": "FEATURE_RELEASE",
-          "accuracy": 0.9125
+          "type": "SECURITY_INCIDENT_HOTFIX",
+          "accuracy": 0.9277777777777778
         },
         {
-          "type": "ASSET_DISPOSAL",
-          "accuracy": 0.9173553719008265
+          "type": "ADVANCE_MEDIUM",
+          "accuracy": 0.9354838709677419
         },
         {
           "type": "SERVER_FIREWALL",
-          "accuracy": 0.9186046511627907
+          "accuracy": 0.9381443298969072
         }
       ]
     },
@@ -90,10 +92,20 @@
       },
       "test": {
         "rows": 127,
-        "accuracy": 0.952755905511811,
-        "top3_accuracy": 0.9921259842519685,
-        "category_accuracy": 0.9606299212598425,
+        "accuracy": 0.937007874015748,
+        "top3_accuracy": 1.0,
+        "category_accuracy": 0.968503937007874,
         "errors": [
+          {
+            "text": "Khách bị trừ tiền 2 lần khi thanh toán online, cần trả lại 1 lần",
+            "expected": "REFUND_COMPENSATION",
+            "predicted": "EXPENSE_CLAIM",
+            "top3": [
+              "EXPENSE_CLAIM",
+              "REFUND_COMPENSATION",
+              "VENDOR_PAYMENT"
+            ]
+          },
           {
             "text": "Nhờ kế toán xuất VAT cho hợp đồng tư vấn vừa nghiệm thu",
             "expected": "TAX_INVOICE_ISSUE",
@@ -105,13 +117,13 @@
             ]
           },
           {
-            "text": "Mua máy chấm công nhận diện khuôn mặt cho chi nhánh",
-            "expected": "EQUIPMENT",
-            "predicted": "ATTENDANCE_ADJUSTMENT",
+            "text": "mua them cay xanh dat o khu lam viec cho thoang",
+            "expected": "PURCHASE_REQUEST",
+            "predicted": "EQUIPMENT",
             "top3": [
-              "ATTENDANCE_ADJUSTMENT",
               "EQUIPMENT",
-              "PURCHASE_REQUEST"
+              "PURCHASE_REQUEST",
+              "TASK_REQUEST"
             ]
           },
           {
@@ -125,13 +137,13 @@
             ]
           },
           {
-            "text": "Cần xem bảng dữ liệu khách hàng thật để đối soát khiếu nại. Có thông tin cá nhân",
-            "expected": "PROD_DATA_ACCESS",
-            "predicted": "NDA_PRIVACY_CLEARANCE",
+            "text": "Đăng ký cho thợ sửa điều hòa vào tòa nhà ngày mai",
+            "expected": "VISITOR_SECURITY_PASS",
+            "predicted": "FACILITY_REPAIR",
             "top3": [
-              "NDA_PRIVACY_CLEARANCE",
-              "PROD_DATA_ACCESS",
-              "REFUND_COMPENSATION"
+              "FACILITY_REPAIR",
+              "VISITOR_SECURITY_PASS",
+              "WFH_REQ"
             ]
           },
           {
@@ -141,17 +153,115 @@
             "top3": [
               "EQUIPMENT_BORROW",
               "FLASH_SALE_VOUCHER",
+              "CROSS_DEPT_SUPPORT"
+            ]
+          },
+          {
+            "text": "Góp ý hệ thống: nên gửi thông báo khi đơn sắp quá hạn",
+            "expected": "FEATURE_RELEASE",
+            "predicted": "TASK_REQUEST",
+            "top3": [
+              "TASK_REQUEST",
+              "FEATURE_RELEASE",
+              "FACILITY_REPAIR"
+            ]
+          },
+          {
+            "text": "Hủy các máy tính hỏng không sửa được trong kho",
+            "expected": "ASSET_DISPOSAL",
+            "predicted": "IT_SUPPORT",
+            "top3": [
+              "IT_SUPPORT",
+              "ASSET_DISPOSAL",
+              "FACILITY_REPAIR"
+            ]
+          }
+        ]
+      }
+    },
+    "short_inputs": {
+      "dev": {
+        "rows": 60,
+        "accuracy": 0.9833333333333333,
+        "top3_accuracy": 1.0,
+        "category_accuracy": 0.9833333333333333,
+        "errors": [
+          {
+            "text": "nhân viên mới chưa có máy tính",
+            "expected": "LAPTOP_PROVISION",
+            "predicted": "EMPLOYEE_ONBOARDING",
+            "top3": [
+              "EMPLOYEE_ONBOARDING",
+              "LAPTOP_PROVISION",
+              "EQUIPMENT"
+            ]
+          }
+        ]
+      },
+      "test": {
+        "rows": 184,
+        "accuracy": 0.967391304347826,
+        "top3_accuracy": 0.9891304347826086,
+        "category_accuracy": 0.9728260869565217,
+        "errors": [
+          {
+            "text": "máy vân tay không nhận",
+            "expected": "ATTENDANCE_ADJUSTMENT",
+            "predicted": "IT_SUPPORT",
+            "top3": [
+              "IT_SUPPORT",
+              "ACCESS_FACILITY",
+              "OFFICE_SUPPLIES"
+            ]
+          },
+          {
+            "text": "bị tính đi muộn sai",
+            "expected": "ATTENDANCE_ADJUSTMENT",
+            "predicted": "EQUIPMENT_BORROW",
+            "top3": [
+              "EQUIPMENT_BORROW",
+              "ATTENDANCE_ADJUSTMENT",
+              "LEAVE"
+            ]
+          },
+          {
+            "text": "ra quy chế làm việc từ xa",
+            "expected": "POLICY_ISSUANCE",
+            "predicted": "WFH_REQ",
+            "top3": [
+              "WFH_REQ",
+              "POLICY_ISSUANCE",
+              "BUSINESS_TRIP"
+            ]
+          },
+          {
+            "text": "mở vị trí kế toán",
+            "expected": "RECRUITMENT_REQ",
+            "predicted": "ACCESS",
+            "top3": [
+              "ACCESS",
+              "VENDOR_PAYMENT",
+              "EXPENSE_CLAIM"
+            ]
+          },
+          {
+            "text": "chuyển sang công ty khác làm",
+            "expected": "RESIGNATION",
+            "predicted": "INTERNAL_TRANSFER",
+            "top3": [
+              "INTERNAL_TRANSFER",
+              "RESIGNATION",
               "WAREHOUSE_TRANSFER"
             ]
           },
           {
-            "text": "Xin lịch deploy bản 2.3 lên production tối thứ 6",
-            "expected": "FEATURE_RELEASE",
-            "predicted": "PROD_DATA_ACCESS",
+            "text": "đăng ký nhà vận chuyển mới",
+            "expected": "SUPPLIER_ONBOARDING",
+            "predicted": "INTERNAL_TRANSFER",
             "top3": [
-              "PROD_DATA_ACCESS",
-              "FEATURE_RELEASE",
-              "SECURITY_INCIDENT_HOTFIX"
+              "INTERNAL_TRANSFER",
+              "SUPPLIER_ONBOARDING",
+              "VISITOR_SECURITY_PASS"
             ]
           }
         ]

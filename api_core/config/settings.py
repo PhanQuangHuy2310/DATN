@@ -138,6 +138,17 @@ EAS_SESSION_IDLE_SECONDS = int(os.getenv("EAS_SESSION_IDLE_SECONDS", "1800"))
 if not 0 < EAS_SESSION_IDLE_SECONDS <= SESSION_COOKIE_AGE:
     raise RuntimeError("Session idle must be within absolute session lifetime")
 SESSION_SAVE_EVERY_REQUEST = True
+# Refresh token (api_core/authn/refresh.py): renews the short session without a
+# new password. "Ghi nhớ đăng nhập" keeps it for 7 days, otherwise until the
+# browser closes (and at most 12 hours).
+EAS_REFRESH_COOKIE_NAME = "eas_refresh"
+EAS_REFRESH_REMEMBER_SECONDS = int(
+    os.getenv("EAS_REFRESH_REMEMBER_SECONDS", str(7 * 24 * 3600))
+)
+EAS_REFRESH_SESSION_SECONDS = int(
+    os.getenv("EAS_REFRESH_SESSION_SECONDS", str(12 * 3600))
+)
+EAS_REFRESH_MAX_PER_MINUTE = int(os.getenv("EAS_REFRESH_MAX_PER_MINUTE", "30"))
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False
@@ -271,6 +282,11 @@ EAS_REQUIRE_MOCK_SOURCES = (
 EAS_ALLOW_ADMIN_DB = os.getenv("EAS_ALLOW_ADMIN_DB", "false").lower() == "true"
 if ENVIRONMENT == "production" and EAS_ALLOW_ADMIN_DB:
     raise RuntimeError("EAS_ALLOW_ADMIN_DB cannot be enabled in production")
+
+# Admin portal address used in e-mails (falls back to the Vite setting of the same .env).
+EAS_ADMIN_PORTAL_URL = (
+    os.getenv("EAS_ADMIN_PORTAL_URL") or os.getenv("VITE_ADMIN_PORTAL_URL") or ""
+).strip()
 
 # ── AI Service Integration ──
 EAS_AI_SERVICE_URL = os.getenv(

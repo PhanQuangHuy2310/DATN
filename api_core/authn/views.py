@@ -20,6 +20,7 @@ from django.views.decorators.http import require_GET, require_POST
 from api_core.http import JsonBodyError, api_error, correlation_id, parse_json_object
 from api_core.middleware import client_ip
 
+from . import refresh as refresh_tokens
 from .login_throttle import (
     clear_account_failures,
     incr_window,
@@ -31,6 +32,7 @@ from .service import (
     PasswordChangeError,
     change_password,
     find_user,
+    find_user_by_id,
     load_actor_from_session,
     require_actor,
     verify_login_password,
@@ -71,6 +73,9 @@ def _parse_credentials(
         body = parse_json_object(request, max_bytes=8 * 1024)
     except JsonBodyError as exc:
         return api_error(request, str(exc), status=400)
+    # "remember": keep the user signed in for days (refresh token cookie).
+    remember = body.pop("remember", True)
+    request.eas_remember = remember is not False
     valid_keys = {"email", "password", "portal"}
     if not (
         {"email", "password"}.issubset(set(body)) and set(body).issubset(valid_keys)
@@ -257,17 +262,99 @@ def login(request: HttpRequest) -> JsonResponse:
     _establish_user_session(request, user)
 
     payload = {
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "display_name": user.display_name,
-            "must_change_password": user.must_change_password,
-        },
+        "user": _login_user_payload(user),
         "correlation_id": correlation_id(request),
     }
     if m_payload:
         payload["maintenance"] = m_payload
-    return JsonResponse(payload)
+    response = JsonResponse(payload)
+    refresh_tokens.issue(
+        response,
+        user_id=user.id,
+        auth_version=user.auth_version,
+        remember=getattr(request, "eas_remember", True),
+        portal=portal,
+    )
+    return response
+
+
+def _login_user_payload(user) -> dict[str, Any]:
+    return {
+        "id": user.id,
+        "email": user.email,
+        "display_name": user.display_name,
+        "must_change_password": user.must_change_password,
+    }
+
+
+@require_POST
+def refresh(request: HttpRequest) -> JsonResponse:
+    """Exchange the refresh-token cookie for a new session and a rotated token."""
+    ip_key = f"eas:refresh:ip:{client_ip(request)}"
+    if incr_window(cache, ip_key, 60) > getattr(
+        settings, "EAS_REFRESH_MAX_PER_MINUTE", 30
+    ):
+        return api_error(
+            request, "LOGIN_RATE_LIMITED", status=429, headers={"Retry-After": "60"}
+        )
+    try:
+        grant = refresh_tokens.consume(request)
+    except refresh_tokens.RefreshRaced:
+        # Another tab of this browser has just refreshed; its cookies are set.
+        return JsonResponse(
+            {"status": "refreshed_elsewhere", "correlation_id": correlation_id(request)}
+        )
+    except refresh_tokens.RefreshRejected:
+        response = api_error(request, "AUTHENTICATION_REQUIRED", status=401)
+        refresh_tokens.clear_cookie(response)
+        return response
+
+    user = find_user_by_id(grant.user_id)
+    if (
+        user is None
+        or not user.is_active
+        or user.auth_version != grant.auth_version
+        or (grant.portal and not _portal_allowed(_active_roles(user.id), grant.portal))
+    ):
+        # Password changed, account locked or rights revoked since login.
+        refresh_tokens.revoke_family(grant.family)
+        response = api_error(request, "AUTHENTICATION_REQUIRED", status=401)
+        refresh_tokens.clear_cookie(response)
+        return response
+
+    m_err, m_payload = _check_maintenance_login(request, user.id)
+    if m_err:
+        # Keep the token: the user signs back in silently after maintenance.
+        refresh_tokens.issue(
+            m_err,
+            user_id=user.id,
+            auth_version=user.auth_version,
+            remember=grant.remember,
+            portal=grant.portal,
+            family=grant.family,
+            family_expires_at=grant.family_expires_at,
+        )
+        return m_err
+
+    _establish_user_session(request, user)
+    payload = {
+        "status": "refreshed",
+        "user": _login_user_payload(user),
+        "correlation_id": correlation_id(request),
+    }
+    if m_payload:
+        payload["maintenance"] = m_payload
+    response = JsonResponse(payload)
+    refresh_tokens.issue(
+        response,
+        user_id=user.id,
+        auth_version=user.auth_version,
+        remember=grant.remember,
+        portal=grant.portal,
+        family=grant.family,
+        family_expires_at=grant.family_expires_at,
+    )
+    return response
 
 
 def _password_reset_request_key(email: str) -> str:
@@ -307,6 +394,21 @@ def _global_ops_admin(request: HttpRequest) -> bool:
             [request.actor.id],
         )
         return bool(cursor.fetchone()[0])
+
+
+def _admin_reset_notice(name: str, email: str, request_id: str) -> str:
+    portal = (getattr(settings, "EAS_ADMIN_PORTAL_URL", "") or "").rstrip("/")
+    where = f"{portal}/#/users" if portal else "cổng quản trị EAS"
+    return (
+        f"Nhân viên {name} ({email}) đã yêu cầu đặt lại mật khẩu.\n\n"
+        f"Xử lý tại: {where} > Người dùng > Yêu cầu đặt lại mật khẩu.\n"
+        "1. Xác minh danh tính nhân viên qua một kênh độc lập (gặp trực tiếp, điện thoại nội bộ).\n"
+        '2. Chọn "Cấp mật khẩu tạm": hệ thống tự sinh mật khẩu hoặc quản trị viên tự nhập; '
+        "mật khẩu tạm được gửi đến email của nhân viên và bắt buộc đổi ở lần đăng nhập đầu tiên.\n"
+        '3. Nếu không xác minh được, chọn "Từ chối" và ghi rõ lý do.\n\n'
+        f"Mã yêu cầu: {request_id} (hiệu lực 24 giờ).\n"
+        "Không trả lời email này và không gửi mật khẩu qua email phản hồi."
+    )
 
 
 def _password_reset_admin_emails(cursor) -> list[str]:
@@ -394,6 +496,7 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
                 [user[0]],
             )
             existing = cursor.fetchone()
+            is_new_request = not existing
             if existing:
                 request_id = existing[0]
             else:
@@ -434,6 +537,15 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
                     },
                     status=202,
                 )
+        if not is_new_request:
+            # Same pending request (valid 24 h): admins were already told once.
+            return JsonResponse(
+                {
+                    "status": "accepted",
+                    "message": "Nếu tài khoản tồn tại, yêu cầu sẽ được xem xét theo quy trình quản trị.",
+                },
+                status=202,
+            )
         if not smtp_configured:
             logger.info(
                 "password_reset_queued_without_smtp",
@@ -457,13 +569,7 @@ def password_reset_request(request: HttpRequest) -> JsonResponse:
         try:
             send_mail(
                 subject="Yêu cầu xác nhận đặt lại mật khẩu EAS",
-                message=(
-                    f"Nhân viên {user[1]} ({email}) đã yêu cầu đặt lại mật khẩu.\n"
-                    "Hãy đăng nhập cổng quản trị EAS, mở Danh tính & phân quyền "
-                    "và xác minh danh tính trước khi phê duyệt.\n"
-                    f"Mã yêu cầu: {request_id}\n"
-                    "Không trả lời email này để gửi mật khẩu."
-                ),
+                message=_admin_reset_notice(user[1], email, request_id),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=_email_recipients(admin_emails),
                 fail_silently=False,
@@ -542,12 +648,20 @@ def password_reset_approve(request: HttpRequest, request_id: str) -> JsonRespons
     except JsonBodyError as exc:
         return api_error(request, str(exc), status=400)
     reason = body.get("reason")
+    mode = body.get("mode", "generated")
+    manual_password = body.get("temporary_password")
     if (
-        set(body) != {"reason"}
+        not set(body) <= {"reason", "mode", "temporary_password"}
         or not isinstance(reason, str)
         or not 10 <= len(reason.strip()) <= 2000
     ):
         return api_error(request, "RESET_APPROVAL_REASON_REQUIRED", status=400)
+    if mode not in ("generated", "manual") or (
+        mode == "generated" and manual_password is not None
+    ):
+        return api_error(request, "RESET_MODE_INVALID", status=400)
+    if mode == "manual" and not isinstance(manual_password, str):
+        return api_error(request, "TEMPORARY_PASSWORD_REQUIRED", status=400)
 
     from django.contrib.auth.hashers import make_password
     from django.db import transaction
@@ -585,7 +699,22 @@ def password_reset_approve(request: HttpRequest, request_id: str) -> JsonRespons
             return api_error(request, "CANNOT_APPROVE_OWN_RESET", status=403)
         if target_email != requested_email:
             return api_error(request, "RESET_REQUEST_EMAIL_CHANGED", status=409)
-        temporary_password = _temporary_password(target_email)
+        if mode == "manual":
+            from .service import validate_new_password
+
+            try:
+                temporary_password = validate_new_password(
+                    manual_password, target_email
+                )
+            except PasswordChangeError as exc:
+                return api_error(
+                    request,
+                    "TEMPORARY_PASSWORD_POLICY",
+                    status=422,
+                    fields={"temporary_password": [str(exc)]},
+                )
+        else:
+            temporary_password = _temporary_password(target_email)
         new_version = auth_version + 1
         cursor.execute(
             """UPDATE eas.app_user
@@ -611,7 +740,11 @@ def password_reset_approve(request: HttpRequest, request_id: str) -> JsonRespons
             target_type="app_user",
             target_id=user_id,
             department_id=department_id,
-            details={"request_id": request_id, "auth_version": new_version},
+            details={
+                "request_id": request_id,
+                "auth_version": new_version,
+                "mode": mode,
+            },
             reason=reason.strip(),
             correlation_id=correlation_id(request),
         )
@@ -650,7 +783,83 @@ def password_reset_approve(request: HttpRequest, request_id: str) -> JsonRespons
         )
         return api_error(request, "PASSWORD_RESET_DELIVERY_FAILED", status=503)
 
-    return JsonResponse({"status": "approved", "email": target_email})
+    return JsonResponse({"status": "approved", "email": target_email, "mode": mode})
+
+
+@require_POST
+@require_actor("OPS_ADMIN")
+def password_reset_reject(request: HttpRequest, request_id: str) -> JsonResponse:
+    """Close a reset request without changing the password (no new status:
+    the request is marked EXPIRED with the reviewer and the reason)."""
+    if not _global_ops_admin(request):
+        return api_error(request, "FORBIDDEN", status=403)
+    try:
+        body = parse_json_object(request, max_bytes=8 * 1024)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    reason = body.get("reason")
+    if (
+        set(body) != {"reason"}
+        or not isinstance(reason, str)
+        or not 10 <= len(reason.strip()) <= 2000
+    ):
+        return api_error(request, "RESET_REJECT_REASON_REQUIRED", status=400)
+
+    from django.db import transaction
+
+    from api_core.workflow.service import _append_admin_audit
+
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute("SELECT eas.lock_security(true)")
+        cursor.execute(
+            """UPDATE eas.password_reset_request pr
+               SET status='EXPIRED', resolved_at=statement_timestamp(),
+                   resolved_by=%s, resolution_reason=%s
+               FROM eas.app_user u
+               WHERE pr.id=%s AND pr.status='PENDING' AND u.id=pr.user_id
+               RETURNING pr.user_id::text, u.email, u.display_name, u.department_id::text""",
+            [request.actor.id, f"Từ chối: {reason.strip()}", request_id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            return api_error(request, "RESET_REQUEST_NOT_FOUND_OR_EXPIRED", status=404)
+        user_id, target_email, target_name, department_id = row
+        _append_admin_audit(
+            cursor,
+            actor_id=request.actor.id,
+            actor_kind="HUMAN",
+            action="PASSWORD_RESET_REJECTED",
+            target_type="app_user",
+            target_id=user_id,
+            department_id=department_id,
+            details={"request_id": request_id},
+            reason=reason.strip(),
+            correlation_id=correlation_id(request),
+        )
+    if settings.EMAIL_HOST and settings.DEFAULT_FROM_EMAIL:
+        try:
+            send_mail(
+                subject="Yêu cầu đặt lại mật khẩu EAS chưa được chấp nhận",
+                message=(
+                    f"Xin chào {target_name},\n\n"
+                    "Yêu cầu đặt lại mật khẩu của bạn chưa được quản trị viên chấp nhận.\n"
+                    f"Lý do: {reason.strip()}\n\n"
+                    "Mật khẩu hiện tại của bạn không thay đổi. Vui lòng liên hệ quản trị viên "
+                    "hệ thống nếu cần hỗ trợ."
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=_email_recipients([target_email]),
+                fail_silently=False,
+            )
+        except (OSError, smtplib.SMTPException) as exc:
+            logger.warning(
+                "password_reset_rejection_notice_failed",
+                extra={
+                    "correlation_id": correlation_id(request),
+                    "error_type": type(exc).__name__,
+                },
+            )
+    return JsonResponse({"status": "rejected", "email": target_email})
 
 
 @require_POST
@@ -664,10 +873,13 @@ def logout(request: HttpRequest) -> JsonResponse:
             "1",
             timeout=settings.SESSION_COOKIE_AGE,
         )
+    refresh_tokens.revoke_from_request(request)
     request.session.flush()
-    return JsonResponse(
+    response = JsonResponse(
         {"status": "logged_out", "correlation_id": correlation_id(request)}
     )
+    refresh_tokens.clear_cookie(response)
+    return response
 
 
 def _is_valid_uuid(val: Any) -> bool:
@@ -1079,6 +1291,12 @@ def password(request: HttpRequest) -> JsonResponse:
         timeout=settings.EAS_SESSION_IDLE_SECONDS,
     )
     request.session.cycle_key()
-    return JsonResponse(
+    response = JsonResponse(
         {"status": "password_changed", "correlation_id": correlation_id(request)}
     )
+    # Tokens issued before the change carry the old auth_version and are now
+    # refused; this browser gets a fresh one so the user is not signed out.
+    refresh_tokens.reissue(
+        request, response, user_id=actor.id, auth_version=new_version
+    )
+    return response

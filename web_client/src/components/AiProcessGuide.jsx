@@ -19,9 +19,16 @@ export default function AiProcessGuide({ user, onOpen, navigate, portal = "clien
   const isAdmin = portal === "admin";
   const canApprove = Boolean(user?.roles?.includes("APPROVER"));
   const canCreate = Boolean(user?.roles?.includes("REQUESTER"));
-  const [queue, setQueue] = useState(canCreate ? "mine" : "approval");
-  // Admins have no business queues: list by their own read scope (auditors see their audit scope).
-  const list = useResource(isAdmin ? "/api/v1/requests?limit=20&offset=0" : `/api/v1/requests?tab=${queue}&limit=20&offset=0`);
+  // Default: every request the user may see; a narrower queue is optional.
+  const sources = [
+    ["all", "Tất cả hồ sơ tôi được xem"],
+    ...(canCreate ? [["mine", "Yêu cầu của tôi"]] : []),
+    ...(canApprove ? [["approval", "Đang chờ tôi duyệt"]] : []),
+    ...(user?.roles?.includes("EXECUTOR") ? [["execution", "Việc tôi thực hiện"]] : []),
+    ...(user?.roles?.includes("ACCEPTOR") ? [["acceptance", "Chờ tôi nghiệm thu"]] : []),
+  ];
+  const [queue, setQueue] = useState("all");
+  const list = useResource(isAdmin || queue === "all" ? "/api/v1/requests?limit=20&offset=0" : `/api/v1/requests?tab=${queue}&limit=20&offset=0`);
   const [picked, setPicked] = useState("");
   const currentId = (list.data?.items || []).some(r=>r.id===picked) ? picked : (list.data?.items?.[0]?.id || "");
   const detail = useResource(currentId ? `/api/v1/requests/${currentId}` : "");
@@ -34,9 +41,9 @@ export default function AiProcessGuide({ user, onOpen, navigate, portal = "clien
     <section className="panel"><div className="section-head"><h2>Quy trình trong hệ thống</h2><span className="muted">Dữ liệu hồ sơ được đọc trực tiếp từ Backend</span></div>
       <ol className="ai-workflow-track">{FLOW.map(([title,desc],i)=><li key={title}><span className="ai-workflow-number">{i+1}</span><strong>{title}</strong><p>{desc}</p></li>)}</ol>
     </section>
-    <section className="panel"><div className="section-head"><div><h2>Theo dõi hồ sơ và kiểm tra AI<InfoHint>Chọn một hồ sơ thực tế để xem tuyến duyệt và chạy phân tích khi cần.</InfoHint></h2></div><button type="button" className="secondary" onClick={()=>{list.reload();if(currentId) detail.reload();}}>Làm mới</button></div>
+    <section className="panel"><div className="section-head"><div><h2>Theo dõi hồ sơ và kiểm tra AI<InfoHint>Chọn một hồ sơ thực tế để xem tuyến duyệt và chạy phân tích khi cần.</InfoHint></h2><p className="muted ai-workflow-help">Chọn một hồ sơ bạn được phép xem để biết hồ sơ đang ở bước nào trong 4 bước trên, ai đang phụ trách, và xem hoặc chạy đánh giá AI cho hồ sơ đó: AI phân loại nội dung, chấm điểm rủi ro, đối chiếu quy định và đề xuất tự duyệt hay chuyển người duyệt. Kết quả chỉ là khuyến nghị.</p></div><button type="button" className="secondary" onClick={()=>{list.reload();if(currentId) detail.reload();}}>Làm mới</button></div>
       <div className="ai-workflow-chooser">
-        {!isAdmin&&canCreate&&canApprove&&<label>Nguồn hồ sơ<select value={queue} onChange={e=>{setQueue(e.target.value);setPicked("");}}><option value="mine">Yêu cầu của tôi</option><option value="approval">Đang chờ tôi duyệt</option></select></label>}
+        {!isAdmin&&sources.length>1&&<label>Nguồn hồ sơ<select value={queue} onChange={e=>{setQueue(e.target.value);setPicked("");}}>{sources.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>}
         <ResourceState resource={list}><label>Hồ sơ<select value={currentId} onChange={e=>setPicked(e.target.value)} disabled={!list.data?.items?.length}><option value="">{list.data?.items?.length?"Chọn hồ sơ":"Chưa có hồ sơ"}</option>{(list.data?.items||[]).map(item=><option value={item.id} key={item.id}>{item.code} · {types[item.type_code]||"Yêu cầu"}</option>)}</select></label></ResourceState>
       </div>
       {currentId && <ResourceState resource={detail}>{request&&<>
@@ -46,7 +53,7 @@ export default function AiProcessGuide({ user, onOpen, navigate, portal = "clien
         <div className="ai-workflow-controls"><button type="button" className="secondary" onClick={()=>onOpen?.(request.id)}>Mở hồ sơ để xử lý →</button></div>
         {request.status === "DRAFT" ? <p className="muted">Bản nháp chưa được gửi nên chưa thể đánh giá AI.</p> : <AiAssessmentPanel key={request.id} requestId={request.id} canRun={!isAdmin && request.progress?.stage !== "CLOSED"} />}
       </>}</ResourceState>}
-      {!currentId&&!list.loading&&<p className="muted">{isAdmin ? "Không có hồ sơ trong phạm vi bạn được xem. Theo quy định, quản trị vận hành chỉ xem thông tin điều phối; đánh giá AI theo hồ sơ dành cho người tham gia xử lý và kiểm toán viên." : "Chưa có hồ sơ phù hợp để theo dõi. Bạn có thể tạo yêu cầu mới hoặc mở danh sách cần phê duyệt."}</p>}
+      {!currentId&&!list.loading&&<p className="muted">{isAdmin ? "Không có hồ sơ trong phạm vi bạn được xem. Theo quy định, quản trị vận hành chỉ xem thông tin điều phối; đánh giá AI theo hồ sơ dành cho người tham gia xử lý và kiểm toán viên." : "Chưa có hồ sơ nào trong nguồn đã chọn. Hãy chọn nguồn khác hoặc tạo yêu cầu mới; hồ sơ bạn gửi, được giao duyệt, thực hiện hay nghiệm thu đều sẽ xuất hiện ở đây."}</p>}
     </section>
   </div>;
 }

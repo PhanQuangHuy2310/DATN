@@ -105,7 +105,7 @@ Web nhân viên mở ở http://127.0.0.1:8080, web quản trị ở http://127.
 | Đăng nhập báo "Hệ thống bảo mật tạm thời gián đoạn" (`CACHE_UNAVAILABLE`) | Redis chưa chạy: mở Docker Desktop rồi chạy `docker compose up -d redis` |
 | Báo `INTEGRATION_DISABLED` | Quản trị đã tắt kết nối hệ thống đó: vào web quản trị → Cấu hình hệ thống → API & tích hợp |
 | Cổng 8000 / 8100 / 5173 / 8081 đã bị dùng | Tắt chương trình đang chiếm cổng, hoặc cửa sổ cũ của chính hệ thống này |
-| Quên mật khẩu quản trị | `.\.venv\Scripts\python.exe set_temporary_admin_password.py` để tạo mật khẩu tạm (bắt buộc đổi khi đăng nhập) |
+| Quên mật khẩu quản trị | `.\.venv\Scripts\python.exe scripts\set_temporary_admin_password.py` để tạo mật khẩu tạm (bắt buộc đổi khi đăng nhập) |
 | Thông báo, nhắc hạn, trả đồ mượn không chạy | Cửa sổ `start_worker_local.cmd` chưa chạy |
 
 ## 7. Tài liệu thêm
@@ -113,5 +113,5 @@ Web nhân viên mở ở http://127.0.0.1:8080, web quản trị ở http://127.
 - Phân loại yêu cầu (12 nhóm): [docs/PHAN_LOAI_YEU_CAU.md](./docs/PHAN_LOAI_YEU_CAU.md)
 - Tích hợp hệ thống ngoài (Mock Systems): [docs/TICH_HOP_HE_THONG_NGOAI.md](./docs/TICH_HOP_HE_THONG_NGOAI.md)
 - Thiết kế cơ sở dữ liệu: [docs/THIET_KE_SCHEMA_EAS_V2.md](./docs/THIET_KE_SCHEMA_EAS_V2.md). Dựng database mới: [database/README.md](./database/README.md)
-- Theo phân hệ: [API](./api_core/README.md) · [AI](./ai_service/README.md) · [Web](./web_client/README.md) · [Mobile](./mobile_app/README.md) · [Kiểm thử](./tests/README.md) · [Triển khai](./deploy/README.md)
-- Lịch sử thay đổi: thư mục [changelogs/](./changelogs/)
+- Theo phân hệ: [API](./api_core/README.md) · [AI](./ai_service/README.md) · [Web](./web_client/README.md) · [Kiểm thử](./tests/README.md) · [Triển khai](./deploy/README.md)
+- Lịch sử thay đổi: [CHANGELOG.md](./CHANGELOG.md)

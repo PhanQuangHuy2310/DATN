@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "about": "Tệp huấn luyện duy nhất cho bộ phân loại yêu cầu. Mỗi loại là một mã đang ACTIVE trong api_core/catalog/catalog_v2.json. train.py ghép tiêu đề + mô tả, thay {slot} bằng giá trị ngẫu nhiên có seed cố định nên mỗi lần train ra cùng một bộ dữ liệu. Thêm tình huống mới: thêm câu vào titles/details của đúng loại, rồi chạy lại train.py.",
+  "about": "Tệp huấn luyện duy nhất cho bộ phân loại yêu cầu. Mỗi loại là một mã đang ACTIVE trong api_core/catalog/catalog_v2.json. train.py ghép tiêu đề + mô tả, thay {slot} bằng giá trị ngẫu nhiên có seed cố định nên mỗi lần train ra cùng một bộ dữ liệu. Thêm tình huống mới: thêm câu vào titles/details của đúng loại, rồi chạy lại train.py. Mục short của mỗi loại là câu rất ngắn kiểu người dùng gõ nhanh (ví dụ \"bố mất\"), được sinh riêng không kèm mô tả để model hiểu cả đầu vào 2-3 từ.",
   "slots": {
     "so_ngay": [
       "1",
@@ -374,6 +374,98 @@
       "rò rỉ",
       "bị gãy",
       "có mùi khét"
+    ],
+    "nguoi_than": [
+      "bố",
+      "mẹ",
+      "ba",
+      "má",
+      "cha",
+      "bố đẻ",
+      "mẹ đẻ",
+      "bố vợ",
+      "mẹ vợ",
+      "bố chồng",
+      "mẹ chồng",
+      "ông nội",
+      "bà nội",
+      "ông ngoại",
+      "bà ngoại",
+      "vợ",
+      "chồng",
+      "con trai",
+      "con gái",
+      "anh trai",
+      "chị gái",
+      "em trai",
+      "em gái",
+      "cụ",
+      "ông",
+      "bà"
+    ],
+    "qua_doi": [
+      "mất",
+      "qua đời",
+      "từ trần",
+      "mất rồi",
+      "vừa mất",
+      "đã mất",
+      "vừa qua đời",
+      "mất đột ngột",
+      "mất đêm qua",
+      "mất hôm qua"
+    ],
+    "benh": [
+      "ốm",
+      "sốt",
+      "đau bụng",
+      "đau đầu",
+      "cảm cúm",
+      "sốt xuất huyết",
+      "đau răng",
+      "ngộ độc thực phẩm",
+      "viêm họng",
+      "đau lưng",
+      "covid",
+      "tiêu chảy",
+      "chóng mặt",
+      "đau dạ dày"
+    ],
+    "tien_nho": [
+      "500k",
+      "1 triệu",
+      "2 triệu",
+      "3tr",
+      "5 triệu",
+      "8 triệu",
+      "1,5 triệu",
+      "900 nghìn"
+    ],
+    "tien_vua": [
+      "12 triệu",
+      "15 triệu",
+      "20tr",
+      "30 triệu",
+      "35 triệu",
+      "45 triệu"
+    ],
+    "tien_lon": [
+      "60 triệu",
+      "80 triệu",
+      "100tr",
+      "200 triệu",
+      "500 triệu",
+      "1 tỷ",
+      "1,2 tỷ"
+    ],
+    "ngay_ngan": [
+      "mai",
+      "hôm nay",
+      "thứ 2",
+      "thứ 6",
+      "tuần sau",
+      "chiều nay",
+      "sáng mai"
     ]
   },
   "prefixes": [
@@ -444,6 +536,13 @@
         "Khoản tạm ứng nhỏ {so_tien} dùng cho {ly_do}.",
         "Số tiền {so_tien}, sẽ quyết toán khi có chứng từ.",
         "Cần tiền mặt {so_tien} chi trước cho {ly_do}, nhận tiền qua chuyển khoản."
+      ],
+      "short": [
+        "tạm ứng {tien_nho}",
+        "tạm ứng {tien_nho} mua đồ",
+        "xin tạm ứng {tien_nho}",
+        "tạm ứng tiền mặt {tien_nho}",
+        "ứng {tien_nho} tiếp khách"
       ]
     },
     "ADVANCE_MEDIUM": {
@@ -483,6 +582,13 @@
         "Em đề nghị tạm ứng {so_tien} cho {ly_do}, dự kiến hoàn ứng trong 15 ngày.",
         "Chi phí dự toán {so_tien}, có bảng dự trù đính kèm.",
         "Tạm ứng để đặt cọc trước cho nhà cung cấp, tổng {so_tien}."
+      ],
+      "short": [
+        "tạm ứng {tien_vua}",
+        "tạm ứng {tien_vua} đi công tác",
+        "xin tạm ứng {tien_vua}",
+        "tạm ứng {tien_vua} tổ chức sự kiện",
+        "ứng {tien_vua} mua vật tư"
       ]
     },
     "ADVANCE_LARGE": {
@@ -521,6 +627,13 @@
         "Khoản tạm ứng dự án lớn {so_tien}, đã có kế hoạch ngân sách được duyệt.",
         "Số tiền {so_tien} dùng để {ly_do}, cần giám đốc phê duyệt.",
         "Tạm ứng theo hợp đồng nguyên tắc, giá trị {so_tien}."
+      ],
+      "short": [
+        "tạm ứng {tien_lon}",
+        "tạm ứng {tien_lon} dự án",
+        "xin tạm ứng {tien_lon}",
+        "ứng {tien_lon} đặt cọc nhà thầu",
+        "tạm ứng {tien_lon} mua nguyên liệu"
       ]
     },
     "EXPENSE_CLAIM": {
@@ -541,6 +654,17 @@
         "Đề nghị thanh toán lại các khoản: {khoan_chi}.",
         "Tổng chi {so_tien}, chứng từ gốc đã nộp cho kế toán.",
         "Không tạm ứng trước, xin thanh toán theo hóa đơn."
+      ],
+      "short": [
+        "thanh toán tiền taxi",
+        "thanh toán {khoan_chi}",
+        "xin thanh toán tiền ăn",
+        "trả lại tiền em đã chi",
+        "thanh toán công tác phí",
+        "thanh toán hóa đơn tiếp khách",
+        "tiền gửi xe tháng này",
+        "chi phí đi lại",
+        "thanh toán tiền grab"
       ]
     },
     "REFUND_COMPENSATION": {
@@ -564,6 +688,15 @@
         "Khách đã chuyển khoản hai lần, cần hoàn lại một lần thanh toán.",
         "Biên bản xác nhận hàng hư hỏng đính kèm, mức bồi thường {so_tien}.",
         "Khách hàng đã thanh toán, cần hoàn lại theo chính sách đổi trả."
+      ],
+      "short": [
+        "hoàn tiền cho khách",
+        "khách đòi hoàn tiền",
+        "đền bù khách hàng",
+        "bồi thường hàng vỡ",
+        "trả lại tiền khách hủy đơn",
+        "khách khiếu nại đòi đền",
+        "hoàn cọc cho khách"
       ]
     },
     "REIMBURSEMENT": {
@@ -585,6 +718,15 @@
         "Kèm bảng kê chi tiết và hóa đơn để tất toán khoản tạm ứng.",
         "Đã tạm ứng {so_tien}, thực chi ít hơn, xin hoàn ứng phần còn lại.",
         "Khoản đã tạm ứng trước chuyến đi, nay nộp hóa đơn để hoàn ứng."
+      ],
+      "short": [
+        "quyết toán tạm ứng",
+        "hoàn ứng",
+        "trả lại tiền tạm ứng thừa",
+        "nộp chứng từ tạm ứng",
+        "quyết toán công tác phí",
+        "quyết toán khoản ứng",
+        "hoàn ứng tháng {thang}"
       ]
     },
     "SALARY_ADVANCE": {
@@ -601,6 +743,16 @@
         "Người thân nằm viện cần tiền gấp, em xin ứng một phần lương.",
         "Em xin ứng lương tháng {thang}, đồng ý khấu trừ vào kỳ lương kế tiếp.",
         "Nhà bị ảnh hưởng do bão, cần ứng trước lương để sửa chữa."
+      ],
+      "short": [
+        "ứng lương",
+        "xin ứng lương",
+        "ứng trước lương",
+        "ứng {tien_nho} lương",
+        "ứng nửa tháng lương",
+        "cần ứng lương gấp",
+        "hết tiền xin ứng lương",
+        "ứng lương tháng {thang}"
       ]
     },
     "TAX_INVOICE_ISSUE": {
@@ -624,6 +776,15 @@
         "Đề nghị kế toán phát hành hóa đơn điện tử trong ngày.",
         "Khách hàng yêu cầu hóa đơn để hạch toán chi phí.",
         "Thông tin xuất hóa đơn: tên công ty, mã số thuế, địa chỉ."
+      ],
+      "short": [
+        "xuất hóa đơn",
+        "xuất VAT",
+        "hóa đơn đỏ",
+        "sửa hóa đơn sai",
+        "xuất hóa đơn cho khách",
+        "hủy hóa đơn",
+        "xuất hóa đơn cho {doi_tac}"
       ]
     },
     "VENDOR_PAYMENT": {
@@ -647,6 +808,15 @@
         "Thanh toán đợt theo tiến độ hợp đồng, hóa đơn VAT đính kèm.",
         "Hạn thanh toán ngày {ngay}, chuyển khoản vào tài khoản của vendor.",
         "Nhà cung cấp đã giao hàng và gửi hóa đơn, đến hạn thanh toán."
+      ],
+      "short": [
+        "thanh toán cho nhà cung cấp",
+        "trả tiền vendor",
+        "thanh toán công nợ",
+        "trả tiền hợp đồng đợt {so_ngay}",
+        "chuyển khoản cho đối tác",
+        "thanh toán tiền thuê văn phòng",
+        "thanh toán cho {doi_tac}"
       ]
     },
     "BUDGET_REALLOCATION": {
@@ -664,6 +834,15 @@
         "Điều chuyển {so_tien} ngân sách còn dư sang {phong_ban}.",
         "Do phát sinh chi phí ngoài kế hoạch, cần điều chỉnh ngân sách đã duyệt.",
         "Đề xuất tái phân bổ ngân sách giữa các bộ phận cho quý tới."
+      ],
+      "short": [
+        "bổ sung ngân sách",
+        "xin thêm ngân sách",
+        "chuyển ngân sách",
+        "vượt ngân sách",
+        "tăng ngân sách quý",
+        "điều chuyển ngân sách",
+        "hết ngân sách"
       ]
     },
     "EQUIPMENT": {
@@ -687,6 +866,15 @@
         "Mua sắm tài sản cố định để cải thiện môi trường làm việc.",
         "Đã khảo sát 3 báo giá, đề xuất mua {tai_san} giá {so_tien}.",
         "Mua mới tài sản, không phải sửa thiết bị đang có."
+      ],
+      "short": [
+        "mua máy chiếu",
+        "mua điều hòa mới",
+        "mua {tai_san}",
+        "mua thêm ghế",
+        "sắm tủ hồ sơ",
+        "trang bị máy lọc không khí",
+        "mua {tai_san} mới"
       ]
     },
     "PURCHASE_REQUEST": {
@@ -711,6 +899,15 @@
         "Hàng dùng cho hoạt động thường xuyên, đã hết tồn kho.",
         "Mua sắm theo kế hoạch quý, nhà cung cấp đề xuất: {doi_tac}.",
         "Lấy báo giá và mua theo quy trình mua sắm."
+      ],
+      "short": [
+        "mua {hang_hoa}",
+        "mua quà Tết",
+        "mua nước uống",
+        "mua cây cảnh",
+        "đặt mua vật tư",
+        "mua đồng phục",
+        "mua cà phê pantry"
       ]
     },
     "SAAS_LICENSE_BUY": {
@@ -727,6 +924,14 @@
         "License {phan_mem} sắp hết hạn, đề nghị gia hạn.",
         "Bản miễn phí bị giới hạn tính năng, đề xuất mua gói trả phí.",
         "Mua thêm tài khoản {phan_mem} cho nhân sự mới."
+      ],
+      "short": [
+        "mua license {phan_mem}",
+        "gia hạn {phan_mem}",
+        "mua bản quyền",
+        "mua tài khoản {phan_mem}",
+        "nâng cấp gói {phan_mem}",
+        "license {phan_mem}"
       ]
     },
     "SUPPLIER_ONBOARDING": {
@@ -751,6 +956,14 @@
         "Bổ sung nhà cung cấp thứ hai để giảm phụ thuộc vào một vendor.",
         "Cần thẩm định năng lực nhà cung cấp trước khi ký hợp đồng chính thức.",
         "Đối tác mới chưa có trong danh sách nhà cung cấp được duyệt."
+      ],
+      "short": [
+        "nhà cung cấp mới",
+        "thêm vendor mới",
+        "thẩm định nhà cung cấp",
+        "đánh giá vendor",
+        "đăng ký nhà cung cấp",
+        "duyệt nhà cung cấp {doi_tac}"
       ]
     },
     "ACCESS": {
@@ -774,6 +987,16 @@
         "Đề nghị IT cấp quyền phù hợp vai trò, không cần quyền quản trị.",
         "Quyền dùng cho {du_an}, thời hạn đến hết dự án.",
         "Cần cấp tài khoản và phân quyền theo vai trò công việc."
+      ],
+      "short": [
+        "xin vpn",
+        "cấp quyền {he_thong}",
+        "mở tài khoản {he_thong}",
+        "không có quyền vào drive",
+        "thêm vào group mail",
+        "cấp tài khoản email",
+        "xin quyền jira",
+        "xin acc {he_thong}"
       ]
     },
     "LAPTOP_PROVISION": {
@@ -791,6 +1014,16 @@
         "Máy hiện tại quá cũ, chạy rất chậm, đề nghị cấp máy khác.",
         "Xin cấp thiết bị từ kho IT, không cần mua mới.",
         "Công việc thiết kế cần màn hình lớn hơn."
+      ],
+      "short": [
+        "cấp laptop",
+        "xin máy tính",
+        "cấp màn hình phụ",
+        "đổi laptop",
+        "máy yếu xin đổi máy",
+        "cấp {thiet_bi}",
+        "chưa có máy tính",
+        "xin {thiet_bi}"
       ]
     },
     "OFFICE_SUPPLIES": {
@@ -807,6 +1040,15 @@
         "Danh sách văn phòng phẩm cần lĩnh: {van_phong_pham}, {van_phong_pham}.",
         "Cấp theo định mức hàng tháng của phòng.",
         "Cần gấp để in hồ sơ cho khách."
+      ],
+      "short": [
+        "xin giấy A4",
+        "hết mực in",
+        "cấp {van_phong_pham}",
+        "xin bút",
+        "văn phòng phẩm",
+        "hết giấy in",
+        "xin {van_phong_pham}"
       ]
     },
     "RESOURCE_REVOKE": {
@@ -823,6 +1065,15 @@
         "Nhân viên đã chuyển sang {phong_ban}, cần gỡ quyền {he_thong} cũ.",
         "Dự án kết thúc, thu hồi quyền truy cập đã cấp tạm thời.",
         "Danh sách tài sản cần thu hồi: laptop, thẻ ra vào, {thiet_bi}."
+      ],
+      "short": [
+        "thu hồi tài khoản",
+        "khóa email nhân viên nghỉ",
+        "thu hồi laptop",
+        "khóa tài khoản {ten}",
+        "thu lại thẻ từ",
+        "thu hồi quyền admin",
+        "khóa quyền {he_thong}"
       ]
     },
     "ACCESS_FACILITY": {
@@ -839,6 +1090,16 @@
         "Nhân viên mới cần thẻ từ để vào văn phòng từ {ngay}.",
         "Cần quyền vào {khu_vuc} để làm việc ngoài giờ.",
         "Đăng ký thẻ xe máy tháng cho nhân viên."
+      ],
+      "short": [
+        "mất thẻ ra vào",
+        "làm lại thẻ từ",
+        "cấp thẻ ra vào",
+        "thẻ từ hỏng",
+        "đăng ký vân tay",
+        "thẻ gửi xe",
+        "quên thẻ từ",
+        "thẻ ra vào không quẹt được"
       ]
     },
     "VISITOR_SECURITY_PASS": {
@@ -855,6 +1116,15 @@
         "Nhà thầu vào thi công {khu_vuc} trong 3 ngày, cần thẻ tạm.",
         "Danh sách khách và số CCCD gửi kèm để bảo vệ đối chiếu.",
         "Ứng viên đến phỏng vấn {gio} ngày {ngay}."
+      ],
+      "short": [
+        "khách đến công ty",
+        "đăng ký khách",
+        "thẻ khách",
+        "đối tác đến thăm",
+        "ứng viên đến phỏng vấn",
+        "nhà thầu vào thi công",
+        "khách đến {ngay_ngan}"
       ]
     },
     "PROD_DATA_ACCESS": {
@@ -875,6 +1145,14 @@
         "Truy cập máy chủ production phục vụ xử lý lỗi của {du_an}.",
         "Quyền tạm thời, đề nghị tự động thu hồi khi hết hạn.",
         "Dữ liệu có thông tin cá nhân, chỉ cần quyền read-only có thời hạn."
+      ],
+      "short": [
+        "quyền database production",
+        "truy cập server thật",
+        "ssh production",
+        "xem dữ liệu khách hàng thật",
+        "quyền đọc log production",
+        "xem dữ liệu lương"
       ]
     },
     "SERVER_FIREWALL": {
@@ -898,6 +1176,15 @@
         "Server hiện tại quá tải, cần nâng cấp tài nguyên.",
         "Cấu hình firewall cho tích hợp {he_thong}.",
         "Cần máy chủ 8 vCPU, 32GB RAM, đặt trong vùng mạng nội bộ."
+      ],
+      "short": [
+        "mở port {port}",
+        "cấp server mới",
+        "tạo máy ảo",
+        "whitelist ip",
+        "thêm RAM server",
+        "cấp domain ssl",
+        "mở firewall"
       ]
     },
     "EQUIPMENT_BORROW": {
@@ -927,6 +1214,15 @@
         "Thiết bị dùng tạm cho {su_kien}, cam kết bàn giao lại nguyên trạng.",
         "Mượn của kho tài sản, không cần mua mới.",
         "Cần mượn gấp vì thiết bị của em đang đi bảo hành."
+      ],
+      "short": [
+        "mượn máy chiếu",
+        "mượn loa",
+        "mượn máy ảnh",
+        "mượn laptop vài hôm",
+        "mượn micro",
+        "mượn {do_muon}",
+        "mượn tạm {do_muon}"
       ]
     },
     "ROOM_BOOKING": {
@@ -947,6 +1243,15 @@
         "Đặt {phong_hop} định kỳ sáng thứ hai hàng tuần.",
         "Buổi họp kéo dài khoảng 2 tiếng.",
         "Đặt lịch sử dụng phòng, không phải báo hỏng thiết bị."
+      ],
+      "short": [
+        "đặt phòng họp",
+        "book phòng",
+        "đặt {phong_hop}",
+        "họp lúc {gio}",
+        "giữ phòng họp",
+        "cần phòng họp {ngay_ngan}",
+        "book phòng họp {gio}"
       ]
     },
     "VEHICLE_BOOKING": {
@@ -963,6 +1268,15 @@
         "Đón đối tác tại sân bay Nội Bài lúc {gio}.",
         "Chở hàng mẫu đến {doi_tac}, đi và về trong ngày.",
         "Đi khảo sát công trình tại {dia_diem}, cần xe 2 ngày."
+      ],
+      "short": [
+        "đặt xe",
+        "mượn xe",
+        "xe đón khách",
+        "xe đi sân bay",
+        "cần xe công ty",
+        "xe 7 chỗ đi {dia_diem}",
+        "đặt xe đi {dia_diem}"
       ]
     },
     "CROSS_DEPT_SUPPORT": {
@@ -985,6 +1299,14 @@
         "Công việc cần sự phối hợp giữa {phong_ban} và {phong_ban}.",
         "Nhờ hỗ trợ đầu mối để kịp tiến độ {du_an}.",
         "Cần người hỗ trợ trực tiếp, không mượn thiết bị."
+      ],
+      "short": [
+        "nhờ phòng khác hỗ trợ",
+        "cần {phong_ban} hỗ trợ",
+        "mượn người phòng khác",
+        "phối hợp với {phong_ban}",
+        "nhờ hỗ trợ số liệu",
+        "nhờ {phong_ban} giúp"
       ]
     },
     "PROJECT_INITIATION": {
@@ -1006,6 +1328,14 @@
         "Đính kèm đề cương, phạm vi, nguồn lực và rủi ro chính.",
         "Đề nghị phê duyệt chủ trương và ngân sách giai đoạn 1.",
         "Thời gian thực hiện dự kiến {so_ngay} tháng, cần phê duyệt phạm vi và nguồn lực."
+      ],
+      "short": [
+        "dự án mới",
+        "khởi tạo dự án",
+        "đề xuất dự án",
+        "mở {du_an}",
+        "kick off dự án",
+        "khởi động {du_an}"
       ]
     },
     "TASK_REQUEST": {
@@ -1033,6 +1363,15 @@
         "Đầu việc cụ thể như mô tả, người nhận việc nghiệm thu khi xong.",
         "Giao cho {ten}, hạn hoàn thành {ngay}.",
         "Đầu việc nội bộ, không phát sinh chi phí mua sắm."
+      ],
+      "short": [
+        "giao việc",
+        "nhờ xử lý việc",
+        "việc tồn đọng",
+        "dọn kho hồ sơ",
+        "sắp xếp lại chỗ ngồi",
+        "nhờ làm giúp việc",
+        "xử lý công việc"
       ]
     },
     "DATA_UAT_EXPORT": {
@@ -1049,6 +1388,14 @@
         "Dữ liệu đã ẩn danh thông tin cá nhân trước khi chuyển.",
         "Phục vụ kiểm thử chấp nhận người dùng trước khi go-live.",
         "Kiểm toán yêu cầu số liệu trước ngày {ngay}."
+      ],
+      "short": [
+        "xuất dữ liệu",
+        "trích xuất báo cáo",
+        "export dữ liệu khách hàng",
+        "dữ liệu test UAT",
+        "lấy số liệu từ {he_thong}",
+        "export dữ liệu {he_thong}"
       ]
     },
     "FEATURE_RELEASE": {
@@ -1066,6 +1413,15 @@
         "Tính năng giúp giảm thao tác thủ công cho {phong_ban}.",
         "Phiên bản đã qua UAT, đề nghị phê duyệt lịch release {ngay}.",
         "Đề xuất bổ sung {tinh_nang} để nâng cao hiệu quả làm việc."
+      ],
+      "short": [
+        "thêm tính năng",
+        "release bản mới",
+        "deploy phiên bản mới",
+        "cải tiến giao diện",
+        "đề xuất tính năng {tinh_nang}",
+        "nâng cấp phần mềm nội bộ",
+        "thêm {tinh_nang}"
       ]
     },
     "BUSINESS_TRIP": {
@@ -1089,6 +1445,17 @@
         "Công tác {so_ngay} ngày tại {dia_diem}.",
         "Chuyến đi để gặp khách hàng và ký hợp đồng tại {dia_diem}.",
         "Cần đặt vé và phòng khách sạn trong thời gian công tác."
+      ],
+      "short": [
+        "đi công tác",
+        "công tác {dia_diem}",
+        "đi {dia_diem} gặp khách",
+        "bay vào {dia_diem}",
+        "ra {dia_diem} làm việc",
+        "đi gặp khách ở {dia_diem}",
+        "công tác nước ngoài",
+        "đi hội thảo ở {dia_diem}",
+        "công tác {so_ngay} ngày"
       ]
     },
     "ATTENDANCE_ADJUSTMENT": {
@@ -1106,6 +1473,19 @@
         "Máy chấm công tầng 3 bị lỗi nên không ghi nhận giờ vào.",
         "Em đi gặp khách cả ngày nên không chấm công tại văn phòng.",
         "Đường ngập do mưa lớn nên em đến muộn 30 phút."
+      ],
+      "short": [
+        "quên chấm công",
+        "quên check in",
+        "quên checkout",
+        "quên chấm vân tay",
+        "máy chấm công lỗi",
+        "đi muộn kẹt xe",
+        "sửa công",
+        "thiếu công ngày {ngay}",
+        "chấm công sai",
+        "quên chấm công {ngay_ngan}",
+        "bù công"
       ]
     },
     "LEAVE": {
@@ -1132,6 +1512,30 @@
         "Xin nghỉ {buoi} để {ly_do_nghi}.",
         "Em xin nghỉ {buoi} vì có việc cá nhân, công việc đã sắp xếp xong.",
         "Trừ vào ngày phép năm còn lại của em."
+      ],
+      "short": [
+        "bị {benh}",
+        "{benh} quá",
+        "em bị {benh}",
+        "nghỉ ốm",
+        "ốm không đi làm được",
+        "nghỉ {so_ngay} ngày",
+        "nghỉ {buoi}",
+        "{ngay_ngan} nghỉ",
+        "xin nghỉ {ngay_ngan}",
+        "về quê",
+        "về quê {so_ngay} ngày",
+        "đi khám bệnh",
+        "đi du lịch",
+        "có việc riêng",
+        "bận việc nhà",
+        "nghỉ không lương",
+        "nghỉ phép năm",
+        "xin nghỉ phép",
+        "đưa con đi tiêm",
+        "đi làm giấy tờ",
+        "{benh} xin nghỉ",
+        "nghỉ {ngay_ngan} vì {benh}"
       ]
     },
     "LEAVE_SPECIAL": {
@@ -1158,6 +1562,37 @@
         "Bác sĩ chỉ định nằm viện điều trị, giấy ra viện đính kèm.",
         "Nhà em bị ảnh hưởng do bão lũ, cần nghỉ để khắc phục.",
         "Nghỉ theo chế độ đặc biệt của Bộ luật Lao động, không trừ phép năm."
+      ],
+      "short": [
+        "{nguoi_than} {qua_doi}",
+        "{nguoi_than} em {qua_doi}",
+        "{nguoi_than} mình {qua_doi}",
+        "nhà có tang",
+        "gia đình có tang",
+        "đám tang {nguoi_than}",
+        "đám ma {nguoi_than}",
+        "về chịu tang {nguoi_than}",
+        "lo hậu sự cho {nguoi_than}",
+        "đưa tang {nguoi_than}",
+        "em cưới vợ",
+        "em lấy chồng",
+        "đám cưới của em",
+        "cưới vợ",
+        "lấy chồng",
+        "con em cưới",
+        "vợ sinh con",
+        "vợ đẻ",
+        "vợ sắp sinh",
+        "nghỉ đẻ",
+        "nghỉ thai sản",
+        "sinh em bé",
+        "phẫu thuật nằm viện",
+        "nhà bị ngập lụt",
+        "nghỉ hiếu",
+        "nghỉ hỉ",
+        "nghỉ cưới",
+        "{nguoi_than} mất xin nghỉ",
+        "tang {nguoi_than}"
       ]
     },
     "OVERTIME_REQ": {
@@ -1174,6 +1609,17 @@
         "Làm thêm thứ 7 để kịp bàn giao cho khách.",
         "Số giờ OT dự kiến 4 tiếng, danh sách nhân sự đính kèm.",
         "Tăng ca theo yêu cầu của quản lý để kịp tiến độ."
+      ],
+      "short": [
+        "làm thêm giờ",
+        "tăng ca",
+        "OT tối nay",
+        "OT thứ 7",
+        "làm thêm cuối tuần",
+        "ở lại làm muộn",
+        "làm đêm",
+        "tăng ca chủ nhật",
+        "OT {ngay_ngan}"
       ]
     },
     "WFH_REQ": {
@@ -1194,6 +1640,20 @@
         "Đường ngập không di chuyển được, em xin làm tại nhà.",
         "Xin WFH {so_ngay} ngày từ {ngay}.",
         "Em ở nhà chờ thợ sửa nhưng vẫn làm việc online bình thường."
+      ],
+      "short": [
+        "làm ở nhà",
+        "làm việc ở nhà",
+        "wfh",
+        "wfh {ngay_ngan}",
+        "làm remote",
+        "remote {so_ngay} ngày",
+        "làm online",
+        "ở nhà làm việc",
+        "đường ngập làm ở nhà",
+        "mưa to làm tại nhà",
+        "{ngay_ngan} làm từ xa",
+        "con ốm làm ở nhà"
       ]
     },
     "DISCIPLINE_REQ": {
@@ -1214,6 +1674,15 @@
         "Hành vi gây thiệt hại cho công ty, đề nghị HR xem xét.",
         "Vi phạm quy định bảo mật thông tin khách hàng.",
         "Đề nghị hội đồng kỷ luật xem xét hình thức xử lý."
+      ],
+      "short": [
+        "kỷ luật nhân viên",
+        "nhân viên vi phạm nội quy",
+        "xử lý vi phạm",
+        "khiển trách {ten}",
+        "đi muộn nhiều lần cần kỷ luật",
+        "gian lận chấm công",
+        "kỷ luật {ten}"
       ]
     },
     "EMPLOYEE_ONBOARDING": {
@@ -1230,6 +1699,14 @@
         "Lịch onboarding gồm giới thiệu công ty, đào tạo nội quy và bàn giao công việc.",
         "Chuẩn bị đầy đủ hồ sơ, tài khoản, thiết bị cho người mới.",
         "Người hướng dẫn: {ten}."
+      ],
+      "short": [
+        "nhân viên mới",
+        "onboard nhân viên mới",
+        "đón nhân viên mới",
+        "thực tập sinh mới vào",
+        "nhân sự mới đi làm {ngay_ngan}",
+        "tiếp nhận {ten}"
       ]
     },
     "HR_CERTIFICATE": {
@@ -1246,6 +1723,14 @@
         "Ngân hàng yêu cầu xác nhận thu nhập 6 tháng gần nhất.",
         "Xin bản có dấu đỏ, cần trước ngày {ngay}.",
         "Mục đích: bổ sung hồ sơ cá nhân."
+      ],
+      "short": [
+        "giấy xác nhận lương",
+        "xác nhận công tác",
+        "giấy xác nhận làm visa",
+        "xác nhận thu nhập vay ngân hàng",
+        "giấy xác nhận đang làm việc",
+        "xin giấy xác nhận"
       ]
     },
     "INTERNAL_TRANSFER": {
@@ -1261,6 +1746,14 @@
         "Điều chuyển từ ngày {ngay}, giữ nguyên mức lương.",
         "Chi nhánh {dia_diem} đang thiếu người, đề xuất điều động 3 tháng.",
         "Hai trưởng bộ phận đã thống nhất."
+      ],
+      "short": [
+        "chuyển phòng ban",
+        "xin chuyển bộ phận",
+        "điều chuyển nhân sự",
+        "chuyển sang chi nhánh {dia_diem}",
+        "luân chuyển công tác",
+        "chuyển sang {phong_ban}"
       ]
     },
     "PROMOTION_REQ": {
@@ -1276,6 +1769,14 @@
         "Đề xuất bổ nhiệm từ ngày {ngay}, kèm bản đánh giá năng lực.",
         "Vị trí trưởng nhóm đang trống, {ten} là ứng viên phù hợp.",
         "Thăng chức từ {vi_tri} lên vị trí quản lý."
+      ],
+      "short": [
+        "thăng chức",
+        "đề bạt",
+        "bổ nhiệm trưởng phòng",
+        "lên senior",
+        "đề xuất lên chức",
+        "thăng chức {ten}"
       ]
     },
     "RECRUITMENT_REQ": {
@@ -1292,6 +1793,15 @@
         "Tuyển thay thế {ten} đã nghỉ việc, mô tả công việc đính kèm.",
         "Mức lương đề xuất trong khung ngân sách nhân sự năm.",
         "Cần người onboard trước ngày {ngay}."
+      ],
+      "short": [
+        "tuyển người",
+        "tuyển thêm {vi_tri}",
+        "thiếu người cần tuyển",
+        "tuyển thay người nghỉ",
+        "mở tuyển dụng",
+        "tuyển thực tập sinh",
+        "cần tuyển gấp"
       ]
     },
     "RESIGNATION": {
@@ -1313,6 +1823,18 @@
         "Em cảm ơn công ty trong thời gian qua và xin chấm dứt hợp đồng.",
         "Danh sách tài sản, tài khoản cần bàn giao đính kèm.",
         "Ngày làm việc cuối cùng là {ngay}, em sẽ bàn giao đầy đủ."
+      ],
+      "short": [
+        "nghỉ việc",
+        "xin nghỉ việc",
+        "thôi việc",
+        "em muốn nghỉ việc",
+        "chuyển công ty khác",
+        "nộp đơn nghỉ việc",
+        "nghỉ hẳn",
+        "bàn giao nghỉ việc",
+        "không làm nữa",
+        "xin thôi việc"
       ]
     },
     "REWARD_REQ": {
@@ -1328,6 +1850,14 @@
         "Nhân viên có sáng kiến giúp tiết kiệm chi phí đáng kể.",
         "Đề xuất khen thưởng kèm giấy khen.",
         "Đội đã trực xuyên đêm khắc phục sự cố hệ thống."
+      ],
+      "short": [
+        "khen thưởng",
+        "thưởng nóng",
+        "thưởng team",
+        "khen thưởng {ten}",
+        "thưởng nhân viên xuất sắc",
+        "thưởng dự án"
       ]
     },
     "SALARY_ADJUSTMENT": {
@@ -1343,6 +1873,14 @@
         "Nhân viên đã qua thử việc và đạt yêu cầu.",
         "Mức lương hiện tại thấp hơn mặt bằng thị trường.",
         "Kiêm nhiệm thêm vai trò trưởng nhóm, đề xuất phụ cấp."
+      ],
+      "short": [
+        "tăng lương",
+        "xin tăng lương",
+        "điều chỉnh lương",
+        "tăng phụ cấp",
+        "lương thấp xin xét lại",
+        "tăng lương cho {ten}"
       ]
     },
     "TRAINING_COURSE": {
@@ -1359,6 +1897,14 @@
         "Kiến thức áp dụng trực tiếp cho công việc tại {phong_ban}.",
         "Đăng ký cho {so_nguoi} nhân viên tham gia.",
         "Lịch học buổi tối, không ảnh hưởng giờ làm."
+      ],
+      "short": [
+        "học tiếng Anh",
+        "đăng ký khóa học",
+        "đi học {khoa_hoc}",
+        "thi chứng chỉ",
+        "đào tạo kỹ năng",
+        "học {khoa_hoc}"
       ]
     },
     "IT_SUPPORT": {
@@ -1376,6 +1922,18 @@
         "Em đã thử khởi động lại nhưng vẫn không được.",
         "Vị trí ngồi {khu_vuc}, máy số 12.",
         "Cần hỗ trợ gấp để kịp gửi báo cáo."
+      ],
+      "short": [
+        "máy tính hỏng",
+        "không vào được mạng",
+        "máy in lỗi",
+        "quên mật khẩu email",
+        "cài {phan_mem}",
+        "laptop treo",
+        "máy chậm",
+        "mất wifi",
+        "outlook lỗi",
+        "{su_co_it}"
       ]
     },
     "SECURITY_INCIDENT_HOTFIX": {
@@ -1398,6 +1956,16 @@
         "Nhiều nhân viên nhận email phishing yêu cầu chuyển tiền.",
         "Cần phê duyệt khẩn để deploy hotfix ngoài lịch release.",
         "Sự cố bảo mật, cần khóa tài khoản và điều tra ngay."
+      ],
+      "short": [
+        "bị hack",
+        "lộ dữ liệu",
+        "email lừa đảo",
+        "mã độc",
+        "tài khoản bị chiếm",
+        "hotfix gấp",
+        "web bị tấn công",
+        "{he_thong} bị tấn công"
       ]
     },
     "FACILITY_REPAIR": {
@@ -1426,6 +1994,16 @@
         "Sự cố có thể gây nguy hiểm, cần xử lý gấp.",
         "{thiet_bi_vp} {loi_hong} từ hôm qua, nhờ kỹ thuật tòa nhà xử lý.",
         "Phòng họp vẫn đặt được nhưng thiết bị bên trong cần sửa."
+      ],
+      "short": [
+        "điều hòa hỏng",
+        "{su_co_vp}",
+        "bóng đèn cháy",
+        "dột nước",
+        "mất điện",
+        "ghế gãy",
+        "nhà vệ sinh tắc",
+        "{thiet_bi_vp} {loi_hong}"
       ]
     },
     "CONTRACT_APPROVAL": {
@@ -1442,6 +2020,14 @@
         "Đề nghị Pháp chế rà soát điều khoản phạt và thanh toán.",
         "Đối tác đã ký trước, chờ phía công ty phê duyệt.",
         "Gia hạn hợp đồng thêm 1 năm với điều kiện không đổi."
+      ],
+      "short": [
+        "duyệt hợp đồng",
+        "ký hợp đồng với {doi_tac}",
+        "rà soát hợp đồng",
+        "gia hạn hợp đồng",
+        "hợp đồng thuê văn phòng",
+        "duyệt hợp đồng {doi_tac}"
       ]
     },
     "DOCUMENT_SEAL": {
@@ -1458,6 +2044,15 @@
         "Văn bản đã được trưởng phòng ký nháy.",
         "Hồ sơ nộp cho {doi_tac}, cần bản có dấu đỏ.",
         "Số lượng bản cần đóng dấu: 5."
+      ],
+      "short": [
+        "đóng dấu",
+        "xin dấu công ty",
+        "đóng dấu công văn",
+        "xin chữ ký giám đốc",
+        "ký tờ trình",
+        "đóng dấu giấy giới thiệu",
+        "đóng dấu biên bản"
       ]
     },
     "NDA_PRIVACY_CLEARANCE": {
@@ -1473,6 +2068,13 @@
         "Đánh giá theo Nghị định 13 về bảo vệ dữ liệu cá nhân.",
         "Phạm vi dữ liệu chia sẻ: tên, số điện thoại, lịch sử mua hàng.",
         "Dự thảo NDA của {doi_tac} đính kèm."
+      ],
+      "short": [
+        "ký NDA",
+        "thỏa thuận bảo mật",
+        "chia sẻ dữ liệu cho đối tác",
+        "bảo mật thông tin đối tác",
+        "NDA với {doi_tac}"
       ]
     },
     "POLICY_ISSUANCE": {
@@ -1493,6 +2095,14 @@
         "Đã lấy ý kiến các phòng ban, bản tổng hợp đính kèm.",
         "Phạm vi áp dụng: toàn bộ nhân viên chính thức.",
         "Văn bản áp dụng toàn công ty sau khi ban hành."
+      ],
+      "short": [
+        "ban hành quy chế",
+        "quy định mới",
+        "sửa nội quy",
+        "chính sách mới",
+        "cập nhật quy chế",
+        "ban hành chính sách"
       ]
     },
     "FLASH_SALE_VOUCHER": {
@@ -1509,6 +2119,14 @@
         "Flash sale trong 2 giờ, giảm tối đa 30%.",
         "Áp dụng cho khách hàng thành viên hạng vàng.",
         "Chương trình chạy từ {ngay} trên website và app."
+      ],
+      "short": [
+        "flash sale",
+        "voucher giảm giá",
+        "mã giảm giá",
+        "khuyến mãi cuối tuần",
+        "sale 11/11",
+        "chạy flash sale"
       ]
     },
     "MARKETING_CAMPAIGN": {
@@ -1529,6 +2147,16 @@
         "Kế hoạch gồm thuê địa điểm, âm thanh ánh sáng, MC và quà tặng.",
         "Chiến dịch chạy 1 tháng trên Facebook, TikTok và Google.",
         "Mục tiêu tăng nhận diện thương hiệu và gắn kết nhân viên."
+      ],
+      "short": [
+        "chạy quảng cáo facebook",
+        "tổ chức sự kiện",
+        "team building",
+        "year end party",
+        "chiến dịch marketing",
+        "thuê KOL",
+        "tiệc tất niên",
+        "tổ chức {su_kien}"
       ]
     },
     "SPECIAL_DISCOUNT": {
@@ -1544,6 +2172,14 @@
         "Đối thủ đang chào giá thấp hơn, cần giá đặc biệt để giữ khách.",
         "Chiết khấu áp dụng cho đơn hàng trong quý.",
         "Biên lợi nhuận sau chiết khấu vẫn đảm bảo."
+      ],
+      "short": [
+        "chiết khấu cho khách",
+        "giảm giá đặc biệt",
+        "giá ưu đãi cho đại lý",
+        "chiết khấu 15%",
+        "khách VIP xin giảm giá",
+        "chiết khấu cho {doi_tac}"
       ]
     },
     "ASSET_DISPOSAL": {
@@ -1576,6 +2212,13 @@
         "Xóa dữ liệu ổ cứng trước khi bán cho đơn vị thu mua.",
         "Tài sản chiếm diện tích kho, không còn giá trị sử dụng.",
         "Tài sản đã kiểm tra, không thể sửa chữa, đề nghị ghi giảm tài sản."
+      ],
+      "short": [
+        "thanh lý",
+        "thanh lý máy cũ",
+        "bán phế liệu",
+        "hủy tài sản hỏng",
+        "thanh lý {tai_san}"
       ]
     },
     "WAREHOUSE_TRANSFER": {
@@ -1592,6 +2235,13 @@
         "Chi nhánh thiếu hàng trong khi kho tổng còn tồn nhiều.",
         "Phiếu xuất kho và danh sách mã hàng đính kèm.",
         "Cần xe tải và nhân sự bốc xếp."
+      ],
+      "short": [
+        "chuyển kho",
+        "luân chuyển hàng",
+        "điều chuyển tồn kho",
+        "xuất hàng sang showroom",
+        "chuyển hàng từ {kho} sang {kho}"
       ]
     }
   }

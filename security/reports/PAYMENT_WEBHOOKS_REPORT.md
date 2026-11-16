@@ -2,7 +2,7 @@
 
 ## Status: N/A
 
-Trạng thái trước khắc phục: **N/A**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/completed/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [PAYMENT_WEBHOOKS_PLAN.md](../plans/PAYMENT_WEBHOOKS_PLAN.md).
+Trạng thái trước khắc phục: **N/A**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/active/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [mục Kế hoạch khắc phục](#kế-hoạch-khắc-phục).
 
 ## Findings
 
@@ -23,3 +23,21 @@ Nếu sau này tích hợp thanh toán: xác minh chữ ký, lưu event ID đã 
 ## Verification results
 
 - [x] Không có endpoint thanh toán/webhook
+
+## Kế hoạch khắc phục
+
+### Changes
+
+- Không có.
+
+### New files
+
+- Không có.
+
+### Verification goals
+
+- [x] Không có endpoint thanh toán/webhook
+
+### Manual verification (for the human)
+
+- Không có.

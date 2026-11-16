@@ -116,6 +116,7 @@ ai_service/
     └── data/
         ├── request_corpus.json         # Mẫu câu huấn luyện 58 loại (sinh câu với seed cố định)
         ├── request_eval_realistic.json # Câu viết tay để đánh giá: dev (được xem khi bổ sung dữ liệu) / test (chỉ để báo cáo)
+        ├── request_eval_short.json     # Câu rất ngắn viết tay ("bố mất", "quên chấm công"): dev / test
         └── training_report.md          # Báo cáo, train.py ghi đè mỗi lần chạy
 ```
 
@@ -136,7 +137,9 @@ ai_service\.venv-ai\Scripts\python.exe ai_service\training\train.py --only nlp  
 
 Pipeline train bộ phân loại văn bản rồi bốn mô hình rủi ro (master, Finance, HR, IT) **lần lượt** để giới hạn RAM; XGBoost dùng tối đa 4 threads (`--threads 2` để giảm). Dữ liệu được sinh lại từ `request_corpus.json` với seed cố định: cùng seed cho cùng model. Model cũ chỉ được thay khi mọi bước train xong (ghi vào thư mục tạm rồi mới chuyển sang `models/`).
 
-Dữ liệu huấn luyện là **tổng hợp** từ mẫu câu. Con số đáng tin nhất là độ chính xác trên **câu viết tay split `test`** trong `training/data/training_report.md`, vì các câu này không dùng để train hay để chỉnh dữ liệu. Thêm tình huống mới: thêm câu vào `titles`/`details` của đúng loại trong `request_corpus.json`, kiểm tra bằng split `dev`, rồi chạy lại `train.py`.
+Dữ liệu huấn luyện là **tổng hợp** từ mẫu câu. Con số đáng tin nhất là độ chính xác trên **câu viết tay split `test`** trong `training/data/training_report.md`, vì các câu này không dùng để train hay để chỉnh dữ liệu. Thêm tình huống mới: thêm câu vào `titles`/`details` (câu đầy đủ) hoặc `short` (câu 2-6 từ kiểu gõ nhanh, ví dụ `{nguoi_than} {qua_doi}`) của đúng loại trong `request_corpus.json`, kiểm tra bằng split `dev`, rồi chạy lại `train.py`. Tham số C được chọn theo câu viết tay `dev` trước, mẫu câu bị giữ lại sau; split `test` không bao giờ dùng để chọn.
+
+Giao diện tạo yêu cầu gọi bộ phân loại khi người dùng gõ tiêu đề/lý do (sau 0,9 giây ngừng gõ). Nếu biểu mẫu mới chỉ có tiêu đề/lý do và AI chắc chắn (≥ 60%, hoặc ≥ 35% và gấp 3 lần lựa chọn thứ hai) thì tự chuyển sang đúng biểu mẫu, giữ nguyên nội dung đã gõ và có nút quay lại; nếu người dùng đã điền trường khác thì chỉ gợi ý (`web_client/src/aiTypeSwitch.js`).
 
 ### 4.1. Kiểm tra model và kiểm thử chức năng
 ```powershell

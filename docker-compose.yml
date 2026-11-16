@@ -98,6 +98,7 @@ services:
       EAS_EMAIL_FROM: ${EAS_EMAIL_FROM:-}
       EAS_EMAIL_TEST_RECIPIENT: ${EAS_EMAIL_TEST_RECIPIENT:-}
       EAS_EMAIL_TIMEOUT_SECONDS: ${EAS_EMAIL_TIMEOUT_SECONDS:-10}
+      EAS_ADMIN_PORTAL_URL: ${EAS_ADMIN_PORTAL_URL:-http://127.0.0.1:8081}
       EAS_TRUST_PROXY_HEADERS: ${EAS_TRUST_PROXY_HEADERS:-true}
       EAS_SSL_REDIRECT: ${EAS_SSL_REDIRECT:-true}
       EAS_HSTS_PRELOAD: ${EAS_HSTS_PRELOAD:-false}
@@ -195,6 +196,10 @@ services:
       LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
       EAS_API_INTERNAL_URL: http://api:8000
       EAS_WORKER_INTERNAL_SECRET: ${EAS_WORKER_INTERNAL_SECRET:-}
+      # The worker runs AI policy learning and auto-approval: it must reach the
+      # AI container (not its own 127.0.0.1) with the shared internal secret.
+      EAS_AI_SERVICE_URL: http://ai-service:8001
+      EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5.0}
       REDIS_URL: redis://redis:6379/0
       EAS_MOCK_API_URL: http://mock-systems:8000/mock-api/v1

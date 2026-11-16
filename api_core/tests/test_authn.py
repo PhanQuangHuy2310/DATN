@@ -543,7 +543,9 @@ class SeedPasswordScriptTests(SimpleTestCase):
         from pathlib import Path
 
         script = (
-            Path(__file__).resolve().parents[2] / "fix_seed_passwords_local.py"
+            Path(__file__).resolve().parents[2]
+            / "scripts"
+            / "fix_seed_passwords_local.py"
         ).read_text(encoding="utf-8")
         self.assertNotIn("Admin@123456", script)
         self.assertNotIn("pbkdf2_sha256$600000$eas_seed_2026", script)

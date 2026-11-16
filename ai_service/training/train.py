@@ -9,6 +9,7 @@ Nguồn dữ liệu (đều nằm trong repo, không cần file sinh tạm):
   * api_core/catalog/catalog_v2.json           danh mục 58 loại yêu cầu đang dùng
   * training/data/request_corpus.json          tệp huấn luyện văn bản (mẫu câu)
   * training/data/request_eval_realistic.json  câu viết tay để đánh giá, không train
+  * training/data/request_eval_short.json      câu rất ngắn viết tay ("bố mất"), không train
 
 Cùng --seed thì cùng dữ liệu, cùng model, cùng tên file. Model chỉ được thay
 khi mọi bước train xong (ghi vào thư mục tạm rồi mới chuyển sang models/).
@@ -59,6 +60,7 @@ MODELS_DIR = AI_DIR / "models"
 CATALOG_PATH = REPO_ROOT / "api_core" / "catalog" / "catalog_v2.json"
 CORPUS_PATH = DATA_DIR / "request_corpus.json"
 EVAL_PATH = DATA_DIR / "request_eval_realistic.json"
+EVAL_SHORT_PATH = DATA_DIR / "request_eval_short.json"
 REPORT_PATH = DATA_DIR / "training_report.md"
 
 PIPELINE_VERSION = "catalog-v2-unified-1"
@@ -166,14 +168,14 @@ def validate_corpus(corpus: dict[str, Any], catalog: dict[str, Any]) -> None:
         slots = {**corpus["slots"], **spec.get("slots", {})}
         if len(spec.get("titles", [])) < 3 or not spec.get("details"):
             raise ValueError(f"{code}: needs at least 3 titles and 1 detail")
-        for template in [*spec["titles"], *spec["details"]]:
+        for template in [*spec["titles"], *spec["details"], *spec.get("short", [])]:
             for name in _SLOT.findall(template):
                 if name not in slots:
                     raise ValueError(f"{code}: unknown slot {{{name}}} in {template!r}")
 
 
 def build_nlp_dataset(
-    corpus: dict[str, Any], per_type: int, seed: int
+    corpus: dict[str, Any], per_type: int, seed: int, short_per_type: int = 200
 ) -> pd.DataFrame:
     rng = random.Random(seed)
     rows: list[dict[str, Any]] = []
@@ -217,6 +219,25 @@ def build_nlp_dataset(
                     "request_type": code,
                     "template_group": f"{code}#{title_index}",
                 }
+            )
+        # Very short inputs ("bố mất", "quên chấm công"): no prefix, suffix or
+        # detail, so a 2-3 word title is learnt as a request on its own.
+        short = spec.get("short", [])
+        target = min(short_per_type, len(short) * 25) if short else 0
+        short_seen: set[str] = set()
+        attempts = 0
+        while len(short_seen) < target and attempts < target * 8:
+            attempts += 1
+            index = rng.randrange(len(short))
+            text = _fill(short[index], slots, rng)
+            if rng.random() < 0.35:
+                text = strip_diacritics(text)
+            key = normalize_text(text)
+            if key in short_seen or key in seen:
+                continue
+            short_seen.add(key)
+            rows.append(
+                {"text": key, "request_type": code, "template_group": f"{code}#s{index}"}
             )
     return pd.DataFrame(rows)
 
@@ -281,8 +302,8 @@ def predict_codes(
     return top1, topk
 
 
-def load_eval_items() -> list[dict[str, str]]:
-    items = json.loads(EVAL_PATH.read_text(encoding="utf-8"))["items"]
+def load_eval_items(path: Path = EVAL_PATH) -> list[dict[str, str]]:
+    items = json.loads(path.read_text(encoding="utf-8"))["items"]
     for item in items:
         item["text"] = f"{item['title']}. {item.get('description') or ''}".strip(" .")
     return items
@@ -323,23 +344,28 @@ def score_realistic(
 
 
 def train_nlp(
-    staging: Path, catalog: dict[str, Any], per_type: int, seed: int
+    staging: Path,
+    catalog: dict[str, Any],
+    per_type: int,
+    seed: int,
+    short_per_type: int = 200,
 ) -> dict[str, Any]:
     corpus = json.loads(CORPUS_PATH.read_text(encoding="utf-8"))
     validate_corpus(corpus, catalog)
-    frame = build_nlp_dataset(corpus, per_type, seed)
+    frame = build_nlp_dataset(corpus, per_type, seed, short_per_type)
     train_idx, test_idx = heldout_template_split(frame, seed)
     texts = frame["text"].tolist()
     labels = frame["request_type"].to_numpy()
     eval_items = load_eval_items()
-    unknown_labels = {i["label"] for i in eval_items} - set(catalog["types"])
+    short_items = load_eval_items(EVAL_SHORT_PATH)
+    unknown_labels = {i["label"] for i in [*eval_items, *short_items]} - set(catalog["types"])
     if unknown_labels:
         raise ValueError(f"Evaluation labels not in catalog: {sorted(unknown_labels)}")
-    dev_items = [i for i in eval_items if i["split"] == "dev"]
+    dev_items = [i for i in [*eval_items, *short_items] if i["split"] == "dev"]
     print(
         f"NLP: {len(frame):,} câu tổng hợp cho {frame['request_type'].nunique()} loại "
         f"| train {len(train_idx):,} / held-out mẫu câu {len(test_idx):,} "
-        f"| đánh giá viết tay {len(eval_items)}"
+        f"| đánh giá viết tay {len(eval_items)} + câu ngắn {len(short_items)}"
     )
 
     # Choose C on the held-out templates plus the hand-written dev split.
@@ -357,7 +383,9 @@ def train_nlp(
             f"  C={c_value:<5} held-out mẫu câu={heldout_acc:.4f} dev viết tay={dev_acc:.4f} "
             f"({time.monotonic() - started:.0f}s)"
         )
-    best_c = max(candidates, key=lambda c: (c[1] + c[2], -c[0]))[0]
+    # Hand-written dev sentences decide first (they look like real users);
+    # synthetic held-out templates break ties, then the simpler model wins.
+    best_c = max(candidates, key=lambda c: (round(c[2], 4), round(c[1], 4), -c[0]))[0]
 
     # Metrics for the chosen C, measured before the final refit.
     model = make_text_pipeline(best_c, seed)
@@ -387,6 +415,7 @@ def train_nlp(
     final = make_text_pipeline(best_c, seed)
     final.fit(texts, labels)
     realistic = score_realistic(final, eval_items, catalog)
+    short_scores = score_realistic(final, short_items, catalog)
     joblib.dump(final, staging / "nlp_classifier.pkl", compress=3)
 
     labels_payload = {
@@ -407,17 +436,20 @@ def train_nlp(
         f"  → chọn C={best_c}: held-out mẫu câu {heldout['accuracy']:.4f}, "
         f"viết tay dev {realistic['dev']['accuracy']:.4f}, "
         f"viết tay TEST {realistic['test']['accuracy']:.4f} "
-        f"(top-3 {realistic['test']['top3_accuracy']:.4f})"
+        f"(top-3 {realistic['test']['top3_accuracy']:.4f}), "
+        f"câu ngắn TEST {short_scores['test']['accuracy']:.4f}"
     )
     return {
         "corpus": str(CORPUS_PATH.relative_to(AI_DIR)),
         "evaluation_set": str(EVAL_PATH.relative_to(AI_DIR)),
+        "short_evaluation_set": str(EVAL_SHORT_PATH.relative_to(AI_DIR)),
         "types": len(order),
         "synthetic_rows": int(len(frame)),
         "rows_per_type": per_type,
         "corpus_templates": {
             "titles": sum(len(s["titles"]) for s in corpus["types"].values()),
             "details": sum(len(s["details"]) for s in corpus["types"].values()),
+            "short": sum(len(s.get("short", [])) for s in corpus["types"].values()),
         },
         "model": "TF-IDF từ (1-2 gram) + ký tự không dấu (2-5 gram) → Logistic Regression",
         "c_search": [
@@ -426,6 +458,7 @@ def train_nlp(
         "chosen_c": best_c,
         "heldout_templates": heldout,
         "realistic": realistic,
+        "short_inputs": short_scores,
     }
 
 
@@ -840,7 +873,8 @@ def write_report(metadata: dict[str, Any]) -> None:
             "",
             f"- {nlp['types']} loại yêu cầu ACTIVE của catalog v2; "
             f"{nlp['synthetic_rows']:,} câu sinh từ {nlp['corpus_templates']['titles']} mẫu tiêu đề "
-            f"và {nlp['corpus_templates']['details']} mẫu mô tả.",
+            f"và {nlp['corpus_templates']['details']} mẫu mô tả, "
+            f"{nlp['corpus_templates'].get('short', 0)} mẫu câu rất ngắn.",
             f"- Mô hình: {nlp['model']}, C={nlp['chosen_c']}.",
             "",
             "| Tập đánh giá | Số câu | Đúng loại (top-1) | Đúng trong top-3 | Đúng nhóm |",
@@ -848,19 +882,26 @@ def write_report(metadata: dict[str, Any]) -> None:
             f"| Mẫu câu bị giữ lại (chưa từng thấy) | {nlp['heldout_templates']['rows']:,} | "
             f"{nlp['heldout_templates']['accuracy']:.1%} | {nlp['heldout_templates']['top3_accuracy']:.1%} | — |",
         ]
-        for split, label in (("dev", "Viết tay — dev"), ("test", "**Viết tay — test**")):
-            if split in real:
-                r = real[split]
+        short = nlp.get("short_inputs", {})
+        for scores, prefix in ((real, "Viết tay"), (short, "Câu rất ngắn")):
+            for split in ("dev", "test"):
+                if split in scores:
+                    r = scores[split]
+                    label = f"{prefix} — dev" if split == "dev" else f"**{prefix} — test**"
+                    lines.append(
+                        f"| {label} | {r['rows']} | {r['accuracy']:.1%} | "
+                        f"{r['top3_accuracy']:.1%} | {r['category_accuracy']:.1%} |"
+                    )
+        for scores, title in ((real, "Câu viết tay (test)"), (short, "Câu rất ngắn (test)")):
+            errors = scores.get("test", {}).get("errors", [])
+            lines += ["", f"{title} còn phân loại sai:", ""]
+            if not errors:
+                lines.append("- (không có)")
+            for error in errors:
                 lines.append(
-                    f"| {label} | {r['rows']} | {r['accuracy']:.1%} | "
-                    f"{r['top3_accuracy']:.1%} | {r['category_accuracy']:.1%} |"
+                    f"- \"{error['text']}\" → dự đoán `{error['predicted']}`, đúng là "
+                    f"`{error['expected']}` (top-3: {', '.join(error['top3'])})"
                 )
-        lines += ["", "Câu viết tay (test) còn phân loại sai:", ""]
-        for error in real.get("test", {}).get("errors", []):
-            lines.append(
-                f"- \"{error['text']}\" → dự đoán `{error['predicted']}`, đúng là "
-                f"`{error['expected']}` (top-3: {', '.join(error['top3'])})"
-            )
         lines.append("")
     if risk:
         lines += [
@@ -885,6 +926,7 @@ def run_check() -> int:
     model = joblib.load(MODELS_DIR / "nlp_classifier.pkl")
     labels = json.loads((MODELS_DIR / "nlp_labels.json").read_text(encoding="utf-8"))
     samples = [
+        "bố mất",
         "Xin nghỉ phép 2 ngày về quê",
         "Điều hòa phòng họp tầng 3 bị hỏng",
         "Tổ chức year end party cho 80 người",
@@ -905,6 +947,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--threads", type=int, default=max(1, min(4, os.cpu_count() or 1)))
     parser.add_argument("--nlp-per-type", type=int, default=600)
+    parser.add_argument("--nlp-short-per-type", type=int, default=200)
     parser.add_argument("--risk-per-type", type=int, default=1500)
     args = parser.parse_args(argv)
     if args.check:
@@ -928,7 +971,9 @@ def main(argv: list[str] | None = None) -> int:
         risk_metrics = previous.get("risk_metrics")
         if args.only in (None, "nlp"):
             print("== 1. Bộ phân loại văn bản ==")
-            nlp_metrics = train_nlp(staging, catalog, args.nlp_per_type, args.seed)
+            nlp_metrics = train_nlp(
+                staging, catalog, args.nlp_per_type, args.seed, args.nlp_short_per_type
+            )
             names += NLP_ARTIFACTS
         if args.only in (None, "risk"):
             print("== 2. Bộ chấm điểm rủi ro ==")

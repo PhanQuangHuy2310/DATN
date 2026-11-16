@@ -12,7 +12,7 @@ Thư mục database có các gói riêng cho schema phê duyệt EAS và các sc
 5. **Seed tài khoản quản trị gốc (`admin@eas.com`)**: Chạy lại [`database/install_fresh_db.sql`](./install_fresh_db.sql) (hoặc chạy `EAS_Supabase_SQL/01_demo_seed_DEV_ONLY.sql` cho môi trường dev) để đảm bảo tài khoản `admin@eas.com` tồn tại trước khi chạy migration 11.
 6. **Chuỗi Migration Schema v2 (09 -> 16)**: Chạy lần lượt `09_request_catalog_v2.sql`, `10_approval_delegation_and_employee_code.sql`, `11_cleanup_duplicates_and_admin_split.sql`, `12_ai_learning_jobs_and_announcements.sql`, `13_lock_client_roles_and_batch1_objects.sql`, `14_security_hardening_and_schema_v2_expand.sql`, `15_schema_v2_consolidate.sql`, `16_worker_delegation_and_working_hours.sql`.
 7. **Khởi tạo 8 Schema Hệ thống ngoài (`mock_*`)**: Chạy `mock_enterprise_sql/00_mock_enterprise_schemas.sql`, `01_mock_seed_DEV_ONLY.sql`, và các bản đồng bộ `mock_enterprise_sql/migrations/001_align_with_eas.sql` đến `005_align_with_eas.sql`.
-8. **Cô lập quyền truy cập, phân quyền RBAC & sửa hồ sơ kẹt (17 -> 18 -> repair)**: Chạy `migrations/17_external_systems_via_api.sql`, `migrations/18_role_module_permission_write_grant.sql`, và `migrations/repair_stuck_requests.sql`. Sau khi hoàn tất, đặt mật khẩu tạm cho admin bằng `python set_temporary_admin_password.py`.
+8. **Cô lập quyền truy cập, phân quyền RBAC & sửa hồ sơ kẹt (17 -> 18 -> repair)**: Chạy `migrations/17_external_systems_via_api.sql`, `migrations/18_role_module_permission_write_grant.sql`, và `migrations/repair_stuck_requests.sql`. Sau khi hoàn tất, đặt mật khẩu tạm cho admin bằng `python scripts/set_temporary_admin_password.py`.
 
 ## Schema EAS
 

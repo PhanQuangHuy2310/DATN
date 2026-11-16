@@ -2,7 +2,7 @@
 
 ## Status: PASS
 
-Trạng thái trước khắc phục: **MEDIUM**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/completed/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [PASSWORD_HASHING_PLAN.md](../plans/PASSWORD_HASHING_PLAN.md).
+Trạng thái trước khắc phục: **MEDIUM**. Ngày kiểm toán: 01/11/2026, nghiệm thu: 02/11/2026. Kế hoạch tổng: [EAS-PLAN-2026-11-01-01](../../plans/active/2026-11-01_vibe_check_security_audit.md). Kế hoạch sửa: [mục Kế hoạch khắc phục](#kế-hoạch-khắc-phục).
 
 ## Findings
 
@@ -30,3 +30,25 @@ Băm giả với Argon2 cho tài khoản không tồn tại/bị khóa.
 - [x] Không MD5/SHA-1/SHA-256 cho mật khẩu
 - [x] Không còn hash yếu trên DB live (42/42 Argon2)
 - [x] Thời gian login không phụ thuộc email có tồn tại
+
+## Kế hoạch khắc phục
+
+### Changes
+
+- `api_core/authn/service.py` — `verify_login_password()` + `_timing_equalizer_hash()` (Argon2 hash ngẫu nhiên, cache theo tiến trình).
+- `api_core/authn/views.py` — login dùng `verify_login_password`.
+
+### New files
+
+- Test `test_unknown_account_still_pays_one_password_hash`.
+
+### Verification goals
+
+- [x] Chỉ dùng Argon2 (PBKDF2 chỉ để xác minh hash cũ)
+- [x] Không MD5/SHA-1/SHA-256 cho mật khẩu
+- [x] Không còn hash yếu trên DB live (42/42 Argon2)
+- [x] Thời gian login không phụ thuộc email có tồn tại
+
+### Manual verification (for the human)
+
+- Không có.

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, idempotencyKey, notify } from "../api.js";
 import {
   fields,
@@ -12,15 +12,18 @@ import {
   enumLabels,
 } from "../domain.js";
 import {
+  caretAfterDigits,
   formatThousandDots,
   isCurrencyField,
   parseDigits,
+  typedDigits,
   vndToVietnameseWords,
 } from "../formatters.js";
 import { Badge, command } from "./ui.jsx";
 import { AiRequestAssist } from "./AiAssist.jsx";
 import RequestTypeMenu from "./RequestTypeMenu.jsx";
 import RoutePreview from "./RoutePreview.jsx";
+import { carriedValues, decideTypeSwitch, INTENT_FIELDS, intentText } from "../aiTypeSwitch.js";
 import { CardGridSkeleton, ConfirmDialog } from "./design.jsx";
 
 // String properties representing evidence are stored as sanitized filenames in
@@ -54,20 +57,40 @@ export function orderFormFields(entries) {
 }
 
 function CurrencyInput({ name, initialValue, isRequired, min, max }) {
-  const [digits, setDigits] = useState(() => parseDigits(initialValue));
+  const [digits, setDigits] = useState(() => typedDigits(parseDigits(initialValue)));
+  const inputRef = useRef(null);
+  // Digits left of the caret after the last edit; the caret is put back after
+  // the same digit once the dots are re-inserted, wherever the user typed.
+  const caretDigits = useRef(null);
+  const [edit, setEdit] = useState(0);
   const words = vndToVietnameseWords(digits);
 
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (caretDigits.current === null || !input || document.activeElement !== input) return;
+    const position = caretAfterDigits(input.value, caretDigits.current);
+    input.setSelectionRange(position, position);
+    caretDigits.current = null;
+  }, [digits, edit]);
+
   function handleChange(e) {
-    const next = parseDigits(e.target.value);
-    if (next.length <= 15) {
-      setDigits(next);
-    }
+    const { value, selectionStart } = e.target;
+    // Never re-parse the dotted display as a decimal number.
+    const next = typedDigits(value);
+    if (next.length > 15) return;
+    const allDigits = value.replace(/\D+/g, "");
+    const leadingZeros = allDigits.length - next.length;
+    const digitsBefore = value.slice(0, selectionStart ?? value.length).replace(/\D+/g, "").length;
+    caretDigits.current = digitsBefore - Math.min(leadingZeros, digitsBefore);
+    setDigits(next);
+    setEdit((n) => n + 1);
   }
 
   return (
     <div className="ds-currency-field">
       <div className="ds-currency-input-wrap">
         <input
+          ref={inputRef}
           type="text"
           inputMode="numeric"
           autoComplete="off"
@@ -275,6 +298,19 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   const submitKeys = useRef(new Map());
   const [confirmSend, setConfirmSend] = useState(false);
   const [circuitBreaker, setCircuitBreaker] = useState(null);
+  // AI form switch: text typed before a switch is carried into the new form.
+  const [carry, setCarry] = useState({});
+  const [aiSwitch, setAiSwitch] = useState(null);
+  const touchedOther = useRef(false);
+  const classifyTimer = useRef(null);
+  const lastClassified = useRef("");
+  const dismissedText = useRef("");
+  const typeRef = useRef(type);
+  const focusTitleAfterSwitch = useRef(false);
+  useEffect(() => {
+    typeRef.current = type;
+  }, [type]);
+  useEffect(() => () => clearTimeout(classifyTimer.current), []);
 
   useEffect(() => {
     let active = true;
@@ -386,6 +422,105 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
 
   const current = catalog.find((entry) => entry.code === type);
   const schema = current?.form_schema;
+  const allowedTypes = catalog.map((entry) => entry.code);
+
+  // Keep typing where the user was: back into the title once the switched
+  // form is rendered (its fields stay hidden while the options load).
+  useEffect(() => {
+    if (!focusTitleAfterSwitch.current || fieldOptions === null) return;
+    const frame = requestAnimationFrame(() => {
+      const title = formElementRef.current?.elements?.namedItem("title");
+      if (!title || typeof title.focus !== "function") return;
+      focusTitleAfterSwitch.current = false;
+      title.focus();
+      const end = String(title.value || "").length;
+      title.setSelectionRange?.(end, end);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [type, fieldOptions]);
+  const typeName = (code) => catalog.find((entry) => entry.code === code)?.name || types[code] || code;
+
+  function readForm() {
+    return formElementRef.current ? [...new FormData(formElementRef.current)] : [];
+  }
+
+  /** Open another form, keeping what the user typed (title, reason, …). */
+  function switchType(code, { focusTitle = false } = {}) {
+    setCarry(carriedValues(readForm(), preset));
+    setType(code);
+    setPreset({});
+    setSelectedAppCode("");
+    setChosenLabel(typeName(code));
+    setError("");
+    touchedOther.current = false;
+    // The new form's fields appear once its options are loaded (see effect below).
+    focusTitleAfterSwitch.current = focusTitle;
+  }
+
+  async function classifyIntent() {
+    const text = intentText(Object.fromEntries(readForm()));
+    if (!text || text === lastClassified.current || record) return;
+    lastClassified.current = text;
+    try {
+      const values = Object.fromEntries(readForm());
+      const response = await api("/api/v1/ai/classify", {
+        method: "POST",
+        silent: true,
+        body: JSON.stringify({
+          title: String(values.title || values.reason || "").trim(),
+          description: values.title ? String(values.reason || "").trim() : "",
+        }),
+      });
+      // The user kept typing meanwhile: a newer request will decide.
+      if (intentText(Object.fromEntries(readForm())) !== text) return;
+      const from = typeRef.current;
+      const decision = decideTypeSwitch({
+        result: response.data,
+        currentType: from,
+        allowedTypes,
+        pristine: !touchedOther.current,
+        dismissed: dismissedText.current === text,
+      });
+      if (!decision) {
+        setAiSwitch((prev) => (prev?.action === "suggest" ? null : prev));
+        return;
+      }
+      const switchInfo = {
+        ...decision,
+        text,
+        from: { type: from, label: chosenLabel || typeName(from), preset, appCode: selectedAppCode },
+      };
+      if (decision.action === "auto") switchType(decision.code, { focusTitle: true });
+      setAiSwitch(switchInfo);
+    } catch {
+      // The AI helper is optional: a failed call never blocks the form.
+      lastClassified.current = "";
+    }
+  }
+
+  function onFormInput(event) {
+    // The visible money box has no name (its value goes through a hidden
+    // input), so an unnamed field also counts as the user filling the form.
+    const name = event.target?.name;
+    if (!name || !INTENT_FIELDS.has(name)) {
+      touchedOther.current = true;
+      return;
+    }
+    clearTimeout(classifyTimer.current);
+    classifyTimer.current = setTimeout(classifyIntent, 900);
+  }
+
+  function undoAiSwitch() {
+    if (!aiSwitch) return;
+    const { from, text } = aiSwitch;
+    dismissedText.current = text;
+    setCarry(carriedValues(readForm(), from.preset));
+    setType(from.type);
+    setPreset(from.preset || {});
+    setSelectedAppCode(from.appCode || "");
+    setChosenLabel(from.label);
+    setAiSwitch(null);
+  }
   const formFields = schema?.properties
     ? orderFormFields(Object.entries(schema.properties))
         .filter(([name]) => name !== "department_id")
@@ -691,6 +826,11 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
               setChosenLabel(choice.label);
               setStage("form");
               setError("");
+              setCarry({});
+              setAiSwitch(null);
+              touchedOther.current = false;
+              lastClassified.current = "";
+              dismissedText.current = "";
             }}
           />
         </div>
@@ -722,6 +862,8 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                   setPreset({});
                   setSelectedAppCode("");
                   setError("");
+                  setCarry({});
+                  setAiSwitch(null);
                   requestAnimationFrame(() =>
                     menuRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
                   );
@@ -757,7 +899,12 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
         </div>
       )}
       {stage === "form" && (
-        <form ref={formElementRef} onSubmit={save} key={`${type}:${chosenLabel}`}>
+        <form
+          ref={formElementRef}
+          onSubmit={save}
+          onInput={onFormInput}
+          key={`${type}:${chosenLabel}`}
+        >
           <fieldset
             disabled={
               busy ||
@@ -768,6 +915,50 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           >
             {fieldOptions === null && (
               <p className="muted" role="status">Đang tải danh mục…</p>
+            )}
+            {aiSwitch && !record && (
+              <div className={`ai-type-switch ai-type-switch-${aiSwitch.action}`} role="status">
+                {aiSwitch.action === "auto" ? (
+                  <>
+                    <span>
+                      AI nhận thấy nội dung «{aiSwitch.text}» thuộc loại{" "}
+                      <strong>{typeName(aiSwitch.code)}</strong> (độ tin cậy{" "}
+                      {Math.round(aiSwitch.confidence * 100)}%) nên đã chuyển sang biểu mẫu này.
+                      Nội dung đã nhập được giữ nguyên.
+                    </span>
+                    <button type="button" className="secondary" onClick={undoAiSwitch}>
+                      Quay lại «{aiSwitch.from.label}»
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span>
+                      AI thấy nội dung giống loại <strong>{typeName(aiSwitch.code)}</strong> (độ tin cậy{" "}
+                      {Math.round(aiSwitch.confidence * 100)}%).
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const info = aiSwitch;
+                        switchType(info.code, { focusTitle: true });
+                        setAiSwitch({ ...info, action: "auto" });
+                      }}
+                    >
+                      Chuyển sang biểu mẫu này
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => {
+                        dismissedText.current = aiSwitch.text;
+                        setAiSwitch(null);
+                      }}
+                    >
+                      Bỏ qua
+                    </button>
+                  </>
+                )}
+              </div>
             )}
             <div className="form-grid" hidden={fieldOptions === null}>
               {fieldOptions !== null && formFields.map(([name, label, kind, spec]) => {
@@ -791,7 +982,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                       kind={kind}
                       spec={spec}
                       isRequired={isReq}
-                      initialValue={preset[name] ?? initial?.payload?.[name]}
+                      initialValue={preset[name] ?? carry[name] ?? initial?.payload?.[name]}
                       evidenceName={evidenceNames[name]}
                       colleagues={colleagues}
                       fieldOptions={fieldOptions}
@@ -845,8 +1036,8 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                   ? Object.fromEntries(new FormData(formElementRef.current))
                   : {}
               }
-              onSuggestType={record ? undefined : setType}
-              allowedTypes={catalog.map((entry) => entry.code)}
+              onSuggestType={record ? undefined : (code) => switchType(code, { focusTitle: true })}
+              allowedTypes={allowedTypes}
             />
             <RoutePreview
               type={type}
