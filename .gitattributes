@@ -1,0 +1,4 @@
+# Đáp án kịch bản quy định được kiểm tra bằng SHA-256 (ai_service/training/train_process_profile.py):
+# giữ nguyên từng byte, không để Git đổi LF <-> CRLF khi checkout trên Windows.
+ai_service/training/data/regulation_scenarios*.json -text
+ai_service/training/data/regulation_scenarios*.sha256 -text

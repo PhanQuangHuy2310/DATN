@@ -1,0 +1,1646 @@
+{
+ "engine": "regulation-llm-1",
+ "model": "gemini-3.5-flash-lite",
+ "prompt_template_sha256": "381e30b1dc9b3dfe29067abc252152149f09f4a5b4fe732002bbef9a5c7b5ddb",
+ "run_at": "2026-11-17 18:50:02 +0700",
+ "scenarios": {
+  "QD-01": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "fad8d63ede66043e68c3ebbc24691a0e5c11e4224f2bf3715c903b855392f3dd",
+   "retrieved_types": [
+    "EQUIPMENT",
+    "PURCHASE_REQUEST",
+    "SUPPLIER_ONBOARDING",
+    "EQUIPMENT_BORROW",
+    "LEAVE_SPECIAL",
+    "RESIGNATION",
+    "EXPENSE_CLAIM",
+    "TRAINING_COURSE",
+    "RESOURCE_REVOKE",
+    "ASSET_DISPOSAL",
+    "SPECIAL_DISCOUNT",
+    "ROOM_BOOKING"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Mọi đề nghị mua sắm hàng hóa, thiết bị phải được người sử dụng nghiệm thu và ký biên bản bàn giao trước khi thanh toán cho nhà cung cấp.",
+     "subject": "Đề nghị mua sắm hàng hóa, thiết bị",
+     "threshold": "không có",
+     "control": "Phải được người sử dụng nghiệm thu và ký biên bản bàn giao trước khi thanh toán cho nhà cung cấp"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "PURCHASE_REQUEST",
+     "name": "Đề nghị mua sắm",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Quy định mới yêu cầu bổ sung bước kiểm tra/nghiệm thu kết quả trước khi thanh toán, làm tăng mức độ kiểm soát từ luồng B (3 bước) lên luồng C (4 bước) và tăng trọng số rủi ro."
+     ],
+     "clause": "Mọi đề nghị mua sắm hàng hóa, thiết bị phải được người sử dụng nghiệm thu và ký biên bản bàn giao trước khi thanh toán cho nhà cung cấp.",
+     "clause_grounded": true
+    },
+    {
+     "code": "EQUIPMENT",
+     "name": "Mua sắm thiết bị / tài sản",
+     "current": {
+      "lifecycle": "C",
+      "risk_weight": 3
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 5
+     },
+     "reasons": [
+      "Quy định mới yêu cầu bổ sung bước nghiệm thu chặt chẽ từ người sử dụng trước khi thanh toán, củng cố và nâng mức kiểm soát lên cấp cao nhất của loại tài sản/thiết bị."
+     ],
+     "clause": "Mọi đề nghị mua sắm hàng hóa, thiết bị phải được người sử dụng nghiệm thu và ký biên bản bàn giao trước khi thanh toán cho nhà cung cấp.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 8742.3,
+   "tokens": 1439,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Mọi đề nghị mua sắm hàng hóa, thiết bị phải được người sử dụng nghiệm thu và ký biên bản bàn giao trước khi thanh toán cho nhà cung cấp.\",\n      \"subject\": \"Đề nghị mua sắm hàng hóa, thiết bị\",\n      \"threshold\": \"không có\",\n      \"control\": \"Phải được người sử dụng nghiệm thu và ký biên bản bàn giao trước khi thanh toán cho nhà cung cấp\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"PURCHASE_REQUEST\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Quy định mới yêu cầu bổ sung bước kiểm tra/nghiệm thu kết quả trước khi thanh toán, làm tăng mức độ kiểm soát từ luồng B (3 bước) lên luồng C (4 bước) và tăng trọng số rủi ro.\",\n      \"clause\": \"Mọi đề nghị mua sắm hàng hóa, thiết bị phải được người sử dụng nghiệm thu và ký biên bản bàn giao trước khi thanh toán cho nhà cung cấp.\"\n    },\n    {\n      \"code\": \"EQUIPMENT\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Quy định mới yêu cầu bổ sung bước nghiệm thu chặt chẽ từ người sử dụng trước khi thanh toán, củng cố và nâng mức kiểm soát lên cấp cao nhất của loại tài sản/thiết bị.\",\n      \"clause\": \"Mọi đề nghị mua sắm hàng hóa, thiết bị phải được người sử dụng nghiệm thu và ký biên bản bàn giao trước khi thanh toán cho nhà cung cấp.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-02": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "8eb7a7ce9563c7d2dc1ee5e929494272d48d583c5cf5dfaa04745e54ceaf44d1",
+   "retrieved_types": [
+    "NDA_PRIVACY_CLEARANCE",
+    "ACCESS",
+    "LEAVE",
+    "DATA_UAT_EXPORT",
+    "RECRUITMENT_REQ",
+    "INTERNAL_TRANSFER",
+    "SUPPLIER_ONBOARDING",
+    "LEAVE_SPECIAL",
+    "MARKETING_CAMPAIGN",
+    "BUSINESS_TRIP",
+    "ACCESS_FACILITY",
+    "TRAINING_COURSE"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Mọi yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống được xếp mức rủi ro cao và phải được thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP.",
+     "subject": "Yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống",
+     "threshold": "Rủi ro cao (trọng số 5)",
+     "control": "Thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP và nâng mức kiểm soát lên luồng C (4 bước)"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "NDA_PRIVACY_CLEARANCE",
+     "name": "Thẩm định NDA & chia sẻ dữ liệu đối tác",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 5
+     },
+     "reasons": [
+      "Liên quan đến việc chia sẻ dữ liệu đối tác và bảo mật thông tin cá nhân khách hàng, cần nâng lên luồng C và trọng số tối đa theo quy định mới về Nghị định 13/2023/NĐ-CP."
+     ],
+     "clause": "Mọi yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống được xếp mức rủi ro cao và phải được thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP.",
+     "clause_grounded": true
+    },
+    {
+     "code": "ACCESS",
+     "name": "Cấp tài khoản & quyền truy cập",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 5
+     },
+     "reasons": [
+      "Yêu cầu cấp tài khoản & quyền truy cập có thể bao gồm quyền truy cập dữ liệu cá nhân khách hàng, cần được kiểm soát chặt theo luồng C và trọng số rủi ro cao."
+     ],
+     "clause": "Mọi yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống được xếp mức rủi ro cao và phải được thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP.",
+     "clause_grounded": true
+    },
+    {
+     "code": "DATA_UAT_EXPORT",
+     "name": "Trích xuất dữ liệu / UAT",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 5
+     },
+     "reasons": [
+      "Yêu cầu trích xuất dữ liệu trực tiếp liên quan đến hành vi trích xuất dữ liệu ra ngoài hệ thống, bắt buộc nâng lên luồng C (4 bước) và trọng số 5."
+     ],
+     "clause": "Mọi yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống được xếp mức rủi ro cao và phải được thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 10622.8,
+   "tokens": 1707,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Mọi yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống được xếp mức rủi ro cao và phải được thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP.\",\n      \"subject\": \"Yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống\",\n      \"threshold\": \"Rủi ro cao (trọng số 5)\",\n      \"control\": \"Thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP và nâng mức kiểm soát lên luồng C (4 bước)\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"NDA_PRIVACY_CLEARANCE\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Liên quan đến việc chia sẻ dữ liệu đối tác và bảo mật thông tin cá nhân khách hàng, cần nâng lên luồng C và trọng số tối đa theo quy định mới về Nghị định 13/2023/NĐ-CP.\",\n      \"clause\": \"Mọi yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống được xếp mức rủi ro cao và phải được thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP.\"\n    },\n    {\n      \"code\": \"ACCESS\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Yêu cầu cấp tài khoản & quyền truy cập có thể bao gồm quyền truy cập dữ liệu cá nhân khách hàng, cần được kiểm soát chặt theo luồng C và trọng số rủi ro cao.\",\n      \"clause\": \"Mọi yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống được xếp mức rủi ro cao và phải được thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP.\"\n    },\n    {\n      \"code\": \"DATA_UAT_EXPORT\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Yêu cầu trích xuất dữ liệu trực tiếp liên quan đến hành vi trích xuất dữ liệu ra ngoài hệ thống, bắt buộc nâng lên luồng C (4 bước) và trọng số 5.\",\n      \"clause\": \"Mọi yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống được xếp mức rủi ro cao và phải được thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-03": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "f0d3fd93694a66a8893cfc3edbef49a1ee5f0d0a04afdc620099e177ec1ab068",
+   "retrieved_types": [
+    "EQUIPMENT_BORROW",
+    "HR_CERTIFICATE",
+    "EQUIPMENT",
+    "BUDGET_REALLOCATION",
+    "ATTENDANCE_ADJUSTMENT",
+    "LEAVE",
+    "BUSINESS_TRIP",
+    "LEAVE_SPECIAL",
+    "EMPLOYEE_ONBOARDING",
+    "IT_SUPPORT",
+    "INTERNAL_TRANSFER",
+    "VEHICLE_BOOKING"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Nhân viên đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng sẽ bị trừ nửa ngày phép và phải được trưởng bộ phận xác nhận",
+     "subject": "Nhân viên đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng",
+     "threshold": "Đi muộn từ 60 phút trở lên hoặc quên chấm công > 3 lần/tháng",
+     "control": "Trừ nửa ngày phép và trưởng bộ phận xác nhận"
+    },
+    {
+     "clause": "đi muộn dưới 15 phút vẫn được tự động chấp thuận",
+     "subject": "Nhân viên đi muộn dưới 15 phút",
+     "threshold": "Đi muộn dưới 15 phút",
+     "control": "Tự động chấp thuận"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "ATTENDANCE_ADJUSTMENT",
+     "name": "Điều chỉnh chấm công",
+     "current": {
+      "lifecycle": "A",
+      "risk_weight": 1
+     },
+     "proposed": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "reasons": [
+      "Quy định mới yêu cầu trưởng bộ phận xác nhận đối với trường hợp đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng, làm tăng số bước xử lý từ 2 bước (luồng A) lên 3 bước (luồng B) và tăng trọng số rủi ro từ 1 lên 3."
+     ],
+     "clause": "Nhân viên đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng sẽ bị trừ nửa ngày phép và phải được trưởng bộ phận xác nhận",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 11429.2,
+   "tokens": 1439,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Nhân viên đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng sẽ bị trừ nửa ngày phép và phải được trưởng bộ phận xác nhận\",\n      \"subject\": \"Nhân viên đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng\",\n      \"threshold\": \"Đi muộn từ 60 phút trở lên hoặc quên chấm công > 3 lần/tháng\",\n      \"control\": \"Trừ nửa ngày phép và trưởng bộ phận xác nhận\"\n    },\n    {\n      \"clause\": \"đi muộn dưới 15 phút vẫn được tự động chấp thuận\",\n      \"subject\": \"Nhân viên đi muộn dưới 15 phút\",\n      \"threshold\": \"Đi muộn dưới 15 phút\",\n      \"control\": \"Tự động chấp thuận\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"ATTENDANCE_ADJUSTMENT\",\n      \"proposed_class\": \"B\",\n      \"proposed_weight\": 3,\n      \"reason\": \"Quy định mới yêu cầu trưởng bộ phận xác nhận đối với trường hợp đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng, làm tăng số bước xử lý từ 2 bước (luồng A) lên 3 bước (luồng B) và tăng trọng số rủi ro từ 1 lên 3.\",\n      \"clause\": \"Nhân viên đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng sẽ bị trừ nửa ngày phép và phải được trưởng bộ phận xác nhận\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-04": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "526e27b84bd965ae38b2827e3c5581b5d6edb73e798d10af81a386896b426e31",
+   "retrieved_types": [
+    "WFH_REQ",
+    "ROOM_BOOKING",
+    "SPECIAL_DISCOUNT",
+    "TASK_REQUEST",
+    "BUDGET_REALLOCATION",
+    "LAPTOP_PROVISION",
+    "LEAVE_SPECIAL",
+    "SUPPLIER_ONBOARDING",
+    "RESIGNATION",
+    "EQUIPMENT",
+    "TRAINING_COURSE",
+    "EQUIPMENT_BORROW"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Làm việc từ xa quá 2 ngày mỗi tuần phải có kế hoạch công việc chi tiết và được trưởng bộ phận phê duyệt.",
+     "subject": "Nhân viên làm việc từ xa",
+     "threshold": "> 2 ngày/tuần",
+     "control": "Phải có kế hoạch công việc chi tiết và được trưởng bộ phận phê duyệt"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "WFH_REQ",
+     "name": "Làm việc từ xa (WFH)",
+     "current": {
+      "lifecycle": "A",
+      "risk_weight": 1
+     },
+     "proposed": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "reasons": [
+      "Quy định mới yêu cầu làm việc từ xa trên 2 ngày mỗi tuần phải có kế hoạch chi tiết và trưởng bộ phận phê duyệt, làm tăng thêm bước thẩm định của trưởng bộ phận (luồng B) và nâng trọng số rủi ro."
+     ],
+     "clause": "Làm việc từ xa quá 2 ngày mỗi tuần phải có kế hoạch công việc chi tiết và được trưởng bộ phận phê duyệt.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 1967.4,
+   "tokens": 1282,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Làm việc từ xa quá 2 ngày mỗi tuần phải có kế hoạch công việc chi tiết và được trưởng bộ phận phê duyệt.\",\n      \"subject\": \"Nhân viên làm việc từ xa\",\n      \"threshold\": \"> 2 ngày/tuần\",\n      \"control\": \"Phải có kế hoạch công việc chi tiết và được trưởng bộ phận phê duyệt\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"WFH_REQ\",\n      \"proposed_class\": \"B\",\n      \"proposed_weight\": 3,\n      \"reason\": \"Quy định mới yêu cầu làm việc từ xa trên 2 ngày mỗi tuần phải có kế hoạch chi tiết và trưởng bộ phận phê duyệt, làm tăng thêm bước thẩm định của trưởng bộ phận (luồng B) và nâng trọng số rủi ro.\",\n      \"clause\": \"Làm việc từ xa quá 2 ngày mỗi tuần phải có kế hoạch công việc chi tiết và được trưởng bộ phận phê duyệt.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-05": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "0459ee069f29964cbcf28890689bff846e3620ce2a77104b1207a6351212f825",
+   "retrieved_types": [
+    "ASSET_DISPOSAL",
+    "TAX_INVOICE_ISSUE",
+    "RESIGNATION",
+    "SECURITY_INCIDENT_HOTFIX",
+    "DOCUMENT_SEAL",
+    "EQUIPMENT",
+    "INTERNAL_TRANSFER",
+    "RECRUITMENT_REQ",
+    "VENDOR_PAYMENT",
+    "BUDGET_REALLOCATION",
+    "NDA_PRIVACY_CLEARANCE",
+    "EXPENSE_CLAIM"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Thanh lý tài sản cố định phải thành lập hội đồng, có biên bản định giá và biên bản bàn giao",
+     "subject": "Thanh lý tài sản cố định",
+     "threshold": "không có",
+     "control": "Phải thành lập hội đồng, có biên bản định giá và biên bản bàn giao"
+    },
+    {
+     "clause": "tài sản có giá trị trên 100 triệu đồng phải báo cáo Ban Giám đốc",
+     "subject": "Thanh lý tài sản cố định",
+     "threshold": "> 100 triệu đồng",
+     "control": "Phải báo cáo Ban Giám đốc"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "ASSET_DISPOSAL",
+     "name": "Thanh lý & hủy tài sản cố định",
+     "current": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 5
+     },
+     "reasons": [
+      "Quy định mới yêu cầu kiểm soát chặt chẽ hơn thông qua việc bắt buộc thành lập hội đồng, có biên bản định giá, biên bản bàn giao và bắt buộc báo cáo Ban Giám đốc đối với tài sản giá trị trên 100 triệu đồng, do đó cần tăng trọng số rủi ro lên mức tối đa."
+     ],
+     "clause": "Thanh lý tài sản cố định phải thành lập hội đồng, có biên bản định giá và biên bản bàn giao; tài sản có giá trị trên 100 triệu đồng phải báo cáo Ban Giám đốc.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2151.4,
+   "tokens": 1398,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Thanh lý tài sản cố định phải thành lập hội đồng, có biên bản định giá và biên bản bàn giao\",\n      \"subject\": \"Thanh lý tài sản cố định\",\n      \"threshold\": \"không có\",\n      \"control\": \"Phải thành lập hội đồng, có biên bản định giá và biên bản bàn giao\"\n    },\n    {\n      \"clause\": \"tài sản có giá trị trên 100 triệu đồng phải báo cáo Ban Giám đốc\",\n      \"subject\": \"Thanh lý tài sản cố định\",\n      \"threshold\": \"> 100 triệu đồng\",\n      \"control\": \"Phải báo cáo Ban Giám đốc\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"ASSET_DISPOSAL\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Quy định mới yêu cầu kiểm soát chặt chẽ hơn thông qua việc bắt buộc thành lập hội đồng, có biên bản định giá, biên bản bàn giao và bắt buộc báo cáo Ban Giám đốc đối với tài sản giá trị trên 100 triệu đồng, do đó cần tăng trọng số rủi ro lên mức tối đa.\",\n      \"clause\": \"Thanh lý tài sản cố định phải thành lập hội đồng, có biên bản định giá và biên bản bàn giao; tài sản có giá trị trên 100 triệu đồng phải báo cáo Ban Giám đốc.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-06": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "d3d2cee4bc95b746ef8081f2e0ce049d5a23691d025bad7f134ad2d6c0956636",
+   "retrieved_types": [
+    "EMPLOYEE_ONBOARDING",
+    "HR_CERTIFICATE",
+    "EXPENSE_CLAIM",
+    "BUSINESS_TRIP",
+    "INTERNAL_TRANSFER",
+    "SPECIAL_DISCOUNT",
+    "TRAINING_COURSE",
+    "ACCESS_FACILITY",
+    "VISITOR_SECURITY_PASS",
+    "LEAVE_SPECIAL",
+    "BUDGET_REALLOCATION",
+    "SECURITY_INCIDENT_HOTFIX"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Nhân viên mặc đồng phục công ty vào thứ Hai hằng tuần và trong các buổi tiếp khách.",
+     "subject": "Nhân viên",
+     "threshold": "Thứ Hai hằng tuần và trong các buổi tiếp khách",
+     "control": "Mặc đồng phục công ty"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "VISITOR_SECURITY_PASS",
+     "name": "Thẻ an ninh khách & đối tác ra vào",
+     "current": {
+      "lifecycle": "A",
+      "risk_weight": 1
+     },
+     "proposed": {
+      "lifecycle": "B",
+      "risk_weight": 2
+     },
+     "reasons": [
+      "Quy định mới yêu cầu kiểm soát việc tiếp khách (liên quan đến khách và đối tác ra vào), cần nâng luồng từ A lên B và tăng trọng số để bộ phận chuyên môn/an ninh thẩm định việc tuân thủ đồng phục và quy chế đón tiếp."
+     ],
+     "clause": "Nhân viên mặc đồng phục công ty vào thứ Hai hằng tuần và trong các buổi tiếp khách.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2022.5,
+   "tokens": 1280,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Nhân viên mặc đồng phục công ty vào thứ Hai hằng tuần và trong các buổi tiếp khách.\",\n      \"subject\": \"Nhân viên\",\n      \"threshold\": \"Thứ Hai hằng tuần và trong các buổi tiếp khách\",\n      \"control\": \"Mặc đồng phục công ty\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"VISITOR_SECURITY_PASS\",\n      \"proposed_class\": \"B\",\n      \"proposed_weight\": 2,\n      \"reason\": \"Quy định mới yêu cầu kiểm soát việc tiếp khách (liên quan đến khách và đối tác ra vào), cần nâng luồng từ A lên B và tăng trọng số để bộ phận chuyên môn/an ninh thẩm định việc tuân thủ đồng phục và quy chế đón tiếp.\",\n      \"clause\": \"Nhân viên mặc đồng phục công ty vào thứ Hai hằng tuần và trong các buổi tiếp khách.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-07": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "c909fc0d09239fb7b4a683f25795918045039abf389f3c852cad6c185238a585",
+   "retrieved_types": [
+    "TAX_INVOICE_ISSUE",
+    "CONTRACT_APPROVAL",
+    "SUPPLIER_ONBOARDING",
+    "DOCUMENT_SEAL",
+    "ROOM_BOOKING",
+    "NDA_PRIVACY_CLEARANCE",
+    "VENDOR_PAYMENT",
+    "ASSET_DISPOSAL",
+    "SPECIAL_DISCOUNT",
+    "BUDGET_REALLOCATION",
+    "LEAVE",
+    "SECURITY_INCIDENT_HOTFIX"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Hợp đồng có giá trị từ 500 triệu đồng phải được Pháp chế thẩm định và Ban Giám đốc phê duyệt trước khi ký.",
+     "subject": "Hợp đồng",
+     "threshold": "từ 500 triệu đồng",
+     "control": "Pháp chế thẩm định và Ban Giám đốc phê duyệt trước khi ký"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [],
+   "rejected": [
+    {
+     "code": "CONTRACT_APPROVAL",
+     "why": "không tăng kiểm soát so với cấu hình hiện tại"
+    }
+   ],
+   "latency_ms": 2636.3,
+   "tokens": 1300,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Hợp đồng có giá trị từ 500 triệu đồng phải được Pháp chế thẩm định và Ban Giám đốc phê duyệt trước khi ký.\",\n      \"subject\": \"Hợp đồng\",\n      \"threshold\": \"từ 500 triệu đồng\",\n      \"control\": \"Pháp chế thẩm định và Ban Giám đốc phê duyệt trước khi ký\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"CONTRACT_APPROVAL\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Yêu cầu hợp đồng từ 500 triệu phải qua Pháp chế thẩm định và Ban Giám đốc phê duyệt, duy trì luồng C và mức trọng số cao nhất để kiểm soát chặt chẽ rủi ro pháp lý và tài chính.\",\n      \"clause\": \"Hợp đồng có giá trị từ 500 triệu đồng phải được Pháp chế thẩm định và Ban Giám đốc phê duyệt trước khi ký.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-08": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "7fe570a9e1cc0ac49d993f234a952acb8856fc914bc65b69d79df396e6bc4a96",
+   "retrieved_types": [
+    "MARKETING_CAMPAIGN",
+    "TAX_INVOICE_ISSUE",
+    "BUDGET_REALLOCATION",
+    "SUPPLIER_ONBOARDING",
+    "ASSET_DISPOSAL",
+    "TRAINING_COURSE",
+    "SPECIAL_DISCOUNT",
+    "SECURITY_INCIDENT_HOTFIX",
+    "VISITOR_SECURITY_PASS",
+    "INTERNAL_TRANSFER",
+    "FLASH_SALE_VOUCHER",
+    "EQUIPMENT_BORROW"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Mọi đợt khuyến mãi, phát hành voucher có tổng giá trị giảm giá trên 200 triệu đồng phải lập kế hoạch ngân sách và được nghiệm thu, đánh giá hiệu quả sau chiến dịch.",
+     "subject": "Đợt khuyến mãi, phát hành voucher",
+     "threshold": "Tổng giá trị giảm giá > 200 triệu đồng",
+     "control": "Phải lập kế hoạch ngân sách và được nghiệm thu, đánh giá hiệu quả sau chiến dịch (bổ sung bước kiểm tra/nghiệm thu kết quả tương ứng luồng C)"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "FLASH_SALE_VOUCHER",
+     "name": "Flash Sale / Voucher",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 4
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 5
+     },
+     "reasons": [
+      "Quy định mới yêu cầu các chương trình khuyến mãi, phát hành voucher có giá trị giảm giá lớn (>200 triệu) phải được nghiệm thu, đánh giá hiệu quả sau chiến dịch (kiểm soát chặt 4 bước, nâng từ luồng B lên C và tăng trọng số lên 5)"
+     ],
+     "clause": "Mọi đợt khuyến mãi, phát hành voucher có tổng giá trị giảm giá trên 200 triệu đồng phải lập kế hoạch ngân sách và được nghiệm thu, đánh giá hiệu quả sau chiến dịch.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 3188.7,
+   "tokens": 1430,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Mọi đợt khuyến mãi, phát hành voucher có tổng giá trị giảm giá trên 200 triệu đồng phải lập kế hoạch ngân sách và được nghiệm thu, đánh giá hiệu quả sau chiến dịch.\",\n      \"subject\": \"Đợt khuyến mãi, phát hành voucher\",\n      \"threshold\": \"Tổng giá trị giảm giá > 200 triệu đồng\",\n      \"control\": \"Phải lập kế hoạch ngân sách và được nghiệm thu, đánh giá hiệu quả sau chiến dịch (bổ sung bước kiểm tra/nghiệm thu kết quả tương ứng luồng C)\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"FLASH_SALE_VOUCHER\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Quy định mới yêu cầu các chương trình khuyến mãi, phát hành voucher có giá trị giảm giá lớn (>200 triệu) phải được nghiệm thu, đánh giá hiệu quả sau chiến dịch (kiểm soát chặt 4 bước, nâng từ luồng B lên C và tăng trọng số lên 5)\",\n      \"clause\": \"Mọi đợt khuyến mãi, phát hành voucher có tổng giá trị giảm giá trên 200 triệu đồng phải lập kế hoạch ngân sách và được nghiệm thu, đánh giá hiệu quả sau chiến dịch.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-09": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "9c0c46d41ee50e064f04281f64adce1197ff5a4559cbee3f5f5388218a5a7e7e",
+   "retrieved_types": [
+    "IT_SUPPORT",
+    "CROSS_DEPT_SUPPORT",
+    "SECURITY_INCIDENT_HOTFIX",
+    "PROD_DATA_ACCESS",
+    "VISITOR_SECURITY_PASS",
+    "NDA_PRIVACY_CLEARANCE",
+    "SPECIAL_DISCOUNT",
+    "EQUIPMENT",
+    "ACCESS",
+    "TASK_REQUEST",
+    "DATA_UAT_EXPORT",
+    "BUDGET_REALLOCATION"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng được xếp mức khẩn cấp và rủi ro cao.",
+     "subject": "Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng",
+     "threshold": "Khẩn cấp và rủi ro cao",
+     "control": "Xếp mức rủi ro cao (trọng số lớn) và nâng mức kiểm soát quy trình"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "IT_SUPPORT",
+     "name": "Yêu cầu hỗ trợ IT",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 1
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 5
+     },
+     "reasons": [
+      "Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng theo quy định mới phải được xếp mức khẩn cấp và rủi ro cao (trọng số 5), do đó cần nâng luồng xử lý lên C (4 bước, kiểm soát chặt) thay vì luồng B và trọng số 1 như trước đây."
+     ],
+     "clause": "Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng được xếp mức khẩn cấp và rủi ro cao.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2741.2,
+   "tokens": 1325,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng được xếp mức khẩn cấp và rủi ro cao.\",\n      \"subject\": \"Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng\",\n      \"threshold\": \"Khẩn cấp và rủi ro cao\",\n      \"control\": \"Xếp mức rủi ro cao (trọng số lớn) và nâng mức kiểm soát quy trình\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"IT_SUPPORT\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng theo quy định mới phải được xếp mức khẩn cấp và rủi ro cao (trọng số 5), do đó cần nâng luồng xử lý lên C (4 bước, kiểm soát chặt) thay vì luồng B và trọng số 1 như trước đây.\",\n      \"clause\": \"Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng được xếp mức khẩn cấp và rủi ro cao.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-10": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "4509e7943e8b3b6022b49a338a4a0e4c74321e6ae8cf3ce8b6aea8dae15c179d",
+   "retrieved_types": [
+    "ROOM_BOOKING",
+    "BUSINESS_TRIP",
+    "BUDGET_REALLOCATION",
+    "TAX_INVOICE_ISSUE",
+    "TRAINING_COURSE",
+    "ACCESS_FACILITY",
+    "LEAVE_SPECIAL",
+    "NDA_PRIVACY_CLEARANCE",
+    "HR_CERTIFICATE",
+    "VISITOR_SECURITY_PASS",
+    "SPECIAL_DISCOUNT",
+    "ASSET_DISPOSAL"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Đặt phòng họp cho trên 50 người hoặc có khách bên ngoài tham dự phải đăng ký trước 2 ngày và được bộ phận hành chính xác nhận.",
+     "subject": "Đặt phòng họp",
+     "threshold": "trên 50 người hoặc có khách bên ngoài tham dự",
+     "control": "đăng ký trước 2 ngày và được bộ phận hành chính xác nhận"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "ROOM_BOOKING",
+     "name": "Đặt phòng họp",
+     "current": {
+      "lifecycle": "A",
+      "risk_weight": 1
+     },
+     "proposed": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "reasons": [
+      "Yêu cầu có sự tham gia của bộ phận hành chính xác nhận và điều kiện kiểm soát chặt hơn đối với quy mô lớn hoặc có khách bên ngoài, do đó cần nâng từ luồng A lên luồng B và tăng trọng số từ 1 lên 3."
+     ],
+     "clause": "Đặt phòng họp cho trên 50 người hoặc có khách bên ngoài tham dự phải đăng ký trước 2 ngày và được bộ phận hành chính xác nhận.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 5531.9,
+   "tokens": 1327,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Đặt phòng họp cho trên 50 người hoặc có khách bên ngoài tham dự phải đăng ký trước 2 ngày và được bộ phận hành chính xác nhận.\",\n      \"subject\": \"Đặt phòng họp\",\n      \"threshold\": \"trên 50 người hoặc có khách bên ngoài tham dự\",\n      \"control\": \"đăng ký trước 2 ngày và được bộ phận hành chính xác nhận\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"ROOM_BOOKING\",\n      \"proposed_class\": \"B\",\n      \"proposed_weight\": 3,\n      \"reason\": \"Yêu cầu có sự tham gia của bộ phận hành chính xác nhận và điều kiện kiểm soát chặt hơn đối với quy mô lớn hoặc có khách bên ngoài, do đó cần nâng từ luồng A lên luồng B và tăng trọng số từ 1 lên 3.\",\n      \"clause\": \"Đặt phòng họp cho trên 50 người hoặc có khách bên ngoài tham dự phải đăng ký trước 2 ngày và được bộ phận hành chính xác nhận.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-11": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "c9bc03aef044b71d2c31bc1afa986377acb4e8d7a01c2c30038c73e257393b30",
+   "retrieved_types": [
+    "SERVER_FIREWALL",
+    "ACCESS",
+    "VISITOR_SECURITY_PASS",
+    "ACCESS_FACILITY",
+    "PROD_DATA_ACCESS",
+    "SUPPLIER_ONBOARDING",
+    "SECURITY_INCIDENT_HOTFIX",
+    "IT_SUPPORT",
+    "RECRUITMENT_REQ",
+    "NDA_PRIVACY_CLEARANCE",
+    "EQUIPMENT",
+    "LEAVE_SPECIAL"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Mọi yêu cầu cấp server hoặc mở firewall cho môi trường production phải được bộ phận An ninh thông tin thẩm định và được xếp mức rủi ro cao.",
+     "subject": "Yêu cầu cấp server hoặc mở firewall cho môi trường production",
+     "threshold": "Môi trường production",
+     "control": "Phải được bộ phận An ninh thông tin thẩm định và xếp mức rủi ro cao"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "SERVER_FIREWALL",
+     "name": "Cấp Server / Firewall",
+     "current": {
+      "lifecycle": "C",
+      "risk_weight": 3
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 5
+     },
+     "reasons": [
+      "Yêu cầu cấp server hoặc mở firewall cho môi trường production thuộc đối tượng của quy định mới, bắt buộc phải nâng mức trọng số lên cao nhất (mức 5) và đảm bảo luồng kiểm soát chặt (luồng C) bao gồm thẩm định từ bộ phận An ninh thông tin."
+     ],
+     "clause": "Mọi yêu cầu cấp server hoặc mở firewall cho môi trường production phải được bộ phận An ninh thông tin thẩm định và được xếp mức rủi ro cao.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 4778.2,
+   "tokens": 1326,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Mọi yêu cầu cấp server hoặc mở firewall cho môi trường production phải được bộ phận An ninh thông tin thẩm định và được xếp mức rủi ro cao.\",\n      \"subject\": \"Yêu cầu cấp server hoặc mở firewall cho môi trường production\",\n      \"threshold\": \"Môi trường production\",\n      \"control\": \"Phải được bộ phận An ninh thông tin thẩm định và xếp mức rủi ro cao\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"SERVER_FIREWALL\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Yêu cầu cấp server hoặc mở firewall cho môi trường production thuộc đối tượng của quy định mới, bắt buộc phải nâng mức trọng số lên cao nhất (mức 5) và đảm bảo luồng kiểm soát chặt (luồng C) bao gồm thẩm định từ bộ phận An ninh thông tin.\",\n      \"clause\": \"Mọi yêu cầu cấp server hoặc mở firewall cho môi trường production phải được bộ phận An ninh thông tin thẩm định và được xếp mức rủi ro cao.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-12": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "fc2f2cbe60a3b69c1f16d72bb6ba98486a7152eab737ff48d98f92aee2a6e3e9",
+   "retrieved_types": [
+    "VEHICLE_BOOKING",
+    "RESIGNATION",
+    "TAX_INVOICE_ISSUE",
+    "BUSINESS_TRIP",
+    "EQUIPMENT_BORROW",
+    "TRAINING_COURSE",
+    "INTERNAL_TRANSFER",
+    "BUDGET_REALLOCATION",
+    "SECURITY_INCIDENT_HOTFIX",
+    "ATTENDANCE_ADJUSTMENT",
+    "RECRUITMENT_REQ",
+    "DOCUMENT_SEAL"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Mượn xe công vụ đi ngoại tỉnh phải có lệnh điều xe của Ban Giám đốc",
+     "subject": "Mượn xe công vụ đi ngoại tỉnh",
+     "threshold": "ngoại tỉnh",
+     "control": "Phải có lệnh điều xe của Ban Giám đốc"
+    },
+    {
+     "clause": "bàn giao xe kèm biên bản khi trả",
+     "subject": "Mượn xe công vụ đi ngoại tỉnh",
+     "threshold": "khi trả xe",
+     "control": "Bàn giao xe kèm biên bản khi trả"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "VEHICLE_BOOKING",
+     "name": "Mượn xe công vụ",
+     "current": {
+      "lifecycle": "C",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Quy định mới yêu cầu kiểm soát chặt chẽ hơn đối với việc mượn xe công vụ đi ngoại tỉnh, bắt buộc phải có lệnh điều xe của Ban Giám đốc và biên bản bàn giao khi trả, do đó cần nâng trọng số rủi ro lên mức cao để phản ánh đúng mức độ kiểm soát."
+     ],
+     "clause": "Mượn xe công vụ đi ngoại tỉnh phải có lệnh điều xe của Ban Giám đốc và bàn giao xe kèm biên bản khi trả.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2454.0,
+   "tokens": 1360,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Mượn xe công vụ đi ngoại tỉnh phải có lệnh điều xe của Ban Giám đốc\",\n      \"subject\": \"Mượn xe công vụ đi ngoại tỉnh\",\n      \"threshold\": \"ngoại tỉnh\",\n      \"control\": \"Phải có lệnh điều xe của Ban Giám đốc\"\n    },\n    {\n      \"clause\": \"bàn giao xe kèm biên bản khi trả\",\n      \"subject\": \"Mượn xe công vụ đi ngoại tỉnh\",\n      \"threshold\": \"khi trả xe\",\n      \"control\": \"Bàn giao xe kèm biên bản khi trả\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"VEHICLE_BOOKING\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Quy định mới yêu cầu kiểm soát chặt chẽ hơn đối với việc mượn xe công vụ đi ngoại tỉnh, bắt buộc phải có lệnh điều xe của Ban Giám đốc và biên bản bàn giao khi trả, do đó cần nâng trọng số rủi ro lên mức cao để phản ánh đúng mức độ kiểm soát.\",\n      \"clause\": \"Mượn xe công vụ đi ngoại tỉnh phải có lệnh điều xe của Ban Giám đốc và bàn giao xe kèm biên bản khi trả.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-13": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "606fdf79c801e7ecf5096828c67db080f671e3affb99afc9246b39d1bf47a4c1",
+   "retrieved_types": [
+    "OFFICE_SUPPLIES",
+    "SUPPLIER_ONBOARDING",
+    "BUDGET_REALLOCATION",
+    "NDA_PRIVACY_CLEARANCE",
+    "ROOM_BOOKING",
+    "INTERNAL_TRANSFER",
+    "SPECIAL_DISCOUNT",
+    "CONTRACT_APPROVAL",
+    "FACILITY_REPAIR",
+    "VISITOR_SECURITY_PASS",
+    "LEAVE",
+    "ACCESS"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Văn phòng phẩm dưới 500.000 đồng mỗi tháng được cấp theo định mức, không cần phê duyệt bổ sung.",
+     "subject": "Văn phòng phẩm",
+     "threshold": "dưới 500.000 đồng mỗi tháng",
+     "control": "cấp theo định mức, không cần phê duyệt bổ sung"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [],
+   "rejected": [],
+   "latency_ms": 1656.3,
+   "tokens": 1130,
+   "fallback_used": false,
+   "raw_response": "{\"atomic_rules\": [{\"clause\": \"Văn phòng phẩm dưới 500.000 đồng mỗi tháng được cấp theo định mức, không cần phê duyệt bổ sung.\", \"subject\": \"Văn phòng phẩm\", \"threshold\": \"dưới 500.000 đồng mỗi tháng\", \"control\": \"cấp theo định mức, không cần phê duyệt bổ sung\"}], \"conflicts\": [], \"impacts\": []}",
+   "requires_admin_approval": true
+  },
+  "QD-14": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "b0b87659a006d5dd1b1b66f0289c0bd00aa930f87ec97200c689b54d581e0c9e",
+   "retrieved_types": [
+    "REFUND_COMPENSATION",
+    "SPECIAL_DISCOUNT",
+    "SUPPLIER_ONBOARDING",
+    "EXPENSE_CLAIM",
+    "TRAINING_COURSE",
+    "BUDGET_REALLOCATION",
+    "VISITOR_SECURITY_PASS",
+    "TAX_INVOICE_ISSUE",
+    "ACCESS",
+    "ROOM_BOOKING",
+    "ASSET_DISPOSAL",
+    "DOCUMENT_SEAL"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Mọi khoản hoàn tiền, đền bù cho khách hàng trên 50 triệu đồng phải được Kế toán trưởng và Ban Giám đốc phê duyệt, có đối soát chứng từ.",
+     "subject": "Khoản hoàn tiền, đền bù cho khách hàng",
+     "threshold": "> 50.000.000 VND",
+     "control": "Phê duyệt bởi Kế toán trưởng và Ban Giám đốc, có đối soát chứng từ"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "REFUND_COMPENSATION",
+     "name": "Hoàn tiền / Đền bù",
+     "current": {
+      "lifecycle": "A",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Quy định mới yêu cầu các khoản hoàn tiền, đền bù cho khách hàng trên 50 triệu đồng phải qua nhiều cấp phê duyệt (Kế toán trưởng và Ban Giám đốc) và kiểm soát chặt chẽ (đối soát chứng từ), do đó cần nâng luồng từ A lên C và tăng trọng số từ 2 lên 4."
+     ],
+     "clause": "Mọi khoản hoàn tiền, đền bù cho khách hàng trên 50 triệu đồng phải được Kế toán trưởng và Ban Giám đốc phê duyệt, có đối soát chứng từ.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2195.6,
+   "tokens": 1368,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Mọi khoản hoàn tiền, đền bù cho khách hàng trên 50 triệu đồng phải được Kế toán trưởng và Ban Giám đốc phê duyệt, có đối soát chứng từ.\",\n      \"subject\": \"Khoản hoàn tiền, đền bù cho khách hàng\",\n      \"threshold\": \"> 50.000.000 VND\",\n      \"control\": \"Phê duyệt bởi Kế toán trưởng và Ban Giám đốc, có đối soát chứng từ\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"REFUND_COMPENSATION\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Quy định mới yêu cầu các khoản hoàn tiền, đền bù cho khách hàng trên 50 triệu đồng phải qua nhiều cấp phê duyệt (Kế toán trưởng và Ban Giám đốc) và kiểm soát chặt chẽ (đối soát chứng từ), do đó cần nâng luồng từ A lên C và tăng trọng số từ 2 lên 4.\",\n      \"clause\": \"Mọi khoản hoàn tiền, đền bù cho khách hàng trên 50 triệu đồng phải được Kế toán trưởng và Ban Giám đốc phê duyệt, có đối soát chứng từ.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-15": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "94565188e7f2cc89f5530b791e1497b200184cb7fba05f09414b958e6b1f34e2",
+   "retrieved_types": [
+    "TRAINING_COURSE",
+    "TAX_INVOICE_ISSUE",
+    "MARKETING_CAMPAIGN",
+    "ASSET_DISPOSAL",
+    "EXPENSE_CLAIM",
+    "ROOM_BOOKING",
+    "SECURITY_INCIDENT_HOTFIX",
+    "RESOURCE_REVOKE",
+    "PROJECT_INITIATION",
+    "LAPTOP_PROVISION",
+    "BUDGET_REALLOCATION",
+    "ADVANCE_SMALL"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Khóa đào tạo có chi phí trên 30 triệu đồng phải ký cam kết làm việc, sau khóa học phải nghiệm thu và đánh giá hiệu quả đào tạo.",
+     "subject": "Khóa đào tạo",
+     "threshold": "chi phí trên 30 triệu đồng",
+     "control": "ký cam kết làm việc, sau khóa học phải nghiệm thu và đánh giá hiệu quả đào tạo"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "TRAINING_COURSE",
+     "name": "Đăng ký đào tạo & chứng chỉ nghề nghiệp",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Quy định mới yêu cầu khóa học trên 30 triệu phải ký cam kết, nghiệm thu và đánh giá hiệu quả. Luồng B hiện tại (2 bước) không đủ để kiểm soát việc nghiệm thu kết quả và cấp thẩm quyền phê duyệt cam kết làm việc, do đó cần nâng lên luồng C (4 bước, kiểm soát chặt) và tăng trọng số lên 4."
+     ],
+     "clause": "Khóa đào tạo có chi phí trên 30 triệu đồng phải ký cam kết làm việc, sau khóa học phải nghiệm thu và đánh giá hiệu quả đào tạo.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 10942.2,
+   "tokens": 1352,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Khóa đào tạo có chi phí trên 30 triệu đồng phải ký cam kết làm việc, sau khóa học phải nghiệm thu và đánh giá hiệu quả đào tạo.\",\n      \"subject\": \"Khóa đào tạo\",\n      \"threshold\": \"chi phí trên 30 triệu đồng\",\n      \"control\": \"ký cam kết làm việc, sau khóa học phải nghiệm thu và đánh giá hiệu quả đào tạo\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"TRAINING_COURSE\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Quy định mới yêu cầu khóa học trên 30 triệu phải ký cam kết, nghiệm thu và đánh giá hiệu quả. Luồng B hiện tại (2 bước) không đủ để kiểm soát việc nghiệm thu kết quả và cấp thẩm quyền phê duyệt cam kết làm việc, do đó cần nâng lên luồng C (4 bước, kiểm soát chặt) và tăng trọng số lên 4.\",\n      \"clause\": \"Khóa đào tạo có chi phí trên 30 triệu đồng phải ký cam kết làm việc, sau khóa học phải nghiệm thu và đánh giá hiệu quả đào tạo.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-16": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "58e25192495a1b2100e2619ebae40905877915662e8e76ceb6376883396559cb",
+   "retrieved_types": [
+    "VISITOR_SECURITY_PASS",
+    "ACCESS_FACILITY",
+    "HR_CERTIFICATE",
+    "ROOM_BOOKING",
+    "LAPTOP_PROVISION",
+    "INTERNAL_TRANSFER",
+    "EMPLOYEE_ONBOARDING",
+    "TRAINING_COURSE",
+    "BUDGET_REALLOCATION",
+    "ASSET_DISPOSAL",
+    "RECRUITMENT_REQ",
+    "RESIGNATION"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Khách và đối tác ra vào khu vực phòng máy chủ phải được bộ phận An ninh xác nhận và có nhân viên đi kèm suốt thời gian làm việc.",
+     "subject": "Khách và đối tác ra vào khu vực phòng máy chủ",
+     "threshold": "None",
+     "control": "Phải được bộ phận An ninh xác nhận và có nhân viên đi kèm suốt thời gian làm việc"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "VISITOR_SECURITY_PASS",
+     "name": "Thẻ an ninh khách & đối tác ra vào",
+     "current": {
+      "lifecycle": "A",
+      "risk_weight": 1
+     },
+     "proposed": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "reasons": [
+      "Khu vực phòng máy chủ là khu vực trọng điểm, yêu cầu kiểm soát chặt chẽ việc ra vào của khách và đối tác thông qua thẩm định/phê duyệt của bộ phận An ninh và có nhân viên đi kèm, do đó cần nâng luồng từ A lên B và tăng trọng số rủi ro từ 1 lên 3."
+     ],
+     "clause": "Khách và đối tác ra vào khu vực phòng máy chủ phải được bộ phận An ninh xác nhận và có nhân viên đi kèm suốt thời gian làm việc.",
+     "clause_grounded": true
+    },
+    {
+     "code": "ACCESS_FACILITY",
+     "name": "Cấp thẻ ra vào",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Việc cấp thẻ ra vào khu vực phòng máy chủ cho đối tượng khách/đối tác liên quan đến quy định kiểm soát an ninh nghiêm ngặt, cần quy trình 4 bước kiểm tra/nghiệm thu và nâng trọng số lên 4."
+     ],
+     "clause": "Khách và đối tác ra vào khu vực phòng máy chủ phải được bộ phận An ninh xác nhận và có nhân viên đi kèm suốt thời gian làm việc.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2280.9,
+   "tokens": 1449,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Khách và đối tác ra vào khu vực phòng máy chủ phải được bộ phận An ninh xác nhận và có nhân viên đi kèm suốt thời gian làm việc.\",\n      \"subject\": \"Khách và đối tác ra vào khu vực phòng máy chủ\",\n      \"threshold\": null,\n      \"control\": \"Phải được bộ phận An ninh xác nhận và có nhân viên đi kèm suốt thời gian làm việc\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"VISITOR_SECURITY_PASS\",\n      \"proposed_class\": \"B\",\n      \"proposed_weight\": 3,\n      \"reason\": \"Khu vực phòng máy chủ là khu vực trọng điểm, yêu cầu kiểm soát chặt chẽ việc ra vào của khách và đối tác thông qua thẩm định/phê duyệt của bộ phận An ninh và có nhân viên đi kèm, do đó cần nâng luồng từ A lên B và tăng trọng số rủi ro từ 1 lên 3.\",\n      \"clause\": \"Khách và đối tác ra vào khu vực phòng máy chủ phải được bộ phận An ninh xác nhận và có nhân viên đi kèm suốt thời gian làm việc.\"\n    },\n    {\n      \"code\": \"ACCESS_FACILITY\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Việc cấp thẻ ra vào khu vực phòng máy chủ cho đối tượng khách/đối tác liên quan đến quy định kiểm soát an ninh nghiêm ngặt, cần quy trình 4 bước kiểm tra/nghiệm thu và nâng trọng số lên 4.\",\n      \"clause\": \"Khách và đối tác ra vào khu vực phòng máy chủ phải được bộ phận An ninh xác nhận và có nhân viên đi kèm suốt thời gian làm việc.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-17": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "4045e37c9748cb63c6724327b780e095bccb8c48ec81c113338a60d4291fa8aa",
+   "retrieved_types": [
+    "TRAINING_COURSE",
+    "ACCESS_FACILITY",
+    "EMPLOYEE_ONBOARDING",
+    "PROMOTION_REQ",
+    "EXPENSE_CLAIM",
+    "VENDOR_PAYMENT",
+    "HR_CERTIFICATE",
+    "RECRUITMENT_REQ",
+    "VISITOR_SECURITY_PASS",
+    "INTERNAL_TRANSFER",
+    "REIMBURSEMENT",
+    "LEAVE"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Công ty tổ chức tiệc tất niên vào ngày 25 tháng 12 hằng năm cho toàn thể nhân viên.",
+     "subject": "toàn thể nhân viên",
+     "threshold": "ngày 25 tháng 12 hằng năm",
+     "control": "Tổ chức tiệc tất niên cho toàn thể nhân viên"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [],
+   "rejected": [],
+   "latency_ms": 1821.9,
+   "tokens": 1124,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Công ty tổ chức tiệc tất niên vào ngày 25 tháng 12 hằng năm cho toàn thể nhân viên.\",\n      \"subject\": \"toàn thể nhân viên\",\n      \"threshold\": \"ngày 25 tháng 12 hằng năm\",\n      \"control\": \"Tổ chức tiệc tất niên cho toàn thể nhân viên\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": []\n}",
+   "requires_admin_approval": true
+  },
+  "QD-18": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "9af9c5db67f015023c9e3c3dfbdff7d3b2a136bd49924662e08da051c8fdcc63",
+   "retrieved_types": [
+    "SPECIAL_DISCOUNT",
+    "LEAVE_SPECIAL",
+    "TAX_INVOICE_ISSUE",
+    "CONTRACT_APPROVAL",
+    "ASSET_DISPOSAL",
+    "BUSINESS_TRIP",
+    "SUPPLIER_ONBOARDING",
+    "REWARD_REQ",
+    "VISITOR_SECURITY_PASS",
+    "VENDOR_PAYMENT",
+    "BUDGET_REALLOCATION",
+    "LEAVE"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Chiết khấu thương mại đặc biệt trên 15% cho khách hàng phải được Giám đốc kinh doanh phê duyệt và ghi rõ trong hợp đồng.",
+     "subject": "Chiết khấu thương mại đặc biệt trên 15% cho khách hàng",
+     "threshold": "discount_percent > 15%",
+     "control": "Phải được Giám đốc kinh doanh phê duyệt và ghi rõ trong hợp đồng"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "SPECIAL_DISCOUNT",
+     "name": "Phê duyệt chiết khấu thương mại đặc biệt",
+     "current": {
+      "lifecycle": "A",
+      "risk_weight": 3
+     },
+     "proposed": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "reasons": [
+      "Quy định mới yêu cầu chiết khấu thương mại đặc biệt trên 15% phải qua phê duyệt của Giám đốc kinh doanh và ghi rõ trong hợp đồng, do đó cần nâng luồng từ A lên B và tăng trọng số lên tương ứng để kiểm soát chặt chẽ hơn."
+     ],
+     "clause": "Chiết khấu thương mại đặc biệt trên 15% cho khách hàng phải được Giám đốc kinh doanh phê duyệt và ghi rõ trong hợp đồng.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 1952.4,
+   "tokens": 1319,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Chiết khấu thương mại đặc biệt trên 15% cho khách hàng phải được Giám đốc kinh doanh phê duyệt và ghi rõ trong hợp đồng.\",\n      \"subject\": \"Chiết khấu thương mại đặc biệt trên 15% cho khách hàng\",\n      \"threshold\": \"discount_percent > 15%\",\n      \"control\": \"Phải được Giám đốc kinh doanh phê duyệt và ghi rõ trong hợp đồng\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"SPECIAL_DISCOUNT\",\n      \"proposed_class\": \"B\",\n      \"proposed_weight\": 3,\n      \"reason\": \"Quy định mới yêu cầu chiết khấu thương mại đặc biệt trên 15% phải qua phê duyệt của Giám đốc kinh doanh và ghi rõ trong hợp đồng, do đó cần nâng luồng từ A lên B và tăng trọng số lên tương ứng để kiểm soát chặt chẽ hơn.\",\n      \"clause\": \"Chiết khấu thương mại đặc biệt trên 15% cho khách hàng phải được Giám đốc kinh doanh phê duyệt và ghi rõ trong hợp đồng.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-19": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "48c8e7d0120209067106b20d0a15ca5331b07fcbde90ffd51299b522d23f5070",
+   "retrieved_types": [
+    "REWARD_REQ",
+    "TAX_INVOICE_ISSUE",
+    "SPECIAL_DISCOUNT",
+    "PROJECT_INITIATION",
+    "DISCIPLINE_REQ",
+    "DOCUMENT_SEAL",
+    "CROSS_DEPT_SUPPORT",
+    "SUPPLIER_ONBOARDING",
+    "CONTRACT_APPROVAL",
+    "SECURITY_INCIDENT_HOTFIX",
+    "DATA_UAT_EXPORT",
+    "IT_SUPPORT"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Đề xuất khen thưởng có giá trị từ 20 triệu đồng trở lên phải được Ban Giám đốc phê duyệt.",
+     "subject": "Đề xuất khen thưởng",
+     "threshold": "amount_vnd >= 20000000",
+     "control": "Phải được Ban Giám đốc phê duyệt (tăng cấp kiểm soát lên luồng 4 bước C và trọng số 4 hoặc 5)."
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "REWARD_REQ",
+     "name": "Đề xuất khen thưởng",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Đề xuất khen thưởng có giá trị từ 20 triệu đồng trở lên phải được Ban Giám đốc phê duyệt, do đó cần nâng luồng từ B lên C và tăng trọng số từ 3 lên 4 để đảm bảo kiểm soát chặt chẽ ở cấp thẩm quyền cao."
+     ],
+     "clause": "Đề xuất khen thưởng có giá trị từ 20 triệu đồng trở lên phải được Ban Giám đốc phê duyệt.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2073.4,
+   "tokens": 1272,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Đề xuất khen thưởng có giá trị từ 20 triệu đồng trở lên phải được Ban Giám đốc phê duyệt.\",\n      \"subject\": \"Đề xuất khen thưởng\",\n      \"threshold\": \"amount_vnd >= 20000000\",\n      \"control\": \"Phải được Ban Giám đốc phê duyệt (tăng cấp kiểm soát lên luồng 4 bước C và trọng số 4 hoặc 5).\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"REWARD_REQ\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Đề xuất khen thưởng có giá trị từ 20 triệu đồng trở lên phải được Ban Giám đốc phê duyệt, do đó cần nâng luồng từ B lên C và tăng trọng số từ 3 lên 4 để đảm bảo kiểm soát chặt chẽ ở cấp thẩm quyền cao.\",\n      \"clause\": \"Đề xuất khen thưởng có giá trị từ 20 triệu đồng trở lên phải được Ban Giám đốc phê duyệt.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-20": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "72f24e27b7192dd226808c569d8f3b6d9a0c84e7a361f728c1b1a6de06415f8c",
+   "retrieved_types": [
+    "SALARY_ADJUSTMENT",
+    "SALARY_ADVANCE",
+    "SUPPLIER_ONBOARDING",
+    "ATTENDANCE_ADJUSTMENT",
+    "TAX_INVOICE_ISSUE",
+    "RECRUITMENT_REQ",
+    "REWARD_REQ",
+    "NDA_PRIVACY_CLEARANCE",
+    "SPECIAL_DISCOUNT",
+    "PROJECT_INITIATION",
+    "DISCIPLINE_REQ",
+    "DOCUMENT_SEAL"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Mọi đề xuất điều chỉnh lương phải được Hội đồng lương thẩm định và Ban Giám đốc phê duyệt.",
+     "subject": "Đề xuất điều chỉnh lương",
+     "threshold": "Không có",
+     "control": "Phải qua Hội đồng lương thẩm định và Ban Giám đốc phê duyệt, tương ứng với luồng C (4 bước, kiểm soát chặt)"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "SALARY_ADJUSTMENT",
+     "name": "Điều chỉnh lương",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 5
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 5
+     },
+     "reasons": [
+      "Quy định mới yêu cầu thêm cấp thẩm quyền phê duyệt là Ban Giám đốc và qua Hội đồng lương thẩm định, làm tăng mức độ kiểm soát từ luồng B lên luồng C (4 bước, kiểm soát chặt)."
+     ],
+     "clause": "Mọi đề xuất điều chỉnh lương phải được Hội đồng lương thẩm định và Ban Giám đốc phê duyệt.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2014.7,
+   "tokens": 1231,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Mọi đề xuất điều chỉnh lương phải được Hội đồng lương thẩm định và Ban Giám đốc phê duyệt.\",\n      \"subject\": \"Đề xuất điều chỉnh lương\",\n      \"threshold\": \"Không có\",\n      \"control\": \"Phải qua Hội đồng lương thẩm định và Ban Giám đốc phê duyệt, tương ứng với luồng C (4 bước, kiểm soát chặt)\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"SALARY_ADJUSTMENT\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 5,\n      \"reason\": \"Quy định mới yêu cầu thêm cấp thẩm quyền phê duyệt là Ban Giám đốc và qua Hội đồng lương thẩm định, làm tăng mức độ kiểm soát từ luồng B lên luồng C (4 bước, kiểm soát chặt).\",\n      \"clause\": \"Mọi đề xuất điều chỉnh lương phải được Hội đồng lương thẩm định và Ban Giám đốc phê duyệt.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-21": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "117083045da8096f9d8864eb6ffc3ac183801736682425696d17cfd2a9b6da60",
+   "retrieved_types": [
+    "OVERTIME_REQ",
+    "LEAVE",
+    "SPECIAL_DISCOUNT",
+    "SUPPLIER_ONBOARDING",
+    "BUDGET_REALLOCATION",
+    "BUSINESS_TRIP",
+    "ACCESS_FACILITY",
+    "CONTRACT_APPROVAL",
+    "TRAINING_COURSE",
+    "TAX_INVOICE_ISSUE",
+    "DISCIPLINE_REQ",
+    "DOCUMENT_SEAL"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Đăng ký làm thêm giờ quá 40 giờ mỗi tháng phải được Giám đốc phê duyệt và tuân thủ giới hạn của Bộ luật Lao động.",
+     "subject": "Đăng ký làm thêm giờ (OT)",
+     "threshold": "Quá 40 giờ mỗi tháng",
+     "control": "Phải được Giám đốc phê duyệt và tuân thủ giới hạn của Bộ luật Lao động"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "OVERTIME_REQ",
+     "name": "Đăng ký làm thêm giờ (OT)",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Yêu cầu làm thêm giờ trên 40 giờ mỗi tháng cần có sự phê duyệt của Giám đốc (cấp thẩm quyền cao) và kiểm soát chặt chẽ theo giới hạn pháp luật, do đó cần nâng luồng từ B lên C và tăng trọng số rủi ro."
+     ],
+     "clause": "Đăng ký làm thêm giờ quá 40 giờ mỗi tháng phải được Giám đốc phê duyệt và tuân thủ giới hạn của Bộ luật Lao động.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2757.4,
+   "tokens": 1305,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Đăng ký làm thêm giờ quá 40 giờ mỗi tháng phải được Giám đốc phê duyệt và tuân thủ giới hạn của Bộ luật Lao động.\",\n      \"subject\": \"Đăng ký làm thêm giờ (OT)\",\n      \"threshold\": \"Quá 40 giờ mỗi tháng\",\n      \"control\": \"Phải được Giám đốc phê duyệt và tuân thủ giới hạn của Bộ luật Lao động\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"OVERTIME_REQ\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Yêu cầu làm thêm giờ trên 40 giờ mỗi tháng cần có sự phê duyệt của Giám đốc (cấp thẩm quyền cao) và kiểm soát chặt chẽ theo giới hạn pháp luật, do đó cần nâng luồng từ B lên C và tăng trọng số rủi ro.\",\n      \"clause\": \"Đăng ký làm thêm giờ quá 40 giờ mỗi tháng phải được Giám đốc phê duyệt và tuân thủ giới hạn của Bộ luật Lao động.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-22": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "46bbb9807ab77cc62756610b10db91c6c88c055378d64c34dc93a501cce7e867",
+   "retrieved_types": [
+    "FACILITY_REPAIR",
+    "ASSET_DISPOSAL",
+    "SECURITY_INCIDENT_HOTFIX",
+    "DOCUMENT_SEAL",
+    "TRAINING_COURSE",
+    "SPECIAL_DISCOUNT",
+    "VISITOR_SECURITY_PASS",
+    "OFFICE_SUPPLIES",
+    "TAX_INVOICE_ISSUE",
+    "BUDGET_REALLOCATION",
+    "IT_SUPPORT",
+    "ROOM_BOOKING"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Sửa chữa sự cố văn phòng có chi phí trên 20 triệu đồng phải có báo giá và được Ban Giám đốc phê duyệt.",
+     "subject": "Sửa chữa sự cố văn phòng",
+     "threshold": "> 20,000,000 VND",
+     "control": "Phải có báo giá và được Ban Giám đốc phê duyệt (tăng cường kiểm soát, luồng C, trọng số cao)"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "FACILITY_REPAIR",
+     "name": "Sửa chữa sự cố văn phòng",
+     "current": {
+      "lifecycle": "C",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Quy định mới yêu cầu chi phí trên 20 triệu đồng phải có báo giá và được Ban Giám đốc phê duyệt, do đó cần bổ sung trường amount_vnd và nâng trọng số rủi ro lên mức kiểm soát chặt (luồng C, trọng số 4) để đảm bảo tuân thủ."
+     ],
+     "clause": "Sửa chữa sự cố văn phòng có chi phí trên 20 triệu đồng phải có báo giá và được Ban Giám đốc phê duyệt.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 1998.5,
+   "tokens": 1331,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Sửa chữa sự cố văn phòng có chi phí trên 20 triệu đồng phải có báo giá và được Ban Giám đốc phê duyệt.\",\n      \"subject\": \"Sửa chữa sự cố văn phòng\",\n      \"threshold\": \"> 20,000,000 VND\",\n      \"control\": \"Phải có báo giá và được Ban Giám đốc phê duyệt (tăng cường kiểm soát, luồng C, trọng số cao)\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"FACILITY_REPAIR\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Quy định mới yêu cầu chi phí trên 20 triệu đồng phải có báo giá và được Ban Giám đốc phê duyệt, do đó cần bổ sung trường amount_vnd và nâng trọng số rủi ro lên mức kiểm soát chặt (luồng C, trọng số 4) để đảm bảo tuân thủ.\",\n      \"clause\": \"Sửa chữa sự cố văn phòng có chi phí trên 20 triệu đồng phải có báo giá và được Ban Giám đốc phê duyệt.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-23": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "5aeb768f37bacb9f859fa12e225276afaec562049c6349583b9a0f2be931dc71",
+   "retrieved_types": [
+    "BUSINESS_TRIP",
+    "EXPENSE_CLAIM",
+    "REIMBURSEMENT",
+    "SPECIAL_DISCOUNT",
+    "BUDGET_REALLOCATION",
+    "SUPPLIER_ONBOARDING",
+    "TRAINING_COURSE",
+    "ADVANCE_MEDIUM",
+    "INTERNAL_TRANSFER",
+    "ADVANCE_SMALL",
+    "HR_CERTIFICATE",
+    "CONTRACT_APPROVAL"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Đi công tác nước ngoài phải được Ban Giám đốc phê duyệt, quyết toán chi phí và nộp báo cáo kết quả sau chuyến đi.",
+     "subject": "Nhân viên đi công tác nước ngoài",
+     "threshold": "Đi công tác nước ngoài",
+     "control": "Ban Giám đốc phê duyệt, quyết toán chi phí và nộp báo cáo kết quả sau chuyến đi"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "BUSINESS_TRIP",
+     "name": "Đăng ký đi công tác",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Quy định mới yêu cầu Ban Giám đốc phê duyệt, quyết toán chi phí và nộp báo cáo kết quả sau chuyến đi đối với đi công tác nước ngoài, đòi hỏi luồng kiểm soát chặt chẽ 4 bước (C) và tăng trọng số rủi ro lên 4."
+     ],
+     "clause": "Đi công tác nước ngoài phải được Ban Giám đốc phê duyệt, quyết toán chi phí và nộp báo cáo kết quả sau chuyến đi.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 2196.2,
+   "tokens": 1290,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Đi công tác nước ngoài phải được Ban Giám đốc phê duyệt, quyết toán chi phí và nộp báo cáo kết quả sau chuyến đi.\",\n      \"subject\": \"Nhân viên đi công tác nước ngoài\",\n      \"threshold\": \"Đi công tác nước ngoài\",\n      \"control\": \"Ban Giám đốc phê duyệt, quyết toán chi phí và nộp báo cáo kết quả sau chuyến đi\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"BUSINESS_TRIP\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Quy định mới yêu cầu Ban Giám đốc phê duyệt, quyết toán chi phí và nộp báo cáo kết quả sau chuyến đi đối với đi công tác nước ngoài, đòi hỏi luồng kiểm soát chặt chẽ 4 bước (C) và tăng trọng số rủi ro lên 4.\",\n      \"clause\": \"Đi công tác nước ngoài phải được Ban Giám đốc phê duyệt, quyết toán chi phí và nộp báo cáo kết quả sau chuyến đi.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-24": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "5fc61e7b99f1f26684ca24825e11239ec68c9a042ddfbdeedd2953c543e80613",
+   "retrieved_types": [
+    "HR_CERTIFICATE",
+    "BUSINESS_TRIP",
+    "RECRUITMENT_REQ",
+    "INTERNAL_TRANSFER",
+    "ACCESS",
+    "EMPLOYEE_ONBOARDING",
+    "BUDGET_REALLOCATION",
+    "MARKETING_CAMPAIGN",
+    "TRAINING_COURSE",
+    "LEAVE",
+    "REWARD_REQ",
+    "EQUIPMENT"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Giấy xác nhận công tác được hệ thống nhân sự tự động xuất trong ngày.",
+     "subject": "Giấy xác nhận công tác",
+     "threshold": "Trong ngày",
+     "control": "Hệ thống nhân sự tự động xuất"
+    }
+   ],
+   "conflicts": [
+    {
+     "old_regulation_code": "HR_CERTIFICATE",
+     "explanation": "Quy định cũ yêu cầu luồng B (3 bước) với trọng số 1 cho loại yêu cầu 'Xin giấy xác nhận công tác / thu nhập'. Quy định mới chuyển sang tự động xuất trong ngày bởi hệ thống nhân sự, làm thay đổi quy trình xử lý nội bộ."
+    }
+   ],
+   "proposals": [],
+   "rejected": [],
+   "latency_ms": 6000.7,
+   "tokens": 1197,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Giấy xác nhận công tác được hệ thống nhân sự tự động xuất trong ngày.\",\n      \"subject\": \"Giấy xác nhận công tác\",\n      \"threshold\": \"Trong ngày\",\n      \"control\": \"Hệ thống nhân sự tự động xuất\"\n    }\n  ],\n  \"conflicts\": [\n    {\n      \"old_regulation_code\": \"HR_CERTIFICATE\",\n      \"explanation\": \"Quy định cũ yêu cầu luồng B (3 bước) với trọng số 1 cho loại yêu cầu 'Xin giấy xác nhận công tác / thu nhập'. Quy định mới chuyển sang tự động xuất trong ngày bởi hệ thống nhân sự, làm thay đổi quy trình xử lý nội bộ.\"\n    }\n  ],\n  \"impacts\": []\n}",
+   "requires_admin_approval": true
+  },
+  "QD-25": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "7f06f476f13e699768720ba51eab39176c301d2a628eb7fdbebc44149cd6e439",
+   "retrieved_types": [
+    "SAAS_LICENSE_BUY",
+    "NDA_PRIVACY_CLEARANCE",
+    "VISITOR_SECURITY_PASS",
+    "INTERNAL_TRANSFER",
+    "BUDGET_REALLOCATION",
+    "PROD_DATA_ACCESS",
+    "RECRUITMENT_REQ",
+    "SECURITY_INCIDENT_HOTFIX",
+    "TASK_REQUEST",
+    "SPECIAL_DISCOUNT",
+    "ASSET_DISPOSAL",
+    "ACCESS"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Mua bản quyền phần mềm có xử lý dữ liệu cá nhân của khách hàng phải được An ninh thông tin thẩm định bảo mật trước khi mua.",
+     "subject": "Mua bản quyền phần mềm có xử lý dữ liệu cá nhân của khách hàng",
+     "threshold": "n/a",
+     "control": "Phải được An ninh thông tin thẩm định bảo mật trước khi mua"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "SAAS_LICENSE_BUY",
+     "name": "Mua bản quyền phần mềm mới",
+     "current": {
+      "lifecycle": "C",
+      "risk_weight": 3
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Bổ sung thêm bước thẩm định bảo mật từ bộ phận An ninh thông tin và tăng trọng số rủi ro do liên quan đến dữ liệu cá nhân của khách hàng."
+     ],
+     "clause": "Mua bản quyền phần mềm có xử lý dữ liệu cá nhân của khách hàng phải được An ninh thông tin thẩm định bảo mật trước khi mua.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 1788.6,
+   "tokens": 1290,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Mua bản quyền phần mềm có xử lý dữ liệu cá nhân của khách hàng phải được An ninh thông tin thẩm định bảo mật trước khi mua.\",\n      \"subject\": \"Mua bản quyền phần mềm có xử lý dữ liệu cá nhân của khách hàng\",\n      \"threshold\": \"n/a\",\n      \"control\": \"Phải được An ninh thông tin thẩm định bảo mật trước khi mua\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"SAAS_LICENSE_BUY\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Bổ sung thêm bước thẩm định bảo mật từ bộ phận An ninh thông tin và tăng trọng số rủi ro do liên quan đến dữ liệu cá nhân của khách hàng.\",\n      \"clause\": \"Mua bản quyền phần mềm có xử lý dữ liệu cá nhân của khách hàng phải được An ninh thông tin thẩm định bảo mật trước khi mua.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-26": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "6631894e44bfb51047656c4e63b5db61386b867d7453d457ddc7fa6fd5c6827c",
+   "retrieved_types": [
+    "OVERTIME_REQ",
+    "LEAVE_SPECIAL",
+    "TRAINING_COURSE",
+    "BUDGET_REALLOCATION",
+    "REFUND_COMPENSATION",
+    "VEHICLE_BOOKING",
+    "TAX_INVOICE_ISSUE",
+    "EQUIPMENT",
+    "WFH_REQ",
+    "EQUIPMENT_BORROW",
+    "SUPPLIER_ONBOARDING",
+    "RECRUITMENT_REQ"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Bãi đỗ xe tầng hầm mở cửa từ 6 giờ sáng đến 22 giờ hằng ngày.",
+     "subject": "Mượn xe công vụ",
+     "threshold": "Ngoài khung giờ 6:00 - 22:00",
+     "control": "Tăng cường kiểm soát hoặc hạn chế thời gian ra vào bãi đỗ xe hầm."
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "VEHICLE_BOOKING",
+     "name": "Mượn xe công vụ",
+     "current": {
+      "lifecycle": "C",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 3
+     },
+     "reasons": [
+      "Quy định mới giới hạn giờ hoạt động bãi đỗ xe tầng hầm từ 6h đến 22h, làm phát sinh rủi ro về thời gian giao nhận/sử dụng xe công vụ ngoài giờ, đòi hỏi siết chặt kiểm soát và nâng trọng số rủi ro."
+     ],
+     "clause": "Bãi đỗ xe tầng hầm mở cửa từ 6 giờ sáng đến 22 giờ hằng ngày.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 6839.5,
+   "tokens": 1319,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Bãi đỗ xe tầng hầm mở cửa từ 6 giờ sáng đến 22 giờ hằng ngày.\",\n      \"subject\": \"Mượn xe công vụ\",\n      \"threshold\": \"Ngoài khung giờ 6:00 - 22:00\",\n      \"control\": \"Tăng cường kiểm soát hoặc hạn chế thời gian ra vào bãi đỗ xe hầm.\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"VEHICLE_BOOKING\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 3,\n      \"reason\": \"Quy định mới giới hạn giờ hoạt động bãi đỗ xe tầng hầm từ 6h đến 22h, làm phát sinh rủi ro về thời gian giao nhận/sử dụng xe công vụ ngoài giờ, đòi hỏi siết chặt kiểm soát và nâng trọng số rủi ro.\",\n      \"clause\": \"Bãi đỗ xe tầng hầm mở cửa từ 6 giờ sáng đến 22 giờ hằng ngày.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-27": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "f438d687e65ba7a4af7a957c067bbd07e3683697b2c3c6abfb741c866440db28",
+   "retrieved_types": [
+    "TAX_INVOICE_ISSUE",
+    "RESIGNATION",
+    "WAREHOUSE_TRANSFER",
+    "ASSET_DISPOSAL",
+    "INTERNAL_TRANSFER",
+    "BUDGET_REALLOCATION",
+    "TRAINING_COURSE",
+    "SECURITY_INCIDENT_HOTFIX",
+    "SPECIAL_DISCOUNT",
+    "LEAVE_SPECIAL",
+    "RECRUITMENT_REQ",
+    "EQUIPMENT_BORROW"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Luân chuyển hàng hóa giữa các kho có giá trị trên 1 tỷ đồng phải có biên bản bàn giao và biên bản kiểm kê được kế toán kho nghiệm thu.",
+     "subject": "Luân chuyển hàng hóa giữa các kho",
+     "threshold": "giá trị trên 1 tỷ đồng",
+     "control": "phải có biên bản bàn giao và biên bản kiểm kê được kế toán kho nghiệm thu"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "WAREHOUSE_TRANSFER",
+     "name": "Luân chuyển kho",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 3
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Quy định mới yêu cầu kiểm soát chặt (thêm bước kiểm tra/nghiệm thu kết quả từ kế toán kho) đối với việc luân chuyển kho có giá trị trên 1 tỷ đồng, do đó cần nâng luồng từ B lên C và tăng trọng số từ 3 lên 4."
+     ],
+     "clause": "Luân chuyển hàng hóa giữa các kho có giá trị trên 1 tỷ đồng phải có biên bản bàn giao và biên bản kiểm kê được kế toán kho nghiệm thu.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 1848.8,
+   "tokens": 1346,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Luân chuyển hàng hóa giữa các kho có giá trị trên 1 tỷ đồng phải có biên bản bàn giao và biên bản kiểm kê được kế toán kho nghiệm thu.\",\n      \"subject\": \"Luân chuyển hàng hóa giữa các kho\",\n      \"threshold\": \"giá trị trên 1 tỷ đồng\",\n      \"control\": \"phải có biên bản bàn giao và biên bản kiểm kê được kế toán kho nghiệm thu\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"WAREHOUSE_TRANSFER\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 4,\n      \"reason\": \"Quy định mới yêu cầu kiểm soát chặt (thêm bước kiểm tra/nghiệm thu kết quả từ kế toán kho) đối với việc luân chuyển kho có giá trị trên 1 tỷ đồng, do đó cần nâng luồng từ B lên C và tăng trọng số từ 3 lên 4.\",\n      \"clause\": \"Luân chuyển hàng hóa giữa các kho có giá trị trên 1 tỷ đồng phải có biên bản bàn giao và biên bản kiểm kê được kế toán kho nghiệm thu.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  },
+  "QD-28": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "0c53e9ee192d84bd8ffe9e78872dfe81bd9b81e200987ab18879cf67249f5555",
+   "retrieved_types": [
+    "VENDOR_PAYMENT",
+    "EXPENSE_CLAIM",
+    "TAX_INVOICE_ISSUE",
+    "RECRUITMENT_REQ",
+    "LEAVE_SPECIAL",
+    "ROOM_BOOKING",
+    "VISITOR_SECURITY_PASS",
+    "TRAINING_COURSE",
+    "CONTRACT_APPROVAL",
+    "SUPPLIER_ONBOARDING",
+    "SPECIAL_DISCOUNT",
+    "RESOURCE_REVOKE"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Thanh toán hợp đồng vendor phải đối chiếu biên bản nghiệm thu trước khi chi.",
+     "subject": "Thanh toán hợp đồng vendor",
+     "threshold": "không có",
+     "control": "đối chiếu biên bản nghiệm thu trước khi chi"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [],
+   "rejected": [],
+   "latency_ms": 1582.7,
+   "tokens": 1106,
+   "fallback_used": false,
+   "raw_response": "{\"atomic_rules\": [{\"clause\": \"Thanh toán hợp đồng vendor phải đối chiếu biên bản nghiệm thu trước khi chi.\", \"subject\": \"Thanh toán hợp đồng vendor\", \"threshold\": \"không có\", \"control\": \"đối chiếu biên bản nghiệm thu trước khi chi\"}], \"conflicts\": [], \"impacts\": []}",
+   "requires_admin_approval": true
+  },
+  "QD-29": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "9d65bc0df830b10fb29d50a39c8119d54f00e25d843caf1afa507d47f7b81f09",
+   "retrieved_types": [
+    "SALARY_ADVANCE",
+    "SALARY_ADJUSTMENT",
+    "SPECIAL_DISCOUNT",
+    "EXPENSE_CLAIM",
+    "RECRUITMENT_REQ",
+    "LEAVE_SPECIAL",
+    "SUPPLIER_ONBOARDING",
+    "REIMBURSEMENT",
+    "VENDOR_PAYMENT",
+    "PROMOTION_REQ",
+    "ACCESS",
+    "CONTRACT_APPROVAL"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Ứng lương quá 50% lương tháng phải được Kế toán trưởng và Giám đốc phê duyệt.",
+     "subject": "Ứng lương",
+     "threshold": ">50% lương tháng",
+     "control": "Phải được Kế toán trưởng và Giám đốc phê duyệt"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "SALARY_ADVANCE",
+     "name": "Ứng lương",
+     "current": {
+      "lifecycle": "B",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 4
+     },
+     "reasons": [
+      "Yêu cầu ứng lương vượt 50% lương tháng cần nâng luồng lên C (4 bước) và tăng trọng số lên 4 để đảm bảo sự phê duyệt của Kế toán trưởng và Giám đốc."
+     ],
+     "clause": "Ứng lương quá 50% lương tháng phải được Kế toán trưởng và Giám đốc phê duyệt.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 1781.2,
+   "tokens": 1179,
+   "fallback_used": false,
+   "raw_response": "{\"atomic_rules\": [{\"clause\": \"Ứng lương quá 50% lương tháng phải được Kế toán trưởng và Giám đốc phê duyệt.\", \"subject\": \"Ứng lương\", \"threshold\": \">50% lương tháng\", \"control\": \"Phải được Kế toán trưởng và Giám đốc phê duyệt\"}], \"conflicts\": [], \"impacts\": [{\"code\": \"SALARY_ADVANCE\", \"proposed_class\": \"C\", \"proposed_weight\": 4, \"reason\": \"Yêu cầu ứng lương vượt 50% lương tháng cần nâng luồng lên C (4 bước) và tăng trọng số lên 4 để đảm bảo sự phê duyệt của Kế toán trưởng và Giám đốc.\", \"clause\": \"Ứng lương quá 50% lương tháng phải được Kế toán trưởng và Giám đốc phê duyệt.\"}]}",
+   "requires_admin_approval": true
+  },
+  "QD-30": {
+   "engine": "regulation-llm-1",
+   "model": "gemini-3.5-flash-lite",
+   "prompt_sha256": "6bbf902c92e59be17cedd8780e1ed88f37e87be939a4f99500f75fe7242a0a9a",
+   "retrieved_types": [
+    "ACCESS",
+    "RESOURCE_REVOKE",
+    "INTERNAL_TRANSFER",
+    "HR_CERTIFICATE",
+    "TRAINING_COURSE",
+    "EMPLOYEE_ONBOARDING",
+    "VISITOR_SECURITY_PASS",
+    "ROOM_BOOKING",
+    "RECRUITMENT_REQ",
+    "SECURITY_INCIDENT_HOTFIX",
+    "LEAVE",
+    "MARKETING_CAMPAIGN"
+   ],
+   "retrieved_regulations": [],
+   "atomic_rules": [
+    {
+     "clause": "Thu hồi tài khoản của nhân viên nghỉ việc phải hoàn tất trong 24 giờ và được An ninh thông tin xác nhận đã xóa quyền truy cập hệ thống production.",
+     "subject": "Tài khoản của nhân viên nghỉ việc",
+     "threshold": "24 giờ",
+     "control": "An ninh thông tin xác nhận đã xóa quyền truy cập hệ thống production"
+    }
+   ],
+   "conflicts": [],
+   "proposals": [
+    {
+     "code": "RESOURCE_REVOKE",
+     "name": "Thu hồi tài khoản / thiết bị",
+     "current": {
+      "lifecycle": "C",
+      "risk_weight": 2
+     },
+     "proposed": {
+      "lifecycle": "C",
+      "risk_weight": 3
+     },
+     "reasons": [
+      "Yêu cầu kiểm soát chặt chẽ với xác nhận từ An ninh thông tin và giới hạn thời gian nghiêm ngặt trong 24 giờ đối với hệ thống production."
+     ],
+     "clause": "Thu hồi tài khoản của nhân viên nghỉ việc phải hoàn tất trong 24 giờ và được An ninh thông tin xác nhận đã xóa quyền truy cập hệ thống production.",
+     "clause_grounded": true
+    }
+   ],
+   "rejected": [],
+   "latency_ms": 1930.3,
+   "tokens": 1286,
+   "fallback_used": false,
+   "raw_response": "{\n  \"atomic_rules\": [\n    {\n      \"clause\": \"Thu hồi tài khoản của nhân viên nghỉ việc phải hoàn tất trong 24 giờ và được An ninh thông tin xác nhận đã xóa quyền truy cập hệ thống production.\",\n      \"subject\": \"Tài khoản của nhân viên nghỉ việc\",\n      \"threshold\": \"24 giờ\",\n      \"control\": \"An ninh thông tin xác nhận đã xóa quyền truy cập hệ thống production\"\n    }\n  ],\n  \"conflicts\": [],\n  \"impacts\": [\n    {\n      \"code\": \"RESOURCE_REVOKE\",\n      \"proposed_class\": \"C\",\n      \"proposed_weight\": 3,\n      \"reason\": \"Yêu cầu kiểm soát chặt chẽ với xác nhận từ An ninh thông tin và giới hạn thời gian nghiêm ngặt trong 24 giờ đối với hệ thống production.\",\n      \"clause\": \"Thu hồi tài khoản của nhân viên nghỉ việc phải hoàn tất trong 24 giờ và được An ninh thông tin xác nhận đã xóa quyền truy cập hệ thống production.\"\n    }\n  ]\n}",
+   "requires_admin_approval": true
+  }
+ },
+ "retried": [
+  {
+   "id": "QD-16",
+   "reason": "HTTP 429 ở lượt đầu",
+   "ok": true
+  },
+  {
+   "id": "QD-17",
+   "reason": "HTTP 429 ở lượt đầu",
+   "ok": true
+  }
+ ]
+}

@@ -560,3 +560,141 @@ def ai_engine_test_view(request: HttpRequest) -> JsonResponse:
             "evaluated_at": decision.get("evaluated_at"),
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# Hồ sơ quy trình: học máy nội bộ đề xuất mẫu vòng đời A/B/C, trọng số rủi ro và
+# tác động của quy định mới. Chỉ đọc: kết quả là ĐỀ XUẤT để quản trị viên duyệt;
+# đổi mẫu vòng đời vẫn phải phát hành cấu hình mới như mọi thay đổi khác.
+# ---------------------------------------------------------------------------
+PROFILE_TEXT_LIMIT = 5000
+ACTIVE_TYPES_SQL = """
+    SELECT rt.code, rt.name, rt.category, coalesce(rt.description, ''),
+           (SELECT coalesce(array_agg(k ORDER BY k), ARRAY[]::text[])
+              FROM jsonb_object_keys(coalesce(cr.form_schema -> 'properties', '{}'::jsonb)) k),
+           rt.lifecycle, rt.risk_weight
+      FROM eas.request_type rt
+      LEFT JOIN eas.config_release cr ON cr.id = rt.active_release_id
+     WHERE rt.is_active AND rt.risk_weight BETWEEN 1 AND 5
+     ORDER BY rt.code
+"""
+
+
+def _active_type_configs() -> list[dict[str, Any]]:
+    with connection.cursor() as cur:
+        cur.execute(ACTIVE_TYPES_SQL)
+        rows = cur.fetchall()
+    keys = ("code", "name", "category", "description", "fields", "lifecycle", "risk_weight")
+    return [
+        {**dict(zip(keys, r)), "fields": list(r[4] or [])[:100], "description": (r[3] or "")[:2000]}
+        for r in rows
+    ]
+
+
+def _profile_call(request: HttpRequest, path: str, body: dict, timeout: float | None = None) -> JsonResponse | dict:
+    import httpx
+
+    try:
+        with _ai_http() as client:
+            if timeout:  # phân tích bằng mô hình ngôn ngữ lớn lâu hơn các API AI khác
+                client.timeout = httpx.Timeout(timeout, connect=3.0)
+            response = client.post(path, json=body)
+    except (httpx.TransportError, httpx.TimeoutException):
+        return api_error(request, "AI_SERVICE_UNAVAILABLE", status=503)
+    if response.status_code != 200:
+        return api_error(request, "AI_SERVICE_ERROR", status=502)
+    return response.json()
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
+def regulation_impact_view(request: HttpRequest, reg_id) -> JsonResponse:
+    """GET /api/v1/admin/regulations/<id>/impact: loại yêu cầu bị quy định này tác động và đề xuất cấu hình."""
+    if request.method != "GET":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    with connection.cursor() as cur:
+        cur.execute(
+            "SELECT code, title, content FROM eas.company_regulations WHERE id = %s AND NOT is_deleted",
+            [str(reg_id)],
+        )
+        row = cur.fetchone()
+    if not row:
+        return api_error(request, "REGULATION_NOT_FOUND", status=404)
+    text = f"{row[1] or ''}. {row[2] or ''}".strip()[:PROFILE_TEXT_LIMIT]
+    if len(text) < 10:
+        return api_error(request, "REGULATION_TOO_SHORT", status=422)
+    engine = request.GET.get("engine", "llm")
+    if engine not in ("llm", "ml"):
+        return api_error(request, "INVALID_ENGINE", status=422)
+    types = _active_type_configs()
+    if engine == "ml":
+        result = _profile_call(request, "/ai/process-profile/regulation-impact", {"text": text, "types": types})
+    else:
+        result = _profile_call(
+            request,
+            "/ai/regulation-llm/analyze",
+            {"text": text, "types": types, "old_regulations": _other_regulations(str(reg_id))},
+            timeout=45.0,
+        )
+    if isinstance(result, JsonResponse):
+        return result
+    return JsonResponse(
+        {
+            "regulation": {"id": str(reg_id), "code": row[0], "title": row[1]},
+            "engine": result.get("engine") or result.get("version"),
+            "model_version": result.get("model") or result.get("version"),
+            "fallback_used": bool(result.get("fallback_used")),
+            "atomic_rules": result.get("atomic_rules") or [],
+            "conflicts": result.get("conflicts") or [],
+            "related": result.get("related") or result.get("retrieved_types") or [],
+            "proposals": result.get("proposals") or [],
+            "rejected": result.get("rejected") or [],
+            "requires_admin_approval": True,
+        }
+    )
+
+
+def _other_regulations(reg_id: str) -> list[dict[str, Any]]:
+    """Các quy định khác đang hiệu lực, để mô hình ngôn ngữ phát hiện xung đột (mô hình chỉ nhận top 3 gần nhất)."""
+    with connection.cursor() as cur:
+        cur.execute(
+            "SELECT code, title, content FROM eas.company_regulations "
+            "WHERE NOT is_deleted AND id <> %s ORDER BY updated_at DESC LIMIT 200",
+            [reg_id],
+        )
+        rows = cur.fetchall()
+    return [{"code": r[0] or "", "title": (r[1] or "")[:300], "content": (r[2] or "")[:20000]} for r in rows]
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
+def process_profile_assess_view(request: HttpRequest) -> JsonResponse:
+    """POST /api/v1/admin/ai-engine/process-profile: đề xuất mẫu A/B/C và trọng số cho một loại yêu cầu (bản nháp)."""
+    if request.method != "POST":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    try:
+        payload = parse_json_object(request)
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    name = payload.get("name")
+    description = payload.get("description", "")
+    category = payload.get("category", "")
+    fields = payload.get("fields", [])
+    if (
+        not isinstance(name, str)
+        or not 1 <= len(name.strip()) <= 200
+        or not isinstance(description, str)
+        or len(description) > 2000
+        or not isinstance(category, str)
+        or len(category) > 64
+        or not isinstance(fields, list)
+        or len(fields) > 100
+        or not all(isinstance(f, str) and 0 < len(f) <= 64 for f in fields)
+    ):
+        return api_error(request, "INVALID_PROFILE_INPUT", status=422)
+    result = _profile_call(
+        request,
+        "/ai/process-profile/assess",
+        {"name": name.strip(), "description": description, "category": category, "fields": fields},
+    )
+    if isinstance(result, JsonResponse):
+        return result
+    return JsonResponse(result)

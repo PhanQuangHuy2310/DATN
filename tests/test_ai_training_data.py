@@ -95,9 +95,14 @@ class TrainingDataTests(unittest.TestCase):
         self.assertIn("bố", self.corpus["slots"]["nguoi_than"])
         self.assertIn("mất", self.corpus["slots"]["qua_doi"])
 
-    def test_only_one_training_entry_point(self):
+    def test_training_scripts_are_the_known_entry_points(self):
+        # train.py: phân loại + rủi ro; train_process_profile.py: luồng/trọng số;
+        # eval_regulation_llm.py: chấm phân tích quy định. Script mới phải được thêm có chủ đích.
         scripts = sorted(p.name for p in (AI / "training").glob("*.py"))
-        self.assertEqual(scripts, ["__init__.py", "train.py"])
+        self.assertEqual(
+            scripts,
+            ["__init__.py", "eval_regulation_llm.py", "train.py", "train_process_profile.py"],
+        )
 
 
 class TextHelperTests(unittest.TestCase):

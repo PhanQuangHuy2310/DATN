@@ -25,8 +25,10 @@ from .regulations_ai import (
     ai_engine_test_view,
     ai_retrain_trigger,
     ai_system_state_view,
+    process_profile_assess_view,
     public_ai_status_view,
     regulation_detail_update_delete,
+    regulation_impact_view,
     regulations_list_create,
 )
 from .views import access_matrix_view, api_catalog_view, records
@@ -107,7 +109,17 @@ urlpatterns = [
         regulation_detail_update_delete,
         name="admin-regulation-detail",
     ),
+    path(
+        "regulations/<uuid:reg_id>/impact",
+        regulation_impact_view,
+        name="admin-regulation-impact",
+    ),
     path("ai-engine/status", ai_system_state_view, name="admin-ai-engine-status"),
+    path(
+        "ai-engine/process-profile",
+        process_profile_assess_view,
+        name="admin-ai-engine-process-profile",
+    ),
     path("ai-engine/retrain", ai_retrain_trigger, name="admin-ai-engine-retrain"),
     path("ai-engine/test", ai_engine_test_view, name="admin-ai-engine-test"),
     path("ai-status", public_ai_status_view, name="admin-ai-status"),
