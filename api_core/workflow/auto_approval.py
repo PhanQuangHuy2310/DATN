@@ -109,17 +109,29 @@ def _requested_days(context: dict[str, Any]) -> int:
 
 
 def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | None:
-    """Approve the active step when the AI allows it; return the result or None."""
-    if not settings.EAS_AI_AUTO_APPROVE_ENABLED:
+    """Escalate a type-A request hit by a bad case, else approve the step when the AI allows it.
+
+    Escalation (A -> B/C, ``api_core.workflow.escalation``) is a control, not an automation: it
+    runs for every pending type-A request whatever its risk weight, and even when automatic
+    approval is switched off. Automatic approval still needs weight <= the configured maximum.
+    """
+    escalation_on = getattr(settings, "EAS_AI_ESCALATION_ENABLED", True)
+    if not (settings.EAS_AI_AUTO_APPROVE_ENABLED or escalation_on):
         return None
     context = _load_context(request_id)
     if (
         context is None
         or context["risk_weight"] is None
-        or context["risk_weight"] > settings.EAS_AI_AUTO_APPROVE_MAX_WEIGHT
         or context["assignee_id"] == settings.EAS_AI_SYSTEM_USER_ID
-        or not context["ai_allowed"]  # a human revoked an earlier AI approval
     ):
+        return None
+    may_auto = (
+        settings.EAS_AI_AUTO_APPROVE_ENABLED
+        and context["risk_weight"] <= settings.EAS_AI_AUTO_APPROVE_MAX_WEIGHT
+        and context["ai_allowed"]  # a human revoked an earlier AI approval
+    )
+    may_escalate = escalation_on and context["lifecycle"] == "A"
+    if not (may_auto or may_escalate):
         return None
 
     from api_core.integrations.ai_service import ai_client_sync
@@ -142,8 +154,24 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         signals=signals,
     )
     if verdict.get("bad_cases"):
-        _record_bad_cases(request_id, context["step_id"], verdict, signals, correlation_id)
-    if verdict.get("decision") != "auto_approve":
+        _record_bad_cases(
+            request_id, context["step_id"], verdict, signals, correlation_id
+        )
+    if may_escalate and verdict.get("escalate_to") in ("B", "C"):
+        from api_core.workflow.escalation import escalate_request
+
+        escalated = escalate_request(
+            request_id=request_id,
+            step_id=context["step_id"],
+            target=verdict["escalate_to"],
+            verdict=verdict,
+            signals=signals,
+            correlation_id=correlation_id,
+        )
+        if escalated is not None:
+            return {**escalated, "approved": False}
+        return None
+    if not may_auto or verdict.get("decision") != "auto_approve":
         return None
 
     ai_user_id = settings.EAS_AI_SYSTEM_USER_ID
@@ -223,16 +251,24 @@ def _record_bad_cases(request_id, step_id, verdict, signals, correlation_id) -> 
                 target_id=step_id,
                 details={
                     "cases": [
-                        {"code": str(c.get("code")), "message": str(c.get("message"))[:400]}
+                        {
+                            "code": str(c.get("code")),
+                            "message": str(c.get("message"))[:400],
+                        }
                         for c in verdict.get("bad_cases") or []
                     ][:5],
                     "effective_risk": verdict.get("effective_risk"),
-                    "signals": {k: (v if not isinstance(v, float) else round(v)) for k, v in signals.items()},
+                    "signals": {
+                        k: (v if not isinstance(v, float) else round(v))
+                        for k, v in signals.items()
+                    },
                 },
                 correlation_id=correlation_id,
             )
-    except Exception:  # noqa: BLE001 - kiểm toán phụ trợ không được làm hỏng luồng duyệt
-        logger.warning("AI bad-case audit skipped: request=%s", request_id, exc_info=True)
+    except Exception:
+        logger.warning(
+            "AI bad-case audit skipped: request=%s", request_id, exc_info=True
+        )
 
 
 REVOKE_WINDOW = timedelta(hours=24)

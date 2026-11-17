@@ -95,6 +95,8 @@ def list_config_releases(
             JOIN eas.request_type rt ON rt.id = cr.type_id
             WHERE (%s::text IS NULL OR rt.code = %s)
               AND (%s::text IS NULL OR cr.state = %s)
+              -- Bản nâng cấp B/C của AI (migration 23) không phải phiên bản để quản trị.
+              AND NOT coalesce((to_jsonb(cr)->>'escalation')::boolean, false)
               AND EXISTS (
                 SELECT 1 FROM eas.role_membership rm
                 WHERE rm.user_id = %s AND rm.role = 'POLICY_ADMIN' AND rm.revoked_at IS NULL

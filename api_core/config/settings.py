@@ -333,6 +333,10 @@ EAS_AI_AUTO_APPROVE_ENABLED = (
     os.getenv("EAS_AI_AUTO_APPROVE_ENABLED", "true").lower() == "true"
 )
 EAS_AI_AUTO_APPROVE_MAX_WEIGHT = int(os.getenv("EAS_AI_AUTO_APPROVE_MAX_WEIGHT", "2"))
+# Nâng luồng A -> B/C khi AI phát hiện tình huống xấu (migration 23). Là kiểm soát, độc lập với tự duyệt.
+EAS_AI_ESCALATION_ENABLED = (
+    os.getenv("EAS_AI_ESCALATION_ENABLED", "true").lower() == "true"
+)
 # The least-privilege worker cannot write approvals; it asks the API to run
 # AI auto-approval through this internal, secret-protected endpoint.
 EAS_API_INTERNAL_URL = os.getenv(

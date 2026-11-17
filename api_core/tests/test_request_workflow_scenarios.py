@@ -188,7 +188,10 @@ class AutoApproveIntegrationTests(SimpleTestCase):
         from api_core.workflow.bad_case_signals import EMPTY
 
         # Tín hiệu tình huống xấu có kiểm thử riêng; giữ nguyên thứ tự lệnh SQL mà các kiểm thử này khẳng định.
-        stub = _patch("api_core.workflow.bad_case_signals.safe_load_signals", return_value=dict(EMPTY))
+        stub = _patch(
+            "api_core.workflow.bad_case_signals.safe_load_signals",
+            return_value=dict(EMPTY),
+        )
         stub.start()
         self.addCleanup(stub.stop)
         self.request_id = str(uuid4())
@@ -238,8 +241,15 @@ class AutoApproveIntegrationTests(SimpleTestCase):
         self.assertEqual(kwargs["body"]["outcome"], "APPROVE")
         self.assertEqual(kwargs["body"]["expected_version"], 3)
 
-    def test_weight_three_never_calls_ai(self):
+    def test_weight_three_is_never_auto_approved(self):
+        # AI vẫn được hỏi để xét nâng luồng A -> B/C (kiểm soát), nhưng không bao giờ tự duyệt.
         ai, decide, _, _ = self.run_auto_approve({**self.context, "risk_weight": 3})
+        ai.assert_called_once()
+        decide.assert_not_called()
+
+    def test_weight_three_does_not_call_ai_when_escalation_is_off(self):
+        with self.settings(EAS_AI_ESCALATION_ENABLED=False):
+            ai, decide, _, _ = self.run_auto_approve({**self.context, "risk_weight": 3})
         ai.assert_not_called()
         decide.assert_not_called()
 

@@ -80,6 +80,8 @@ class AutoApproveInput(BaseModel):
     same_customer_count_7d: int = Field(0, ge=0, le=10_000)
     requester_absent_on_event: bool = False
     off_hours_count_7d: int = Field(0, ge=0, le=10_000)
+    uncovered_work: int = Field(0, ge=0, le=10_000)
+    handover_named: bool = False
 
     def policy_signals(self) -> PolicySignals:
         return PolicySignals(

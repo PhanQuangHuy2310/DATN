@@ -34,6 +34,10 @@ def retry_delay(attempts: int) -> timedelta:
 
 SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
 RESOURCE_LABELS = {
+    "REQUEST_ESCALATED": (
+        "AI phát hiện tình huống cần kiểm soát: yêu cầu của bạn được chuyển sang quy trình có người "
+        "kiểm duyệt và bộ phận chuyên môn xử lý"
+    ),
     "RESOURCE_PREEMPTED": (
         "Yêu cầu mượn của bạn đã bị thu hồi vì Ban Giám đốc cần sử dụng trong cùng thời gian"
     ),

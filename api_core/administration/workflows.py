@@ -410,8 +410,9 @@ def _switch_lifecycle(cur, type_id: str, lifecycle: str) -> None:
         )
         return
     cur.execute(
-        """SELECT id FROM eas.config_release
+        """SELECT id FROM eas.config_release cr
            WHERE type_id = %s::uuid AND lifecycle = %s AND state = 'PUBLISHED'
+             AND NOT coalesce((to_jsonb(cr)->>'escalation')::boolean, false)
            ORDER BY version DESC LIMIT 1""",
         [type_id, lifecycle],
     )

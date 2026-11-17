@@ -65,6 +65,10 @@ class Signals:
     requester_absent_on_event: bool = False
     ai_revoked_90d: int = 0
     off_hours_count_7d: int = 0
+    uncovered_work: int = (
+        0  # việc đến hạn mà người nhận bàn giao không đủ vai trò làm thay
+    )
+    handover_named: bool = False  # đơn có điền người nhận bàn giao
 
     @classmethod
     def from_input(cls, body: Any) -> Signals:
@@ -115,8 +119,15 @@ def _deadline_conflict(s: Signals, p: dict) -> tuple[bool, str, dict]:
         parts.append(f"{count} việc đến hạn trong {hours} giờ tới")
     if s.work_due_in_absence:
         parts.append(f"{s.work_due_in_absence} việc đến hạn ngay trong thời gian nghỉ")
+    if s.handover_named and s.uncovered_work:
+        why = (
+            f"người được chọn nhận bàn giao không đủ thẩm quyền làm thay {s.uncovered_work} việc "
+            "(không có vai trò duyệt/xử lý phù hợp hoặc chính là người gửi việc đó)"
+        )
+    else:
+        why = "chưa chỉ định người nhận bàn giao"
     msg = (
-        f"Người gửi đang giữ {', '.join(parts)} và chưa chỉ định người nhận bàn giao; "
+        f"Người gửi đang giữ {', '.join(parts)} và {why}; "
         "không tự duyệt, cần quản lý chốt phương án bàn giao."
     )
     return (
@@ -126,6 +137,7 @@ def _deadline_conflict(s: Signals, p: dict) -> tuple[bool, str, dict]:
             "due_within_hours": count,
             "due_in_absence": s.work_due_in_absence,
             "handover_assigned": bool(s.handover_assigned),
+            "uncovered_work": s.uncovered_work,
         },
     )
 

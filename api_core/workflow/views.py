@@ -437,9 +437,11 @@ def internal_auto_approve_view(request: HttpRequest, request_id: str) -> JsonRes
     if not expected or not hmac.compare_digest(supplied, expected):
         return api_error(request, "UNAUTHORIZED", status=401)
     result = try_auto_approve(str(request_id), correlation_id(request))
+    escalated = bool(result and result.get("escalated_to"))
     return JsonResponse(
         {
-            "approved": result is not None,
+            "approved": result is not None and not escalated,
+            "escalated_to": result.get("escalated_to") if escalated else None,
             "result": result,
             "correlation_id": correlation_id(request),
         }

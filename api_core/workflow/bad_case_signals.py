@@ -5,12 +5,13 @@ Mỗi tín hiệu là một truy vấn tham số hóa trên lịch sử thật c
 dữ liệu cá nhân.
 
 Tín hiệu (mốc thời gian = lúc hồ sơ được gửi):
+  handover_assigned       có người nhận bàn giao VÀ người đó đủ vai trò làm thay mọi việc đến hạn
+                          (72 giờ tới hoặc trong thời gian vắng); uncovered_work: số việc không ai làm thay
   open_work_due_hours     số giờ còn lại tới hạn của từng việc người gửi đang giữ (bước duyệt
                           đang chờ, lượt thực hiện chưa xong, nghiệm thu đang chờ); hạn = sớm hơn
                           giữa hạn SLA và hạn nghiệp vụ trong biểu mẫu (due_date/end_date)
   work_due_in_absence     số việc trên có hạn rơi vào khoảng vắng mặt của chính đơn (start..end)
   active_tasks_due_24h    số việc đến hạn trong 24 giờ (giữ cho tương thích)
-  handover_assigned       đơn có chỉ định người nhận bàn giao (handover_user_id) hay không
   same_type_count_*       số hồ sơ cùng loại của người gửi trong 7/30 ngày và trong tháng dương lịch
   requester_amount_7d     tổng tiền hồ sơ tài chính 7 ngày; requester_finance_count_7d: số hồ sơ
   attendance_count_30d    số lần điều chỉnh chấm công 30 ngày (giữ cho tương thích)
@@ -73,7 +74,8 @@ SQL_SIGNALS = f"""
     ),
     work AS (
       -- việc đang giữ: bước duyệt ACTIVE, lượt thực hiện chưa đóng, nghiệm thu đang chờ
-      SELECT st.request_id,
+      SELECT st.request_id, st.kind, rq.type_id AS item_type, v.department_id AS item_dept,
+             rq.requester_id AS item_requester,
              least(st.due_at, coalesce({_PAYLOAD_DUE}, st.due_at)) AS due_at
       FROM eas.sla_stage st
       JOIN me ON true
@@ -90,6 +92,24 @@ SQL_SIGNALS = f"""
           OR (st.kind = 'ACCEPTANCE' AND rq.status = 'WAITING_FOR_ACCEPTANCE'
               AND i.acceptor_id = me.requester_id)
         )
+    ),
+    urgent AS (
+      -- việc đến hạn trong 72 giờ hoặc trong thời gian vắng, kèm người nhận bàn giao có làm thay được không
+      SELECT w.*, (
+        me.handover_id IS NOT NULL AND me.handover_id <> w.item_requester AND EXISTS (
+          SELECT 1 FROM eas.role_membership rm
+          WHERE rm.user_id = me.handover_id
+            AND rm.role = CASE w.kind WHEN 'APPROVAL' THEN 'APPROVER'
+                                      WHEN 'EXECUTION' THEN 'EXECUTOR' ELSE 'ACCEPTOR' END
+            AND rm.revoked_at IS NULL AND rm.valid_from <= statement_timestamp()
+            AND (rm.valid_to IS NULL OR rm.valid_to > statement_timestamp())
+            AND (rm.scope_kind = 'GLOBAL' OR rm.department_id = w.item_dept)
+            AND (rm.type_scope = 'ALL' OR rm.type_id = w.item_type))
+      ) AS covered
+      FROM work w, me
+      WHERE w.due_at <= me.t0 + interval '72 hours'
+         OR (me.d_start IS NOT NULL
+             AND (w.due_at AT TIME ZONE %(tz)s)::date BETWEEN me.d_start AND me.d_end)
     ),
     hist AS (
       SELECT r2.id, t2.code, r2.status, v2.amount_vnd, v2.submitted_at
@@ -141,7 +161,8 @@ SQL_SIGNALS = f"""
         WHERE me.d_start IS NOT NULL
           AND (w.due_at AT TIME ZONE %(tz)s)::date BETWEEN me.d_start AND me.d_end),
       (SELECT count(*) FROM work w, me WHERE w.due_at <= me.t0 + interval '24 hours'),
-      nullif(me.payload->>'handover_user_id', '') IS NOT NULL,
+      -- bàn giao hợp lệ: có người nhận VÀ người đó làm thay được mọi việc đến hạn
+      (me.handover_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM urgent WHERE NOT covered)),
       (SELECT count(*) FROM hist WHERE hist.code = me.type_code AND hist.status <> ALL(%(excluded)s)
           AND hist.submitted_at > me.t0 - interval '7 days'),
       (SELECT count(*) FROM hist WHERE hist.code = me.type_code AND hist.status <> ALL(%(excluded)s)
@@ -197,7 +218,9 @@ SQL_SIGNALS = f"""
           AND (extract(isodow FROM hist.submitted_at AT TIME ZONE %(tz)s) IN (6, 7)
                OR (hist.submitted_at AT TIME ZONE %(tz)s)::time NOT BETWEEN '08:00' AND '17:30'
                OR (hist.submitted_at AT TIME ZONE %(tz)s)::date IN
-                  (SELECT holiday_date FROM eas.business_holiday)))
+                  (SELECT holiday_date FROM eas.business_holiday))),
+      (SELECT count(*) FROM urgent WHERE NOT covered),
+      me.handover_id IS NOT NULL
     FROM me
 """
 
@@ -222,6 +245,8 @@ EMPTY: dict[str, Any] = {
     "same_customer_count_7d": 0,
     "requester_absent_on_event": False,
     "off_hours_count_7d": 0,
+    "uncovered_work": 0,
+    "handover_named": False,
 }
 
 
@@ -260,6 +285,8 @@ def load_signals(request_id: str) -> dict[str, Any]:
         "same_customer_count_7d": int(row[17] or 0),
         "requester_absent_on_event": bool(row[18]),
         "off_hours_count_7d": int(row[19] or 0),
+        "uncovered_work": int(row[20] or 0),
+        "handover_named": bool(row[21]),
     }
 
 
