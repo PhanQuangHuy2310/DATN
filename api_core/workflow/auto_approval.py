@@ -123,7 +123,9 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         return None
 
     from api_core.integrations.ai_service import ai_client_sync
+    from api_core.workflow.bad_case_signals import safe_load_signals
 
+    signals = safe_load_signals(request_id)
     verdict = ai_client_sync.evaluate_auto_approve(
         request_id=request_id,
         request_type=context["type_code"],
@@ -137,7 +139,10 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         # Leave rules (balance, < 3 days) need the requested span.
         days_requested=_requested_days(context),
         correlation_id=correlation_id,
+        signals=signals,
     )
+    if verdict.get("bad_cases"):
+        _record_bad_cases(request_id, context["step_id"], verdict, signals, correlation_id)
     if verdict.get("decision") != "auto_approve":
         return None
 
@@ -195,6 +200,39 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         )
         return None
     return result.body
+
+
+def _record_bad_cases(request_id, step_id, verdict, signals, correlation_id) -> None:
+    """Ghi một sự kiện kiểm toán khi AI chặn tự duyệt vì tình huống xấu (một lần cho mỗi bước duyệt)."""
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT 1 FROM eas.audit_event WHERE request_id=%s AND action='AI_BAD_CASE_FLAGGED' "
+                "AND target_id=%s LIMIT 1",
+                [request_id, step_id],
+            )
+            if cursor.fetchone():
+                return
+            _append_request_audit(
+                cursor,
+                request_id=request_id,
+                actor_id=None,
+                actor_kind="SYSTEM",
+                action="AI_BAD_CASE_FLAGGED",
+                target_type="approval_step",
+                target_id=step_id,
+                details={
+                    "cases": [
+                        {"code": str(c.get("code")), "message": str(c.get("message"))[:400]}
+                        for c in verdict.get("bad_cases") or []
+                    ][:5],
+                    "effective_risk": verdict.get("effective_risk"),
+                    "signals": {k: (v if not isinstance(v, float) else round(v)) for k, v in signals.items()},
+                },
+                correlation_id=correlation_id,
+            )
+    except Exception:  # noqa: BLE001 - kiểm toán phụ trợ không được làm hỏng luồng duyệt
+        logger.warning("AI bad-case audit skipped: request=%s", request_id, exc_info=True)
 
 
 REVOKE_WINDOW = timedelta(hours=24)

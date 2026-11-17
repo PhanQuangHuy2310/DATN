@@ -183,6 +183,14 @@ class AutoApproveIntegrationTests(SimpleTestCase):
     databases: ClassVar[set[str]] = {"default"}
 
     def setUp(self):
+        from unittest.mock import patch as _patch
+
+        from api_core.workflow.bad_case_signals import EMPTY
+
+        # Tín hiệu tình huống xấu có kiểm thử riêng; giữ nguyên thứ tự lệnh SQL mà các kiểm thử này khẳng định.
+        stub = _patch("api_core.workflow.bad_case_signals.safe_load_signals", return_value=dict(EMPTY))
+        stub.start()
+        self.addCleanup(stub.stop)
         self.request_id = str(uuid4())
         self.context = {
             "status": "PENDING_APPROVAL",

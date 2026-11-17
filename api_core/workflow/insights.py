@@ -793,6 +793,7 @@ def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]
             amount=float(amount or 0),
             days_requested=_requested_days(payload),
             correlation_id=cid,
+            signals=_bad_case_signals(request_id),
         )
     fallback = bool(advice.get("fallback_used")) or advice.get("decision") is None
     reasons = [advice["reason"]] if advice.get("reason") else []
@@ -811,6 +812,11 @@ def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]
                 "reasons": [str(item)[:300] for item in reasons][:8],
                 "policy_version": advice.get("policy_version"),
                 "citations": _cite_regulations(advice.get("citations") or []),
+                "bad_cases": [
+                    {"code": str(c.get("code")), "message": str(c.get("message"))[:300]}
+                    for c in (advice.get("bad_cases") or [])
+                ][:5],
+                "effective_risk": advice.get("effective_risk"),
             },
             {
                 "key": "HUMAN_REVIEW",
@@ -883,3 +889,10 @@ def list_ai_assessments(actor: Actor, request_id: str) -> dict[str, Any]:
             for r in cursor.fetchall()
         ]
     return {"items": items}
+
+
+def _bad_case_signals(request_id: str) -> dict:
+    """Tín hiệu tình huống xấu cho khuyến nghị gửi người duyệt; lỗi truy vấn thì bỏ qua tín hiệu."""
+    from api_core.workflow.bad_case_signals import safe_load_signals
+
+    return safe_load_signals(request_id)

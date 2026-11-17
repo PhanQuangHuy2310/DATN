@@ -54,6 +54,20 @@ class AutoApproveTakeoverConflictTests(SimpleTestCase):
 
     databases: ClassVar[set[str]] = {"default"}
 
+    def setUp(self):
+        super().setUp()
+        self._stub_signals()
+
+    def _stub_signals(self):
+        # Tín hiệu tình huống xấu có kiểm thử riêng; ở đây giữ nguyên thứ tự lệnh SQL mà các kiểm thử này khẳng định.
+        from unittest.mock import patch as _patch
+
+        from api_core.workflow.bad_case_signals import EMPTY
+
+        stub = _patch("api_core.workflow.bad_case_signals.safe_load_signals", return_value=dict(EMPTY))
+        stub.start()
+        self.addCleanup(stub.stop)
+
     def test_integrity_error_leaves_step_to_human(self):
         context = {
             "status": "PENDING_APPROVAL",
@@ -214,6 +228,20 @@ class RoutingAdjustmentTests(SimpleTestCase):
 
 class AutoApproveLeaveDaysTests(SimpleTestCase):
     """The AI leave rules (balance, < 3 days) need the requested day span."""
+
+    def setUp(self):
+        super().setUp()
+        self._stub_signals()
+
+    def _stub_signals(self):
+        # Tín hiệu tình huống xấu có kiểm thử riêng; ở đây giữ nguyên thứ tự lệnh SQL mà các kiểm thử này khẳng định.
+        from unittest.mock import patch as _patch
+
+        from api_core.workflow.bad_case_signals import EMPTY
+
+        stub = _patch("api_core.workflow.bad_case_signals.safe_load_signals", return_value=dict(EMPTY))
+        stub.start()
+        self.addCleanup(stub.stop)
 
     def _days_sent(self, start, end):
         context = {

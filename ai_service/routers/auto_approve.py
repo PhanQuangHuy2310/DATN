@@ -23,6 +23,11 @@ from fastapi import APIRouter
 from loguru import logger
 from pydantic import BaseModel, Field
 
+try:
+    import bad_cases
+except ImportError:
+    from ai_service import bad_cases
+
 from .mock_context import lookup_facility_available, lookup_leave_balance
 from .policy import apply_policy, policy_citations
 
@@ -52,6 +57,12 @@ class AutoApproveInput(BaseModel):
         None, description="Email để tra quỹ phép trong hệ thống HRM"
     )
     room_code: str | None = Field(None, description="Mã phòng họp (ROOM_BOOKING)")
+    # Tín hiệu ngữ cảnh do API core tính từ lịch sử trong CSDL (suy luận tình huống xấu).
+    active_tasks_due_24h: int = Field(0, ge=0, le=10_000)
+    handover_assigned: bool | None = None
+    requester_amount_7d: float = Field(0.0, ge=0)
+    requester_finance_count_7d: int = Field(0, ge=0, le=10_000)
+    attendance_count_30d: int = Field(0, ge=0, le=10_000)
 
 
 class AutoApproveDecision(BaseModel):
@@ -67,6 +78,10 @@ class AutoApproveDecision(BaseModel):
         default_factory=list,
         description="Điều khoản quy chế đã đối chiếu (áp dụng hoặc không) và phép so sánh",
     )
+    bad_cases: list[dict] = Field(
+        default_factory=list, description="Tình huống xấu suy luận được từ ngữ cảnh; có thì không tự duyệt"
+    )
+    effective_risk: int | None = Field(None, description="Mức rủi ro sau khi xét tình huống xấu")
 
 
 # ---------------------------------------------------------------------------
@@ -144,11 +159,9 @@ class AutoApproveChecker:
         return ok, reasons
 
     def check_late_checkin(self, inp: AutoApproveInput) -> tuple[bool, list[str]]:
-        """Đăng ký đi muộn/về sớm"""
-        reasons = ["✅ Loại yêu cầu này tự động xét duyệt nếu rủi ro thấp"]
-        # Rule: Trong tháng, nếu đây là lần ≥ 4, cần duyệt thủ công
-        # (Thông tin này cần được truyền vào thông qua data, hiện dùng reject_count làm proxy)
-        return True, reasons
+        """Đăng ký đi muộn/về sớm. Lần thứ 4 trong 30 ngày bị chặn ở Gate -1 (BC_REPEATED_EXEMPTION)."""
+        return True, [f"✅ Điều chỉnh chấm công lần {max(1, inp.attendance_count_30d)} trong 30 ngày, "
+                      "rủi ro thấp: tự động xét duyệt"]
 
     def check_refund(self, inp: AutoApproveInput) -> tuple[bool, list[str]]:
         """Hoàn tiền/Đền bù"""
@@ -213,6 +226,19 @@ async def evaluate_auto_approve(body: AutoApproveInput):
     detail_reasons = []
     can_auto_approve = True
 
+    # --- Gate -1: Suy luận tình huống xấu từ ngữ cảnh vận hành ---
+    bad = bad_cases.evaluate(bad_cases.Signals(
+        request_type=body.request_type, amount=body.amount,
+        active_tasks_due_24h=body.active_tasks_due_24h, handover_assigned=body.handover_assigned,
+        requester_amount_7d=body.requester_amount_7d,
+        requester_finance_count_7d=body.requester_finance_count_7d,
+        attendance_count_30d=body.attendance_count_30d,
+    ))
+    for case in bad.cases:
+        detail_reasons.append(f"⛔ [{case['code']}] {case['message']}")
+    if bad.blocked:
+        can_auto_approve = False
+
     # --- Gate 0: Quy định đã nạp (đọc lại theo mtime, hiệu lực ngay) ---
     risk_score, forced_manual, matched_rules, policy_version = apply_policy(
         request_type=body.request_type,
@@ -248,6 +274,9 @@ async def evaluate_auto_approve(body: AutoApproveInput):
             f"✅ Risk score {risk_score}/5 ≤ {settings.auto_approve_max_risk}"
         )
 
+    if bad.effective_risk:
+        risk_score = max(risk_score, bad.effective_risk)
+
     # --- Gate 3: Business rules theo loại ---
     if can_auto_approve:
         business_ok, business_reasons = checker.evaluate(body)
@@ -268,7 +297,7 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         )
     else:
         decision = "escalate_to_human"
-        reason = "Yêu cầu cần người phê duyệt thủ công do không đáp ứng đủ điều kiện"
+        reason = ("Phát hiện tình huống xấu: " + "; ".join(c["code"] for c in bad.cases)) if bad.blocked else             "Yêu cầu cần người phê duyệt thủ công do không đáp ứng đủ điều kiện"
         note = None
         logger.info(
             f"ESCALATE | request_id={body.request_id} | type={body.request_type} | reasons: {len([r for r in detail_reasons if '❌' in r])}"
@@ -286,4 +315,6 @@ async def evaluate_auto_approve(body: AutoApproveInput):
             amount=body.amount,
             days=body.days_requested,
         ),
+        bad_cases=bad.cases,
+        effective_risk=risk_score,
     )
