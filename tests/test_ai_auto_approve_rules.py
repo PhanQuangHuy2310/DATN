@@ -58,8 +58,14 @@ class CatalogCodeRuleTests(unittest.TestCase):
             patch.object(
                 auto_approve,
                 "apply_policy",
-                side_effect=lambda request_type, amount, days, risk: (risk, False, [], None),
+                side_effect=lambda request_type, amount, days, risk, signals=None: (
+                    risk,
+                    False,
+                    [],
+                    None,
+                ),
             ),
+            patch.object(auto_approve, "matched_escalation", return_value=(None, [])),
             patch.object(auto_approve, "policy_citations", return_value=[]),
         ):
             result = asyncio.run(auto_approve.evaluate_auto_approve(_body(**overrides)))

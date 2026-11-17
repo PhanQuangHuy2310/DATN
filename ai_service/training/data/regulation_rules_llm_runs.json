@@ -1,0 +1,790 @@
+{
+ "engine": "regulation-rules-llm-1",
+ "model": "gemini-3.5-flash-lite",
+ "at": "2026-11-17T19:18:25+00:00",
+ "outputs": {
+  "D01": [
+   {
+    "request_type": "LEAVE",
+    "days_gt": 2,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Đơn Nghỉ phép từ 3 ngày trở lên phải được Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "D02": [
+   {
+    "request_type": "REFUND_COMPENSATION",
+    "amount_gt": 5000000,
+    "auto_approve": false,
+    "clause": "Không tự động duyệt yêu cầu Hoàn tiền / Đền bù có giá trị trên 5 triệu đồng."
+   }
+  ],
+  "D03": [
+   {
+    "request_type": "LEAVE",
+    "due_within_hours": 24,
+    "require_no_handover": true,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER",
+     "HR_MANAGER"
+    ],
+    "clause": "Nhân viên đang giữ công việc có hạn chót trong 24 giờ tới mà chưa bàn giao thì đơn Nghỉ phép không được tự động duyệt và phải chuyển Trưởng bộ phận cùng phòng Nhân sự xem xét."
+   }
+  ],
+  "D04": [
+   {
+    "request_type": "ATTENDANCE_ADJUSTMENT",
+    "repeat_count_gte": 3,
+    "repeat_window": "CALENDAR_MONTH",
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Từ lần Điều chỉnh chấm công thứ 3 trong tháng, hệ thống bắt buộc Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "D05": [
+   {
+    "request_type": "EXPENSE_CLAIM",
+    "split_suspect": true,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Các đề nghị Thanh toán chi phí có dấu hiệu chia nhỏ hóa đơn để lách hạn mức phải trình Kế toán và Ban Giám đốc phê duyệt kèm nghiệm thu độc lập."
+   }
+  ],
+  "D06": [
+   {
+    "request_type": "ROOM_BOOKING",
+    "auto_approve": true,
+    "clause": "Yêu cầu Đặt phòng họp được tự động duyệt."
+   }
+  ],
+  "D07": [
+   {
+    "request_type": null,
+    "amount_gt": 499999999,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECTOR"
+    ],
+    "clause": "Mọi yêu cầu có giá trị từ 500 triệu đồng trở lên phải trình Ban Giám đốc phê duyệt."
+   }
+  ],
+  "D08": [
+   {
+    "request_type": "WFH_REQ",
+    "days_gt": 1,
+    "auto_approve": false,
+    "clause": "Yêu cầu Làm việc từ xa (WFH) dưới 2 ngày được tự động duyệt."
+   },
+   {
+    "request_type": "WFH_REQ",
+    "days_gt": 1,
+    "auto_approve": true,
+    "clause": "Yêu cầu Làm việc từ xa (WFH) dưới 2 ngày được tự động duyệt."
+   }
+  ],
+  "D09": [],
+  "D10": [
+   {
+    "request_type": "SALARY_ADVANCE",
+    "amount_gt": 10000000,
+    "auto_approve": false,
+    "clause": "Ứng lương vượt quá 10 triệu đồng không được tự động phê duyệt."
+   }
+  ],
+  "D11": [
+   {
+    "request_type": "LEAVE_SPECIAL",
+    "due_within_hours": 48,
+    "require_no_handover": true,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Đơn Nghỉ phép đặc biệt khi người gửi có việc đến hạn trong 48 giờ và chưa chỉ định người nhận bàn giao thì phải qua Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "D12": [
+   {
+    "request_type": "VISITOR_SECURITY_PASS",
+    "auto_approve": false,
+    "clause": "Thẻ an ninh khách & đối tác ra vào phải được phê duyệt thủ công khi khách vào khu vực máy chủ."
+   }
+  ],
+  "D13": [
+   {
+    "request_type": "ADVANCE_SMALL",
+    "split_suspect": true,
+    "auto_approve": false,
+    "approvers": [
+     "FINANCE"
+    ],
+    "clause": "Tạm ứng chi phí (<10tr) và Tạm ứng chi phí (10-50tr) có tổng giá trị trong 7 ngày vượt 20 triệu đồng được xem là chia nhỏ và phải qua Kế toán phê duyệt."
+   },
+   {
+    "request_type": "ADVANCE_MEDIUM",
+    "split_suspect": true,
+    "auto_approve": false,
+    "approvers": [
+     "FINANCE"
+    ],
+    "clause": "Tạm ứng chi phí (<10tr) và Tạm ứng chi phí (10-50tr) có tổng giá trị trong 7 ngày vượt 20 triệu đồng được xem là chia nhỏ và phải qua Kế toán phê duyệt."
+   }
+  ],
+  "D14": [
+   {
+    "request_type": "OVERTIME_REQ",
+    "repeat_count_gte": 4,
+    "repeat_window": "ROLLING_7D",
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Đăng ký làm thêm giờ (OT) quá 3 lần trong 7 ngày phải được Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "D15": [
+   {
+    "request_type": "EXPENSE_CLAIM",
+    "amount_gt": 19999999,
+    "auto_approve": false,
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Thanh toán chi phí từ 20 triệu đồng trở lên phải qua Kế toán kiểm soát và trình Ban Giám đốc phê duyệt."
+   }
+  ],
+  "D16": [
+   {
+    "request_type": "ATTENDANCE_ADJUSTMENT",
+    "auto_approve": true,
+    "clause": "Hệ thống được phép tự động duyệt Điều chỉnh chấm công."
+   }
+  ],
+  "D17": [
+   {
+    "request_type": "REFUND_COMPENSATION",
+    "repeat_count_gte": 2,
+    "repeat_window": "ROLLING_30D",
+    "auto_approve": false,
+    "clause": "Yêu cầu Hoàn tiền / Đền bù từ lần thứ 2 trong 30 ngày của cùng người gửi phải được phê duyệt thủ công."
+   }
+  ],
+  "D18": [],
+  "QC05-1": [
+   {
+    "request_type": "LEAVE",
+    "days_gt": 0,
+    "due_within_hours": 24,
+    "require_no_handover": true,
+    "auto_approve": false,
+    "escalate_to": "B",
+    "approvers": [
+     "DIRECT_MANAGER",
+     "HR_MANAGER"
+    ],
+    "clause": "Đối với yêu cầu Nghỉ phép hoặc Nghỉ phép đặc biệt kéo dài từ 1 ngày trở lên trong giai đoạn nhân sự đang giữ tác vụ có hạn chót gấp trong 24 giờ chưa bàn giao, hệ thống không được tự động duyệt mà bắt buộc phải qua Trưởng bộ phận và Nhân sự phê duyệt thủ công."
+   },
+   {
+    "request_type": "LEAVE_SPECIAL",
+    "days_gt": 0,
+    "due_within_hours": 24,
+    "require_no_handover": true,
+    "auto_approve": false,
+    "escalate_to": "B",
+    "approvers": [
+     "DIRECT_MANAGER",
+     "HR_MANAGER"
+    ],
+    "clause": "Đối với yêu cầu Nghỉ phép hoặc Nghỉ phép đặc biệt kéo dài từ 1 ngày trở lên trong giai đoạn nhân sự đang giữ tác vụ có hạn chót gấp trong 24 giờ chưa bàn giao, hệ thống không được tự động duyệt mà bắt buộc phải qua Trưởng bộ phận và Nhân sự phê duyệt thủ công."
+   }
+  ],
+  "QC05-2": [
+   {
+    "request_type": "ATTENDANCE_ADJUSTMENT",
+    "repeat_count_gte": 4,
+    "repeat_window": "CALENDAR_MONTH",
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Đối với yêu cầu Điều chỉnh chấm công khi nhân sự giải trình quên chấm công, đi muộn hoặc về sớm lặp lại từ lần thứ 4 trong tháng, hệ thống không tự động duyệt và bắt buộc Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "QC05-3": [
+   {
+    "request_type": "EXPENSE_CLAIM",
+    "amount_gt": 19999999,
+    "auto_approve": false,
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với yêu cầu Thanh toán chi phí hoặc Quyết toán tạm ứng có giá trị từ 20 triệu đồng trở lên, hệ thống không được tự động phê duyệt mà phải qua Kế toán kiểm soát và trình Ban Giám đốc phê duyệt."
+   },
+   {
+    "request_type": "REIMBURSEMENT",
+    "amount_gt": 19999999,
+    "auto_approve": false,
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với yêu cầu Thanh toán chi phí hoặc Quyết toán tạm ứng có giá trị từ 20 triệu đồng trở lên, hệ thống không được tự động phê duyệt mà phải qua Kế toán kiểm soát và trình Ban Giám đốc phê duyệt."
+   }
+  ],
+  "QC05-4": [
+   {
+    "request_type": "EXPENSE_CLAIM",
+    "amount_gt": 14999999,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với đề xuất Thanh toán chi phí, Tạm ứng chi phí (<10tr) và Tạm ứng chi phí (10-50tr) có giá trị từ 15 triệu đồng trở lên hoặc có dấu hiệu chia nhỏ hóa đơn liên tiếp, hệ thống bắt buộc trình Kế toán và Ban Giám đốc phê duyệt thủ công kèm nghiệm thu độc lập."
+   },
+   {
+    "request_type": "EXPENSE_CLAIM",
+    "split_suspect": true,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với đề xuất Thanh toán chi phí, Tạm ứng chi phí (<10tr) và Tạm ứng chi phí (10-50tr) có giá trị từ 15 triệu đồng trở lên hoặc có dấu hiệu chia nhỏ hóa đơn liên tiếp, hệ thống bắt buộc trình Kế toán và Ban Giám đốc phê duyệt thủ công kèm nghiệm thu độc lập."
+   },
+   {
+    "request_type": "ADVANCE_SMALL",
+    "amount_gt": 14999999,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với đề xuất Thanh toán chi phí, Tạm ứng chi phí (<10tr) và Tạm ứng chi phí (10-50tr) có giá trị từ 15 triệu đồng trở lên hoặc có dấu hiệu chia nhỏ hóa đơn liên tiếp, hệ thống bắt buộc trình Kế toán và Ban Giám đốc phê duyệt thủ công kèm nghiệm thu độc lập."
+   },
+   {
+    "request_type": "ADVANCE_SMALL",
+    "split_suspect": true,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với đề xuất Thanh toán chi phí, Tạm ứng chi phí (<10tr) và Tạm ứng chi phí (10-50tr) có giá trị từ 15 triệu đồng trở lên hoặc có dấu hiệu chia nhỏ hóa đơn liên tiếp, hệ thống bắt buộc trình Kế toán và Ban Giám đốc phê duyệt thủ công kèm nghiệm thu độc lập."
+   },
+   {
+    "request_type": "ADVANCE_MEDIUM",
+    "amount_gt": 14999999,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với đề xuất Thanh toán chi phí, Tạm ứng chi phí (<10tr) và Tạm ứng chi phí (10-50tr) có giá trị từ 15 triệu đồng trở lên hoặc có dấu hiệu chia nhỏ hóa đơn liên tiếp, hệ thống bắt buộc trình Kế toán và Ban Giám đốc phê duyệt thủ công kèm nghiệm thu độc lập."
+   },
+   {
+    "request_type": "ADVANCE_MEDIUM",
+    "split_suspect": true,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với đề xuất Thanh toán chi phí, Tạm ứng chi phí (<10tr) và Tạm ứng chi phí (10-50tr) có giá trị từ 15 triệu đồng trở lên hoặc có dấu hiệu chia nhỏ hóa đơn liên tiếp, hệ thống bắt buộc trình Kế toán và Ban Giám đốc phê duyệt thủ công kèm nghiệm thu độc lập."
+   }
+  ],
+  "T01": [
+   {
+    "request_type": "LEAVE",
+    "due_within_hours": 24,
+    "require_no_handover": true,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER",
+     "HR_MANAGER"
+    ],
+    "clause": "Trường hợp nhân sự còn giữ đầu việc đến hạn trong vòng 24 giờ và chưa bàn giao cho người khác, đơn xin Nghỉ phép phải do Trưởng bộ phận và phòng Nhân sự xét duyệt, AI không được tự động phê duyệt."
+   }
+  ],
+  "T02": [
+   {
+    "request_type": "ATTENDANCE_ADJUSTMENT",
+    "repeat_count_gte": 4,
+    "repeat_window": "CALENDAR_MONTH",
+    "auto_approve": false,
+    "clause": "Đơn Điều chỉnh chấm công từ lần thứ 4 trong tháng không được tự động duyệt."
+   }
+  ],
+  "T03": [
+   {
+    "request_type": "EXPENSE_CLAIM",
+    "amount_gt": 29999999,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECTOR"
+    ],
+    "clause": "Đề nghị Thanh toán chi phí hoặc Quyết toán tạm ứng từ 30 triệu đồng trở lên bắt buộc trình Ban Giám đốc phê duyệt."
+   },
+   {
+    "request_type": "REIMBURSEMENT",
+    "amount_gt": 29999999,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECTOR"
+    ],
+    "clause": "Đề nghị Thanh toán chi phí hoặc Quyết toán tạm ứng từ 30 triệu đồng trở lên bắt buộc trình Ban Giám đốc phê duyệt."
+   }
+  ],
+  "T04": [
+   {
+    "request_type": "REFUND_COMPENSATION",
+    "amount_gt": 2000000,
+    "auto_approve": false,
+    "clause": "Hoàn tiền / Đền bù trên 2 triệu đồng phải được phê duyệt thủ công."
+   }
+  ],
+  "T05": [
+   {
+    "request_type": "WFH_REQ",
+    "days_gt": 3,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Yêu cầu Làm việc từ xa (WFH) kéo dài trên 3 ngày bắt buộc qua Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "T06": [
+   {
+    "request_type": "ADVANCE_SMALL",
+    "split_suspect": true,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE"
+    ],
+    "clause": "Các khoản Tạm ứng chi phí (<10tr) có dấu hiệu chia nhỏ liên tiếp phải trình Kế toán phê duyệt và có nghiệm thu độc lập sau giải ngân."
+   }
+  ],
+  "T07": [
+   {
+    "request_type": "EXPENSE_CLAIM",
+    "amount_gt": 14999999,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với Thanh toán chi phí từ 15 triệu đồng trở lên hoặc có dấu hiệu chia nhỏ hóa đơn, hệ thống bắt buộc trình Kế toán và Ban Giám đốc phê duyệt kèm nghiệm thu độc lập."
+   },
+   {
+    "request_type": "EXPENSE_CLAIM",
+    "split_suspect": true,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Đối với Thanh toán chi phí từ 15 triệu đồng trở lên hoặc có dấu hiệu chia nhỏ hóa đơn, hệ thống bắt buộc trình Kế toán và Ban Giám đốc phê duyệt kèm nghiệm thu độc lập."
+   }
+  ],
+  "T08": [],
+  "T09": [
+   {
+    "request_type": "SPECIAL_DISCOUNT",
+    "amount_gt": 50000000,
+    "auto_approve": false,
+    "clause": "Không áp dụng tự động duyệt cho Phê duyệt chiết khấu thương mại đặc biệt có giá trị vượt 50 triệu đồng."
+   }
+  ],
+  "T10": [
+   {
+    "request_type": "LEAVE_SPECIAL",
+    "due_within_hours": 48,
+    "require_no_handover": true,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Nhân viên xin Nghỉ phép đặc biệt trong khi đang phụ trách công việc có hạn chót trong 2 ngày tới mà chưa chỉ định người nhận bàn giao phải được Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "T11": [
+   {
+    "request_type": "SALARY_ADVANCE",
+    "repeat_count_gte": 3,
+    "repeat_window": "ROLLING_30D",
+    "auto_approve": false,
+    "approvers": [
+     "HR_MANAGER",
+     "FINANCE"
+    ],
+    "clause": "Ứng lương từ lần thứ 3 trong 30 ngày phải qua phòng Nhân sự và Kế toán xem xét."
+   }
+  ],
+  "T12": [
+   {
+    "request_type": "VISITOR_SECURITY_PASS",
+    "auto_approve": true,
+    "clause": "Thẻ an ninh khách & đối tác ra vào được tự động duyệt."
+   }
+  ],
+  "T13": [
+   {
+    "request_type": "ROOM_BOOKING",
+    "repeat_count_gte": 5,
+    "repeat_window": "ROLLING_7D",
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Yêu cầu Đặt phòng họp từ lần thứ 5 trong tuần của cùng một người phải được Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "T14": [
+   {
+    "request_type": "ADVANCE_MEDIUM",
+    "amount_gt": 40000000,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECTOR"
+    ],
+    "clause": "Giá trị Tạm ứng chi phí (10-50tr) vượt quá 40 triệu đồng phải trình Ban Giám đốc phê duyệt."
+   }
+  ],
+  "T15": [],
+  "T16": [
+   {
+    "request_type": "LEAVE",
+    "days_gt": 0,
+    "auto_approve": true,
+    "clause": "Nghỉ phép dưới 1 ngày được tự động duyệt."
+   }
+  ],
+  "T17": [
+   {
+    "request_type": "ATTENDANCE_ADJUSTMENT",
+    "repeat_count_gte": 3,
+    "repeat_window": "ROLLING_7D",
+    "auto_approve": false,
+    "escalate_to": "B",
+    "approvers": [
+     "DIRECT_MANAGER",
+     "HR_MANAGER"
+    ],
+    "clause": "Điều chỉnh chấm công quá 2 lần trong 7 ngày phải chuyển phòng Nhân sự đối soát và Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "T18": [],
+  "T19": [
+   {
+    "request_type": "VENDOR_PAYMENT",
+    "amount_gt": 99999999,
+    "auto_approve": false,
+    "approvers": [
+     "LEGAL",
+     "DIRECTOR"
+    ],
+    "clause": "Thanh toán Hợp đồng Vendor từ 100 triệu đồng trở lên phải có Pháp chế và Ban Giám đốc phê duyệt."
+   }
+  ],
+  "T20": [
+   {
+    "request_type": "LEAVE",
+    "days_gt": 4,
+    "auto_approve": false,
+    "clause": "Đơn Nghỉ phép từ 5 ngày trở lên hoặc khi người gửi đang giữ việc đến hạn trong 24 giờ chưa bàn giao thì không được tự động duyệt."
+   },
+   {
+    "request_type": "LEAVE",
+    "due_within_hours": 24,
+    "require_no_handover": true,
+    "auto_approve": false,
+    "clause": "Đơn Nghỉ phép từ 5 ngày trở lên hoặc khi người gửi đang giữ việc đến hạn trong 24 giờ chưa bàn giao thì không được tự động duyệt."
+   }
+  ],
+  "T21": [
+   {
+    "request_type": "REFUND_COMPENSATION",
+    "split_suspect": true,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE"
+    ],
+    "clause": "Hoàn tiền / Đền bù có dấu hiệu chia nhỏ nhiều lần để né ngưỡng phải được Kế toán phê duyệt thủ công kèm nghiệm thu độc lập."
+   }
+  ],
+  "T22": [
+   {
+    "request_type": "WFH_REQ",
+    "repeat_count_gte": 4,
+    "repeat_window": "CALENDAR_MONTH",
+    "auto_approve": false,
+    "approvers": [
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Làm việc từ xa (WFH) từ lần thứ 4 trong tháng phải qua Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "T23": [],
+  "T24": [
+   {
+    "request_type": "PROD_DATA_ACCESS",
+    "auto_approve": false,
+    "approvers": [
+     "SECURITY"
+    ],
+    "clause": "Cấp quyền Dữ liệu nhạy cảm/Server bắt buộc phê duyệt thủ công và có Bảo mật thông tin thẩm định."
+   }
+  ],
+  "T25": [
+   {
+    "request_type": "ADVANCE_LARGE",
+    "amount_gt": 50000000,
+    "auto_approve": false,
+    "escalate_to": "C",
+    "approvers": [
+     "FINANCE",
+     "DIRECTOR"
+    ],
+    "clause": "Tạm ứng dự án lớn (>50tr) phải qua Kế toán và Ban Giám đốc, sau khi giải ngân phải nghiệm thu độc lập chứng từ."
+   }
+  ],
+  "T26": [
+   {
+    "request_type": "LEAVE",
+    "days_gt": 2,
+    "auto_approve": false,
+    "approvers": [
+     "DIRECTOR"
+    ],
+    "clause": "Đơn Nghỉ phép kéo dài trên 2 ngày phải được Giám đốc phê duyệt."
+   }
+  ],
+  "T27": [
+   {
+    "request_type": "ATTENDANCE_ADJUSTMENT",
+    "days_gt": 30,
+    "auto_approve": false,
+    "clause": "Điều chỉnh chấm công cho ngày đã quá 30 ngày phải được phê duyệt thủ công."
+   }
+  ],
+  "T28": [
+   {
+    "request_type": "SPECIAL_DISCOUNT",
+    "auto_approve": false,
+    "approvers": [
+     "DIRECTOR"
+    ],
+    "clause": "Phê duyệt chiết khấu thương mại đặc biệt từ 20% trở lên phải qua Ban Giám đốc."
+   }
+  ],
+  "T29": [
+   {
+    "request_type": "LEAVE_SPECIAL",
+    "repeat_count_gte": 3,
+    "repeat_window": "ROLLING_30D",
+    "auto_approve": false,
+    "approvers": [
+     "HR_MANAGER",
+     "DIRECT_MANAGER"
+    ],
+    "clause": "Đơn Nghỉ phép đặc biệt từ lần thứ 3 trong 30 ngày phải được phòng Nhân sự xác minh và Trưởng bộ phận phê duyệt thủ công."
+   }
+  ],
+  "T30": [
+   {
+    "request_type": "BUSINESS_TRIP",
+    "amount_gt": 30000000,
+    "auto_approve": false,
+    "clause": "Đăng ký đi công tác có chi phí trên 30 triệu đồng không được tự động duyệt."
+   }
+  ]
+ },
+ "rejected": {
+  "D01": [],
+  "D02": [],
+  "D03": [],
+  "D04": [],
+  "D05": [],
+  "D06": [],
+  "D07": [],
+  "D08": [],
+  "D09": [],
+  "D10": [],
+  "D11": [],
+  "D12": [],
+  "D13": [],
+  "D14": [],
+  "D15": [],
+  "D16": [],
+  "D17": [],
+  "D18": [],
+  "QC05-1": [],
+  "QC05-2": [],
+  "QC05-3": [],
+  "QC05-4": [],
+  "T01": [],
+  "T02": [],
+  "T03": [],
+  "T04": [],
+  "T05": [],
+  "T06": [],
+  "T07": [],
+  "T08": [],
+  "T09": [],
+  "T10": [],
+  "T11": [],
+  "T12": [],
+  "T13": [],
+  "T14": [],
+  "T15": [],
+  "T16": [],
+  "T17": [],
+  "T18": [],
+  "T19": [],
+  "T20": [],
+  "T21": [],
+  "T22": [],
+  "T23": [],
+  "T24": [],
+  "T25": [],
+  "T26": [],
+  "T27": [],
+  "T28": [],
+  "T29": [],
+  "T30": []
+ },
+ "latency_ms": {
+  "D01": 2297.1,
+  "D02": 2761.1,
+  "D03": 2043.9,
+  "D04": 2555.2,
+  "D05": 6094.8,
+  "D06": 7520.3,
+  "D07": 4430.4,
+  "D08": 3010.6,
+  "D09": 1760.8,
+  "D10": 1723.7,
+  "D11": 2184.7,
+  "D12": 2175.1,
+  "D13": 3980.4,
+  "D14": 2533.4,
+  "D15": 2073.5,
+  "D16": 2753.5,
+  "D17": 5209.9,
+  "D18": 5768.2,
+  "QC05-1": 4359.1,
+  "QC05-2": 5487.9,
+  "QC05-3": 5266.9,
+  "QC05-4": 3970.2,
+  "T01": 2522.9,
+  "T02": 3150.5,
+  "T03": 2703.3,
+  "T04": 3734.6,
+  "T05": 3262.5,
+  "T06": 2900.3,
+  "T07": 2878.3,
+  "T08": 2142.8,
+  "T09": 2714.9,
+  "T10": 2883.4,
+  "T11": 3533.4,
+  "T12": 2304.7,
+  "T13": 2329.2,
+  "T14": 2602.1,
+  "T15": 2961.5,
+  "T16": 3862.7,
+  "T17": 2367.3,
+  "T18": 2253.0,
+  "T19": 2479.3,
+  "T20": 2527.5,
+  "T21": 2566.2,
+  "T22": 2211.9,
+  "T23": 2168.0,
+  "T24": 2018.8,
+  "T25": 2123.0,
+  "T26": 1991.1,
+  "T27": 2119.5,
+  "T28": 3347.6,
+  "T29": 2040.9,
+  "T30": 2605.2
+ },
+ "tokens": {
+  "D01": 1626,
+  "D02": 1703,
+  "D03": 1710,
+  "D04": 1725,
+  "D05": 1747,
+  "D06": 1663,
+  "D07": 1721,
+  "D08": 1657,
+  "D09": 1545,
+  "D10": 1700,
+  "D11": 1741,
+  "D12": 1701,
+  "D13": 1966,
+  "D14": 1729,
+  "D15": 1738,
+  "D16": 1735,
+  "D17": 1727,
+  "D18": 1549,
+  "QC05-1": 1966,
+  "QC05-2": 1793,
+  "QC05-3": 1848,
+  "QC05-4": 2589,
+  "T01": 1722,
+  "T02": 1697,
+  "T03": 1776,
+  "T04": 1703,
+  "T05": 1726,
+  "T06": 1733,
+  "T07": 1841,
+  "T08": 1549,
+  "T09": 1647,
+  "T10": 1713,
+  "T11": 1731,
+  "T12": 1683,
+  "T13": 1687,
+  "T14": 1736,
+  "T15": 1549,
+  "T16": 1597,
+  "T17": 1742,
+  "T18": 1549,
+  "T19": 1736,
+  "T20": 1747,
+  "T21": 1665,
+  "T22": 1714,
+  "T23": 1544,
+  "T24": 1713,
+  "T25": 1681,
+  "T26": 1691,
+  "T27": 1700,
+  "T28": 1714,
+  "T29": 1698,
+  "T30": 1635
+ },
+ "errors": {
+  "QC05-5": "AttributeError: 'list' object has no attribute 'get'"
+ }
+}

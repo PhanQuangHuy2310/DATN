@@ -1,0 +1,791 @@
+{
+ "at": "2026-11-17T19:19:50+00:00",
+ "splits": {
+  "dev": {
+   "v1": {
+    "clauses": 18,
+    "exact": 9,
+    "exact_rate": 0.5,
+    "rule_precision": 0.389,
+    "rule_recall": 0.467,
+    "rule_f1": 0.424,
+    "over_block_rules": 10,
+    "missed_control_rules": 8,
+    "escalate_accuracy": 1.0,
+    "approver_accuracy": 0.0,
+    "errors": [
+     {
+      "id": "D03",
+      "missing": [
+       {
+        "request_type": "LEAVE",
+        "due_within_hours": 24,
+        "require_no_handover": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "LEAVE",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "D04",
+      "missing": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "repeat_count_gte": 3,
+        "repeat_window": "CALENDAR_MONTH",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "D05",
+      "missing": [
+       {
+        "request_type": "EXPENSE_CLAIM",
+        "split_suspect": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "EXPENSE_CLAIM",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "D08",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "WFH_REQ",
+        "auto_approve": true
+       }
+      ]
+     },
+     {
+      "id": "D11",
+      "missing": [
+       {
+        "request_type": "LEAVE_SPECIAL",
+        "due_within_hours": 48,
+        "require_no_handover": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "LEAVE_SPECIAL",
+        "auto_approve": false
+       },
+       {
+        "request_type": "LEAVE",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "D12",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "VISITOR_SECURITY_PASS",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "D13",
+      "missing": [
+       {
+        "request_type": "ADVANCE_SMALL",
+        "split_suspect": true,
+        "auto_approve": false
+       },
+       {
+        "request_type": "ADVANCE_MEDIUM",
+        "split_suspect": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "ADVANCE_MEDIUM",
+        "amount_gt": 20000000,
+        "auto_approve": false
+       },
+       {
+        "request_type": "ADVANCE_SMALL",
+        "amount_gt": 20000000,
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "D14",
+      "missing": [
+       {
+        "request_type": "OVERTIME_REQ",
+        "repeat_count_gte": 4,
+        "repeat_window": "ROLLING_7D",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "OVERTIME_REQ",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "D17",
+      "missing": [
+       {
+        "request_type": "REFUND_COMPENSATION",
+        "repeat_count_gte": 2,
+        "repeat_window": "ROLLING_30D",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "REFUND_COMPENSATION",
+        "auto_approve": false
+       }
+      ]
+     }
+    ]
+   },
+   "v2": {
+    "clauses": 18,
+    "exact": 18,
+    "exact_rate": 1.0,
+    "rule_precision": 1.0,
+    "rule_recall": 1.0,
+    "rule_f1": 1.0,
+    "over_block_rules": 0,
+    "missed_control_rules": 0,
+    "escalate_accuracy": 1.0,
+    "approver_accuracy": 1.0,
+    "errors": []
+   },
+   "llm": {
+    "clauses": 18,
+    "exact": 16,
+    "exact_rate": 0.889,
+    "rule_precision": 0.833,
+    "rule_recall": 1.0,
+    "rule_f1": 0.909,
+    "over_block_rules": 2,
+    "missed_control_rules": 0,
+    "escalate_accuracy": 0.733,
+    "approver_accuracy": 1.0,
+    "errors": [
+     {
+      "id": "D08",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "WFH_REQ",
+        "days_gt": 1,
+        "auto_approve": true
+       },
+       {
+        "request_type": "WFH_REQ",
+        "days_gt": 1,
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "D12",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "VISITOR_SECURITY_PASS",
+        "auto_approve": false
+       }
+      ]
+     }
+    ]
+   },
+   "hybrid": {
+    "clauses": 18,
+    "exact": 16,
+    "exact_rate": 0.889,
+    "rule_precision": 0.833,
+    "rule_recall": 1.0,
+    "rule_f1": 0.909,
+    "over_block_rules": 2,
+    "missed_control_rules": 0,
+    "escalate_accuracy": 1.0,
+    "approver_accuracy": 1.0,
+    "errors": [
+     {
+      "id": "D08",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "WFH_REQ",
+        "days_gt": 1,
+        "auto_approve": true
+       },
+       {
+        "request_type": "WFH_REQ",
+        "days_gt": 1,
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "D12",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "VISITOR_SECURITY_PASS",
+        "auto_approve": false
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "demo": {
+   "v1": {
+    "clauses": 5,
+    "exact": 2,
+    "exact_rate": 0.4,
+    "rule_precision": 0.7,
+    "rule_recall": 0.538,
+    "rule_f1": 0.609,
+    "over_block_rules": 3,
+    "missed_control_rules": 6,
+    "escalate_accuracy": 0.571,
+    "approver_accuracy": 0.0,
+    "errors": [
+     {
+      "id": "QC05-1",
+      "missing": [
+       {
+        "request_type": "LEAVE",
+        "days_gt": 0,
+        "due_within_hours": 24,
+        "require_no_handover": true,
+        "auto_approve": false
+       },
+       {
+        "request_type": "LEAVE_SPECIAL",
+        "days_gt": 0,
+        "due_within_hours": 24,
+        "require_no_handover": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "LEAVE",
+        "days_gt": 0,
+        "auto_approve": false
+       },
+       {
+        "request_type": "LEAVE_SPECIAL",
+        "days_gt": 0,
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "QC05-2",
+      "missing": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "repeat_count_gte": 4,
+        "repeat_window": "CALENDAR_MONTH",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "QC05-4",
+      "missing": [
+       {
+        "request_type": "ADVANCE_SMALL",
+        "split_suspect": true,
+        "auto_approve": false
+       },
+       {
+        "request_type": "EXPENSE_CLAIM",
+        "split_suspect": true,
+        "auto_approve": false
+       },
+       {
+        "request_type": "ADVANCE_MEDIUM",
+        "split_suspect": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": []
+     }
+    ]
+   },
+   "v2": {
+    "clauses": 5,
+    "exact": 5,
+    "exact_rate": 1.0,
+    "rule_precision": 1.0,
+    "rule_recall": 1.0,
+    "rule_f1": 1.0,
+    "over_block_rules": 0,
+    "missed_control_rules": 0,
+    "escalate_accuracy": 1.0,
+    "approver_accuracy": 1.0,
+    "errors": []
+   }
+  },
+  "test": {
+   "v1": {
+    "clauses": 30,
+    "exact": 13,
+    "exact_rate": 0.433,
+    "rule_precision": 0.464,
+    "rule_recall": 0.481,
+    "rule_f1": 0.473,
+    "over_block_rules": 13,
+    "missed_control_rules": 14,
+    "escalate_accuracy": 0.846,
+    "approver_accuracy": 0.0,
+    "errors": [
+     {
+      "id": "T01",
+      "missing": [
+       {
+        "request_type": "LEAVE",
+        "due_within_hours": 24,
+        "require_no_handover": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "LEAVE",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T02",
+      "missing": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "repeat_count_gte": 4,
+        "repeat_window": "CALENDAR_MONTH",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T06",
+      "missing": [
+       {
+        "request_type": "ADVANCE_SMALL",
+        "split_suspect": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": []
+     },
+     {
+      "id": "T07",
+      "missing": [
+       {
+        "request_type": "EXPENSE_CLAIM",
+        "split_suspect": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": []
+     },
+     {
+      "id": "T09",
+      "missing": [
+       {
+        "request_type": "SPECIAL_DISCOUNT",
+        "amount_gt": 50000000,
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "SPECIAL_DISCOUNT",
+        "amount_gt": 50000000,
+        "auto_approve": true
+       }
+      ]
+     },
+     {
+      "id": "T10",
+      "missing": [
+       {
+        "request_type": "LEAVE_SPECIAL",
+        "due_within_hours": 48,
+        "require_no_handover": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "LEAVE_SPECIAL",
+        "auto_approve": false
+       },
+       {
+        "request_type": "LEAVE",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T11",
+      "missing": [
+       {
+        "request_type": "SALARY_ADVANCE",
+        "repeat_count_gte": 3,
+        "repeat_window": "ROLLING_30D",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "SALARY_ADVANCE",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T13",
+      "missing": [
+       {
+        "request_type": "ROOM_BOOKING",
+        "repeat_count_gte": 5,
+        "repeat_window": "ROLLING_7D",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "ROOM_BOOKING",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T16",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "LEAVE",
+        "auto_approve": true
+       }
+      ]
+     },
+     {
+      "id": "T17",
+      "missing": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "repeat_count_gte": 3,
+        "repeat_window": "ROLLING_7D",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T20",
+      "missing": [
+       {
+        "request_type": "LEAVE",
+        "due_within_hours": 24,
+        "require_no_handover": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": []
+     },
+     {
+      "id": "T21",
+      "missing": [
+       {
+        "request_type": "REFUND_COMPENSATION",
+        "split_suspect": true,
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "REFUND_COMPENSATION",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T22",
+      "missing": [
+       {
+        "request_type": "WFH_REQ",
+        "repeat_count_gte": 4,
+        "repeat_window": "CALENDAR_MONTH",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "WFH_REQ",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T26",
+      "missing": [
+       {
+        "request_type": "LEAVE",
+        "days_gt": 2,
+        "auto_approve": false
+       }
+      ],
+      "extra": []
+     },
+     {
+      "id": "T27",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "days_gt": 30,
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T28",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "SPECIAL_DISCOUNT",
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T29",
+      "missing": [
+       {
+        "request_type": "LEAVE_SPECIAL",
+        "repeat_count_gte": 3,
+        "repeat_window": "ROLLING_30D",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "LEAVE_SPECIAL",
+        "auto_approve": false
+       },
+       {
+        "request_type": "LEAVE",
+        "auto_approve": false
+       }
+      ]
+     }
+    ]
+   },
+   "v2": {
+    "clauses": 30,
+    "exact": 29,
+    "exact_rate": 0.967,
+    "rule_precision": 1.0,
+    "rule_recall": 0.963,
+    "rule_f1": 0.981,
+    "over_block_rules": 0,
+    "missed_control_rules": 1,
+    "escalate_accuracy": 1.0,
+    "approver_accuracy": 1.0,
+    "errors": [
+     {
+      "id": "T25",
+      "missing": [
+       {
+        "request_type": "ADVANCE_LARGE",
+        "auto_approve": false
+       }
+      ],
+      "extra": []
+     }
+    ]
+   },
+   "llm": {
+    "clauses": 30,
+    "exact": 25,
+    "exact_rate": 0.833,
+    "rule_precision": 0.862,
+    "rule_recall": 0.926,
+    "rule_f1": 0.893,
+    "over_block_rules": 3,
+    "missed_control_rules": 2,
+    "escalate_accuracy": 0.72,
+    "approver_accuracy": 1.0,
+    "errors": [
+     {
+      "id": "T16",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "LEAVE",
+        "days_gt": 0,
+        "auto_approve": true
+       }
+      ]
+     },
+     {
+      "id": "T18",
+      "missing": [
+       {
+        "amount_gt": 1000000000,
+        "auto_approve": false
+       }
+      ],
+      "extra": []
+     },
+     {
+      "id": "T25",
+      "missing": [
+       {
+        "request_type": "ADVANCE_LARGE",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "ADVANCE_LARGE",
+        "amount_gt": 50000000,
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T27",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "days_gt": 30,
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T28",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "SPECIAL_DISCOUNT",
+        "auto_approve": false
+       }
+      ]
+     }
+    ]
+   },
+   "hybrid": {
+    "clauses": 30,
+    "exact": 26,
+    "exact_rate": 0.867,
+    "rule_precision": 0.867,
+    "rule_recall": 0.963,
+    "rule_f1": 0.912,
+    "over_block_rules": 3,
+    "missed_control_rules": 1,
+    "escalate_accuracy": 1.0,
+    "approver_accuracy": 1.0,
+    "errors": [
+     {
+      "id": "T16",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "LEAVE",
+        "days_gt": 0,
+        "auto_approve": true
+       }
+      ]
+     },
+     {
+      "id": "T25",
+      "missing": [
+       {
+        "request_type": "ADVANCE_LARGE",
+        "auto_approve": false
+       }
+      ],
+      "extra": [
+       {
+        "request_type": "ADVANCE_LARGE",
+        "amount_gt": 50000000,
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T27",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "ATTENDANCE_ADJUSTMENT",
+        "days_gt": 30,
+        "auto_approve": false
+       }
+      ]
+     },
+     {
+      "id": "T28",
+      "missing": [],
+      "extra": [
+       {
+        "request_type": "SPECIAL_DISCOUNT",
+        "auto_approve": false
+       }
+      ]
+     }
+    ]
+   }
+  }
+ }
+}

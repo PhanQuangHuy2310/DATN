@@ -23,12 +23,9 @@ import hashlib
 import json
 import logging
 import os
-import re
 import socket
 import threading
 import time
-import unicodedata
-from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
@@ -60,130 +57,17 @@ class TransientLearningError(RuntimeError):
 
 # ---------------------------------------------------------------------------
 # 1. Regulation compiler: Vietnamese text -> policy rules (pure functions)
+#    Cài đặt ở regulation_compiler.py (v2: điều kiện ngữ cảnh deadline / lặp lại /
+#    chia nhỏ, tách "hoặc", không chặn tràn khi điều kiện ngoài schema).
 # ---------------------------------------------------------------------------
 
-_MONEY = re.compile(
-    r"(?P<num>\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*"
-    r"(?P<unit>tỷ|ty|triệu|trieu|nghìn|nghin|ngàn|vnđ|vnd|đồng|dong|đ)\b",
-    re.IGNORECASE,
+from api_core.workflow.regulation_compiler import (
+    RequestTypeName,
+    compile_regulations,
 )
-_DAYS = re.compile(r"(?P<num>\d+)\s*ngày", re.IGNORECASE)
-_SENTENCE = re.compile(r"(?<=[.;!?])\s+|\n+")
-_MANUAL_STRONG = ("ban giám đốc", "hội đồng")
-_MANUAL = (
-    "bắt buộc",
-    "duyệt thủ công",
-    "phê duyệt thủ công",
-    "không được tự động",
-    "không tự động",
-    "phải được phê duyệt",
-    "phải qua",
-    "rủi ro cao",
-) + _MANUAL_STRONG
-_AUTO = ("tự động duyệt", "tự động phê duyệt", "duyệt tự động", "đối chiếu tự động")
-_EVERY = ("mọi yêu cầu", "tất cả yêu cầu", "toàn bộ yêu cầu")
-
-
-def _fold(text: str) -> str:
-    return unicodedata.normalize("NFC", text).lower()
-
-
-def _money_value(num: str, unit: str) -> int | None:
-    unit = _fold(unit)
-    if unit in {"tỷ", "ty", "triệu", "trieu", "nghìn", "nghin", "ngàn"}:
-        try:
-            value = float(num.replace(",", "."))
-        except ValueError:
-            return None
-        scale = {"tỷ": 1e9, "ty": 1e9, "triệu": 1e6, "trieu": 1e6}.get(unit, 1e3)
-        return round(value * scale)
-    digits = re.sub(r"[.,]", "", num)
-    return int(digits) if digits.isdigit() else None
-
-
-def _lower_bound(sentence: str, start: int, end: int, value: int) -> int | None:
-    """amount_gt for the number at [start:end] (strict '>' semantics)."""
-    before = sentence[max(0, start - 25) : start]
-    after = sentence[end : end + 15]
-    if re.search(r"(dưới|không quá|tối đa|nhỏ hơn|thấp hơn)\s*$", before):
-        return None  # upper bound: not expressible as a policy rule
-    if re.search(r"(từ|tối thiểu|ít nhất|bằng hoặc lớn hơn)\s*$", before) or re.match(
-        r"\s*trở lên", after
-    ):
-        return max(value - 1, 0)
-    if re.search(r"(trên|vượt|vượt quá|quá|lớn hơn|cao hơn|hơn)\s*$", before):
-        return value
-    return None
-
-
-def _threshold(pattern: re.Pattern, sentence: str, money: bool) -> int | None:
-    for match in pattern.finditer(sentence):
-        value = (
-            _money_value(match.group("num"), match.group("unit"))
-            if money
-            else int(match.group("num"))
-        )
-        if value is None:
-            continue
-        bound = _lower_bound(sentence, match.start(), match.end(), value)
-        if bound is not None:
-            return bound
-    return None
-
-
-@dataclass(frozen=True)
-class RequestTypeName:
-    code: str
-    name: str
-
-
-def compile_regulations(
-    regulations: list[dict[str, Any]], request_types: list[RequestTypeName]
-) -> list[dict[str, Any]]:
-    """Extract enforceable approval rules from regulation sentences.
-
-    A sentence becomes a rule when it carries an approval signal (forced manual
-    review or explicit auto approval) and something to match on: an amount or
-    day threshold, a named request type, or an explicit "mọi yêu cầu".
-    """
-    rules: list[dict[str, Any]] = []
-    types = sorted(request_types, key=lambda t: -len(t.name))
-    for reg in sorted(regulations, key=lambda r: r["code"]):
-        sentences = [s.strip() for s in _SENTENCE.split(reg.get("content") or "")]
-        for index, sentence in enumerate((s for s in sentences if s), start=1):
-            low = _fold(sentence)
-            manual = any(word in low for word in _MANUAL)
-            auto = not manual and any(word in low for word in _AUTO)
-            if not (manual or auto):
-                continue
-            amount_gt = _threshold(_MONEY, low, money=True)
-            days_gt = _threshold(_DAYS, low, money=False)
-            scoped = [t.code for t in types if t.name and _fold(t.name) in low]
-            unconstrained = amount_gt is None and days_gt is None and not scoped
-            if unconstrained and not any(word in low for word in _EVERY):
-                continue
-            base = {
-                "description": sentence[:500],
-                "amount_gt": amount_gt,
-                "days_gt": days_gt,
-            }
-            if manual:
-                base["min_risk"] = (
-                    5 if any(word in low for word in _MANUAL_STRONG) else 4
-                )
-                base["auto_approve"] = False
-            else:
-                base["auto_approve"] = True
-            rule_id = f"{reg['code']}-{index}"
-            for code in scoped or [None]:
-                rules.append(
-                    {
-                        "id": (f"{rule_id}-{code}" if code else rule_id)[:50],
-                        "request_type": code,
-                        **{k: v for k, v in base.items() if v is not None},
-                    }
-                )
-    return rules
+from api_core.workflow.regulation_compiler import (
+    rule_key as _compiled_rule_key,
+)
 
 
 def snapshot_hash(regulations: list[dict[str, Any]]) -> str:
@@ -206,6 +90,13 @@ def _vnd(value: int) -> str:
     return f"{value:,}".replace(",", ".") + " đ"
 
 
+_WINDOW_TEXT = {
+    "CALENDAR_MONTH": "trong tháng",
+    "ROLLING_7D": "trong 7 ngày",
+    "ROLLING_30D": "trong 30 ngày",
+}
+
+
 def describe_rule(rule: dict[str, Any], type_names: dict[str, str]) -> str:
     scope = (
         f"Yêu cầu loại “{type_names.get(rule['request_type'], rule['request_type'])}”"
@@ -217,18 +108,34 @@ def describe_rule(rule: dict[str, Any], type_names: dict[str, str]) -> str:
         conditions.append(f"có giá trị từ {_vnd(rule['amount_gt'] + 1)} trở lên")
     if rule.get("days_gt") is not None:
         conditions.append(f"kéo dài từ {rule['days_gt'] + 1} ngày trở lên")
+    if rule.get("due_within_hours"):
+        text = (
+            f"khi người gửi đang giữ việc đến hạn trong {rule['due_within_hours']} giờ"
+        )
+        if rule.get("require_no_handover"):
+            text += " mà chưa chỉ định người nhận bàn giao"
+        conditions.append(text)
+    if rule.get("repeat_count_gte"):
+        window = _WINDOW_TEXT.get(rule.get("repeat_window") or "ROLLING_30D", "")
+        conditions.append(f"từ lần thứ {rule['repeat_count_gte']} {window}".rstrip())
+    if rule.get("split_suspect"):
+        total = rule.get("split_total_gt")
+        conditions.append(
+            "có dấu hiệu chia nhỏ hồ sơ tài chính"
+            + (f" (tổng 7 ngày vượt {_vnd(int(total))})" if total else "")
+        )
     head = scope + (" " + " và ".join(conditions) if conditions else "")
     if rule.get("auto_approve") is False:
         level = rule.get("min_risk") or 4
-        return f"{head}: bắt buộc người duyệt xét thủ công (mức rủi ro tối thiểu {level}/5)."
+        tail = f"bắt buộc người duyệt xét thủ công (mức rủi ro tối thiểu {level}/5)"
+        if rule.get("escalate_to"):
+            tail += f", hồ sơ được chuyển sang quy trình {rule['escalate_to']}"
+        return f"{head}: {tail}."
     return f"{head}: được AI đối chiếu và có thể tự duyệt nếu đủ điều kiện."
 
 
 def _rule_key(rule: dict[str, Any]) -> tuple:
-    return tuple(
-        rule.get(k)
-        for k in ("request_type", "amount_gt", "days_gt", "min_risk", "auto_approve")
-    )
+    return (*_compiled_rule_key(rule), rule.get("min_risk"), rule.get("escalate_to"))
 
 
 def build_announcement(
@@ -619,8 +526,13 @@ def _load_inputs(
         }
         for r in cursor.fetchall()
     ]
-    cursor.execute("SELECT code, name FROM eas.request_type WHERE is_active")
-    types = [RequestTypeName(code=r[0], name=r[1] or "") for r in cursor.fetchall()]
+    cursor.execute("SELECT code, name, lifecycle FROM eas.request_type WHERE is_active")
+    types = [
+        RequestTypeName(
+            code=r[0], name=r[1] or "", lifecycle=(r[2] or "").strip() or None
+        )
+        for r in cursor.fetchall()
+    ]
     cursor.execute(
         """
         SELECT COALESCE(applied_policy, '{}'::jsonb), COALESCE(applied_snapshot, '[]'::jsonb)
@@ -652,6 +564,38 @@ def _ai_http():
     )
 
 
+def enforcement_probe(rule: dict[str, Any]) -> dict[str, Any]:
+    """A synthetic request that satisfies every condition of ``rule`` (incl. context)."""
+    window_field = {
+        "CALENDAR_MONTH": "same_type_count_month",
+        "ROLLING_7D": "same_type_count_7d",
+        "ROLLING_30D": "same_type_count_30d",
+    }
+    probe: dict[str, Any] = {
+        "request_id": str(uuid4()),
+        "request_type": rule.get("request_type") or "POLICY_PROBE",
+        "lifecycle_template": "A",
+        "risk_score": 1,
+        "amount": float((rule.get("amount_gt") or 0) + 1),
+        "days_requested": int((rule.get("days_gt") or 0) + 1),
+        "requester_name": "EAS policy verifier",
+        "requester_dept": "QA",
+    }
+    if rule.get("due_within_hours"):
+        probe["open_work_due_hours"] = [1.0]
+        probe["handover_assigned"] = False
+    if rule.get("repeat_count_gte"):
+        count = int(rule["repeat_count_gte"])
+        probe[window_field[rule.get("repeat_window") or "ROLLING_30D"]] = count
+        probe["attendance_count_30d"] = count
+    if rule.get("split_suspect"):
+        total = float(rule.get("split_total_gt") or 20_000_000)
+        probe["amount"] = total
+        probe["requester_amount_7d"] = total * 2 + 1
+        probe["requester_finance_count_7d"] = 3
+    return probe
+
+
 def apply_to_ai(policy: dict[str, Any]) -> dict[str, Any]:
     """Push the policy to ai_service and prove the engine enforces it."""
     import httpx
@@ -674,16 +618,7 @@ def apply_to_ai(policy: dict[str, Any]) -> dict[str, Any]:
             for rule in policy["rules"]:
                 if rule.get("auto_approve") is not False:
                     continue
-                probe = {
-                    "request_id": str(uuid4()),
-                    "request_type": rule.get("request_type") or "POLICY_PROBE",
-                    "lifecycle_template": "A",
-                    "risk_score": 1,
-                    "amount": float((rule.get("amount_gt") or 0) + 1),
-                    "days_requested": int((rule.get("days_gt") or 0) + 1),
-                    "requester_name": "EAS policy verifier",
-                    "requester_dept": "QA",
-                }
+                probe = enforcement_probe(rule)
                 decision = client.post("/ai/auto-approve/evaluate", json=probe).json()
                 reasons = " ".join(decision.get("detail_reasons") or [])
                 if (

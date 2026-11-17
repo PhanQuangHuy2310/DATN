@@ -29,7 +29,7 @@ except ImportError:
     from ai_service import bad_cases
 
 from .mock_context import lookup_facility_available, lookup_leave_balance
-from .policy import apply_policy, policy_citations
+from .policy import PolicySignals, apply_policy, matched_escalation, policy_citations
 
 settings = get_settings()
 router = APIRouter()
@@ -63,6 +63,27 @@ class AutoApproveInput(BaseModel):
     requester_amount_7d: float = Field(0.0, ge=0)
     requester_finance_count_7d: int = Field(0, ge=0, le=10_000)
     attendance_count_30d: int = Field(0, ge=0, le=10_000)
+    # Tín hiệu cho luật quy định có điều kiện ngữ cảnh (regulation_compiler v2).
+    open_work_due_hours: list[float] = Field(default_factory=list, max_length=200)
+    work_due_in_absence: int = Field(0, ge=0, le=10_000)
+    same_type_count_7d: int = Field(0, ge=0, le=10_000)
+    same_type_count_30d: int = Field(0, ge=0, le=10_000)
+    same_type_count_month: int = Field(0, ge=0, le=10_000)
+    team_absence_ratio: float = Field(0.0, ge=0, le=1)
+    requester_rejected_30d: int = Field(0, ge=0, le=10_000)
+    ai_revoked_90d: int = Field(0, ge=0, le=10_000)
+
+    def policy_signals(self) -> PolicySignals:
+        return PolicySignals(
+            open_work_due_hours=self.open_work_due_hours,
+            work_due_in_absence=self.work_due_in_absence,
+            handover_assigned=self.handover_assigned,
+            same_type_count_7d=self.same_type_count_7d,
+            same_type_count_30d=self.same_type_count_30d,
+            same_type_count_month=self.same_type_count_month,
+            requester_amount_7d=self.requester_amount_7d,
+            requester_finance_count_7d=self.requester_finance_count_7d,
+        )
 
 
 class AutoApproveDecision(BaseModel):
@@ -79,9 +100,20 @@ class AutoApproveDecision(BaseModel):
         description="Điều khoản quy chế đã đối chiếu (áp dụng hoặc không) và phép so sánh",
     )
     bad_cases: list[dict] = Field(
-        default_factory=list, description="Tình huống xấu suy luận được từ ngữ cảnh; có thì không tự duyệt"
+        default_factory=list,
+        description="Tình huống xấu suy luận được từ ngữ cảnh; có thì không tự duyệt",
     )
-    effective_risk: int | None = Field(None, description="Mức rủi ro sau khi xét tình huống xấu")
+    effective_risk: int | None = Field(
+        None, description="Mức rủi ro sau khi xét tình huống xấu"
+    )
+    escalate_to: str | None = Field(
+        None,
+        description="Luồng nâng cấp cho CHÍNH hồ sơ này (B/C) khi dính tình huống xấu hoặc quy định",
+    )
+    escalation_causes: list[dict] = Field(
+        default_factory=list,
+        description="Tình huống xấu / luật quy định dẫn tới nâng luồng",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -160,8 +192,12 @@ class AutoApproveChecker:
 
     def check_late_checkin(self, inp: AutoApproveInput) -> tuple[bool, list[str]]:
         """Đăng ký đi muộn/về sớm. Lần thứ 4 trong 30 ngày bị chặn ở Gate -1 (BC_REPEATED_EXEMPTION)."""
-        return True, [f"✅ Điều chỉnh chấm công lần {max(1, inp.attendance_count_30d)} trong 30 ngày, "
-                      "rủi ro thấp: tự động xét duyệt"]
+        return True, [
+            (
+                f"✅ Điều chỉnh chấm công lần {max(1, inp.attendance_count_30d)} trong 30 ngày, "
+                "rủi ro thấp: tự động xét duyệt"
+            )
+        ]
 
     def check_refund(self, inp: AutoApproveInput) -> tuple[bool, list[str]]:
         """Hoàn tiền/Đền bù"""
@@ -225,15 +261,10 @@ async def evaluate_auto_approve(body: AutoApproveInput):
     """
     detail_reasons = []
     can_auto_approve = True
+    signals = body.policy_signals()
 
     # --- Gate -1: Suy luận tình huống xấu từ ngữ cảnh vận hành ---
-    bad = bad_cases.evaluate(bad_cases.Signals(
-        request_type=body.request_type, amount=body.amount,
-        active_tasks_due_24h=body.active_tasks_due_24h, handover_assigned=body.handover_assigned,
-        requester_amount_7d=body.requester_amount_7d,
-        requester_finance_count_7d=body.requester_finance_count_7d,
-        attendance_count_30d=body.attendance_count_30d,
-    ))
+    bad = bad_cases.evaluate(bad_cases.Signals.from_input(body))
     for case in bad.cases:
         detail_reasons.append(f"⛔ [{case['code']}] {case['message']}")
     if bad.blocked:
@@ -245,6 +276,13 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         amount=body.amount,
         days=body.days_requested,
         risk=body.risk_score,
+        signals=signals,
+    )
+    _policy_target, policy_causes = matched_escalation(
+        request_type=body.request_type,
+        amount=body.amount,
+        days=body.days_requested,
+        signals=signals,
     )
     if matched_rules:
         detail_reasons.append(
@@ -284,6 +322,35 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         if not business_ok:
             can_auto_approve = False
 
+    # --- Nâng luồng cho chính hồ sơ (A -> B/C) khi dính tình huống xấu hoặc luật quy định ---
+    order = {"A": 0, "B": 1, "C": 2}
+    current = order.get(body.lifecycle_template, 0)
+    causes = [
+        {
+            "source": "BAD_CASE",
+            "code": c["code"],
+            "escalate_to": c.get("escalate_to"),
+            "text": c["message"],
+        }
+        for c in bad.cases
+        if c.get("escalate_to")
+    ] + [{"source": "REGULATION", "code": c["rule_id"], **c} for c in policy_causes]
+    escalate_to = None
+    for cause in causes:
+        target = cause.get("escalate_to")
+        if (
+            target in order
+            and order[target] > current
+            and (escalate_to is None or order[target] > order[escalate_to])
+        ):
+            escalate_to = target
+    if escalate_to:
+        can_auto_approve = False
+        detail_reasons.append(
+            f"⤴️ Chuyển hồ sơ từ quy trình {body.lifecycle_template} sang quy trình {escalate_to} "
+            f"({', '.join(c['code'] for c in causes if c.get('escalate_to') == escalate_to)})"
+        )
+
     # --- Kết luận ---
     if can_auto_approve:
         decision = "auto_approve"
@@ -297,7 +364,11 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         )
     else:
         decision = "escalate_to_human"
-        reason = ("Phát hiện tình huống xấu: " + "; ".join(c["code"] for c in bad.cases)) if bad.blocked else             "Yêu cầu cần người phê duyệt thủ công do không đáp ứng đủ điều kiện"
+        reason = (
+            ("Phát hiện tình huống xấu: " + "; ".join(c["code"] for c in bad.cases))
+            if bad.blocked
+            else "Yêu cầu cần người phê duyệt thủ công do không đáp ứng đủ điều kiện"
+        )
         note = None
         logger.info(
             f"ESCALATE | request_id={body.request_id} | type={body.request_type} | reasons: {len([r for r in detail_reasons if '❌' in r])}"
@@ -314,7 +385,10 @@ async def evaluate_auto_approve(body: AutoApproveInput):
             request_type=body.request_type,
             amount=body.amount,
             days=body.days_requested,
+            signals=signals,
         ),
         bad_cases=bad.cases,
         effective_risk=risk_score,
+        escalate_to=escalate_to,
+        escalation_causes=causes if escalate_to else [],
     )

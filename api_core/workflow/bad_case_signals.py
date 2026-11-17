@@ -1,14 +1,32 @@
-"""Tín hiệu ngữ cảnh cho suy luận tình huống xấu (ai_service/bad_cases.py).
+"""Tín hiệu ngữ cảnh cho suy luận tình huống xấu và luật quy định có điều kiện.
 
-Mỗi tín hiệu là một truy vấn tham số hóa trên lịch sử thật của người gửi; chỉ số đếm và tổng tiền
-được gửi sang dịch vụ AI, không gửi nội dung hồ sơ hay dữ liệu cá nhân.
+Mỗi tín hiệu là một truy vấn tham số hóa trên lịch sử thật của người gửi trong CSDL. Chỉ số
+đếm, tổng tiền và số giờ còn lại tới hạn được gửi sang dịch vụ AI, không gửi nội dung hồ sơ hay
+dữ liệu cá nhân.
+
+Tín hiệu (mốc thời gian = lúc hồ sơ được gửi):
+  open_work_due_hours     số giờ còn lại tới hạn của từng việc người gửi đang giữ (bước duyệt
+                          đang chờ, lượt thực hiện chưa xong, nghiệm thu đang chờ); hạn = sớm hơn
+                          giữa hạn SLA và hạn nghiệp vụ trong biểu mẫu (due_date/end_date)
+  work_due_in_absence     số việc trên có hạn rơi vào khoảng vắng mặt của chính đơn (start..end)
+  active_tasks_due_24h    số việc đến hạn trong 24 giờ (giữ cho tương thích)
+  handover_assigned       đơn có chỉ định người nhận bàn giao (handover_user_id) hay không
+  same_type_count_*       số hồ sơ cùng loại của người gửi trong 7/30 ngày và trong tháng dương lịch
+  requester_amount_7d     tổng tiền hồ sơ tài chính 7 ngày; requester_finance_count_7d: số hồ sơ
+  attendance_count_30d    số lần điều chỉnh chấm công 30 ngày (giữ cho tương thích)
+  team_absence_ratio      tỉ lệ thành viên khác cùng phòng đã vắng (nghỉ/công tác đã duyệt) trùng ngày
+  requester_rejected_30d  số hồ sơ của người gửi bị từ chối trong 30 ngày
+  ai_revoked_90d          số lần quyết định tự duyệt của AI trên hồ sơ của người gửi bị thu hồi (90 ngày)
 """
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from django.db import connection
+
+logger = logging.getLogger(__name__)
 
 FINANCE_TYPES = (
     "ADVANCE_SMALL",
@@ -20,64 +38,117 @@ FINANCE_TYPES = (
     "REFUND_COMPENSATION",
 )
 EXCLUDED_STATUSES = ("DRAFT", "CANCELLED", "REJECTED")
+MAX_WORK_ITEMS = 50
+LOCAL_TZ = "Asia/Ho_Chi_Minh"
 
-SQL_SIGNALS = """
+# Một ngày trong biểu mẫu (YYYY-MM-DD) hết hạn lúc 17:30 giờ Việt Nam.
+_PAYLOAD_DUE = """
+  CASE WHEN coalesce(v.payload->>'due_date', v.payload->>'end_date') ~ '^\\d{4}-\\d{2}-\\d{2}'
+       THEN (left(coalesce(v.payload->>'due_date', v.payload->>'end_date'), 10)::date
+             + time '17:30') AT TIME ZONE %(tz)s END
+"""
+
+SQL_SIGNALS = f"""
     WITH me AS (
-      SELECT r.id, r.requester_id, v.payload, v.submitted_at
+      SELECT r.id, r.requester_id, rt.code AS type_code, r.type_id, v.payload,
+             coalesce(v.submitted_at, now()) AS t0, u.department_id,
+             CASE WHEN coalesce(v.payload->>'start_date', v.payload->>'date') ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+                  THEN left(coalesce(v.payload->>'start_date', v.payload->>'date'), 10)::date END AS d_start,
+             CASE WHEN coalesce(v.payload->>'end_date', v.payload->>'start_date', v.payload->>'date')
+                       ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+                  THEN left(coalesce(v.payload->>'end_date', v.payload->>'start_date',
+                                     v.payload->>'date'), 10)::date END AS d_end
       FROM eas.request r
+      JOIN eas.request_type rt ON rt.id = r.type_id
       JOIN eas.request_revision v ON v.id = r.current_revision_id
+      JOIN eas.app_user u ON u.id = r.requester_id
       WHERE r.id = %(request_id)s
+    ),
+    work AS (
+      -- việc đang giữ: bước duyệt ACTIVE, lượt thực hiện chưa đóng, nghiệm thu đang chờ
+      SELECT st.request_id,
+             least(st.due_at, coalesce({_PAYLOAD_DUE}, st.due_at)) AS due_at
+      FROM eas.sla_stage st
+      JOIN me ON true
+      LEFT JOIN eas.approval_step s ON s.id = st.approval_step_id
+      LEFT JOIN eas.execution_attempt a ON a.id = st.attempt_id
+      LEFT JOIN eas.workflow_instance i ON i.id = coalesce(s.instance_id, a.instance_id)
+      JOIN eas.request rq ON rq.id = st.request_id
+      JOIN eas.request_revision v ON v.id = rq.current_revision_id
+      WHERE st.closed_at IS NULL
+        AND st.request_id <> me.id
+        AND (
+          (st.kind = 'APPROVAL' AND s.state = 'ACTIVE' AND s.assignee_id = me.requester_id)
+          OR (st.kind = 'EXECUTION' AND a.closed_at IS NULL AND a.executor_id = me.requester_id)
+          OR (st.kind = 'ACCEPTANCE' AND rq.status = 'WAITING_FOR_ACCEPTANCE'
+              AND i.acceptor_id = me.requester_id)
+        )
+    ),
+    hist AS (
+      SELECT r2.id, t2.code, r2.status, v2.amount_vnd, v2.submitted_at
+      FROM eas.request r2
+      JOIN eas.request_type t2 ON t2.id = r2.type_id
+      JOIN eas.request_revision v2 ON v2.id = r2.current_revision_id
+      JOIN me ON r2.requester_id = me.requester_id
+      WHERE v2.submitted_at <= me.t0 AND v2.submitted_at > me.t0 - interval '90 days'
     )
     SELECT
-      -- việc đang giữ (bước duyệt hoặc lượt thực hiện còn mở) có hạn SLA trong 24 giờ tới
-      (SELECT count(DISTINCT st.id)
-         FROM eas.sla_stage st
-         LEFT JOIN eas.approval_step s ON s.id = st.approval_step_id
-         LEFT JOIN eas.execution_attempt a ON a.id = st.attempt_id
-        WHERE st.closed_at IS NULL
-          AND st.request_id <> me.id
-          AND st.due_at <= coalesce(me.submitted_at, now()) + interval '24 hours'
-          AND ((s.assignee_id = me.requester_id AND s.state = 'ACTIVE')
-               OR (a.executor_id = me.requester_id AND a.closed_at IS NULL))),
+      (SELECT coalesce(array_agg(h ORDER BY h), '{{}}')
+         FROM (SELECT round(extract(epoch FROM (w.due_at - me.t0)) / 3600.0, 1)::float8 AS h
+                 FROM work w, me ORDER BY w.due_at LIMIT {MAX_WORK_ITEMS}) x),
+      (SELECT count(*) FROM work w, me
+        WHERE me.d_start IS NOT NULL
+          AND (w.due_at AT TIME ZONE %(tz)s)::date BETWEEN me.d_start AND me.d_end),
+      (SELECT count(*) FROM work w, me WHERE w.due_at <= me.t0 + interval '24 hours'),
       nullif(me.payload->>'handover_user_id', '') IS NOT NULL,
-      -- hồ sơ tài chính đã gửi trong 7 ngày (gồm hồ sơ này)
-      (SELECT coalesce(sum(v2.amount_vnd), 0)
-         FROM eas.request r2
-         JOIN eas.request_type t2 ON t2.id = r2.type_id
-         JOIN eas.request_revision v2 ON v2.id = r2.current_revision_id
-        WHERE r2.requester_id = me.requester_id
-          AND t2.code = ANY(%(finance)s)
-          AND r2.status <> ALL(%(excluded)s)
-          AND v2.submitted_at > coalesce(me.submitted_at, now()) - interval '7 days'
-          AND v2.submitted_at <= coalesce(me.submitted_at, now())),
-      (SELECT count(*)
-         FROM eas.request r2
-         JOIN eas.request_type t2 ON t2.id = r2.type_id
-         JOIN eas.request_revision v2 ON v2.id = r2.current_revision_id
-        WHERE r2.requester_id = me.requester_id
-          AND t2.code = ANY(%(finance)s)
-          AND r2.status <> ALL(%(excluded)s)
-          AND v2.submitted_at > coalesce(me.submitted_at, now()) - interval '7 days'
-          AND v2.submitted_at <= coalesce(me.submitted_at, now())),
-      -- điều chỉnh chấm công trong 30 ngày (gồm hồ sơ này)
-      (SELECT count(*)
-         FROM eas.request r2
-         JOIN eas.request_type t2 ON t2.id = r2.type_id
-         JOIN eas.request_revision v2 ON v2.id = r2.current_revision_id
-        WHERE r2.requester_id = me.requester_id
-          AND t2.code = 'ATTENDANCE_ADJUSTMENT'
-          AND r2.status <> ALL(%(excluded)s)
-          AND v2.submitted_at > coalesce(me.submitted_at, now()) - interval '30 days'
-          AND v2.submitted_at <= coalesce(me.submitted_at, now()))
+      (SELECT count(*) FROM hist WHERE hist.code = me.type_code AND hist.status <> ALL(%(excluded)s)
+          AND hist.submitted_at > me.t0 - interval '7 days'),
+      (SELECT count(*) FROM hist WHERE hist.code = me.type_code AND hist.status <> ALL(%(excluded)s)
+          AND hist.submitted_at > me.t0 - interval '30 days'),
+      (SELECT count(*) FROM hist WHERE hist.code = me.type_code AND hist.status <> ALL(%(excluded)s)
+          AND date_trunc('month', hist.submitted_at AT TIME ZONE %(tz)s)
+              = date_trunc('month', me.t0 AT TIME ZONE %(tz)s)),
+      (SELECT coalesce(sum(amount_vnd), 0) FROM hist
+        WHERE hist.code = ANY(%(finance)s) AND hist.status <> ALL(%(excluded)s)
+          AND hist.submitted_at > me.t0 - interval '7 days'),
+      (SELECT count(*) FROM hist
+        WHERE hist.code = ANY(%(finance)s) AND hist.status <> ALL(%(excluded)s)
+          AND hist.submitted_at > me.t0 - interval '7 days'),
+      (SELECT count(*) FROM hist WHERE hist.code = 'ATTENDANCE_ADJUSTMENT'
+          AND hist.status <> ALL(%(excluded)s) AND hist.submitted_at > me.t0 - interval '30 days'),
+      (SELECT CASE WHEN me.d_start IS NULL THEN 0 ELSE
+         (SELECT count(DISTINCT x.user_id)::float8 / greatest(
+                    (SELECT count(*) FROM eas.app_user m
+                      WHERE m.department_id = me.department_id AND m.is_active
+                        AND m.id <> me.requester_id AND NOT m.is_system_account), 1)
+            FROM eas.user_leave_and_trips x
+            JOIN eas.app_user m ON m.id = x.user_id
+           WHERE m.department_id = me.department_id AND m.id <> me.requester_id
+             AND upper(x.approval_status) = 'APPROVED'
+             AND (x.start_time AT TIME ZONE %(tz)s)::date <= me.d_end
+             AND (x.end_time AT TIME ZONE %(tz)s)::date >= me.d_start)
+       END),
+      (SELECT count(*) FROM hist WHERE hist.status = 'REJECTED'
+          AND hist.submitted_at > me.t0 - interval '30 days'),
+      (SELECT count(*) FROM eas.audit_event e
+        WHERE e.action = 'AI_AUTO_APPROVE_REVOKED' AND e.request_id IN (SELECT id FROM hist))
     FROM me
 """
 
 EMPTY: dict[str, Any] = {
+    "open_work_due_hours": [],
+    "work_due_in_absence": 0,
     "active_tasks_due_24h": 0,
     "handover_assigned": None,
+    "same_type_count_7d": 0,
+    "same_type_count_30d": 0,
+    "same_type_count_month": 0,
     "requester_amount_7d": 0.0,
     "requester_finance_count_7d": 0,
     "attendance_count_30d": 0,
+    "team_absence_ratio": 0.0,
+    "requester_rejected_30d": 0,
+    "ai_revoked_90d": 0,
 }
 
 
@@ -89,26 +160,35 @@ def load_signals(request_id: str) -> dict[str, Any]:
                 "request_id": request_id,
                 "finance": list(FINANCE_TYPES),
                 "excluded": list(EXCLUDED_STATUSES),
+                "tz": LOCAL_TZ,
             },
         )
         row = cursor.fetchone()
     if not row:
         return dict(EMPTY)
     return {
-        "active_tasks_due_24h": int(row[0] or 0),
-        "handover_assigned": bool(row[1]),
-        "requester_amount_7d": float(row[2] or 0),
-        "requester_finance_count_7d": int(row[3] or 0),
-        "attendance_count_30d": int(row[4] or 0),
+        "open_work_due_hours": [float(h) for h in (row[0] or [])],
+        "work_due_in_absence": int(row[1] or 0),
+        "active_tasks_due_24h": int(row[2] or 0),
+        "handover_assigned": bool(row[3]),
+        "same_type_count_7d": int(row[4] or 0),
+        "same_type_count_30d": int(row[5] or 0),
+        "same_type_count_month": int(row[6] or 0),
+        "requester_amount_7d": float(row[7] or 0),
+        "requester_finance_count_7d": int(row[8] or 0),
+        "attendance_count_30d": int(row[9] or 0),
+        "team_absence_ratio": round(min(float(row[10] or 0), 1.0), 3),
+        "requester_rejected_30d": int(row[11] or 0),
+        "ai_revoked_90d": int(row[12] or 0),
     }
 
 
 def safe_load_signals(request_id: str) -> dict[str, Any]:
     """Như load_signals nhưng không bao giờ làm hỏng luồng duyệt: lỗi truy vấn thì trả tín hiệu rỗng."""
-    import logging
-
     try:
         return load_signals(request_id)
-    except Exception:  # noqa: BLE001
-        logging.getLogger(__name__).warning("bad-case signals unavailable: request=%s", request_id, exc_info=True)
+    except Exception:
+        logger.warning(
+            "bad-case signals unavailable: request=%s", request_id, exc_info=True
+        )
         return dict(EMPTY)

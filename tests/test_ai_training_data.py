@@ -72,7 +72,9 @@ class TrainingDataTests(unittest.TestCase):
             with self.subTest(code=code):
                 self.assertGreaterEqual(len(spec.get("short", [])), 5)
                 for phrase in spec["short"]:
-                    self.assertLessEqual(len(re.sub(r"\{\w+\}", "x", phrase).split()), 8, phrase)
+                    self.assertLessEqual(
+                        len(re.sub(r"\{\w+\}", "x", phrase).split()), 8, phrase
+                    )
 
     def test_short_evaluation_covers_every_type_and_is_not_trained_on(self):
         labels = {item["label"] for item in self.short_eval}
@@ -97,11 +99,21 @@ class TrainingDataTests(unittest.TestCase):
 
     def test_training_scripts_are_the_known_entry_points(self):
         # train.py: phân loại + rủi ro; train_process_profile.py: luồng/trọng số;
-        # eval_regulation_llm.py: chấm phân tích quy định. Script mới phải được thêm có chủ đích.
+        # eval_regulation_llm.py: chấm phân tích quy định; eval_regulation_compiler.py (+ mốc v1 đóng băng,
+        # run_regulation_rules_llm.py): chấm hiểu quy định có điều kiện ngữ cảnh.
+        # Script mới phải được thêm có chủ đích.
         scripts = sorted(p.name for p in (AI / "training").glob("*.py"))
         self.assertEqual(
             scripts,
-            ["__init__.py", "eval_regulation_llm.py", "train.py", "train_process_profile.py"],
+            [
+                "__init__.py",
+                "eval_regulation_compiler.py",
+                "eval_regulation_llm.py",
+                "regulation_compiler_v1_baseline.py",
+                "run_regulation_rules_llm.py",
+                "train.py",
+                "train_process_profile.py",
+            ],
         )
 
 
@@ -125,12 +137,16 @@ class TextHelperTests(unittest.TestCase):
         self.assertEqual(advance_tier(10_000_000), "ADVANCE_MEDIUM")
         self.assertEqual(advance_tier(50_000_000), "ADVANCE_MEDIUM")
         self.assertEqual(advance_tier(50_001_000), "ADVANCE_LARGE")
-        self.assertEqual(refine_advance_tier("ADVANCE_SMALL", "tạm ứng 80 triệu"), "ADVANCE_LARGE")
+        self.assertEqual(
+            refine_advance_tier("ADVANCE_SMALL", "tạm ứng 80 triệu"), "ADVANCE_LARGE"
+        )
         self.assertEqual(refine_advance_tier("LEAVE", "nghỉ 80 triệu"), "LEAVE")
 
     def test_legacy_codes_map_to_the_catalog(self):
         self.assertEqual(canonical_request_type("leave_annual"), "LEAVE")
-        self.assertEqual(canonical_request_type("expense_reimbursement"), "EXPENSE_CLAIM")
+        self.assertEqual(
+            canonical_request_type("expense_reimbursement"), "EXPENSE_CLAIM"
+        )
         self.assertEqual(canonical_request_type("LEAVE_LONG"), "LEAVE")
         self.assertEqual(canonical_request_type("purchase_request"), "PURCHASE_REQUEST")
 
