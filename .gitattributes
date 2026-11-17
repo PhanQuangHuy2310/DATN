@@ -2,3 +2,5 @@
 # giữ nguyên từng byte, không để Git đổi LF <-> CRLF khi checkout trên Windows.
 ai_service/training/data/regulation_scenarios*.json -text
 ai_service/training/data/regulation_scenarios*.sha256 -text
+ai_service/training/data/regulation_clauses*.json -text
+ai_service/training/data/regulation_clauses*.sha256 -text
