@@ -4,3 +4,5 @@ ai_service/training/data/regulation_scenarios*.json -text
 ai_service/training/data/regulation_scenarios*.sha256 -text
 ai_service/training/data/regulation_clauses*.json -text
 ai_service/training/data/regulation_clauses*.sha256 -text
+ai_service/training/data/remediation_test.json -text
+ai_service/training/data/remediation_test.sha256 -text
