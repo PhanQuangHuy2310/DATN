@@ -79,7 +79,7 @@ BEGIN
 
   SELECT id INTO v_dept_id FROM eas.department WHERE code = 'BOD' LIMIT 1;
   IF v_dept_id IS NULL THEN
-    SELECT id INTO v_dept_id FROM eas.department ORDER BY created_at ASC LIMIT 1;
+    SELECT id INTO v_dept_id FROM eas.department ORDER BY code ASC LIMIT 1;
   END IF;
   IF v_dept_id IS NULL THEN
     INSERT INTO eas.department (code, name, is_active)
@@ -160,16 +160,15 @@ BEGIN
       SELECT 1 FROM eas.role_membership
       WHERE user_id = v_admin_id AND role = 'OPS_ADMIN' AND revoked_at IS NULL
     ) THEN
-      INSERT INTO eas.role_membership (user_id, role, dept_id, granted_by)
-      VALUES (v_admin_id, 'OPS_ADMIN', NULL, v_admin_id);
+      INSERT INTO eas.role_membership (user_id, role, scope_kind, department_id, type_scope, type_id)
+      VALUES (v_admin_id, 'OPS_ADMIN', 'GLOBAL', NULL, 'ALL', NULL);
     END IF;
-
     IF NOT EXISTS (
       SELECT 1 FROM eas.role_membership
       WHERE user_id = v_admin_id AND role = 'POLICY_ADMIN' AND revoked_at IS NULL
     ) THEN
-      INSERT INTO eas.role_membership (user_id, role, dept_id, granted_by)
-      VALUES (v_admin_id, 'POLICY_ADMIN', NULL, v_admin_id);
+      INSERT INTO eas.role_membership (user_id, role, scope_kind, department_id, type_scope, type_id)
+      VALUES (v_admin_id, 'POLICY_ADMIN', 'GLOBAL', NULL, 'ALL', NULL);
     END IF;
   END IF;
 

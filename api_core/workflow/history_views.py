@@ -40,7 +40,7 @@ def history(request, request_id):
             c.execute(
                 """SELECT a.id::text,a.original_name,a.mime,a.size_bytes,a.scan_state
                 FROM eas.draft_attachment da JOIN eas.attachment a ON a.id=da.attachment_id
-                WHERE da.request_id=%s AND a.deleted_at IS NULL ORDER BY a.created_at""",
+                WHERE da.request_id=%s AND a.deleted_at IS NULL ORDER BY a.created_at, a.id""",
                 [str(request_id)],
             )
             draft = rows(c)
@@ -62,14 +62,15 @@ def history(request, request_id):
             c.execute(
                 """SELECT d.outcome,d.reason,d.decided_at,u.display_name AS actor_name
                 FROM eas.acceptance_decision d JOIN eas.app_user u ON u.id=d.actor_id
-                WHERE d.attempt_id=%s ORDER BY d.decided_at""",
+                WHERE d.attempt_id=%s ORDER BY d.decided_at, d.id""",
                 [attempt["id"]],
             )
             attempt["decisions"] = rows(c)
         c.execute(
             """SELECT d.outcome,d.reason,d.decided_at,s.step_no,u.display_name AS actor_name
             FROM eas.approval_decision d JOIN eas.approval_step s ON s.id=d.step_id
-            JOIN eas.app_user u ON u.id=d.actor_id WHERE d.request_id=%s ORDER BY d.decided_at""",
+            JOIN eas.app_user u ON u.id=d.actor_id WHERE d.request_id=%s
+            ORDER BY d.decided_at, s.step_no, d.id""",
             [str(request_id)],
         )
         decisions = rows(c)

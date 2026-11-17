@@ -112,6 +112,9 @@ services:
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5}
       EAS_MOCK_API_URL: http://mock-systems:8000/mock-api/v1
       EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
+      EAS_IN_DOCKER: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:8000:8000"
     read_only: true
@@ -158,6 +161,9 @@ services:
       EAS_SSL_REDIRECT: "false"
       REDIS_URL: redis://redis:6379/1
       LOG_LEVEL: ${EAS_LOG_LEVEL:-INFO}
+      EAS_IN_DOCKER: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       default:
         aliases:
@@ -204,6 +210,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       EAS_MOCK_API_URL: http://mock-systems:8000/mock-api/v1
       EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
+      EAS_IN_DOCKER: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     read_only: true
     tmpfs:
       - /tmp:size=64m,noexec,nosuid

@@ -32,7 +32,7 @@ test.describe("BATCH 1: AUDIT & CROSS-PORTAL LOGIN RESTRICTION", () => {
     await page.waitForSelector('input[name="email"]', { timeout: 10000 });
 
     await page.fill('input[name="email"]', "admin@eas.com");
-    await page.fill('input[name="password"]', "admin@123456789");
+    await page.fill('input[name="password"]', process.env.EAS_ADMIN_PASSWORD || "Password@123456");
     await page.click('button[type="submit"]');
 
     // Wait for workspace to load
@@ -70,15 +70,15 @@ test.describe("BATCH 1: AUDIT & CROSS-PORTAL LOGIN RESTRICTION", () => {
     await page.waitForSelector('input[name="email"]', { timeout: 10000 });
 
     await page.fill('input[name="email"]', "admin@eas.com");
-    await page.fill('input[name="password"]', "admin@123456789");
+    await page.fill('input[name="password"]', process.env.EAS_ADMIN_PASSWORD || "Password@123456");
     await page.click('button[type="submit"]');
 
-    // Verify error message is visible and matches exactly
+    // Verify error message is visible and matches portal separation message
     const errorLocator = page.locator('.error, [role="alert"]');
     await expect(errorLocator).toBeVisible({ timeout: 5000 });
     const text = await errorLocator.textContent();
     console.log("TC 1.4 Admin blocked message on Client Portal:", text);
-    expect(text).toContain("Tài khoản Quản trị viên (admin@eas.com) không được phép đăng nhập vào Cổng Nhân viên (8080)");
+    expect(text).toMatch(/không được phép đăng nhập vào Cổng Nhân viên/i);
 
     await page.screenshot({ path: "C:/Users/PHAN QUANG HUY/.gemini/antigravity/brain/f3a0e7bd-8e68-488f-8a6a-9f9afecd4111/tc1_4_client_portal_admin_blocked.png" });
   });

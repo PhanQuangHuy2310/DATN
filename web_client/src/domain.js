@@ -621,6 +621,7 @@ const ERROR_MESSAGES = {
   IDEMPOTENCY_KEY_REQUIRED: "Phiên gửi biểu mẫu thiếu khóa xác thực. Vui lòng thử lại.",
   IDEMPOTENCY_KEY_REUSED: "Thao tác đang được xử lý, vui lòng không bấm lặp lại.",
   VALIDATION_FAILED: "Một số thông tin trên biểu mẫu chưa hợp lệ",
+  LIFECYCLE_RELEASE_REQUIRED: "Chưa thể chuyển nhóm: nhóm mới chưa có quy trình đã công bố. Hãy công bố quy trình cho nhóm đó trước.",
   VALIDATION_STALE: "Cấu hình quy chế vừa thay đổi. Vui lòng kiểm tra lại trước khi thực hiện.",
 };
 

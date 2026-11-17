@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
@@ -216,7 +217,16 @@ EAS_API_RATE_LIMIT_PER_MINUTE = int(
 )
 if EAS_API_RATE_LIMIT_PER_MINUTE < 1:
     raise RuntimeError("EAS_API_RATE_LIMIT_PER_MINUTE must be >= 1")
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+_raw_supabase_url = os.getenv("SUPABASE_URL", "").rstrip("/")
+if os.getenv("EAS_IN_DOCKER") == "1" and _raw_supabase_url:
+    _sb = urlsplit(_raw_supabase_url)
+    if _sb.scheme == "http" and _sb.hostname in {"127.0.0.1", "localhost"}:
+        _host_alias = os.getenv("EAS_DOCKER_HOST_ALIAS", "host.docker.internal")
+        _netloc = f"{_host_alias}:{_sb.port}" if _sb.port else _host_alias
+        _raw_supabase_url = urlunsplit(
+            (_sb.scheme, _netloc, _sb.path, _sb.query, _sb.fragment)
+        ).rstrip("/")
+SUPABASE_URL = _raw_supabase_url
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "")
 EAS_STORAGE_BUCKET = os.getenv("EAS_STORAGE_BUCKET", "eas-private")
 EAS_CLAMAV_HOST = os.getenv("EAS_CLAMAV_HOST", "clamav")

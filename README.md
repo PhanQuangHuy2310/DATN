@@ -22,6 +22,8 @@ Tài liệu này hướng dẫn **chạy hệ thống trên máy Windows**.
 
 Dữ liệu nằm trên **một database Supabase** có sẵn, không cần cài database trên máy.
 
+Muốn có một bản sao đầy đủ của database (kể cả dữ liệu mock và file đính kèm) chạy trên máy bằng Supabase local, xem [docs/SUPABASE_LOCAL.md](docs/SUPABASE_LOCAL.md).
+
 ## 2. Chuẩn bị (một lần)
 
 1. Cài **Python 3.12** (https://www.python.org, chọn "Add python.exe to PATH") và **Node.js 22.12 trở lên** (https://nodejs.org). Muốn dùng AI thì cài thêm **Python 3.11**.

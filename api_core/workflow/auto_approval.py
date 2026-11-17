@@ -210,7 +210,7 @@ def _latest_ai_decision(cursor, request_id: str) -> datetime | None:
         JOIN eas.workflow_instance i ON i.id = s.instance_id
         JOIN eas.request r ON r.id = d.request_id AND r.current_revision_id = i.revision_id
         WHERE d.request_id = %s
-        ORDER BY d.decided_at DESC LIMIT 1
+        ORDER BY d.decided_at DESC, s.step_no DESC, d.id DESC LIMIT 1
         """,
         [request_id],
     )

@@ -165,10 +165,17 @@ def _validate_storage(values: dict[str, str], profile: str, errors: list[str]) -
     if values.get(storage_secret_key):
         validate_supabase_secret(storage_secret_key, values[storage_secret_key], errors)
 
+    local_hosts = {"127.0.0.1", "localhost", "host.docker.internal"}
     for key in ("EAS_SUPABASE_URL", "SUPABASE_URL"):
         if values.get(key):
             parsed = urlparse(values[key])
-            if parsed.scheme != "https" or not parsed.hostname:
+            # Plain HTTP only for a local Supabase (supabase start) outside production.
+            local_dev = (
+                parsed.scheme == "http"
+                and parsed.hostname in local_hosts
+                and values.get("EAS_ENV", "production") != "production"
+            )
+            if (parsed.scheme != "https" and not local_dev) or not parsed.hostname:
                 errors.append(f"{key}: must be an HTTPS origin")
     return storage_required
 

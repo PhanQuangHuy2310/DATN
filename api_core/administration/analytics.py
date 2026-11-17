@@ -345,7 +345,8 @@ def admin_analytics_view(request):
                 "processing_count": kpi["processing"],
                 "processing_rate": _pct(kpi["processing"], total),
             },
-            "status_breakdown": status_breakdown,
+            # Sorted: the same data must give the same JSON on every database.
+            "status_breakdown": dict(sorted(status_breakdown.items())),
             "trends": list(trends.values()),
             "top_types": [
                 {"name": k, "count": v["total"], "percentage": _pct(v["total"], total)}

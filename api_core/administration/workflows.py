@@ -387,6 +387,55 @@ def request_templates_list(request):
     return JsonResponse({"success": True, "item": item}, status=201)
 
 
+def _switch_lifecycle(cur, type_id: str, lifecycle: str) -> None:
+    """Move a request type to another lifecycle without breaking it.
+
+    A type is only usable while its active release has the same lifecycle
+    (submission and readiness both require it). Changing only the type's
+    lifecycle left e.g. LEAVE unusable. Point the type at its latest
+    published release for the new lifecycle, or refuse if there is none.
+    """
+    cur.execute(
+        """SELECT cr.lifecycle FROM eas.request_type rt
+           LEFT JOIN eas.config_release cr ON cr.id = rt.active_release_id
+           WHERE rt.id = %s::uuid FOR UPDATE OF rt""",
+        [type_id],
+    )
+    row = cur.fetchone()
+    active_lifecycle = row[0] if row else None
+    if active_lifecycle is None or active_lifecycle == lifecycle:
+        cur.execute(
+            "UPDATE eas.request_type SET lifecycle = %s WHERE id = %s::uuid",
+            [lifecycle, type_id],
+        )
+        return
+    cur.execute(
+        """SELECT id FROM eas.config_release
+           WHERE type_id = %s::uuid AND lifecycle = %s AND state = 'PUBLISHED'
+           ORDER BY version DESC LIMIT 1""",
+        [type_id, lifecycle],
+    )
+    release = cur.fetchone()
+    if release is None:
+        raise CommandError(
+            "LIFECYCLE_RELEASE_REQUIRED",
+            status=409,
+            fields={
+                "category_code": [
+                    (
+                        f"Chưa có quy trình đã công bố cho Nhóm {lifecycle}. Hãy soạn và "
+                        "công bố quy trình cho nhóm này trước khi chuyển mẫu yêu cầu."
+                    )
+                ]
+            },
+        )
+    cur.execute(
+        """UPDATE eas.request_type SET lifecycle = %s, active_release_id = %s
+           WHERE id = %s::uuid""",
+        [lifecycle, release[0], type_id],
+    )
+
+
 @require_actor(*READ_ROLES)
 @_errors
 def request_template_detail(request, template_id):
@@ -445,10 +494,7 @@ def request_template_detail(request, template_id):
         new_cat = new_cat.strip().upper()
     if new_cat and new_cat in ("A", "B", "C") and new_cat != current["category_code"]:
         with transaction.atomic(), connection.cursor() as cur:
-            cur.execute(
-                "UPDATE eas.request_type SET lifecycle = %s WHERE id = %s::uuid",
-                [new_cat.upper(), tid],
-            )
+            _switch_lifecycle(cur, tid, new_cat.upper())
             record_system_change(
                 cur,
                 actor_id=str(request.actor.id),

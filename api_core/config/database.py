@@ -39,6 +39,9 @@ def parse_database_url(url: str) -> dict[str, object]:
         else:
             host, port_text = host_port.rsplit(":", 1)
 
+        if os.getenv("EAS_IN_DOCKER") == "1" and host in {"127.0.0.1", "localhost"}:
+            host = os.getenv("EAS_DOCKER_HOST_ALIAS", "host.docker.internal")
+
         options = parse_qs(query_string, keep_blank_values=True)
         sslmode = options.get("sslmode", ["require"])[0]
         if sslmode not in {"require", "verify-ca", "verify-full", "disable"}:

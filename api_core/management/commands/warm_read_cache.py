@@ -12,6 +12,10 @@ class Command(BaseCommand):
     help = "Warm the Redis read cache with shared reference data."
 
     def handle(self, *args, **options):
+        from django.conf import settings
+
+        if getattr(settings, "EAS_SERVICE", "api") != "api":
+            return  # Mock Systems shares the image but cannot read eas.*
         from api_core.administration import org_users_rbac, regulations_ai, workflows
         from api_core.administration.workspace import _catalog_items
 
