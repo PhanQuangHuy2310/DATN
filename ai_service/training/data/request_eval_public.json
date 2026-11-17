@@ -1,0 +1,7463 @@
+{
+ "schema_version": 1,
+ "about": "Bộ đánh giá từ dữ liệu công khai có giấy phép: phiếu IT thật (dịch sang tiếng Việt, gán lại nhãn EAS thủ công), câu hỏi người dùng của CLINC150 và BANKING77 (dịch, ánh xạ ý định sang loại EAS), câu tiếng Việt ngoài phạm vi của MASSIVE. KHÔNG dùng để huấn luyện.",
+ "sources": {
+  "it_tickets": {
+   "name": "Classification of IT Support Tickets (Pereira, 2022)",
+   "url": "https://doi.org/10.5281/zenodo.7648117",
+   "license": "CC BY 4.0"
+  },
+  "clinc": {
+   "name": "CLINC150 / oos-eval (Larson et al., 2019)",
+   "url": "https://github.com/clinc/oos-eval",
+   "license": "CC BY 3.0"
+  },
+  "banking77": {
+   "name": "BANKING77 (Casanueva et al., 2020)",
+   "url": "https://github.com/PolyAI-LDN/task-specific-datasets",
+   "license": "CC BY 4.0"
+  },
+  "massive": {
+   "name": "MASSIVE 1.1, vi-VN (FitzGerald et al., 2023)",
+   "url": "https://github.com/alexa/massive",
+   "license": "CC BY 4.0"
+  }
+ },
+ "counts": {
+  "items": 789,
+  "by_source": {
+   "it_tickets": 269,
+   "clinc": 140,
+   "banking77": 80,
+   "massive": 300
+  },
+  "by_mapping": {
+   "manual": 269,
+   "direct": 91,
+   "approx": 129,
+   "oos": 300
+  },
+  "by_label": {
+   "IT_SUPPORT": 148,
+   "ACCESS": 92,
+   "RESOURCE_REVOKE": 12,
+   "SERVER_FIREWALL": 13,
+   "SAAS_LICENSE_BUY": 1,
+   "EQUIPMENT": 1,
+   "SECURITY_INCIDENT_HOTFIX": 2,
+   "LEAVE": 26,
+   "ROOM_BOOKING": 25,
+   "REFUND_COMPENSATION": 80,
+   "HR_CERTIFICATE": 30,
+   "BUSINESS_TRIP": 59,
+   "__OUT_OF_SCOPE__": 300
+  },
+  "dropped_in_translation": {
+   "it_tickets": 11,
+   "clinc": 10
+  }
+ },
+ "items": [
+  {
+   "source": "it_tickets",
+   "source_id": "it:830",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài đặt BlackBerry trên điện thoại di động",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:4585",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền truy cập thư mục chia sẻ J:/CDC-C, quyền đọc/ghi, cho nhân viên bắt đầu làm việc từ 7/1 tại phòng 2.36",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:655",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Không còn truy cập được Intranet, ứng dụng OKTA chưa được gán cho tôi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:736",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản người dùng rút gọn cho nhân sự bên ngoài",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:900",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Điện thoại không nhận được email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:9439",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản rút gọn cho nhân sự bên ngoài, chức danh hỗ trợ IT, công ty dịch vụ IT, phòng GIT",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1299",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Sửa điện thoại bàn, máy lẻ phòng Ferrari",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:5984",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Hủy tài khoản và quyền truy cập của nhân viên nghỉ việc, tạo bí danh email chuyển tiếp, có văn bản phê duyệt đính kèm",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:3626",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản Windows cho nhân viên nội bộ, trung tâm chi phí 22006, phòng R&D",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:544",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản Windows cho nhân viên nội bộ, trung tâm chi phí 79099",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:8983",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Nhờ đặt IP cố định trên DHCP cho máy in",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:8966",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền chỉ đọc thư mục chia sẻ j:/PDW/TargetDB cho nhân viên",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1236",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Đặt lại ứng dụng xác thực Okta Verify",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:11374",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp toàn quyền thư mục chia sẻ ổ J:/ cho nhân viên phòng",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1162",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "OneDrive liên tục bắt đăng nhập lại, không mở được tài liệu đang làm",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1379",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài mới các ứng dụng BlackBerry Work",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6823",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản Windows cho nhân viên nội bộ chi nhánh Pháp, phòng SB-P",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:10268",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền đọc/ghi thư mục chia sẻ ổ J: cho nhân viên",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1051",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không vào được email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1208",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Điện thoại bàn gọi đi và gọi đến văn phòng không ổn định",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1026",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không xem được lịch Outlook",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1399",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản người dùng mới và mua thiết bị kèm theo",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1430",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Thiết lập tài khoản Windows và các dịch vụ bổ sung theo đơn đặt hàng",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6001",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản Windows cho nhân viên nội bộ văn phòng Berlin, phòng GFP",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6023",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền chỉ đọc các thư mục chia sẻ J:/KALENDER, J:/Prüfprotokolle, J:/Thermographie",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1403",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin quyền truy cập thư mục trên máy chủ",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:8316",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền chỉ đọc thư mục chia sẻ J:/FAQ BTR HR",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:11554",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản rút gọn cho tư vấn viên bên ngoài, công ty tư vấn BA, phòng GIT",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:845",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Mở khóa ổ cứng ngoài cá nhân của tôi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1400",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Nhân viên không đăng nhập được vào máy tính",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1404",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền truy cập cho team IT khu vực châu Mỹ",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:11565",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản Windows cho nhân viên nội bộ văn phòng Pháp, phòng BR",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1155",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản người dùng, quyền truy cập hệ thống và email cho nhân viên mới",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1335",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Skype và OneNote bị lỗi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:908",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi khi truy cập phần mềm Neoagro",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1055",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không vào được Banco do Brasil, quản lý yêu cầu cài lại máy",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1310",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy in nhãn bị lỗi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:594",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Gỡ tệp đính kèm khỏi email gửi từ bên ngoài",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1052",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Ứng dụng làm việc trên điện thoại bị văng, cần cấp chứng chỉ mới",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1061",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Điện thoại bị mất tiếng",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1039",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài driver máy in mới",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:832",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Nhân viên không đăng nhập được Office 365",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1197",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không kết nối được máy in mạng",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1201",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy bị khóa BitLocker",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:11459",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản Windows cho nhân viên nội bộ văn phòng Berlin, phòng GTC",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1265",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Hủy tài khoản người dùng và quyền truy cập",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1325",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Skype không hoạt động trên nhiều máy tính",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1337",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Skype for Business không chạy",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1303",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không in được ra máy photocopy mới ở phòng KIM",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1447",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tài khoản người dùng bị khóa",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:822",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Kích hoạt quyền dùng Base Discovery",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1365",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lắp máy in mới trong văn phòng",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1168",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài đặt phần mềm theo đơn đã cấp phát",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:14058",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo địa chỉ email chung cho bộ phận ESH để gửi thông tin, quản lý từ máy của tôi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:2939",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin cấp quyền truy cập thư mục theo email đề nghị của trưởng bộ phận",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:11410",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Nhân viên nghỉ việc từ 9/8: xóa tài khoản Windows, Active Directory và hộp thư email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:920",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cấu hình lại điện thoại công ty của tôi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:936",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không xóa được tệp trong Access nên không cập nhật được tồn kho",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1045",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Thiếu thông tin đăng nhập Citrix",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:631",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Tạo bản ghi DNS trên miền nội bộ ads.dir",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:772",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Mở tệp từ Outlook và ổ chia sẻ mất 4-5 phút",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1369",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi đăng nhập Skype for Business",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:952",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Quên mật mã iPhone công ty",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:788",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tài khoản AD liên tục bị vô hiệu hóa",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:2118",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền VPN cho nhân viên, dùng token phần mềm, cần từ ngày 6/10",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1332",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài máy in ở chi nhánh Parral",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1066",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Thay miếng dán bảo vệ màn hình điện thoại",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1010",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Mất Outlook và mất mạng Internet",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:970",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Đăng nhập tài khoản Microsoft không được",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:587",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo hộp thư chung cho nhóm quản lý nhân sự",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:714",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền truy cập thư mục chia sẻ cho nhân viên",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1274",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cần cài phần mềm Extech RHT10",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1358",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Skype không hoạt động",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1014",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cập nhật danh sách tên trên máy photocopy chi nhánh Shakopee",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:643",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Tạo bản ghi DNS trên miền ads.dir",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:10643",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi tệp PDF: gửi cho người khác thì tệp thành đuôi .dll, họ không mở được",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1163",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không vào được website ngân hàng Itau",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1170",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài chương trình để truy cập tài khoản ngân hàng Itau",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1273",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài phần mềm Datalogger Extech",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:329",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo hộp thư mới kèm các địa chỉ email bí danh",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:608",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Outlook không hoạt động",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:10550",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Thiết lập email cho các người dùng giống cấu hình cũ: thư chuyển về cổng thông tin và nhận thông báo qua Flow",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:944",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Thiết bị mới lắp không cài được ứng dụng",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1266",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài đặt Visio",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:128",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin quyền truy cập hộp thư dùng chung",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:585",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Nhờ tạo hộp thư dùng chung",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1420",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Tạo OU mới khu vực West trên Active Directory",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:856",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không kết nối được Internet cáp ở nhà",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:861",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy tôi không có Outlook",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:994",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy in Brother báo lỗi thay linh kiện, cần thay trống mực",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6661",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy in không hiện trên máy tính của tôi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:2870",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không vào được Skype",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:593",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xử lý tiếp phiếu cấp quyền truy cập tệp TCK85637",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1090",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin quyền truy cập hệ thống LVS",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:870",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không mở được tệp PDF",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:422",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Chuyển tiếp lỗi Outlook như đã trao đổi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:798",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy scan dùng chung bị lỗi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1227",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin mật khẩu Wi-Fi khách cho các tư vấn viên đối tác",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1094",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Mở quyền truy cập cho tôi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:5807",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Đặt IP cố định cho máy chấm công",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1215",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cần quyền truy cập các thư mục trong email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1085",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài Adobe Acrobat DC Pro",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:707",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Không truy cập được hộp thư dùng chung",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1079",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Outlook của tôi không chạy",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1323",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài lại máy scan",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:10601",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Thêm người dùng vào máy chủ cho bộ phận Marketing",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:9569",
+   "split": "test",
+   "label": "SAAS_LICENSE_BUY",
+   "mapping": "manual",
+   "title": "Cần cài phần mềm Nautilus 9.3 và ứng dụng Citrix Nautilus trên máy, có thể cần phê duyệt",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1156",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy in hoạt động không ổn định",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1304",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy in khu Fishbowl tòa nhà 6",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1429",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Nhân viên sắp nghỉ việc ngày 1/2, thu hồi tài khoản",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1228",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy tính không khởi động được",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1095",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi in ấn",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1106",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Mở email của tôi trên máy của người khác",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:786",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Đổi tên phòng họp trên Exchange",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1046",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Cấp máy ảo để chạy chương trình ngân hàng",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1123",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài đặt màn hình đôi (nhân bản màn hình)",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:873",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Nhân viên cần thông tin đăng nhập để vào hệ thống",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:5710",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "OneDrive không cấu hình được, email và Skype vẫn bình thường",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:8961",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Kiểm tra bản ghi DNS/DHCP của dải mạng máy chủ 10.10.89.0",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:847",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo danh sách phân phối email cho nhân viên chi nhánh Shakopee",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1071",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền ổ R cho thành viên trong nhóm",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6694",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Lại không truy cập được thư mục ổ J:, nhờ cấp quyền giống của đồng nghiệp",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:632",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Đề nghị tạo địa chỉ email dùng chung",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:5445",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Thu hồi quyền truy cập các thư mục chia sẻ ZR-SP, ZR-SV, ZRMUSTER của nhân viên",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1306",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Kích hoạt Skype cho tài khoản",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6698",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản rút gọn cho nhân viên tư vấn, phòng GIT-EST",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1419",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Thêm người dùng mới vào nhóm email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1418",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tài khoản thiếu nhóm quyền trên AD",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:816",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "VPN hay bị ngắt kết nối",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:813",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi khi vào website Cục thuế",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:782",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Sao chép quyền của người dùng này cho người dùng khác",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:353",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Nhân sự bên ngoài kết thúc hợp đồng, thu hồi tài khoản",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1243",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Mất hết danh bạ trên iPhone 5",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1336",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không đăng nhập được Skype",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:647",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin quyền truy cập email nhóm trên Outlook",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:348",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản dịch vụ trên O365 để máy in gửi bản scan qua email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1412",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Xóa máy tính khỏi hệ thống",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:790",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Ứng dụng BlackBerry trên iPhone mở lên rồi tắt ngay",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1432",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Đưa các máy tính vào domain",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1025",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Vô hiệu hóa địa chỉ email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:9767",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Hủy tài khoản người dùng và tạo bí danh email chuyển tiếp, theo biên bản đính kèm",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:839",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cập nhật chương trình Receita BX",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:8474",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Mở cổng 443 giữa hai máy chủ để ứng dụng web xử lý dữ liệu địa lý truy cập được hai chiều",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:805",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy in bị kẹt giấy",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1138",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy tính thiếu bản cập nhật",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:630",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Tạo bản ghi DNS trên miền ads.dir",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:628",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Sửa tên hiển thị cho các địa chỉ email dùng chung",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:722",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Email gửi từ hộp thư chung GTC-TR lại nằm trong mục đã gửi của cá nhân",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:859",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy tính không vào được mạng khi tháo khỏi dock",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:652",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Thêm người dùng vào các hộp thư dùng chung hiện có",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1434",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tài khoản bị khóa",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1006",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi email trên điện thoại",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1317",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin quyền truy cập thư mục Z",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:4468",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Không lấy được mã QR để kích hoạt ứng dụng Okta Verify trên điện thoại",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:2968",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Mở tệp từ OneDrive thì lúc lưu thường bị bắt đăng nhập lại",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:927",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy in báo lỗi bộ sấy",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1318",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Khi kết nối VPN không vào được ổ R: bằng tên, chỉ vào được bằng IP",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1211",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài đặt điện thoại mới",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1247",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Mất email trong Outlook",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1092",
+   "split": "test",
+   "label": "EQUIPMENT",
+   "mapping": "manual",
+   "title": "Xin cấp tai nghe",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:806",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tư vấn viên bên thứ ba bị từ chối truy cập",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:5854",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo thư mục Báo cáo tồn kho trong nhóm J mục Phòng thí nghiệm và cấp quyền cho các thành viên",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1116",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài ứng dụng trên điện thoại",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:14108",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Nhờ nhập mật khẩu quản trị để tôi cài bản cập nhật Sicalc",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:8170",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Nhân viên nghỉ việc từ 15/8: hủy tài khoản Windows, Active Directory và hộp thư",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:9508",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không mở được tệp đính kèm trong email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1053",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Thêm máy in nhãn",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:10905",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài phần mềm cho bộ thu Wi-Fi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:4482",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Trả lời tất cả thì lại nhận bản sao thư mình vừa gửi, có thể do cấu hình danh sách phân phối",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:2817",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không vào được Skype",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:917",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lắp máy in đa năng ở chi nhánh Longavi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:985",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài Google Earth và Basecamp",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6285",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi đồng bộ trạng thái giữa Teams và Skype",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:835",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Ứng dụng trên điện thoại không truy cập được",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1217",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Thêm thành viên vào danh sách email Ban lãnh đạo",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1144",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy tính bộ phận kế toán công nợ phải trả bị lỗi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:872",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi lời mời họp Skype",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1166",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Quên mật mã điện thoại công ty",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:977",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp Wi-Fi cố định cho iPad",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:808",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy in hoạt động không bình thường",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:8825",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài lịch công ty trên laptop cá nhân",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1256",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Chuyển máy tính và chỗ ngồi về văn phòng cũ",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:960",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lắp đặt máy in",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:539",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài thông báo email khi có người đặt lịch",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1423",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Đổi tên tài khoản do nhân viên kết hôn",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:11019",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài máy in in bao bì hạt giống vào máy tính của tôi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:672",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Điều chỉnh cấu hình hộp thư dùng chung",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:456",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo các địa chỉ email chung cho phòng Mua hàng",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1212",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin quyền truy cập hộp thư email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:4239",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Tệp Excel báo đang mở dù tôi đã đóng, người khác không sửa được",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1192",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài phần mềm Contaction",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1195",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài chương trình của cơ quan thuế",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1380",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Khó đăng nhập Skype",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1101",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài chương trình BarTender",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:3772",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Máy bị khóa tài khoản khi đang đi công tác, nhờ gọi điện hỗ trợ đặt lại tài khoản",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1385",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi mở tệp Word hồ sơ ứng viên",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:8278",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Thêm nhân viên vào danh sách email nhân viên chi nhánh Shakopee",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:705",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xác thực qua Pushmail Verify không được",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:11518",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài máy in Sharp vào laptop của tôi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1147",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi ứng dụng Hobo trên điện thoại",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:468",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Đổi tên người dùng và địa chỉ email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:5828",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Outlook báo lỗi từ hôm nay khi mở lịch sử hội thoại Skype, nhiều người cùng bị",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1084",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Điện thoại bị lỗi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:8978",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Lỗi truy cập thư mục chia sẻ, trưởng phòng IT đề nghị xử lý theo email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:922",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Không truy cập được máy chủ tệp Bloomington",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1354",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Mất công cụ Analysis trong Excel",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:36",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Skype không đăng nhập được trên máy tính",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:60",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin quyền truy cập qua VPN",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1023",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo địa chỉ email mới",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:904",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Mất thư mục trên ổ J",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1259",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không hiện danh bạ trong BlackBerry Work",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:5224",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo thư mục Phân bổ chi phí trên ổ J và phân quyền sửa, xem cho các thành viên",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1245",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Khôi phục thư mục và tệp trên máy tính",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1007",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Tệp PDF bị mở bằng WordPad và không đọc được",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1275",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài driver máy scan cho máy tính phòng sản xuất",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:951",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không nhận được email từ bên ngoài",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6196",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Nâng RAM các máy chủ ứng dụng: APP05 lên 32GB, APP01 đến APP04 lên 16GB",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:834",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Báo lỗi trang khi đăng nhập ngân hàng US Bank",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6861",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo tài khoản rút gọn cho nhân viên, văn phòng 2.111",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1128",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền thư mục J:/REPOSITORIO và cài chương trình DANFEview",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1321",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không đăng nhập được Skype",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:933",
+   "split": "test",
+   "label": "SECURITY_INCIDENT_HOTFIX",
+   "mapping": "manual",
+   "title": "Máy báo phần mềm bảo mật McAfee đang tắt",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:614",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Gửi link kích hoạt ứng dụng SafeNet MobilePass",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1232",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lắp máy in ở chi nhánh Parral",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:2665",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo thư mục mạng chung để mọi người cập nhật hóa đơn gửi kế toán, cấp quyền chỉnh sửa",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:823",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không in được",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:965",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lắp đặt máy in",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1378",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin mở quyền truy cập",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:875",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Lỗi máy chủ danh sách email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:700",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Thay đổi cài đặt địa chỉ email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1125",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cài ứng dụng Okta trên điện thoại để xác thực",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1209",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cài máy in và cấp quyền dùng Discoverer",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:10315",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cần cài Microsoft Teams trên máy tính của tôi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1359",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Skype không kết nối được",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:595",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Giới hạn quyền truy cập thư mục trên máy chủ",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:3503",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Thêm thiết bị Genie Gun 2 vào thư mục thiết bị trên Outlook để đặt lịch sử dụng",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:993",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài chương trình và driver máy in mới",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:2480",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài phần bổ trợ tiếng Tây Ban Nha xong thì Outlook mở vài giây là tự tắt",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:954",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền xóa tệp trên ổ J INS-ZR để chạy truy vấn trong Access",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1083",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài lại công cụ Snipping Tool",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:807",
+   "split": "test",
+   "label": "SECURITY_INCIDENT_HOTFIX",
+   "mapping": "manual",
+   "title": "Cập nhật công cụ bảo mật và gỡ mã hóa ổ cứng trên các máy",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1258",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không kết nối được mạng nội bộ",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:10194",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Ổ R không đổi tên hoặc xóa được thư mục, sao chép thì mất dữ liệu",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1391",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài đặt điện thoại mới",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1295",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cập nhật driver máy in",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:746",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Không đăng nhập được qua Okta",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:4885",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Phần mềm ghi dữ liệu vẫn không chạy, cần quản trị viên đăng nhập",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:6952",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Thu hồi toàn quyền thư mục ổ J của nhân viên",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:2786",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Cấp quyền truy cập thư mục J: Marketing",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:11177",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Xóa các bản ghi DNS trên miền ads.dir kèm bản ghi PTR liên quan",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:751",
+   "split": "test",
+   "label": "RESOURCE_REVOKE",
+   "mapping": "manual",
+   "title": "Thu hồi quyền truy cập hộp thư dùng chung",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:867",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Căn chỉnh máy in",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1353",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "iPad không kết nối mạng di động được nữa",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:864",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Không đăng nhập được Intranet",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:14088",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Đổi địa chỉ email cho nhân viên",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1288",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Máy in Zebra ở kho hạt giống bị lỗi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:637",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Ổ chia sẻ bị tạo nhầm ổ đĩa",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:633",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Đăng ký Okta mới",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:877",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin quyền truy cập Microsoft Teams",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:653",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Xin quyền truy cập hộp thư dùng chung",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1013",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "XFlow không hiển thị hóa đơn cần hạch toán",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1242",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Cài đặt chương trình",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1080",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Outlook bị lỗi",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:868",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Mất biểu tượng Service Portal trên máy",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:883",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Skype chạy lúc nhanh lúc chậm",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1145",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không gửi được email",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1300",
+   "split": "test",
+   "label": "IT_SUPPORT",
+   "mapping": "manual",
+   "title": "Không vào được BlackBerry để xem thư",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:665",
+   "split": "test",
+   "label": "ACCESS",
+   "mapping": "manual",
+   "title": "Tạo danh sách email mới",
+   "description": ""
+  },
+  {
+   "source": "it_tickets",
+   "source_id": "it:1417",
+   "split": "test",
+   "label": "SERVER_FIREWALL",
+   "mapping": "manual",
+   "title": "Thiếu chính sách nhóm GPO trên domain",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#0",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Giúp tôi tạo đơn xin nghỉ phép",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#1",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Làm đơn xin nghỉ phép thì làm thế nào",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#2",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi nộp đơn nghỉ phép bằng cách nào",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#3",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Hướng dẫn tôi làm đơn xin nghỉ phép",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#4",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Gửi giúp tôi một đơn xin nghỉ phép",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#5",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Xin nghỉ phép làm như nào",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#6",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Đơn nghỉ phép được lập ra sao",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#7",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Quy trình làm đơn xin nghỉ phép là gì",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#8",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Muốn xin nghỉ phép thì làm sao",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#9",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi xin nghỉ phép từ 1/9 đến 8/9 được không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#10",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Nếu tôi muốn xin nghỉ phép thì làm thế nào",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#11",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi đăng ký nghỉ phép từ 1/8 đến 10/8 được không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#12",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Cho tôi xin nghỉ phép từ 4/1 đến 9/1 được không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#13",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi muốn nghỉ phép từ 3/12 đến 10/12",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#14",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi xin nghỉ phép từ 25/12 đến 1/1 được không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#15",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi nghỉ phép từ cuối tháng này đến mùng 5 tháng sau được không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#17",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi nghỉ phép từ ngày 8 đến ngày 11 có được không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#18",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi dùng mấy ngày phép từ 24/5 đến 29/5 có được không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#19",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Đăng ký nghỉ phép thì cần làm gì",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#20",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi cần nghỉ phép từ 5/10 đến 10/10",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#22",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Cho tôi xin nghỉ phép từ thứ hai đến thứ tư",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#25",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Làm sao để xin nghỉ phép",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#26",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi muốn xin nghỉ phép",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#27",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Tôi cần xin nghỉ phép",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#28",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Thông tin về đơn xin nghỉ phép",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:pto_request#29",
+   "split": "test",
+   "label": "LEAVE",
+   "mapping": "direct",
+   "title": "Cho tôi xin nghỉ phép",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#0",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Đặt giúp tôi phòng họp lúc 4 giờ thứ năm",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#1",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Nhờ đặt phòng họp lúc 4 giờ chiều thứ năm",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#2",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Đặt giúp phòng họp 4 giờ thứ năm được không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#3",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Đặt phòng hội nghị thứ năm lúc 4 giờ",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#4",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Giữ giúp một chỗ họp lúc 4 giờ thứ năm",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#10",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Tôi cần phòng họp từ 3 đến 7 giờ, còn phòng trống không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#11",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Từ 1 đến 4 giờ có phòng họp nào trống không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#12",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Phòng họp có trống từ 8 đến 3 giờ không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#13",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Phòng họp có dùng được từ 1 đến 2 giờ không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#14",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Kiểm tra giúp phòng họp còn trống từ 4 đến 5 giờ không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#15",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Phòng họp trống từ 1 đến 3 giờ chiều",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#16",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Kiểm tra lịch trống phòng họp từ 1 đến 3 giờ chiều",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#17",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Phòng họp nào còn trống để họp lúc 5 giờ chiều thứ sáu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#18",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Đặt phòng họp thứ sáu lúc 5 giờ chiều",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#19",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Từ 1 đến 3 giờ chiều còn phòng họp trống không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#20",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Thứ sáu 5 giờ chiều đặt một phòng để họp",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#21",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Các phòng họp trống từ 1 đến 3 giờ chiều",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#22",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Đặt giúp phòng cho cuộc họp thứ sáu lúc 5 giờ chiều",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#23",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Đặt phòng họp lúc 5 giờ chiều thứ sáu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#24",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Xem phòng họp còn trống từ 1 đến 3 giờ chiều",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#25",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Tôi cần đặt phòng họp thứ hai lúc 2 giờ 30 chiều",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#26",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Đặt giúp tôi phòng hội nghị trưa mai",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#27",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Đặt phòng họp lúc 1 giờ chiều thứ ba",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#28",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Giữ giúp một phòng hội nghị thứ sáu lúc 11 giờ sáng",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:schedule_meeting#29",
+   "split": "test",
+   "label": "ROOM_BOOKING",
+   "mapping": "direct",
+   "title": "Đặt phòng họp thứ sáu lúc 9 giờ sáng được không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#0",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi cần hoàn tiền gấp cho sản phẩm này, người bán không hỗ trợ, giờ phải làm sao",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#1",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi có được hoàn tiền món hàng này không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#2",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Hoàn tiền một món hàng",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#3",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Hàng đã mua có được hoàn tiền không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#4",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi cần làm hoàn tiền",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#5",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi chưa nhận được hàng nên cần hoàn tiền, có hủy thanh toán được không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#6",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi muốn hoàn tiền một món đã mua",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#7",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi muốn trả lại hàng",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#8",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Cho tôi hoàn tiền được không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#9",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Món hàng bị tính sai tiền, xử lý thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#10",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi cần hủy đơn vừa đặt và làm hoàn tiền gấp",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#11",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Dừng giúp giao dịch mua của tôi",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#12",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Hàng giao quá lâu nên tôi muốn hoàn tiền, làm thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#13",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Đăng ký hoàn tiền thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#14",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Món này hoàn tiền được không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#15",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Đặt hàng online lâu rồi mà không thấy giao, trả lại tiền cho tôi",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#16",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Muốn được hoàn tiền thì cần làm gì",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#17",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi cần hoàn tiền",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#18",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Không hài lòng với hàng đã mua, hủy đơn thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#19",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Đã mua hàng nhưng giờ muốn hoàn tiền, làm sao",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#20",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Làm sao để được hoàn tiền",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#21",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Hủy giúp giao dịch mua của tôi",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#22",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Hủy giao dịch mua trước đó thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#23",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Mong được hoàn tiền cho món hàng này",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#24",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Yêu cầu hoàn tiền như thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#25",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi mua nhầm, không cần nữa, hoàn tiền được không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#26",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi đổi ý, cần hủy giao dịch vừa mua và lấy lại tiền gấp",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#27",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi muốn hoàn tiền một sản phẩm đã mua của bên mình",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#28",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Không hài lòng với sản phẩm, hoàn tiền được không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#29",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi muốn hoàn lại khoản tiền này vào tài khoản",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#30",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi vừa mua hàng và cần hủy đơn, hoàn tiền sớm nhất có thể",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#31",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi muốn hủy một giao dịch mua, được không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#32",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Đơn hàng từ lâu đến giờ vẫn chưa nhận, tôi muốn lấy lại toàn bộ tiền",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#33",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Mua hàng bị tính sai tiền, có được hoàn không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#34",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Mua hàng mấy hôm rồi vẫn chưa nhận, tôi muốn hủy thanh toán",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#35",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Quy trình hoàn tiền thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#36",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi muốn hoàn tiền đơn hàng đã mua",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#37",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Xử lý hoàn tiền cho món đã mua thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#38",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi muốn hoàn tiền một món hàng",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:request_refund#39",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "direct",
+   "title": "Tôi cần hủy một giao dịch mua",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#0",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Lấy chứng từ khấu trừ thuế thu nhập cá nhân ở đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#1",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Bọn mình lấy chứng từ khấu trừ thuế TNCN ở đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#2",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tôi lấy chứng từ khấu trừ thuế ở đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#3",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tôi xin chứng từ khấu trừ thuế từ đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#4",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tôi cần chứng từ khấu trừ thuế TNCN để quyết toán thuế, lấy ở đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#5",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Cần làm gì để lấy chứng từ khấu trừ thuế để quyết toán",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#6",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Cần chứng từ khấu trừ thuế để quyết toán thuế thì làm sao",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#7",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Xin bản sao chứng từ khấu trừ thuế để quyết toán thuế thế nào",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#8",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Quy trình xin bản sao chứng từ khấu trừ thuế để quyết toán thuế",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#9",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Cái giấy thuế của công ty lấy ở đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#10",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Muốn lấy giấy tờ thuế từ công ty thì làm gì",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#11",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Làm sao lấy giấy tờ thuế từ công ty",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#12",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Giấy tờ thuế công ty cấp cho mình tìm ở đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#13",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Lấy giấy tờ từ công ty để quyết toán thuế bằng cách nào",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#14",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tìm chứng từ khấu trừ thuế ở đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#15",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tôi cần chứng từ khấu trừ thuế",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#16",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Chỉ tôi chỗ lấy chứng từ khấu trừ thuế",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#17",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tôi muốn lấy chứng từ khấu trừ thuế TNCN",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#18",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Muốn biết chỗ tìm chứng từ khấu trừ thuế",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#19",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Muốn biết lấy chứng từ khấu trừ thuế ở đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#20",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Cho biết chỗ lấy mẫu chứng từ khấu trừ thuế",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#21",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tôi phải biết lấy chứng từ khấu trừ thuế ở đâu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#22",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tôi muốn lấy chứng từ khấu trừ thuế TNCN",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#23",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Cần chứng từ khấu trừ thuế, ở đâu vậy",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#24",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tìm chứng từ khấu trừ thuế ở đâu được",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#25",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Tôi bắt buộc phải có chứng từ khấu trừ thuế",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#26",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Giúp tôi lấy chứng từ khấu trừ thuế",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#27",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Chứng từ khấu trừ thuế ở đâu nhỉ",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#28",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Giúp tôi xin chứng từ khấu trừ thuế của tôi",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:w2#29",
+   "split": "test",
+   "label": "HR_CERTIFICATE",
+   "mapping": "approx",
+   "title": "Không tìm thấy chứng từ khấu trừ thuế",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#0",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt cho tôi vé máy bay American Airlines từ Austin đi Jackson",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#1",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt cho tôi chỗ bay United từ Atlanta đi Chicago",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#2",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt giúp vé Delta từ St. Louis đi Memphis được không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#3",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt vé American Airlines từ Las Vegas đi Los Angeles",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#4",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt cho tôi vé Delta từ St. Paul đi Dallas",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#5",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần chuyến bay Delta từ Los Angeles đi Seattle",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#6",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần đặt vé JetBlue từ New York đi Boston",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#7",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Lấy giúp tôi vé American Airlines từ San Francisco đi San Jose",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#8",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi muốn bay Delta từ New York đi San Francisco",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#9",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm giúp vé JetBlue từ Barcelona đi Paris",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#10",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Ngày 10/5 tôi bay từ LAX đi PHL giá khoảng 120 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#11",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Cuối tuần này tôi bay từ LAX đi PHL giá khoảng 120 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#12",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Ngày 12 cuối tuần này tôi đi LAX rồi bay PHL giá rẻ 120 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#13",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Ngày 15/6 tôi bay từ LAX đi PHL, vé chỉ 120 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#14",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Ngày 5/11 tôi bay LAX đi PHL giá 120 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#15",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt cho tôi vé từ Midway đi JFK dưới 200 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#16",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần vé máy bay từ Boston đi Miami dưới 300 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#17",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Có vé từ Atlanta đi San Francisco dưới 100 đô không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#18",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt vé từ New York đi Los Angeles dưới 200 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#19",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm giúp tôi vé từ Seattle đi Detroit dưới 200 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#20",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi muốn đặt vé khứ hồi San Antonio đi Detroit, đi thứ sáu về thứ tư",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#21",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi tìm chuyến bay từ Billings đi Cleveland ngày 2/5, về ngày 9/5",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#23",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Có chuyến khứ hồi Orlando đi Las Vegas từ thứ năm đến thứ hai không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#24",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Có chuyến khứ hồi Thượng Hải đi Seattle, đi thứ tư về ngày 31 không",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#25",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt chắc cho tôi vé Delta từ Pittsburgh đi Arizona",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#26",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt vé Delta từ Pittsburgh đi Arizona",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#27",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Lên lịch chuyến bay Delta từ Pittsburgh đi Arizona",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#28",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi muốn bay từ Pittsburgh đi Atlanta dưới 300 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_flight#29",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần vé từ Pittsburgh đi Atlanta dưới 300 đô",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#0",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm giúp tôi khách sạn được đánh giá tốt ở Phoenix",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#1",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi muốn đặt chỗ ở tại Phoenix từ 5 đến 9 tháng 3",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#2",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi muốn tìm khách sạn đánh giá tốt ở Phoenix",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#3",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi muốn khách sạn ở Phoenix gần sân Chase Field từ 4 đến 8 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#4",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi muốn đặt chỗ ở Phoenix từ 5 đến 9 tháng 3",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#5",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần khách sạn ở Phoenix gần Chase Field từ 4 đến 8 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#6",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần phòng khách sạn ở Phoenix đủ cho 11 người từ 10 đến 15 tháng 3",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#7",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi phải có khách sạn ở Phoenix gần Chase Field từ 4 đến 8 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#8",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm giúp tôi khách sạn đánh giá tốt ở Phoenix đi",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#9",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm khách sạn đánh giá tốt ở Phoenix",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#10",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần bạn tìm khách sạn đánh giá tốt ở Phoenix",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#11",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Lấy cho tôi khách sạn ở Phoenix gần Chase Field từ 4 đến 8 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#12",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần đặt khách sạn ở Phoenix gần Chase Field từ 4 đến 8 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#13",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt giúp tôi chỗ ở Phoenix từ 5 đến 9 tháng 3",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#14",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần đặt chỗ ở Phoenix từ 5 đến 9 tháng 3",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#15",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi thật sự cần đặt chỗ ở Phoenix từ 5 đến 9 tháng 3",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#16",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần phòng khách sạn đủ cho 11 người ở Phoenix từ 10 đến 15 tháng 3",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#17",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm giúp tôi khách sạn uy tín ở Honolulu",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#18",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi muốn khách sạn đánh giá tốt ở Honolulu, tìm giúp một chỗ",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#19",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm cho tôi khách sạn đánh giá cao ở TP. Hồ Chí Minh",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#20",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Giúp tôi tìm khách sạn đánh giá tốt ở Washington",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#21",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm giúp khách sạn đánh giá tốt ở Nhật Bản",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#22",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần khách sạn ở Jacksonville gần sân vận động từ 1 đến 3 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#23",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm chỗ ở Jacksonville gần sân vận động từ 1 đến 3 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#24",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Đặt khách sạn ở Jacksonville gần sân vận động từ 1 đến 3 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#25",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi muốn một phòng ở Jacksonville gần sân vận động từ 1 đến 3 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#26",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tìm phòng gần sân vận động Jacksonville từ 1 đến 3 tháng 1",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#27",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Lấy cho tôi phòng khách sạn đủ 4 người ở Boston từ 3 đến 5 tháng 5",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#28",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi đi Boston từ 2 đến 4 tháng 3, đặt giúp tôi khách sạn",
+   "description": ""
+  },
+  {
+   "source": "clinc",
+   "source_id": "clinc:test:book_hotel#29",
+   "split": "test",
+   "label": "BUSINESS_TRIP",
+   "mapping": "approx",
+   "title": "Tôi cần phòng khách sạn cho 4 người ở Boston từ 3 đến 5 tháng 5",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#0",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tôi bị trừ tiền hai lần cho một khoản thanh toán, xử lý sao",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#1",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Đi du lịch Mỹ và Canada về thấy rất nhiều giao dịch bị treo và bị trùng, kiểm tra giúp tôi",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#2",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Sao tôi bị trừ tiền nhà hàng hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#3",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tôi muốn biết sao mua một lần mà bị trừ tiền hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#4",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tôi không mua món này hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#5",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Sao cùng một món mà tôi bị trừ tiền hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#6",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Thẻ bị trừ nhiều lần trong khi tôi chỉ trả một lần, sửa thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#7",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Ứng dụng hiện thanh toán bị trùng, làm sao để không bị trừ tiền hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#8",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Sao một giao dịch mà bị trừ tiền nhiều lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#9",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Trong 7 ngày một món bị trừ tiền hai lần, sửa giúp tôi sớm",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#10",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Kiểm tra giúp tôi có bị trừ tiền hai lần không",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#11",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tôi bị trừ tiền hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#12",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tuần này mấy món tôi mua bị trừ tiền hai lần, kiểm tra và sửa giúp",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#13",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tuần này vài món bị trừ tiền hai lần, kiểm tra và hoàn lại phần bị trừ thừa vào thẻ giúp tôi",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#14",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Lần đi nhà hàng đầu tuần bị trừ tiền hai lần, xóa giúp một lần để tôi lấy lại tiền",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#15",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Hình như có khoản bị trừ tiền hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#16",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Sao một giao dịch lại hiện nhiều lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#17",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tài khoản có vẻ bị trừ tiền trùng",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#18",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Sao cùng một món mà bị trừ tiền nhiều lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#19",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tôi có thẻ phụ và bị trừ tiền hai lần, giải quyết thế nào",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#20",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Kiểm tra giao dịch thấy thẻ bị trừ tiền nhà hàng hai lần, tôi muốn lấy lại tiền",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#21",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Sao tôi bị trừ tiền hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#22",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Giao dịch trên thẻ rất lạ, tuần này mấy món bị trừ tiền hai lần, kiểm tra và hoàn lại giúp",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#23",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Kiểm tra thanh toán trên thẻ giúp, có khoản bị trùng dù tôi chỉ mua một lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#24",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tuần này nhiều lần bị trừ tiền trùng cho cùng giao dịch, sửa và hoàn lại phần trùng giúp tôi",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#25",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Một giao dịch bị lặp nhiều lần trong tài khoản",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#26",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Một giao dịch mà tôi bị trừ tiền nhiều lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#27",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Thẻ bị trừ tiền hai lần riêng biệt cho một giao dịch",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#28",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Giải thích giúp sao khoản thanh toán hiện hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#29",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Sao cùng một giao dịch mà bị trừ tiền hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#30",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tôi thấy một giao dịch bị trừ tiền nhiều lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#31",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tôi bị trừ tiền hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#32",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Một giao dịch mà có nhiều lần trừ tiền",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#33",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Thanh toán thẻ bị trùng: lần đầu bị từ chối, lần hai thành công nhưng ứng dụng vẫn treo một khoản, xóa giúp khoản sai",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#34",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Có một giao dịch hiện nhiều lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#35",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tuần này đi nhà hàng bị trừ tiền hai lần, tôi muốn xóa một khoản khỏi tài khoản",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#36",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Trong tài khoản có nhiều giao dịch giống hệt nhau",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#37",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Có khoản thanh toán bị trùng",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#38",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Tôi thanh toán một lần mà bị trừ tiền hai lần",
+   "description": ""
+  },
+  {
+   "source": "banking77",
+   "source_id": "banking77:test:transaction_charged_twice#39",
+   "split": "test",
+   "label": "REFUND_COMPENSATION",
+   "mapping": "approx",
+   "title": "Nếu bị trừ tiền hai lần cho cùng một khoản chi thì tôi xử lý thế nào",
+   "description": ""
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:8343",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "hôm nay là thứ tư phải không",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5465",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi có thể mang xăng đan của tôi hôm nay không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14963",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mạng làm ơn",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14414",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mô tả về phần cứng máy tính",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:837",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "là những gì b. b. c. poll dự đoán cho cuộc bầu cử ở mỹ sắp tới",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9768",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tiếp tục đọc sách nói",
+   "description": "",
+   "source_intent": "play_audiobook"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1351",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời tiết bên ngoài tuần này có tốt không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9718",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát tiếp trại súc vật",
+   "description": "",
+   "source_intent": "play_audiobook"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:10381",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bắt đầu một cuộc thi đấu chơi chữ cho chúng ta",
+   "description": "",
+   "source_intent": "play_game"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2959",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở máy hút bụi",
+   "description": "",
+   "source_intent": "iot_cleaning"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1554",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tắt đèn bàn",
+   "description": "",
+   "source_intent": "iot_hue_lightoff"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2801",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bây giờ là mấy giờ ở sài gòn",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11916",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "các công viên giải trí gần đây ở đâu",
+   "description": "",
+   "source_intent": "recommendation_events"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4084",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "pha cà phê",
+   "description": "",
+   "source_intent": "iot_coffee"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:10220",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi cần những nguyên liệu gì để nướng một chiếc bánh lớn",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:10048",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cách làm món gà tây",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2780",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "có bất kỳ buổi biểu diễn sắp tới nào bởi",
+   "description": "",
+   "source_intent": "music_likeness"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5043",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đặt báo thức lúc mười hai giờ trưa",
+   "description": "",
+   "source_intent": "alarm_set"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5683",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát danh sách phát nhạc cho tiệc của tôi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:197",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mấy giờ rồi",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14063",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "ngày sinh nhật của elvis presley là gì",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9980",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thực đơn hôm nay là gì thêm một số loại rau củ luộc vào đó",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:12986",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "kiểm tra định nghĩa của thất thường",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4659",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "không nói chuyện",
+   "description": "",
+   "source_intent": "audio_volume_mute"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9577",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thay đổi sang đài tám mươi hai chấm bốn",
+   "description": "",
+   "source_intent": "play_radio"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15127",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "định nghĩa loa",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14958",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tìm kiếm",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14770",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi biết đại dương lớn nhất trên thế giới",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13487",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "olly trung tâm của huế là gì",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2160",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi sẽ đi ngủ bây giờ",
+   "description": "",
+   "source_intent": "iot_hue_lightoff"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4710",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "halloween là thứ mấy trong năm nay",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:10216",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tìm kiếm trên web để mua dụng cụ làm bánh cho bánh nướng xốp",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3543",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi muốn ánh sáng có màu đỏ hơn một chút",
+   "description": "",
+   "source_intent": "iot_hue_lightchange"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3096",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời tiết ở new jersey như thế nào",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2206",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "im lặng từ giờ đi",
+   "description": "",
+   "source_intent": "audio_volume_mute"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:625",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "làm ơn phát radio bài hát mỹ tâm",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6402",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi một số lời khuyên về sức khỏe",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14490",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nhà hát lớn được xây dựng khi nào",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4667",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "giờ hiện tại ở",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5671",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời gian ở hà nội là mấy giờ",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13023",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "chỉ tôi công thức nấu ăn",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6477",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tỷ số bóng chày",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:765",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có thể vui lòng cung cấp cho tôi những tin tức từ các nguồn mới nhất",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6448",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "trump",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9909",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tiếp tục phát trạm dừng cảm xúc",
+   "description": "",
+   "source_intent": "play_audiobook"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9353",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bật vài bài nhạc phát radio",
+   "description": "",
+   "source_intent": "play_radio"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14229",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "emma watson đóng những phim gì",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9881",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở sách nói",
+   "description": "",
+   "source_intent": "play_audiobook"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13439",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "j. k. rowling mấy tuổi",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13591",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đâu là thủ đô của toàn nước việt nam",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:10366",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "chúng ta nên chơi liên minh huyền thoại tại người hãy quên em đi",
+   "description": "",
+   "source_intent": "play_game"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5593",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát tìm lại hát bởi bức tường",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5590",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở nhiệt độ",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9591",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát chương trình của bhuli bisri yaadien trên kênh fm chín mươi mốt chấm ba",
+   "description": "",
+   "source_intent": "play_radio"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3741",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bài hát nào đang được phát vậy",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2573",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát danh sách nhạc nhảy của tôi trên spotify",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11384",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có thể vui lòng tải xuống tệp podcast có sẵn của tôi trên internet và mở nó một lần được không",
+   "description": "",
+   "source_intent": "play_podcasts"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14475",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "chi tiết giá cổ phiếu",
+   "description": "",
+   "source_intent": "qa_stock"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13847",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tỷ giá hối đối cho tiền lào là bao nhiêu",
+   "description": "",
+   "source_intent": "qa_currency"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14130",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "giá hiện tại của googs",
+   "description": "",
+   "source_intent": "qa_stock"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4177",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cung cấp cho tôi những tiêu đề chính trị mới nhất trên toàn thế giới",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4673",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "vui lòng liệt kê tất cả các báo thức",
+   "description": "",
+   "source_intent": "alarm_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14912",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tổng thống madison sinh ra ở đâu",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:317",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "không nói hôm nay",
+   "description": "",
+   "source_intent": "audio_volume_mute"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14071",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nói cho tôi biết tôi đã mặc gì hôm qua",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15672",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tweet cho apple về việc không nhận được iphone mà tôi đã gửi để sửa chữa vào tuần trước",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6039",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "ngày mai có mưa không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4249",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nhà bạn có thể chỉnh tất cả các đèn trong nhà thành màu xanh dương không",
+   "description": "",
+   "source_intent": "iot_hue_lightchange"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:393",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "chơi một bài hát retro trong danh sách phát của tôi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2611",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "dự báo thời tiết hiện tại",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4227",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "trời dự báo sẽ mưa trong tuần tới không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:576",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát tất cả trong danh sách phát",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13900",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "định nghĩa của cuộc sống",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2365",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bài hát gì trên rađiô",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6301",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thịt xông khói là gì",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9969",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "các thành phần nào có thể sử dụng thay thế trà",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:891",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát một chút âm nhạc thiên chúa giáo",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14304",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tỷ giá giữa pesos và yên",
+   "description": "",
+   "source_intent": "qa_currency"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13252",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tháng mười một đầu tiên của hồ ngọc hà là gì",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3489",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "vui lòng phát nhạc bây giờ",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14757",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "chia bảy mươi sáu thành hai phần",
+   "description": "",
+   "source_intent": "qa_maths"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5301",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời tiết sẽ như thế nào vào ngày hai mươi tháng ba năm hai ngàn mười bảy",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:939",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đặt báo thức lúc bảy giờ sáng",
+   "description": "",
+   "source_intent": "alarm_set"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13524",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi muốn nó giúp phân tích ý kiến",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:10166",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tìm kiếm công thức làm bánh táo",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2840",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mùng hai tháng sau rơi vào ngày nào",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9619",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở bài bạn đồng hành nhà thảo nguyên trên radio của xe hơi",
+   "description": "",
+   "source_intent": "play_radio"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13780",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mỹ tâm đã kết hôn chưa",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15635",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tweet mcdonald điện biên phủ có dịch vụ cực tệ",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3161",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi có bất kỳ báo thức nào đặt lúc sáu giờ sáng ngày mai không",
+   "description": "",
+   "source_intent": "alarm_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13929",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi biết một nơi có tuyết bây giờ",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6074",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tắt đèn phòng ngủ lúc chín giờ ba mươi tối",
+   "description": "",
+   "source_intent": "iot_hue_lightoff"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15289",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đăng tin nhắn bây giờ",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:10105",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi nên nấu bít tết trong bâu lâu để đạt đến độ chín vừa",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:182",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát danh sách nhạc rock của tôi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:843",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "khởi động robot hút bụi",
+   "description": "",
+   "source_intent": "iot_cleaning"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13714",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "xoài là gì",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6024",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi có nên mang áo len hay áo khoác để đi làm hôm nay không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11770",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "có sự kiện nào vào cuối tuần này ở đà nẵng không",
+   "description": "",
+   "source_intent": "recommendation_events"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6701",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "lời khuyên sức khỏe tổng quát",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4081",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi muốn cài một báo thức khi tôi lái xe về nhà ngày mai để nhớ ghé cửa hàng và mua thức ăn",
+   "description": "",
+   "source_intent": "alarm_set"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1474",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tin thức thể thao hôm nay là gì",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5038",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời tiết tuần này thế nào",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:299",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời tiết thế nào",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1294",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi tin tức về giải thưởng của học viện",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2615",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi có cần phải mặc áo khoác vào thứ tư tuần tới không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4851",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "báo thức của tôi đã được cài đặt chưa",
+   "description": "",
+   "source_intent": "alarm_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15155",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có thể tải ảnh tự chụp mới nhất của tôi lên tài khoản facebook của tôi được không",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11612",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "chương trình truyền hình sao nhập ngũ ở sài gòn là gì",
+   "description": "",
+   "source_intent": "recommendation_events"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15561",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "vui lòng nhìn vào vấn đề",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5286",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở tin tức kênh mười bốn về di cư",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15732",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tweet samsung và yêu cầu họ ngừng giết người bằng sản phẩm của họ",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9994",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có thể cho tôi biết công thức làm cơm tấm sườn bì chả không",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9524",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở chương trình nhạc của tui",
+   "description": "",
+   "source_intent": "play_radio"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3780",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát danh sách phát nhạc quốc tế của tôi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3513",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "chỉ phát danh sách nhạc của tôi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5225",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thứ tư tới là ngày nào",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5615",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tên của bản nhạc bạn đang chơi là gì",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1636",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi xem những tin tức mới nhất từ báo tuổi trẻ",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6594",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "hôm nay tôi đi đâu",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14015",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tọa độ của đường xích đạo là gì",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15676",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "vui lòng thêm phàn nàn về dịch vụ trong tweet cho hòa phát",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:897",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "làm cho các đèn trong nhà thành màu hổ phách vào lúc sáu giờ chiều",
+   "description": "",
+   "source_intent": "iot_hue_lightchange"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4662",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "có tin tức gì mới trên kênh v. t. v một alexa",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14272",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "sách là gì",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2639",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi xem các tin tức về môi trường",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6495",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn vui lòng cho lời khuyên",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3742",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có biết tên bài hát đang phát không",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1121",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát người hãy quên em đi bởi mỹ tâm",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:31",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đi qua hành lang",
+   "description": "",
+   "source_intent": "iot_cleaning"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2824",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "ngày mười ba tháng mười hai là ngày nào",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15113",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "địa chất của vị trí này là gì",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2540",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "làm cho đèn trong phòng thành màu xanh dương",
+   "description": "",
+   "source_intent": "iot_hue_lightchange"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14330",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nguyễn phú trọng sinh ra ở đâu",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13706",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mô tả rotor",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1808",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tiêu đề",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:12008",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "có sự kiện thú vị nào ở đống đa hôm nay không",
+   "description": "",
+   "source_intent": "recommendation_events"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15075",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "olly những người mỹ đầu tiên định cư ở đâu",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9930",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi nên luộc trứng trong bao lâu",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13625",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cái bàn rộng nhất là gì",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3034",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi biết nhiệt độ",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3581",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tắt âm thanh",
+   "description": "",
+   "source_intent": "audio_volume_mute"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11636",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bộ phim nào đang chiều xung quanh đây",
+   "description": "",
+   "source_intent": "recommendation_movies"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:128",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "ngày mấy tháng mấy",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5082",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "báo thức mới cho sáu giờ sáng",
+   "description": "",
+   "source_intent": "alarm_set"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15358",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "olly tweet điện máy xanh rằng iphone không hoạt động",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11442",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "làm ơn phát podcast bill simmons mới nhất",
+   "description": "",
+   "source_intent": "play_podcasts"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11643",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "các sự kiện nào sẽ diễn sớm",
+   "description": "",
+   "source_intent": "recommendation_events"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:936",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở và phát nhạc nhạc từ nhạc quốc tế",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4436",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi nên mặc áo khoác gì",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14889",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "làm ơn mô tả hiện tượng đó cho tôi",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14817",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thanh kiếm cứng của anh ấy đúng là mạnh mẽ",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13740",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tỷ giá hối đoái tiền tệ của trung quốc là bao nhiêu",
+   "description": "",
+   "source_intent": "qa_currency"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13896",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "từ đô la sang euro",
+   "description": "",
+   "source_intent": "qa_currency"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15187",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "chia sẻ trong bài đăng của bạn bè",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2711",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tắt đèn",
+   "description": "",
+   "source_intent": "iot_hue_lightoff"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2927",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bây giờ là mấy giờ ở long an",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2721",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có truyện cười vui nhộn nào cho tôi không",
+   "description": "",
+   "source_intent": "general_joke"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14904",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cổ phiếu tăng hay giảm",
+   "description": "",
+   "source_intent": "qa_stock"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2796",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tắt âm loa",
+   "description": "",
+   "source_intent": "audio_volume_mute"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15532",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "olly tweet vinmart và nói với họ rằng dịch vụ khách hàng của họ thật tồi tệ",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:473",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở gửi người yêu cũ",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4973",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "olly phát người hãy quên em đi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6457",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có thông minh không",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4874",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nhập người hãy quên em đi",
+   "description": "",
+   "source_intent": "music_likeness"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1108",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mong muốn của tôi là nghe một vài bản nhạc đồng quê",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13717",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có thể thấy nga từ alaska",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:8322",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi muốn biết thêm về hội chợ vào cuối tuần này",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:10206",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cơm được chuẩn bị như thế nào",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:7876",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "điều gì đã xảy ra trong hai tháng vừa rồi",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14023",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "miêu tả địa ngục",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:8731",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đặt báo thức nhắc nhở lặp lại cho sự kiện facebook tôi phải tham dự vào ngày mười bảy tháng tư",
+   "description": "",
+   "source_intent": "alarm_set"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4580",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời gian ở chicago là mấy giờ",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4145",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "những báo thức tôi đã đặt hôm nay",
+   "description": "",
+   "source_intent": "alarm_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2205",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "im lặng trong hai giờ",
+   "description": "",
+   "source_intent": "audio_volume_mute"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3582",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tắt tiếng đi",
+   "description": "",
+   "source_intent": "audio_volume_mute"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:216",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời tiết hôm nay như thế nào",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6077",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi muốn nghe tin thế giới từ hôm nay",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9263",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở ứng dụng đài phát thanh",
+   "description": "",
+   "source_intent": "play_radio"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4482",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi sẽ cần dọn dẹp đường đi của tôi sáng nay không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11451",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi muốn nghe podcast gần nhất của vov",
+   "description": "",
+   "source_intent": "play_podcasts"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1719",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đặt báo thức chỉ cho sáu giờ sáng ngày thứ hai",
+   "description": "",
+   "source_intent": "alarm_set"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2960",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "khởi động máy hút bụi",
+   "description": "",
+   "source_intent": "iot_cleaning"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14981",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mô tả iphone bảy",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2167",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "gọi tôi dậy sau nửa tiếng nữa",
+   "description": "",
+   "source_intent": "alarm_set"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13340",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi muốn nó có thể tính toán câu trả lời từ kết quả tìm kiếm như google đã làm",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15647",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tweet khiếu nại tại",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:8308",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "ngày hôm qua vào lúc trưa ở quảng trường thời đại cuộc biểu tình nói về cái gì",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14406",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho chi tiết giá cổ phiếu của vingroup",
+   "description": "",
+   "source_intent": "qa_stock"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5158",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "hãy phát bài hát mới nhất từ album hát với dòng sông",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1677",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bài nhạc nào đang được mở",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:151",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát nó lại",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5245",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đặt thông báo tin tức về môi trường",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14585",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "di chuyển mất bao lâu từ nhật bản sang hàn quốc",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6378",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn làm gì với dữ liệu và thông tin của tôi",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4487",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "trời sẽ mưa vào thứ năm phải không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1533",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "c. n. n. hôm nay có tin tức gì",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9676",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát tiếp sách nói của tôi từ nguyên phong",
+   "description": "",
+   "source_intent": "play_audiobook"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2679",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nhiệt độ sẽ không đổi hay nó sẽ trở nên lạnh hơn",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13761",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "một parsec là gì",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13221",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mỹ tâm làm gì để trông xinh đẹp",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5614",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "có gì trên radio bây giờ",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13346",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nói chuyện phiếm thôi",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9341",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thay đổi đài radio",
+   "description": "",
+   "source_intent": "play_radio"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4152",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "hãy phát bài hát người hãy quên em đi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4848",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đánh thức tôi sau ba mươi phút",
+   "description": "",
+   "source_intent": "alarm_set"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11438",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đi đến tập kế tiếp của podcast",
+   "description": "",
+   "source_intent": "play_podcasts"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3785",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "làm ơn tắt đèn phòng tắm",
+   "description": "",
+   "source_intent": "iot_hue_lightoff"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15587",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở gallery đăng tấm hình có tên",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4809",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nhớ cảm giác của tôi về bài hát này như thế nào",
+   "description": "",
+   "source_intent": "music_likeness"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5160",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có thể phát bài hát của mai tiến dũng không",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14648",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "công thức làm ơn",
+   "description": "",
+   "source_intent": "cooking_recipe"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11720",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bơi",
+   "description": "",
+   "source_intent": "recommendation_events"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14418",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nguyễn phú trọng làm gì trong cuộc sống hàng ngày của anh ấy",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11554",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi muốn bạn bật podcast",
+   "description": "",
+   "source_intent": "play_podcasts"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11904",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "sự kiện gì đang diễn ra ở đây cuối tuần này",
+   "description": "",
+   "source_intent": "recommendation_events"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14925",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "giá cổ phiếu vingroup tăng hay giảm",
+   "description": "",
+   "source_intent": "qa_stock"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:10319",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "chơi bóng đá với tôi",
+   "description": "",
+   "source_intent": "play_game"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14370",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi biết nghề nghiệp của người nổi tiếng",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9678",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có thể phát tam quốc diễn nghĩa không",
+   "description": "",
+   "source_intent": "play_audiobook"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13855",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bài hát phổ biến nhất của mỹ tâm là gì",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13166",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đánh vần và định nghĩa dao động",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6411",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời tiết như thế nào thứ tư tới",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1007",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát b. t. s. từ danh sách nhạc rock của tôi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4253",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "giờ hiện tại ở giờ chuẩn phía đông",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11424",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "kênh vitaly",
+   "description": "",
+   "source_intent": "play_podcasts"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4240",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bật máy dọn dẹn tự động",
+   "description": "",
+   "source_intent": "iot_cleaning"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6633",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi muốn chơi video games",
+   "description": "",
+   "source_intent": "play_game"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5433",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "trời sẽ mưa lát nữa phải không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:527",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có biết bất kỳ truyện cười nào không",
+   "description": "",
+   "source_intent": "general_joke"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1904",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi xem các tiêu điểm của trận đấu",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2354",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đây là loại nhạc gì",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1924",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bật máy hút bụi",
+   "description": "",
+   "source_intent": "iot_cleaning"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14874",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "kiểm tra giá chứng khoán của vingroup",
+   "description": "",
+   "source_intent": "qa_stock"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2795",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "loa im lặng",
+   "description": "",
+   "source_intent": "audio_volume_mute"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2673",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi nhớ có đặt một báo thức nhắc hẹn khám bác sĩ",
+   "description": "",
+   "source_intent": "alarm_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:428",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tắt các bóng đèn ở phòng tắm",
+   "description": "",
+   "source_intent": "iot_hue_lightoff"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14354",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "câu trả lời cho vũ trụ là gì",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3859",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "vui lòng bật danh sách nhạc rap yêu thích của tôi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4442",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "pha cà phê vào lúc ba giờ",
+   "description": "",
+   "source_intent": "iot_coffee"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15652",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "giúp khiếu nại với dịch vụ chăm sóc khách hàng",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15359",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tweet cho apple rằng pin iphone của tôi luôn hết",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14457",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tìm đường",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3822",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tìm cho tôi thông tin về những chiếc xe hơi",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2355",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bài hát này từ phim nào tên của nó là gì",
+   "description": "",
+   "source_intent": "music_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1252",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bây giờ là mấy giờ",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9851",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát tiếp hành trình về phương đông từ nơi tôi đã bỏ dỡ lần cuối",
+   "description": "",
+   "source_intent": "play_audiobook"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13255",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "vui lòng cho tôi thông tin về mỹ tâm",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3264",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát nhạc reggae",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6432",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "hôm nay điều sau đây đã xảy ra với tôi tôi đã có một cuộc họp với nam",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11273",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát tập tiếp theo của cơn giông chiều mùa hạ từ bùi nguyễn trường kiên",
+   "description": "",
+   "source_intent": "play_audiobook"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14973",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tỷ giá hối đoái phổ biến của đô la mỹ so với đồng rupi ấn độ là bao nhiêu",
+   "description": "",
+   "source_intent": "qa_currency"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3993",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có thể làm các bóng đèn tắt không",
+   "description": "",
+   "source_intent": "iot_hue_lightoff"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3967",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "rap",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15185",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "lời ước sinh nhật",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6229",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi đã có một ngày tồi tệ",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11476",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát tập podcast trước",
+   "description": "",
+   "source_intent": "play_podcasts"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5198",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "gắn thẻ bài hát này với năm sao",
+   "description": "",
+   "source_intent": "music_likeness"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2962",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "làm ơn phát một bài hát của sơn tùng",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3727",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở người hãy quên em đi của mỹ tâm",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6083",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tạo một báo thức vào hôm nay lúc mười giờ sáng",
+   "description": "",
+   "source_intent": "alarm_set"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14917",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "khi nào minh hằng ra mắt album mới",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13383",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bao nhiêu bang có án tử hình",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:16146",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi những cập nhật mới nhất",
+   "description": "",
+   "source_intent": "news_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:4171",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tắt các đèn trong nhà bếp",
+   "description": "",
+   "source_intent": "iot_hue_lightoff"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1866",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "báo cáo thời tiết bây giờ",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:360",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "hiện là mấy giờ",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1318",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mửo ứng dụng âm nhạc và phát một bài hát cho tôi",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1127",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát toàn bộ bài hát trong chế độ xáo trộn",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5413",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát nhạc",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:12982",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "nhiễu loạn không khí nghĩa là gì",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6127",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bạn có cho là nên cần dù hay không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1336",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi thích bài hát của mỹ tâm hãy mở nó",
+   "description": "",
+   "source_intent": "music_likeness"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11733",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phim cánh đồng bất tận hay không",
+   "description": "",
+   "source_intent": "recommendation_movies"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2914",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi biết hôm nay là ngày gì",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5027",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "khi nào mới đến thứ sáu ngày mười ba tiếp theo",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13693",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "kinh tuyến gốc ở đâu",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14223",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "ba nhân bốn là bao nhiêu",
+   "description": "",
+   "source_intent": "qa_maths"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3407",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "có dự báo nào về mưa hay tuyết trong tuần này không",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13101",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "một cộng một bằng mấy",
+   "description": "",
+   "source_intent": "qa_maths"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15563",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "giải quyết vấn đề",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15271",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đăng cái này lên facebook của tôi l. o. l",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14761",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "cho tôi định nghĩa cho từ giáo hoàng",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:9270",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "phát f. m. số chín trăm ba mươi bảy",
+   "description": "",
+   "source_intent": "play_radio"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3779",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mở danh sách phát sau tất cả youtube",
+   "description": "",
+   "source_intent": "play_music"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3960",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mấy giờ rồi",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11427",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "bắt đầu vov",
+   "description": "",
+   "source_intent": "play_podcasts"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13494",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "đưa ra định nghĩa về động lực",
+   "description": "",
+   "source_intent": "qa_definition"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:14599",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tỉ giá tiền tệ",
+   "description": "",
+   "source_intent": "qa_currency"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15448",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "gửi một tweet về vấn đề âm lượng của sony",
+   "description": "",
+   "source_intent": "social_post"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:5703",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "giờ bây giờ",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13679",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "ạn có thể cho tôi biết con bò có bao nhiêu dạ dày được không",
+   "description": "",
+   "source_intent": "qa_factoid"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11514",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "olly chúng ta có thể trả lời tất cả chương trình phát thanh được chứ",
+   "description": "",
+   "source_intent": "play_podcasts"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:6388",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi có một ngày tuyệt vời",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:13186",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi cần nói chuyện với má",
+   "description": "",
+   "source_intent": "general_quirky"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:2283",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tôi cần thay đổi màu đèn ngôi nhà của tôi thành màu xanh dương",
+   "description": "",
+   "source_intent": "iot_hue_lightchange"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:3606",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "mấy giờ ở hà nội",
+   "description": "",
+   "source_intent": "datetime_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:1547",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "thời tiết tuần này ở khu vực của tôi như thế nào",
+   "description": "",
+   "source_intent": "weather_query"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:11616",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "có sự kiện gì ở trung tâm thành phố tối nay không",
+   "description": "",
+   "source_intent": "recommendation_events"
+  },
+  {
+   "source": "massive",
+   "source_id": "massive:vi-VN:15592",
+   "split": "test",
+   "label": "__OUT_OF_SCOPE__",
+   "mapping": "oos",
+   "title": "tweet lời phàn nàn đến m. t. v.",
+   "description": "",
+   "source_intent": "social_post"
+  }
+ ]
+}

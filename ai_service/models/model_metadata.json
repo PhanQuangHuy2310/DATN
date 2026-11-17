@@ -1,11 +1,11 @@
 {
-  "pipeline_version": "catalog-v2-unified-1",
-  "trained_at": "2026-11-15T16:47:13+00:00",
-  "training_duration_seconds": 254.4,
+  "pipeline_version": "catalog-v2-public-1",
+  "trained_at": "2026-11-17T04:06:10+00:00",
+  "training_duration_seconds": 50.8,
   "status": "READY_FOR_INFERENCE",
   "random_state": 42,
   "catalog": "api_core\\catalog\\catalog_v2.json",
-  "evaluation_scope": "Synthetic data generated from request_corpus.json; the hand-written request_eval_realistic.json test split is never used for training.",
+  "evaluation_scope": "Synthetic data generated from request_corpus.json plus translated real requests from public datasets (request_public_train.json); the hand-written test splits and request_eval_public.json are never used for training.",
   "nlp_metrics": {
     "corpus": "training\\data\\request_corpus.json",
     "evaluation_set": "training\\data\\request_eval_realistic.json",
@@ -19,91 +19,184 @@
       "short": 442
     },
     "model": "TF-IDF từ (1-2 gram) + ký tự không dấu (2-5 gram) → Logistic Regression",
+    "public_train_set": "training\\data\\request_public_train.json",
+    "public_evaluation_set": "training\\data\\request_eval_public.json",
+    "public_rows": {
+      "train": 2447,
+      "dev": 150,
+      "test": 789
+    },
     "c_search": [
       {
         "C": 2.0,
+        "public_weight": 0,
         "heldout_accuracy": 0.9736881224914523,
-        "dev_accuracy": 0.9871794871794872
+        "dev_accuracy": 0.9871794871794872,
+        "public_dev_accuracy": 0.48
       },
       {
         "C": 5.0,
+        "public_weight": 0,
         "heldout_accuracy": 0.9759179426192954,
-        "dev_accuracy": 0.9786324786324786
+        "dev_accuracy": 0.9786324786324786,
+        "public_dev_accuracy": 0.5133333333333333
       },
       {
         "C": 10.0,
+        "public_weight": 0,
         "heldout_accuracy": 0.9754719785937268,
-        "dev_accuracy": 0.9786324786324786
+        "dev_accuracy": 0.9786324786324786,
+        "public_dev_accuracy": 0.5066666666666667
       },
       {
         "C": 20.0,
+        "public_weight": 0,
         "heldout_accuracy": 0.9779991080719489,
-        "dev_accuracy": 0.9829059829059829
+        "dev_accuracy": 0.9829059829059829,
+        "public_dev_accuracy": 0.5066666666666667
+      },
+      {
+        "C": 2.0,
+        "public_weight": 3,
+        "heldout_accuracy": 0.9774044893711907,
+        "dev_accuracy": 0.9743589743589743,
+        "public_dev_accuracy": 0.88
+      },
+      {
+        "C": 5.0,
+        "public_weight": 3,
+        "heldout_accuracy": 0.9799316188494128,
+        "dev_accuracy": 0.9829059829059829,
+        "public_dev_accuracy": 0.8866666666666667
+      },
+      {
+        "C": 10.0,
+        "public_weight": 3,
+        "heldout_accuracy": 0.9800802735246024,
+        "dev_accuracy": 0.9829059829059829,
+        "public_dev_accuracy": 0.8733333333333333
+      },
+      {
+        "C": 20.0,
+        "public_weight": 3,
+        "heldout_accuracy": 0.9808235469005501,
+        "dev_accuracy": 0.9786324786324786,
+        "public_dev_accuracy": 0.8733333333333333
+      },
+      {
+        "C": 2.0,
+        "public_weight": 6,
+        "heldout_accuracy": 0.9775531440463803,
+        "dev_accuracy": 0.9743589743589743,
+        "public_dev_accuracy": 0.88
+      },
+      {
+        "C": 5.0,
+        "public_weight": 6,
+        "heldout_accuracy": 0.9797829641742233,
+        "dev_accuracy": 0.9786324786324786,
+        "public_dev_accuracy": 0.8666666666666667
+      },
+      {
+        "C": 10.0,
+        "public_weight": 6,
+        "heldout_accuracy": 0.9799316188494128,
+        "dev_accuracy": 0.9871794871794872,
+        "public_dev_accuracy": 0.86
+      },
+      {
+        "C": 20.0,
+        "public_weight": 6,
+        "heldout_accuracy": 0.9814181656013081,
+        "dev_accuracy": 0.9786324786324786,
+        "public_dev_accuracy": 0.86
       }
     ],
-    "chosen_c": 2.0,
+    "chosen_c": 5.0,
+    "chosen_public_weight": 3,
     "heldout_templates": {
       "rows": 6727,
-      "accuracy": 0.9736881224914523,
-      "top3_accuracy": 0.9936078489668501,
-      "f1_macro": 0.9738628080938259,
+      "accuracy": 0.9799316188494128,
+      "top3_accuracy": 0.9959863237698826,
+      "f1_macro": 0.9812115916227744,
       "weakest_types": [
         {
-          "type": "SPECIAL_DISCOUNT",
-          "accuracy": 0.85
+          "type": "EQUIPMENT",
+          "accuracy": 0.9081632653061225
+        },
+        {
+          "type": "SECURITY_INCIDENT_HOTFIX",
+          "accuracy": 0.9111111111111111
         },
         {
           "type": "TRAINING_COURSE",
-          "accuracy": 0.8797814207650273
+          "accuracy": 0.912568306010929
         },
         {
           "type": "CONTRACT_APPROVAL",
-          "accuracy": 0.8807339449541285
+          "accuracy": 0.9174311926605505
         },
         {
           "type": "WAREHOUSE_TRANSFER",
           "accuracy": 0.9203980099502488
         },
         {
-          "type": "TASK_REQUEST",
-          "accuracy": 0.9243243243243243
+          "type": "LEAVE_SPECIAL",
+          "accuracy": 0.9246575342465754
         },
         {
-          "type": "SECURITY_INCIDENT_HOTFIX",
-          "accuracy": 0.9277777777777778
+          "type": "SPECIAL_DISCOUNT",
+          "accuracy": 0.9416666666666667
         },
         {
-          "type": "ADVANCE_MEDIUM",
-          "accuracy": 0.9354838709677419
-        },
-        {
-          "type": "SERVER_FIREWALL",
-          "accuracy": 0.9381443298969072
+          "type": "RESIGNATION",
+          "accuracy": 0.9452054794520548
         }
       ]
     },
     "realistic": {
       "dev": {
         "rows": 174,
-        "accuracy": 1.0,
+        "accuracy": 0.9942528735632183,
         "top3_accuracy": 1.0,
         "category_accuracy": 1.0,
-        "errors": []
+        "errors": [
+          {
+            "text": "Nhờ phòng kế toán gửi số liệu doanh thu để làm báo cáo quý",
+            "expected": "CROSS_DEPT_SUPPORT",
+            "predicted": "TASK_REQUEST",
+            "top3": [
+              "TASK_REQUEST",
+              "CROSS_DEPT_SUPPORT",
+              "DATA_UAT_EXPORT"
+            ]
+          }
+        ]
       },
       "test": {
         "rows": 127,
-        "accuracy": 0.937007874015748,
+        "accuracy": 0.889763779527559,
         "top3_accuracy": 1.0,
-        "category_accuracy": 0.968503937007874,
+        "category_accuracy": 0.9133858267716536,
         "errors": [
           {
-            "text": "Khách bị trừ tiền 2 lần khi thanh toán online, cần trả lại 1 lần",
-            "expected": "REFUND_COMPENSATION",
-            "predicted": "EXPENSE_CLAIM",
+            "text": "Tạm ứng kinh phí 90 triệu triển khai phần mềm cho chi nhánh miền Nam. Đã có kế hoạch ngân sách",
+            "expected": "ADVANCE_LARGE",
+            "predicted": "BUDGET_REALLOCATION",
             "top3": [
-              "EXPENSE_CLAIM",
+              "BUDGET_REALLOCATION",
+              "ADVANCE_LARGE",
+              "ADVANCE_MEDIUM"
+            ]
+          },
+          {
+            "text": "Bồi thường cho khách do nhân viên giao nhầm đơn. Đề xuất tặng voucher và hoàn phí ship",
+            "expected": "REFUND_COMPENSATION",
+            "predicted": "FLASH_SALE_VOUCHER",
+            "top3": [
+              "FLASH_SALE_VOUCHER",
               "REFUND_COMPENSATION",
-              "VENDOR_PAYMENT"
+              "REWARD_REQ"
             ]
           },
           {
@@ -117,13 +210,33 @@
             ]
           },
           {
-            "text": "mua them cay xanh dat o khu lam viec cho thoang",
-            "expected": "PURCHASE_REQUEST",
-            "predicted": "EQUIPMENT",
+            "text": "Ngân sách quảng cáo quý 4 đã hết, đề nghị cấp bổ sung. Chiến dịch đang hiệu quả, cần thêm 200 triệu",
+            "expected": "BUDGET_REALLOCATION",
+            "predicted": "MARKETING_CAMPAIGN",
             "top3": [
+              "MARKETING_CAMPAIGN",
+              "BUDGET_REALLOCATION",
+              "FEATURE_RELEASE"
+            ]
+          },
+          {
+            "text": "Mua máy chấm công nhận diện khuôn mặt cho chi nhánh",
+            "expected": "EQUIPMENT",
+            "predicted": "ATTENDANCE_ADJUSTMENT",
+            "top3": [
+              "ATTENDANCE_ADJUSTMENT",
               "EQUIPMENT",
+              "PURCHASE_REQUEST"
+            ]
+          },
+          {
+            "text": "Đặt mua quà Trung thu cho khách hàng thân thiết. Khoảng 200 hộp bánh",
+            "expected": "PURCHASE_REQUEST",
+            "predicted": "REFUND_COMPENSATION",
+            "top3": [
+              "REFUND_COMPENSATION",
               "PURCHASE_REQUEST",
-              "TASK_REQUEST"
+              "FLASH_SALE_VOUCHER"
             ]
           },
           {
@@ -137,13 +250,23 @@
             ]
           },
           {
-            "text": "Đăng ký cho thợ sửa điều hòa vào tòa nhà ngày mai",
-            "expected": "VISITOR_SECURITY_PASS",
-            "predicted": "FACILITY_REPAIR",
+            "text": "Chuẩn bị máy tính cho 2 bạn thực tập sinh vào làm thứ hai",
+            "expected": "LAPTOP_PROVISION",
+            "predicted": "EMPLOYEE_ONBOARDING",
             "top3": [
-              "FACILITY_REPAIR",
-              "VISITOR_SECURITY_PASS",
-              "WFH_REQ"
+              "EMPLOYEE_ONBOARDING",
+              "LAPTOP_PROVISION",
+              "IT_SUPPORT"
+            ]
+          },
+          {
+            "text": "Cần quyền vào văn phòng sau 22h để trực hệ thống",
+            "expected": "ACCESS_FACILITY",
+            "predicted": "ACCESS",
+            "top3": [
+              "ACCESS",
+              "ACCESS_FACILITY",
+              "PROD_DATA_ACCESS"
             ]
           },
           {
@@ -163,7 +286,27 @@
             "top3": [
               "TASK_REQUEST",
               "FEATURE_RELEASE",
-              "FACILITY_REPAIR"
+              "RESIGNATION"
+            ]
+          },
+          {
+            "text": "Xử lý nhân viên chia sẻ file nội bộ ra ngoài công ty",
+            "expected": "DISCIPLINE_REQ",
+            "predicted": "NDA_PRIVACY_CLEARANCE",
+            "top3": [
+              "NDA_PRIVACY_CLEARANCE",
+              "DISCIPLINE_REQ",
+              "ACCESS"
+            ]
+          },
+          {
+            "text": "Tổ chức buổi đào tạo phòng chống lừa đảo qua email cho nhân viên",
+            "expected": "TRAINING_COURSE",
+            "predicted": "ACCESS",
+            "top3": [
+              "ACCESS",
+              "TRAINING_COURSE",
+              "ROOM_BOOKING"
             ]
           },
           {
@@ -187,23 +330,33 @@
         "category_accuracy": 0.9833333333333333,
         "errors": [
           {
-            "text": "nhân viên mới chưa có máy tính",
-            "expected": "LAPTOP_PROVISION",
-            "predicted": "EMPLOYEE_ONBOARDING",
+            "text": "xin thêm ngân sách quảng cáo",
+            "expected": "BUDGET_REALLOCATION",
+            "predicted": "MARKETING_CAMPAIGN",
             "top3": [
-              "EMPLOYEE_ONBOARDING",
-              "LAPTOP_PROVISION",
-              "EQUIPMENT"
+              "MARKETING_CAMPAIGN",
+              "BUDGET_REALLOCATION",
+              "ACCESS"
             ]
           }
         ]
       },
       "test": {
         "rows": 184,
-        "accuracy": 0.967391304347826,
+        "accuracy": 0.9456521739130435,
         "top3_accuracy": 0.9891304347826086,
-        "category_accuracy": 0.9728260869565217,
+        "category_accuracy": 0.9510869565217391,
         "errors": [
+          {
+            "text": "thanh lý mấy cái máy in hỏng",
+            "expected": "ASSET_DISPOSAL",
+            "predicted": "IT_SUPPORT",
+            "top3": [
+              "IT_SUPPORT",
+              "ASSET_DISPOSAL",
+              "OFFICE_SUPPLIES"
+            ]
+          },
           {
             "text": "máy vân tay không nhận",
             "expected": "ATTENDANCE_ADJUSTMENT",
@@ -221,27 +374,57 @@
             "top3": [
               "EQUIPMENT_BORROW",
               "ATTENDANCE_ADJUSTMENT",
-              "LEAVE"
+              "IT_SUPPORT"
             ]
           },
           {
-            "text": "ra quy chế làm việc từ xa",
-            "expected": "POLICY_ISSUANCE",
-            "predicted": "WFH_REQ",
+            "text": "hệ thống nên có chữ ký số",
+            "expected": "FEATURE_RELEASE",
+            "predicted": "ATTENDANCE_ADJUSTMENT",
             "top3": [
-              "WFH_REQ",
-              "POLICY_ISSUANCE",
-              "BUSINESS_TRIP"
+              "ATTENDANCE_ADJUSTMENT",
+              "FEATURE_RELEASE",
+              "DOCUMENT_SEAL"
+            ]
+          },
+          {
+            "text": "xin đổi bộ phận",
+            "expected": "INTERNAL_TRANSFER",
+            "predicted": "LAPTOP_PROVISION",
+            "top3": [
+              "LAPTOP_PROVISION",
+              "INTERNAL_TRANSFER",
+              "OFFICE_SUPPLIES"
+            ]
+          },
+          {
+            "text": "máy in hết mực",
+            "expected": "OFFICE_SUPPLIES",
+            "predicted": "IT_SUPPORT",
+            "top3": [
+              "IT_SUPPORT",
+              "OFFICE_SUPPLIES",
+              "ACCESS"
+            ]
+          },
+          {
+            "text": "cấp sổ tay cho nhân viên mới",
+            "expected": "OFFICE_SUPPLIES",
+            "predicted": "EMPLOYEE_ONBOARDING",
+            "top3": [
+              "EMPLOYEE_ONBOARDING",
+              "LAPTOP_PROVISION",
+              "OFFICE_SUPPLIES"
             ]
           },
           {
             "text": "mở vị trí kế toán",
             "expected": "RECRUITMENT_REQ",
-            "predicted": "ACCESS",
+            "predicted": "EXPENSE_CLAIM",
             "top3": [
-              "ACCESS",
+              "EXPENSE_CLAIM",
               "VENDOR_PAYMENT",
-              "EXPENSE_CLAIM"
+              "ACCESS"
             ]
           },
           {
@@ -255,16 +438,58 @@
             ]
           },
           {
-            "text": "đăng ký nhà vận chuyển mới",
-            "expected": "SUPPLIER_ONBOARDING",
-            "predicted": "INTERNAL_TRANSFER",
+            "text": "máy chủ dính ransomware",
+            "expected": "SECURITY_INCIDENT_HOTFIX",
+            "predicted": "SERVER_FIREWALL",
             "top3": [
-              "INTERNAL_TRANSFER",
-              "SUPPLIER_ONBOARDING",
-              "VISITOR_SECURITY_PASS"
+              "SERVER_FIREWALL",
+              "SECURITY_INCIDENT_HOTFIX",
+              "IT_SUPPORT"
             ]
           }
         ]
+      }
+    },
+    "public_test": {
+      "ALL_IN_SCOPE": {
+        "rows": 489,
+        "accuracy": 0.9202453987730062,
+        "top3_accuracy": 0.9897750511247444,
+        "low_confidence_rate": 0.022494887525562373
+      },
+      "banking77:approx": {
+        "rows": 40,
+        "accuracy": 1.0,
+        "top3_accuracy": 1.0,
+        "low_confidence_rate": 0.0
+      },
+      "banking77:direct": {
+        "rows": 40,
+        "accuracy": 1.0,
+        "top3_accuracy": 1.0,
+        "low_confidence_rate": 0.0
+      },
+      "clinc:approx": {
+        "rows": 89,
+        "accuracy": 1.0,
+        "top3_accuracy": 1.0,
+        "low_confidence_rate": 0.0
+      },
+      "clinc:direct": {
+        "rows": 51,
+        "accuracy": 1.0,
+        "top3_accuracy": 1.0,
+        "low_confidence_rate": 0.0
+      },
+      "it_tickets:manual": {
+        "rows": 269,
+        "accuracy": 0.8550185873605948,
+        "top3_accuracy": 0.9814126394052045,
+        "low_confidence_rate": 0.040892193308550186
+      },
+      "OUT_OF_SCOPE": {
+        "rows": 300,
+        "flagged_rate": 0.7533333333333333
       }
     }
   },
@@ -319,7 +544,7 @@
         ]
       ],
       "best_iteration": 398,
-      "seconds": 337.0,
+      "seconds": 23.5,
       "top_features": [
         [
           "is_over_budget",
@@ -397,7 +622,7 @@
         ]
       ],
       "best_iteration": 399,
-      "seconds": 124.1,
+      "seconds": 10.2,
       "top_features": [
         [
           "is_over_budget",
@@ -475,7 +700,7 @@
         ]
       ],
       "best_iteration": 298,
-      "seconds": 370.5,
+      "seconds": 7.9,
       "top_features": [
         [
           "is_over_budget",
@@ -553,7 +778,7 @@
         ]
       ],
       "best_iteration": 140,
-      "seconds": 32.9,
+      "seconds": 3.3,
       "top_features": [
         [
           "risk_weight",

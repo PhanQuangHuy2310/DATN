@@ -1,5 +1,5 @@
 {
-  "pipeline_version": "catalog-v2-unified-1",
+  "pipeline_version": "catalog-v2-public-1",
   "type_domains": {
     "ACCESS": "it",
     "ACCESS_FACILITY": "master",

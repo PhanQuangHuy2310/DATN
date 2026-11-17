@@ -10,6 +10,10 @@ Nguồn dữ liệu (đều nằm trong repo, không cần file sinh tạm):
   * training/data/request_corpus.json          tệp huấn luyện văn bản (mẫu câu)
   * training/data/request_eval_realistic.json  câu viết tay để đánh giá, không train
   * training/data/request_eval_short.json      câu rất ngắn viết tay ("bố mất"), không train
+  * training/data/request_public_train.json    câu yêu cầu THẬT từ bộ dữ liệu công khai (phiếu IT,
+                                               CLINC150, BANKING77), đã dịch và gán nhãn; có train
+  * training/data/request_eval_public.json     phần test của các bộ công khai + câu ngoài phạm vi
+                                               (MASSIVE vi-VN), không train
 
 Cùng --seed thì cùng dữ liệu, cùng model, cùng tên file. Model chỉ được thay
 khi mọi bước train xong (ghi vào thư mục tạm rồi mới chuyển sang models/).
@@ -61,9 +65,16 @@ CATALOG_PATH = REPO_ROOT / "api_core" / "catalog" / "catalog_v2.json"
 CORPUS_PATH = DATA_DIR / "request_corpus.json"
 EVAL_PATH = DATA_DIR / "request_eval_realistic.json"
 EVAL_SHORT_PATH = DATA_DIR / "request_eval_short.json"
+PUBLIC_TRAIN_PATH = DATA_DIR / "request_public_train.json"
+EVAL_PUBLIC_PATH = DATA_DIR / "request_eval_public.json"
 REPORT_PATH = DATA_DIR / "training_report.md"
 
-PIPELINE_VERSION = "catalog-v2-unified-1"
+PIPELINE_VERSION = "catalog-v2-public-1"
+# Số bản sao của mỗi câu thật khi ghép với ~38.000 câu tổng hợp (luân phiên có dấu /
+# không dấu). 0 = không dùng dữ liệu thật; giá trị được chọn trên tập dev.
+PUBLIC_WEIGHTS = (0, 3, 6)
+OUT_OF_SCOPE = "__OUT_OF_SCOPE__"
+LOW_CONFIDENCE = 0.35  # cùng ngưỡng với routers/classify.py
 OTHER_TYPE = "__OTHER__"
 
 NLP_ARTIFACTS = ["nlp_classifier.pkl", "nlp_labels.json"]
@@ -309,6 +320,58 @@ def load_eval_items(path: Path = EVAL_PATH) -> list[dict[str, str]]:
     return items
 
 
+def load_public_train(catalog: dict[str, Any]) -> list[dict[str, str]]:
+    """Real requests from public datasets (translated, relabelled); [] if absent."""
+    if not PUBLIC_TRAIN_PATH.is_file():
+        return []
+    items = load_eval_items(PUBLIC_TRAIN_PATH)
+    unknown = {i["label"] for i in items} - set(catalog["types"])
+    if unknown:
+        raise ValueError(f"Public train labels not in catalog: {sorted(unknown)}")
+    return items
+
+
+def public_rows(items: list[dict[str, str]], weight: int) -> tuple[list[str], list[str]]:
+    """`weight` copies per real sentence, alternating accented / accent-free text."""
+    texts: list[str] = []
+    labels: list[str] = []
+    for item in items:
+        for copy in range(weight):
+            text = item["text"] if copy % 2 == 0 else strip_diacritics(item["text"])
+            texts.append(normalize_text(text))
+            labels.append(item["label"])
+    return texts, labels
+
+
+def score_public(model: Pipeline, items: list[dict[str, Any]]) -> dict[str, Any]:
+    """In-scope accuracy per source/mapping, and how often out-of-scope text is flagged."""
+    normalized = [normalize_text(i["text"]) for i in items]
+    probabilities = model.predict_proba(normalized)
+    top1, topk = predict_codes(model, [i["text"] for i in items])
+    groups: dict[str, list[tuple[bool, bool, bool]]] = {}
+    oos_flagged: list[bool] = []
+    for item, p1, ranked, row in zip(items, top1, topk, probabilities):
+        low = float(row.max()) < LOW_CONFIDENCE
+        if item["label"] == OUT_OF_SCOPE:
+            oos_flagged.append(low)
+            continue
+        hit = (p1 == item["label"], item["label"] in ranked, low)
+        groups.setdefault(f"{item['source']}:{item['mapping']}", []).append(hit)
+        groups.setdefault("ALL_IN_SCOPE", []).append(hit)
+    out: dict[str, Any] = {
+        name: {
+            "rows": len(hits),
+            "accuracy": float(np.mean([h[0] for h in hits])),
+            "top3_accuracy": float(np.mean([h[1] for h in hits])),
+            "low_confidence_rate": float(np.mean([h[2] for h in hits])),
+        }
+        for name, hits in sorted(groups.items())
+    }
+    if oos_flagged:
+        out["OUT_OF_SCOPE"] = {"rows": len(oos_flagged), "flagged_rate": float(np.mean(oos_flagged))}
+    return out
+
+
 def score_realistic(
     model: Pipeline, items: list[dict[str, str]], catalog: dict[str, Any]
 ) -> dict[str, Any]:
@@ -362,34 +425,62 @@ def train_nlp(
     if unknown_labels:
         raise ValueError(f"Evaluation labels not in catalog: {sorted(unknown_labels)}")
     dev_items = [i for i in [*eval_items, *short_items] if i["split"] == "dev"]
+    public_items = load_public_train(catalog)
+    public_train = [i for i in public_items if i["split"] == "train"]
+    public_dev = [i for i in public_items if i["split"] == "dev"]
+    public_eval = load_eval_items(EVAL_PUBLIC_PATH) if EVAL_PUBLIC_PATH.is_file() else []
+    weights = PUBLIC_WEIGHTS if public_items else (0,)
     print(
         f"NLP: {len(frame):,} câu tổng hợp cho {frame['request_type'].nunique()} loại "
         f"| train {len(train_idx):,} / held-out mẫu câu {len(test_idx):,} "
-        f"| đánh giá viết tay {len(eval_items)} + câu ngắn {len(short_items)}"
+        f"| đánh giá viết tay {len(eval_items)} + câu ngắn {len(short_items)} "
+        f"| câu thật công khai train {len(public_train)} / dev {len(public_dev)} / test {len(public_eval)}"
     )
 
-    # Choose C on the held-out templates plus the hand-written dev split.
-    candidates: list[tuple[float, float, float, float]] = []
-    for c_value in (2.0, 5.0, 10.0, 20.0):
-        started = time.monotonic()
-        model = make_text_pipeline(c_value, seed)
-        model.fit([texts[i] for i in train_idx], labels[train_idx])
-        heldout_pred, _ = predict_codes(model, [texts[i] for i in test_idx])
-        heldout_acc = accuracy_score(labels[test_idx], heldout_pred)
-        dev_pred, _ = predict_codes(model, [i["text"] for i in dev_items])
-        dev_acc = float(np.mean([p == i["label"] for p, i in zip(dev_pred, dev_items)]))
-        candidates.append((c_value, heldout_acc, dev_acc, time.monotonic() - started))
-        print(
-            f"  C={c_value:<5} held-out mẫu câu={heldout_acc:.4f} dev viết tay={dev_acc:.4f} "
-            f"({time.monotonic() - started:.0f}s)"
-        )
-    # Hand-written dev sentences decide first (they look like real users);
-    # synthetic held-out templates break ties, then the simpler model wins.
-    best_c = max(candidates, key=lambda c: (round(c[2], 4), round(c[1], 4), -c[0]))[0]
+    def accuracy_on(model: Pipeline, items: list[dict[str, str]]) -> float:
+        if not items:
+            return 0.0
+        pred, _ = predict_codes(model, [i["text"] for i in items])
+        return float(np.mean([p == i["label"] for p, i in zip(pred, items)]))
 
-    # Metrics for the chosen C, measured before the final refit.
+    # Choose C and the weight of real sentences on held-out templates, the
+    # hand-written dev split and the public dev split (never on any test split).
+    candidates: list[tuple[float, int, float, float, float, float]] = []
+    for weight in weights:
+        extra_texts, extra_labels = public_rows(public_train, weight)
+        for c_value in (2.0, 5.0, 10.0, 20.0):
+            started = time.monotonic()
+            model = make_text_pipeline(c_value, seed)
+            model.fit(
+                [texts[i] for i in train_idx] + extra_texts,
+                np.concatenate([labels[train_idx], np.array(extra_labels, dtype=labels.dtype)]),
+            )
+            heldout_pred, _ = predict_codes(model, [texts[i] for i in test_idx])
+            heldout_acc = accuracy_score(labels[test_idx], heldout_pred)
+            dev_acc = accuracy_on(model, dev_items)
+            public_dev_acc = accuracy_on(model, public_dev)
+            candidates.append(
+                (c_value, weight, heldout_acc, dev_acc, public_dev_acc, time.monotonic() - started)
+            )
+            print(
+                f"  w={weight} C={c_value:<5} held-out={heldout_acc:.4f} dev viết tay={dev_acc:.4f} "
+                f"dev công khai={public_dev_acc:.4f} ({time.monotonic() - started:.0f}s)"
+            )
+    # Both dev splits count equally (hand-written phrasing and real tickets);
+    # held-out templates break ties, then the simpler model wins.
+    best = max(
+        candidates,
+        key=lambda c: (round((c[3] + c[4]) / 2 if public_dev else c[3], 4), round(c[2], 4), -c[0]),
+    )
+    best_c, best_weight = best[0], best[1]
+
+    # Metrics for the chosen settings, measured before the final refit.
+    extra_texts, extra_labels = public_rows(public_train, best_weight)
     model = make_text_pipeline(best_c, seed)
-    model.fit([texts[i] for i in train_idx], labels[train_idx])
+    model.fit(
+        [texts[i] for i in train_idx] + extra_texts,
+        np.concatenate([labels[train_idx], np.array(extra_labels, dtype=labels.dtype)]),
+    )
     heldout_pred, heldout_top = predict_codes(model, [texts[i] for i in test_idx])
     order = sorted(catalog["types"])
     heldout = {
@@ -411,11 +502,14 @@ def train_nlp(
     )[:8]
     heldout["weakest_types"] = [{"type": c, "accuracy": a} for c, a in worst]
 
-    # Final model: every synthetic sentence (hand-written eval stays unseen).
+    # Final model: every synthetic sentence plus every public train+dev sentence
+    # (hand-written eval and the public test set stay unseen).
+    all_texts, all_labels = public_rows(public_items, best_weight)
     final = make_text_pipeline(best_c, seed)
-    final.fit(texts, labels)
+    final.fit(texts + all_texts, np.concatenate([labels, np.array(all_labels, dtype=labels.dtype)]))
     realistic = score_realistic(final, eval_items, catalog)
     short_scores = score_realistic(final, short_items, catalog)
+    public_scores = score_public(final, public_eval) if public_eval else {}
     joblib.dump(final, staging / "nlp_classifier.pkl", compress=3)
 
     labels_payload = {
@@ -432,8 +526,13 @@ def train_nlp(
     (staging / "nlp_labels.json").write_text(
         json.dumps(labels_payload, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    if public_scores:
+        print(
+            f"  → dữ liệu công khai TEST: trong phạm vi {public_scores['ALL_IN_SCOPE']['accuracy']:.4f}, "
+            f"ngoài phạm vi bị gắn cờ {public_scores.get('OUT_OF_SCOPE', {}).get('flagged_rate', 0):.4f}"
+        )
     print(
-        f"  → chọn C={best_c}: held-out mẫu câu {heldout['accuracy']:.4f}, "
+        f"  → chọn C={best_c}, trọng số câu thật={best_weight}: held-out mẫu câu {heldout['accuracy']:.4f}, "
         f"viết tay dev {realistic['dev']['accuracy']:.4f}, "
         f"viết tay TEST {realistic['test']['accuracy']:.4f} "
         f"(top-3 {realistic['test']['top3_accuracy']:.4f}), "
@@ -452,13 +551,20 @@ def train_nlp(
             "short": sum(len(s.get("short", [])) for s in corpus["types"].values()),
         },
         "model": "TF-IDF từ (1-2 gram) + ký tự không dấu (2-5 gram) → Logistic Regression",
+        "public_train_set": str(PUBLIC_TRAIN_PATH.relative_to(AI_DIR)) if public_items else None,
+        "public_evaluation_set": str(EVAL_PUBLIC_PATH.relative_to(AI_DIR)) if public_eval else None,
+        "public_rows": {"train": len(public_train), "dev": len(public_dev), "test": len(public_eval)},
         "c_search": [
-            {"C": c, "heldout_accuracy": h, "dev_accuracy": d} for c, h, d, _ in candidates
+            {"C": c, "public_weight": w, "heldout_accuracy": h, "dev_accuracy": d,
+             "public_dev_accuracy": pd_}
+            for c, w, h, d, pd_, _ in candidates
         ],
         "chosen_c": best_c,
+        "chosen_public_weight": best_weight,
         "heldout_templates": heldout,
         "realistic": realistic,
         "short_inputs": short_scores,
+        "public_test": public_scores,
     }
 
 
@@ -862,8 +968,9 @@ def write_report(metadata: dict[str, Any]) -> None:
         f"{metadata['training_duration_seconds']} giây)",
         "- Lệnh: `ai_service\\.venv-ai\\Scripts\\python.exe ai_service\\training\\train.py`",
         "",
-        "> Dữ liệu huấn luyện là dữ liệu tổng hợp từ mẫu câu; con số đáng tin nhất là "
-        "độ chính xác trên **bộ câu viết tay (test)**, vì các câu này không được dùng để train.",
+        "> Dữ liệu huấn luyện gồm câu tổng hợp từ mẫu câu và câu yêu cầu thật từ bộ dữ liệu "
+        "công khai (đã dịch, gán nhãn). Con số đáng tin nhất là độ chính xác trên các tập "
+        "**test** (viết tay và công khai), vì các câu này không được dùng để train.",
         "",
     ]
     if nlp:
@@ -875,6 +982,9 @@ def write_report(metadata: dict[str, Any]) -> None:
             f"{nlp['synthetic_rows']:,} câu sinh từ {nlp['corpus_templates']['titles']} mẫu tiêu đề "
             f"và {nlp['corpus_templates']['details']} mẫu mô tả, "
             f"{nlp['corpus_templates'].get('short', 0)} mẫu câu rất ngắn.",
+            f"- Câu thật từ bộ dữ liệu công khai: {nlp.get('public_rows', {}).get('train', 0)} train + "
+            f"{nlp.get('public_rows', {}).get('dev', 0)} dev (`{nlp.get('public_train_set')}`), "
+            f"mỗi câu nhân {nlp.get('chosen_public_weight', 0)} bản (có dấu / không dấu).",
             f"- Mô hình: {nlp['model']}, C={nlp['chosen_c']}.",
             "",
             "| Tập đánh giá | Số câu | Đúng loại (top-1) | Đúng trong top-3 | Đúng nhóm |",
@@ -892,6 +1002,28 @@ def write_report(metadata: dict[str, Any]) -> None:
                         f"| {label} | {r['rows']} | {r['accuracy']:.1%} | "
                         f"{r['top3_accuracy']:.1%} | {r['category_accuracy']:.1%} |"
                     )
+        public = nlp.get("public_test") or {}
+        names = {
+            "ALL_IN_SCOPE": "**Công khai — tất cả câu trong phạm vi (test)**",
+            "it_tickets:manual": "Công khai — phiếu IT thật (test)",
+            "clinc:direct": "Công khai — CLINC150, ánh xạ trực tiếp (test)",
+            "clinc:approx": "Công khai — CLINC150, ánh xạ gần đúng (test)",
+            "banking77:direct": "Công khai — BANKING77, ánh xạ trực tiếp (test)",
+            "banking77:approx": "Công khai — BANKING77, ánh xạ gần đúng (test)",
+        }
+        for key, label in names.items():
+            if key in public:
+                r = public[key]
+                lines.append(
+                    f"| {label} | {r['rows']} | {r['accuracy']:.1%} | {r['top3_accuracy']:.1%} | — |"
+                )
+        if "OUT_OF_SCOPE" in public:
+            r = public["OUT_OF_SCOPE"]
+            lines += [
+                "",
+                f"Câu ngoài phạm vi (MASSIVE vi-VN, {r['rows']} câu): {r['flagged_rate']:.1%} bị gắn cờ "
+                f"độ tin cậy thấp (< {LOW_CONFIDENCE}), đúng kỳ vọng.",
+            ]
         for scores, title in ((real, "Câu viết tay (test)"), (short, "Câu rất ngắn (test)")):
             errors = scores.get("test", {}).get("errors", [])
             lines += ["", f"{title} còn phân loại sai:", ""]
@@ -989,8 +1121,9 @@ def main(argv: list[str] | None = None) -> int:
             "random_state": args.seed,
             "catalog": str(CATALOG_PATH.relative_to(REPO_ROOT)),
             "evaluation_scope": (
-                "Synthetic data generated from request_corpus.json; the hand-written "
-                "request_eval_realistic.json test split is never used for training."
+                "Synthetic data generated from request_corpus.json plus translated real requests "
+                "from public datasets (request_public_train.json); the hand-written test splits "
+                "and request_eval_public.json are never used for training."
             ),
             "nlp_metrics": nlp_metrics,
             "risk_metrics": risk_metrics,
