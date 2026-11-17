@@ -57,7 +57,14 @@ SQL_SIGNALS = f"""
              CASE WHEN coalesce(v.payload->>'end_date', v.payload->>'start_date', v.payload->>'date')
                        ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
                   THEN left(coalesce(v.payload->>'end_date', v.payload->>'start_date',
-                                     v.payload->>'date'), 10)::date END AS d_end
+                                     v.payload->>'date'), 10)::date END AS d_end,
+             CASE WHEN coalesce(v.payload->>'visit_date', v.payload->>'booking_date') ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+                  THEN left(coalesce(v.payload->>'visit_date', v.payload->>'booking_date'), 10)::date
+             END AS d_event,
+             CASE WHEN v.payload->>'handover_user_id' ~ '^[0-9a-fA-F-]{{36}}$'
+                  THEN (v.payload->>'handover_user_id')::uuid END AS handover_id,
+             upper(regexp_replace(coalesce(v.payload->>'invoice_number', ''), '\\s', '', 'g')) AS invoice_no,
+             lower(btrim(coalesce(v.payload->>'customer_name', ''))) AS customer
       FROM eas.request r
       JOIN eas.request_type rt ON rt.id = r.type_id
       JOIN eas.request_revision v ON v.id = r.current_revision_id
@@ -91,6 +98,40 @@ SQL_SIGNALS = f"""
       JOIN eas.request_revision v2 ON v2.id = r2.current_revision_id
       JOIN me ON r2.requester_id = me.requester_id
       WHERE v2.submitted_at <= me.t0 AND v2.submitted_at > me.t0 - interval '90 days'
+    ),
+    absences AS (
+      -- vắng mặt: lịch nghỉ/công tác đã duyệt + đơn nghỉ/công tác trong EAS chưa bị từ chối/hủy
+      SELECT x.user_id, (x.start_time AT TIME ZONE %(tz)s)::date AS d1,
+             (x.end_time AT TIME ZONE %(tz)s)::date AS d2
+      FROM eas.user_leave_and_trips x
+      WHERE upper(x.approval_status) = 'APPROVED'
+      UNION ALL
+      SELECT r3.requester_id, left(v3.payload->>'start_date', 10)::date,
+             left(CASE WHEN v3.payload->>'end_date' ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+                       THEN v3.payload->>'end_date' ELSE v3.payload->>'start_date' END, 10)::date
+      FROM eas.request r3
+      JOIN eas.request_type t3 ON t3.id = r3.type_id
+      JOIN eas.request_revision v3 ON v3.id = r3.current_revision_id
+      JOIN me ON r3.id <> me.id
+      WHERE t3.code IN ('LEAVE', 'LEAVE_SPECIAL', 'BUSINESS_TRIP')
+        AND r3.status <> ALL(%(excluded)s)
+        AND v3.payload->>'start_date' ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+    ),
+    team AS (
+      SELECT m.id FROM eas.app_user m JOIN me ON m.department_id = me.department_id
+      WHERE m.is_active AND m.id <> me.requester_id AND NOT m.is_system_account
+    ),
+    handover_work AS (
+      SELECT least(st.due_at, coalesce({_PAYLOAD_DUE}, st.due_at)) AS due_at
+      FROM eas.sla_stage st
+      JOIN me ON me.handover_id IS NOT NULL
+      LEFT JOIN eas.approval_step s ON s.id = st.approval_step_id
+      LEFT JOIN eas.execution_attempt a ON a.id = st.attempt_id
+      JOIN eas.request rq ON rq.id = st.request_id
+      JOIN eas.request_revision v ON v.id = rq.current_revision_id
+      WHERE st.closed_at IS NULL
+        AND ((st.kind = 'APPROVAL' AND s.state = 'ACTIVE' AND s.assignee_id = me.handover_id)
+             OR (st.kind = 'EXECUTION' AND a.closed_at IS NULL AND a.executor_id = me.handover_id))
     )
     SELECT
       (SELECT coalesce(array_agg(h ORDER BY h), '{{}}')
@@ -117,21 +158,46 @@ SQL_SIGNALS = f"""
       (SELECT count(*) FROM hist WHERE hist.code = 'ATTENDANCE_ADJUSTMENT'
           AND hist.status <> ALL(%(excluded)s) AND hist.submitted_at > me.t0 - interval '30 days'),
       (SELECT CASE WHEN me.d_start IS NULL THEN 0 ELSE
-         (SELECT count(DISTINCT x.user_id)::float8 / greatest(
-                    (SELECT count(*) FROM eas.app_user m
-                      WHERE m.department_id = me.department_id AND m.is_active
-                        AND m.id <> me.requester_id AND NOT m.is_system_account), 1)
-            FROM eas.user_leave_and_trips x
-            JOIN eas.app_user m ON m.id = x.user_id
-           WHERE m.department_id = me.department_id AND m.id <> me.requester_id
-             AND upper(x.approval_status) = 'APPROVED'
-             AND (x.start_time AT TIME ZONE %(tz)s)::date <= me.d_end
-             AND (x.end_time AT TIME ZONE %(tz)s)::date >= me.d_start)
+         (SELECT count(DISTINCT a.user_id)::float8 / greatest((SELECT count(*) FROM team), 1)
+            FROM absences a JOIN team ON team.id = a.user_id
+           WHERE a.d1 <= me.d_end AND a.d2 >= me.d_start)
        END),
       (SELECT count(*) FROM hist WHERE hist.status = 'REJECTED'
           AND hist.submitted_at > me.t0 - interval '30 days'),
       (SELECT count(*) FROM eas.audit_event e
-        WHERE e.action = 'AI_AUTO_APPROVE_REVOKED' AND e.request_id IN (SELECT id FROM hist))
+        WHERE e.action = 'AI_AUTO_APPROVE_REVOKED' AND e.request_id IN (SELECT id FROM hist)),
+      (SELECT count(*) FROM team),
+      (SELECT count(*) FROM handover_work hw
+        WHERE me.d_start IS NOT NULL
+          AND (hw.due_at AT TIME ZONE %(tz)s)::date BETWEEN me.d_start AND me.d_end),
+      (me.handover_id IS NOT NULL AND me.d_start IS NOT NULL AND EXISTS (
+         SELECT 1 FROM absences a
+         WHERE a.user_id = me.handover_id AND a.d1 <= me.d_end AND a.d2 >= me.d_start)),
+      (SELECT count(*) FROM eas.request r4
+         JOIN eas.request_type t4 ON t4.id = r4.type_id
+         JOIN eas.request_revision v4 ON v4.id = r4.current_revision_id
+        WHERE me.invoice_no <> '' AND r4.id <> me.id
+          AND t4.code IN ('EXPENSE_CLAIM', 'REIMBURSEMENT')
+          AND r4.status <> ALL(%(excluded)s)
+          AND v4.submitted_at > me.t0 - interval '180 days'
+          AND upper(regexp_replace(coalesce(v4.payload->>'invoice_number', ''), '\\s', '', 'g'))
+              = me.invoice_no),
+      (SELECT count(*) FROM eas.request r5
+         JOIN eas.request_type t5 ON t5.id = r5.type_id
+         JOIN eas.request_revision v5 ON v5.id = r5.current_revision_id
+        WHERE me.customer <> '' AND r5.id <> me.id AND t5.code = 'SPECIAL_DISCOUNT'
+          AND r5.status <> ALL(%(excluded)s)
+          AND v5.submitted_at > me.t0 - interval '7 days'
+          AND lower(btrim(coalesce(v5.payload->>'customer_name', ''))) = me.customer),
+      (me.d_event IS NOT NULL AND EXISTS (
+         SELECT 1 FROM absences a
+         WHERE a.user_id = me.requester_id AND me.d_event BETWEEN a.d1 AND a.d2)),
+      (SELECT count(*) FROM hist
+        WHERE hist.submitted_at > me.t0 - interval '7 days'
+          AND (extract(isodow FROM hist.submitted_at AT TIME ZONE %(tz)s) IN (6, 7)
+               OR (hist.submitted_at AT TIME ZONE %(tz)s)::time NOT BETWEEN '08:00' AND '17:30'
+               OR (hist.submitted_at AT TIME ZONE %(tz)s)::date IN
+                  (SELECT holiday_date FROM eas.business_holiday)))
     FROM me
 """
 
@@ -149,6 +215,13 @@ EMPTY: dict[str, Any] = {
     "team_absence_ratio": 0.0,
     "requester_rejected_30d": 0,
     "ai_revoked_90d": 0,
+    "team_size": 0,
+    "handover_open_work_in_absence": 0,
+    "handover_absent": False,
+    "duplicate_invoice_count": 0,
+    "same_customer_count_7d": 0,
+    "requester_absent_on_event": False,
+    "off_hours_count_7d": 0,
 }
 
 
@@ -180,6 +253,13 @@ def load_signals(request_id: str) -> dict[str, Any]:
         "team_absence_ratio": round(min(float(row[10] or 0), 1.0), 3),
         "requester_rejected_30d": int(row[11] or 0),
         "ai_revoked_90d": int(row[12] or 0),
+        "team_size": int(row[13] or 0),
+        "handover_open_work_in_absence": int(row[14] or 0),
+        "handover_absent": bool(row[15]),
+        "duplicate_invoice_count": int(row[16] or 0),
+        "same_customer_count_7d": int(row[17] or 0),
+        "requester_absent_on_event": bool(row[18]),
+        "off_hours_count_7d": int(row[19] or 0),
     }
 
 

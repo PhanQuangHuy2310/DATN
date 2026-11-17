@@ -72,6 +72,14 @@ class AutoApproveInput(BaseModel):
     team_absence_ratio: float = Field(0.0, ge=0, le=1)
     requester_rejected_30d: int = Field(0, ge=0, le=10_000)
     ai_revoked_90d: int = Field(0, ge=0, le=10_000)
+    # Tín hiệu cho danh mục tình huống xấu (data/bad_case_catalog.json).
+    team_size: int = Field(0, ge=0, le=10_000)
+    handover_open_work_in_absence: int = Field(0, ge=0, le=10_000)
+    handover_absent: bool = False
+    duplicate_invoice_count: int = Field(0, ge=0, le=10_000)
+    same_customer_count_7d: int = Field(0, ge=0, le=10_000)
+    requester_absent_on_event: bool = False
+    off_hours_count_7d: int = Field(0, ge=0, le=10_000)
 
     def policy_signals(self) -> PolicySignals:
         return PolicySignals(

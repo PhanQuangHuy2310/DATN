@@ -200,7 +200,9 @@ class ContextRuleTests(unittest.TestCase):
             out = asyncio.run(auto_approve.evaluate_auto_approve(body))
         self.assertEqual(out.decision, "escalate_to_human")
         self.assertEqual(out.escalate_to, "B")
-        self.assertEqual(out.escalation_causes[0]["code"], "QC05-1-LEAVE")
+        codes = {c["code"] for c in out.escalation_causes}
+        # cả tình huống xấu trong danh mục lẫn luật Quy chế 05/2026 cùng giải thích việc nâng luồng
+        self.assertEqual(codes, {"BC_DEADLINE_CONFLICT", "QC05-1-LEAVE"})
 
 
 if __name__ == "__main__":

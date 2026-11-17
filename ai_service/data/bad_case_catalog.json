@@ -1,0 +1,161 @@
+{
+  "version": "bad-case-catalog-1",
+  "about": "Danh mục tình huống xấu cho các loại luồng A (AI có quyền tự duyệt). Nguồn: Gemini 3.5 Flash-Lite sinh 30 ứng viên ngày 18/11/2026 (training/data/bad_case_candidates_gemini.json) từ định nghĩa 9 loại A và danh sách tín hiệu CSDL; nhóm rà lại, giữ 12 tình huống phát hiện được bằng tín hiệu có thật, bỏ các ứng viên trùng kiểm tra sẵn có (quỹ phép, trùng phòng) hoặc cần dữ liệu không có. Ngưỡng là tham số chính sách, sửa ở đây không cần huấn luyện lại.",
+  "cases": [
+    {
+      "code": "BC_DEADLINE_CONFLICT",
+      "request_types": ["LEAVE", "LEAVE_SPECIAL", "ATTENDANCE_ADJUSTMENT"],
+      "title": "Xin nghỉ/về sớm khi đang giữ việc đến hạn, chưa bàn giao",
+      "harm": "Việc đến hạn bị bỏ dở, trễ cam kết với khách hàng/phòng khác.",
+      "condition": "Người gửi giữ ít nhất 1 việc (bước duyệt, lượt thực hiện, nghiệm thu) đến hạn trong 24 giờ hoặc trong thời gian nghỉ, và đơn chưa có người nhận bàn giao.",
+      "params": {"due_within_hours": 24},
+      "risk": 5,
+      "escalate_to": "B",
+      "remediation": ["REASSIGN_WORK", "POSTPONE_DEADLINE", "DELEGATE_APPROVALS", "RESCHEDULE_REQUEST"],
+      "false_positive": "Đã chỉ định người nhận bàn giao thì không chặn; việc đã đóng không tính."
+    },
+    {
+      "code": "BC_HANDOVER_OVERLOADED",
+      "request_types": ["LEAVE", "LEAVE_SPECIAL"],
+      "title": "Người nhận bàn giao đang quá tải hoặc cũng vắng",
+      "harm": "Bàn giao trên giấy: người nhận không thể làm thay, việc vẫn trễ.",
+      "condition": "Người được chỉ định nhận bàn giao có từ 3 việc đến hạn trong thời gian nghỉ, hoặc chính họ có lịch nghỉ/công tác đã duyệt trùng ngày.",
+      "params": {"max_handover_items": 3},
+      "risk": 4,
+      "escalate_to": "B",
+      "remediation": ["CHANGE_HANDOVER", "REASSIGN_WORK", "RESCHEDULE_REQUEST"],
+      "false_positive": "Chỉ đếm việc có hạn trong đúng khoảng nghỉ của người gửi."
+    },
+    {
+      "code": "BC_TEAM_ABSENCE_PEAK",
+      "request_types": ["LEAVE", "LEAVE_SPECIAL"],
+      "title": "Phòng đã vắng nhiều người trùng ngày",
+      "harm": "Phòng thiếu người trực, dịch vụ nội bộ gián đoạn.",
+      "condition": "Tỉ lệ thành viên khác trong phòng đã có lịch nghỉ/công tác đã duyệt trùng ngày từ 40% trở lên.",
+      "params": {"min_ratio": 0.4},
+      "risk": 4,
+      "escalate_to": "B",
+      "remediation": ["RESCHEDULE_REQUEST", "REASSIGN_WORK"],
+      "false_positive": "Không tính chính người gửi; phòng dưới 3 người thì không áp dụng."
+    },
+    {
+      "code": "BC_REPEATED_EXEMPTION",
+      "request_types": ["ATTENDANCE_ADJUSTMENT"],
+      "title": "Điều chỉnh chấm công lặp lại có hệ thống",
+      "harm": "Lạm dụng ngưỡng miễn trừ để hợp thức hóa đi muộn/về sớm.",
+      "condition": "Đây là lần điều chỉnh chấm công thứ 4 trở lên trong 30 ngày.",
+      "params": {"max_in_30d": 3},
+      "risk": 3,
+      "escalate_to": "B",
+      "remediation": ["REQUIRE_EVIDENCE", "HR_COUNSELING"],
+      "false_positive": "Hồ sơ đã hủy/bị từ chối/nháp không tính."
+    },
+    {
+      "code": "BC_WFH_FREQUENT",
+      "request_types": ["WFH_REQ"],
+      "title": "Làm việc từ xa dày đặc trong tháng",
+      "harm": "WFH trở thành mặc định, né chấm công và họp trực tiếp.",
+      "condition": "Đây là đơn WFH thứ 8 trở lên trong tháng dương lịch.",
+      "params": {"max_in_month": 7},
+      "risk": 3,
+      "escalate_to": "B",
+      "remediation": ["REQUIRE_EVIDENCE", "RESCHEDULE_REQUEST"],
+      "false_positive": "Ngưỡng tháng, không cộng dồn qua tháng."
+    },
+    {
+      "code": "BC_SPLIT_AMOUNT_EVASION",
+      "request_types": ["EXPENSE_CLAIM", "REFUND_COMPENSATION", "ADVANCE_SMALL", "ADVANCE_MEDIUM", "ADVANCE_LARGE", "REIMBURSEMENT", "SALARY_ADVANCE"],
+      "title": "Chia nhỏ đề xuất tài chính để né ngưỡng",
+      "harm": "Lách cấp duyệt cao (Kế toán trưởng, Giám đốc) bằng nhiều hồ sơ nhỏ.",
+      "condition": "Từ 2 hồ sơ tài chính trong 7 ngày, tổng vượt ngưỡng trong khi hồ sơ này dưới ngưỡng.",
+      "params": {"threshold_vnd": 20000000, "window_days": 7, "min_requests": 2},
+      "risk": 5,
+      "escalate_to": "C",
+      "remediation": ["MERGE_REQUESTS", "REQUIRE_EVIDENCE"],
+      "false_positive": "Hồ sơ đơn lẻ trên ngưỡng đã có tuyến duyệt riêng, không tính là chia nhỏ."
+    },
+    {
+      "code": "BC_DUPLICATE_INVOICE",
+      "request_types": ["EXPENSE_CLAIM", "REIMBURSEMENT"],
+      "title": "Số hóa đơn đã được dùng ở hồ sơ khác",
+      "harm": "Thanh toán hai lần cho một chứng từ.",
+      "condition": "Số hóa đơn (invoice_number) đã xuất hiện ở hồ sơ thanh toán khác chưa bị hủy/từ chối trong 180 ngày.",
+      "params": {"window_days": 180},
+      "risk": 5,
+      "escalate_to": "C",
+      "remediation": ["REQUIRE_EVIDENCE", "MERGE_REQUESTS"],
+      "false_positive": "So khớp sau khi bỏ khoảng trắng và chữ hoa/thường; hồ sơ bị từ chối/hủy không tính."
+    },
+    {
+      "code": "BC_REFUND_FREQUENT",
+      "request_types": ["REFUND_COMPENSATION"],
+      "title": "Hoàn tiền/đền bù dồn dập",
+      "harm": "Rò rỉ tiền qua nhiều khoản hoàn nhỏ.",
+      "condition": "Đây là hồ sơ hoàn tiền thứ 3 trở lên của người gửi trong 7 ngày.",
+      "params": {"max_in_7d": 2},
+      "risk": 4,
+      "escalate_to": "B",
+      "remediation": ["REQUIRE_EVIDENCE", "MERGE_REQUESTS"],
+      "false_positive": "Chỉ tính hồ sơ của cùng người gửi."
+    },
+    {
+      "code": "BC_DISCOUNT_REPEAT_CUSTOMER",
+      "request_types": ["SPECIAL_DISCOUNT"],
+      "title": "Chiết khấu lặp lại cho cùng khách hàng",
+      "harm": "Cộng dồn chiết khấu vượt biên lợi nhuận cho một khách.",
+      "condition": "Đã có hồ sơ chiết khấu khác cho cùng tên khách hàng trong 7 ngày.",
+      "params": {"window_days": 7},
+      "risk": 4,
+      "escalate_to": "B",
+      "remediation": ["MERGE_REQUESTS", "REQUIRE_EVIDENCE"],
+      "false_positive": "So khớp tên khách hàng đã chuẩn hóa."
+    },
+    {
+      "code": "BC_REQUESTER_ABSENT_ON_EVENT",
+      "request_types": ["VISITOR_SECURITY_PASS", "ROOM_BOOKING"],
+      "title": "Người đón khách/chủ trì họp vắng đúng ngày",
+      "harm": "Khách vào toà nhà không có người tiếp; phòng bị giữ vô ích.",
+      "condition": "Người gửi có lịch nghỉ/công tác đã duyệt hoặc đơn nghỉ đang chờ trùng ngày khách đến/ngày họp.",
+      "params": {},
+      "risk": 4,
+      "escalate_to": "B",
+      "remediation": ["CHANGE_HOST", "RESCHEDULE_REQUEST"],
+      "false_positive": "Chỉ xét đúng ngày của sự kiện."
+    },
+    {
+      "code": "BC_AI_REVOKED_HISTORY",
+      "request_types": ["*"],
+      "title": "Quyết định tự duyệt của AI cho người này từng bị thu hồi",
+      "harm": "Người gửi đã từng lợi dụng tự duyệt; tiếp tục tự duyệt là lặp lại rủi ro.",
+      "condition": "Có từ 2 lần quản lý thu hồi quyết định tự duyệt của AI trên hồ sơ của người gửi trong 90 ngày.",
+      "params": {"min_revoked_90d": 2},
+      "risk": 3,
+      "escalate_to": "B",
+      "remediation": ["REQUIRE_EVIDENCE"],
+      "false_positive": "Một lần thu hồi đơn lẻ chưa đủ."
+    },
+    {
+      "code": "BC_OFF_HOURS_BULK",
+      "request_types": ["EXPENSE_CLAIM", "REFUND_COMPENSATION", "ATTENDANCE_ADJUSTMENT", "SPECIAL_DISCOUNT"],
+      "title": "Gửi hàng loạt ngoài giờ hành chính",
+      "harm": "Lợi dụng lúc vắng người kiểm soát để AI tự duyệt.",
+      "condition": "Từ 3 hồ sơ của người gửi trong 7 ngày được gửi ngoài 08:00-17:30 thứ Hai-thứ Sáu hoặc ngày lễ, kể cả hồ sơ này.",
+      "params": {"min_in_7d": 3},
+      "risk": 3,
+      "escalate_to": "B",
+      "remediation": ["REQUIRE_EVIDENCE"],
+      "false_positive": "Một hồ sơ ngoài giờ đơn lẻ không tính."
+    }
+  ],
+  "remediation_actions": {
+    "REASSIGN_WORK": "Chuyển việc đang giữ sang đồng nghiệp đủ điều kiện (AI xếp hạng ứng viên, quản lý xác nhận).",
+    "POSTPONE_DEADLINE": "Lùi hạn việc tới sau ngày người gửi đi làm lại (quản lý xác nhận, ghi audit, báo người liên quan).",
+    "DELEGATE_APPROVALS": "Ủy quyền các bước duyệt của người gửi trong thời gian vắng cho người duyệt thay.",
+    "CHANGE_HANDOVER": "Đổi người nhận bàn giao sang ứng viên khác ít tải hơn.",
+    "CHANGE_HOST": "Đổi người đón khách/chủ trì sang đồng nghiệp có mặt.",
+    "RESCHEDULE_REQUEST": "Đề nghị người gửi đổi ngày (trả hồ sơ kèm gợi ý khoảng ngày ít xung đột).",
+    "REQUIRE_EVIDENCE": "Yêu cầu bổ sung chứng từ/giải trình trước khi duyệt.",
+    "MERGE_REQUESTS": "Xem xét gộp các hồ sơ liên quan để duyệt theo tổng giá trị.",
+    "HR_COUNSELING": "Nhân sự trao đổi với người gửi về việc chấm công lặp lại."
+  }
+}
