@@ -15,7 +15,9 @@ SECRET_PATTERNS = {
     "JWT-like token": re.compile(
         rb"eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}"
     ),
-    "Database URL with password": re.compile(rb"postgres(?:ql)?://[^:\s]+:[^@\s]{8,}@"),
+    "Database URL with password": re.compile(
+        rb"postgres(?:ql)?://[^:\s]+:(?!postgres@)[^@\s]{8,}@"
+    ),
 }
 MAX_SCAN_BYTES = 2 * 1024 * 1024
 

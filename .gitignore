@@ -92,8 +92,6 @@ ai_service/data/active_enterprise_policy.json
 # Báo cáo, ảnh chụp, bản nháp tài liệu của nhóm: chỉ lưu trên máy, không commit
 workspace/
 
-# Local Supabase copy: full data dump (password hashes, personal data) and
-# SQL editor snippets (may contain role passwords) never go to git.
-supabase/seed.sql
-supabase/snippets/
+# Local Supabase CLI state (database dump seed.sql & SQL snippets are tracked
+# so teammates get the full local schema and seed automatically via supabase start).
 supabase/.branches/

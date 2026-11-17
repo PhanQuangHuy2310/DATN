@@ -23,6 +23,7 @@ ai_service/
 database/
 tests/
 scripts/
+supabase/
 plans/
 .idea/
 .vscode/
