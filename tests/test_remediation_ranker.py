@@ -52,6 +52,42 @@ class RankerTests(unittest.TestCase):
     def test_empty_candidates(self):
         self.assertEqual(rr.rank([])["ranked"], [])
 
+    @unittest.skipUnless(HAS_XGB and os.path.exists(rr.MODEL_PATH), "xgboost/mô hình chưa có")
+    def test_model_is_monotone(self):
+        """Thêm việc đến hạn/việc mở/là cấp trên không bao giờ làm điểm tăng (bản 1 có 7 cặp vi phạm)."""
+        import itertools
+
+        worse = {"due_in_window": [0, 1, 2, 3, 5], "open_items": [0, 1, 2, 4, 8, 15], "is_superior": [0, 1]}
+        better = {"type_experience": [0, 1, 3, 6, 12], "same_team": [0, 1], "same_department": [0, 1]}
+        grid = {**worse, **better}
+        keys = list(grid)
+        candidates, moves = [], []
+        for combo in itertools.product(*grid.values()):
+            base = dict(zip(keys, combo, strict=True))
+            for feat, values in grid.items():
+                i = values.index(base[feat])
+                if i + 1 < len(values):
+                    moves.append((len(candidates), feat))
+                    candidates += [base, {**base, feat: values[i + 1]}]
+        scores = [c["score"] for c in sorted(
+            rr.rank([{**c, "user_id": n} for n, c in enumerate(candidates)])["ranked"], key=lambda c: c["user_id"])]
+        bad = [(candidates[i], f) for i, f in moves
+               if (scores[i + 1] - scores[i]) * (-1 if f in worse else 1) < -1e-6]
+        self.assertEqual(bad, [])
+
+    def test_missing_or_null_fields_count_as_zero(self):
+        out = rr.rank([{"user_id": "x", "open_items": None}, {"user_id": "y"}])
+        self.assertEqual(len(out["ranked"]), 2)
+        self.assertIn("đang mở 0 việc", out["ranked"][0]["why"])
+
+    def test_suggest_action_boundaries(self):
+        self.assertEqual(rr.suggest_action("APPROVAL", 10, 48, {**PEER, "due_in_window": 2})["action"],
+                         "DELEGATE_APPROVALS")
+        self.assertEqual(rr.suggest_action("APPROVAL", 10, 48, {**PEER, "due_in_window": 3})["action"],
+                         "POSTPONE_DEADLINE")  # người tốt nhất cũng kín việc
+        self.assertEqual(rr.suggest_action("EXECUTION", 72, 48, None)["action"], "POSTPONE_DEADLINE")  # đúng +24h
+        self.assertEqual(rr.suggest_action("EXECUTION", 72.5, 48, None)["action"], "RESCHEDULE_REQUEST")
+
 
 if __name__ == "__main__":
     unittest.main()
