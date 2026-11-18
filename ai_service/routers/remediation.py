@@ -67,3 +67,19 @@ async def rank_items(body: RankInput):
 @router.get("/info", summary="Thông tin mô hình xếp hạng")
 async def info():
     return rr.model_info()
+
+
+class FeedbackCandidate(Candidate):
+    chosen: bool = False
+
+
+class RetrainInput(BaseModel):
+    groups: list[list[FeedbackCandidate]] = Field(default_factory=list, max_length=5000)
+
+
+@router.post("/retrain", summary="Học dồn từ các lần quản lý chọn khác AI (có cổng kiểm tra)")
+async def retrain(body: RetrainInput):
+    import asyncio
+
+    groups = [[c.model_dump() for c in g] for g in body.groups]
+    return await asyncio.to_thread(rr.retrain_with_feedback, groups)

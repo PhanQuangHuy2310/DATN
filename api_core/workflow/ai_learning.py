@@ -812,6 +812,160 @@ def _fail(job: dict[str, Any], owner: str, error: str, *, retry: bool) -> None:
     invalidate_lock_cache()
 
 
+RULE_KEYS = {
+    "request_type",
+    "amount_gt",
+    "days_gt",
+    "due_within_hours",
+    "require_no_handover",
+    "repeat_count_gte",
+    "repeat_window",
+    "split_suspect",
+    "split_total_gt",
+    "min_risk",
+    "auto_approve",
+    "escalate_to",
+    "approvers",
+}
+
+
+def validate_review_rules(rules: Any, type_codes: set[str]) -> list[dict[str, Any]]:
+    """Luật admin duyệt cho một câu: cùng schema với trình biên dịch v2 / PolicyRule của AI service."""
+    if not isinstance(rules, list) or not 1 <= len(rules) <= 10:
+        raise ValueError("Cần 1-10 luật")
+    clean = []
+    for rule in rules:
+        if not isinstance(rule, dict) or set(rule) - RULE_KEYS:
+            raise ValueError("Trường luật không hợp lệ")
+        code = rule.get("request_type")
+        if code is not None and code not in type_codes:
+            raise ValueError(f"Mã loại không có: {code}")
+        for key in (
+            "amount_gt",
+            "days_gt",
+            "due_within_hours",
+            "repeat_count_gte",
+            "split_total_gt",
+            "min_risk",
+        ):
+            value = rule.get(key)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or value < 0
+            ):
+                raise ValueError(f"{key} phải là số không âm")
+        if rule.get("min_risk") is not None and not 1 <= rule["min_risk"] <= 5:
+            raise ValueError("min_risk phải từ 1 đến 5")
+        if rule.get("auto_approve") not in (True, False):
+            raise ValueError("Cần auto_approve true/false")
+        if rule.get("repeat_window") not in (
+            None,
+            "CALENDAR_MONTH",
+            "ROLLING_7D",
+            "ROLLING_30D",
+        ):
+            raise ValueError("repeat_window không hợp lệ")
+        if rule.get("escalate_to") not in (None, "B", "C"):
+            raise ValueError("escalate_to chỉ B hoặc C")
+        if rule["auto_approve"] and any(
+            rule.get(k)
+            for k in ("due_within_hours", "repeat_count_gte", "split_suspect")
+        ):
+            raise ValueError("Điều kiện ngữ cảnh chỉ được dùng để chặn tự duyệt")
+        out = {k: v for k, v in rule.items() if v is not None}
+        if out["auto_approve"] is False:
+            out.setdefault("min_risk", 4)
+        clean.append(out)
+    return clean
+
+
+def _suggest_rules(sentence: str, types: list[RequestTypeName]) -> dict[str, Any]:
+    try:
+        with _ai_http() as client:
+            resp = client.post(
+                "/ai/regulation-llm/rules",
+                json={
+                    "clause": sentence,
+                    "types": [
+                        {"code": t.code, "name": t.name, "lifecycle": t.lifecycle}
+                        for t in types
+                    ],
+                },
+                timeout=30.0,
+            )
+            data = (
+                resp.json()
+                if resp.status_code == 200
+                else {"error": f"HTTP {resp.status_code}"}
+            )
+    except Exception as exc:  # noqa: BLE001 - gợi ý của Gemini là phụ, câu vẫn vào hàng chờ
+        data = {"error": type(exc).__name__}
+    return {
+        k: data.get(k)
+        for k in ("rules", "rejected", "error", "model", "engine")
+        if data.get(k) is not None
+    }
+
+
+def clause_review_cycle(
+    regulations: list[dict[str, Any]], types: list[RequestTypeName]
+) -> list[dict[str, Any]]:
+    """Đưa câu chưa hiểu lên hàng chờ của admin; trả các luật admin đã duyệt cho câu còn hiệu lực."""
+    from api_core.workflow.regulation_compiler import sentences, skip_reason
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT to_regclass('eas.regulation_clause_review') IS NOT NULL")
+        if not cursor.fetchone()[0]:
+            return []
+        current: dict[tuple[str, str], str] = {}
+        for reg in regulations:
+            for sentence in sentences(reg.get("content") or ""):
+                current[
+                    (reg["code"], hashlib.sha256(sentence.encode("utf-8")).hexdigest())
+                ] = sentence
+        cursor.execute(
+            "SELECT regulation_code, sentence_sha256 FROM eas.regulation_clause_review"
+        )
+        known = {(r[0], r[1]) for r in cursor.fetchall()}
+    for (code, sha), sentence in current.items():
+        if (code, sha) in known:
+            continue
+        reason = skip_reason(sentence, types)
+        if reason is None:
+            continue
+        suggestion = _suggest_rules(sentence, types)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO eas.regulation_clause_review(regulation_code, sentence, sentence_sha256, reason, suggestion)
+                VALUES (%s, %s, %s, %s, %s) ON CONFLICT (regulation_code, sentence_sha256) DO NOTHING
+                """,
+                [code, sentence[:2000], sha, reason[:200], Jsonb(suggestion)],
+            )
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id::text, regulation_code, sentence_sha256, sentence, approved_rules
+            FROM eas.regulation_clause_review WHERE state = 'APPROVED' ORDER BY decided_at
+            """
+        )
+        approved = cursor.fetchall()
+    rules = []
+    for review_id, code, sha, sentence, approved_rules in approved:
+        if (code, sha) not in current:
+            continue  # câu đã bị sửa/xóa khỏi quy định: luật duyệt cho câu cũ không còn hiệu lực
+        for index, rule in enumerate(approved_rules or [], start=1):
+            rules.append(
+                {
+                    **rule,
+                    "id": f"REV-{code}-{review_id[:8]}-{index}"[:50],
+                    "description": sentence[:500],
+                }
+            )
+    return rules
+
+
 def process_job(job: dict[str, Any], owner: str) -> str:
     previous: dict[str, Any] = {}
     try:
@@ -824,10 +978,18 @@ def process_job(job: dict[str, Any], owner: str) -> str:
         _progress(job["id"], owner, 2, STEP_LABELS[2])
         time.sleep(2.5)
         compiled = compile_regulations(regulations, types)
+        try:
+            reviewed = clause_review_cycle(regulations, types)
+        except Exception:
+            logger.warning("clause_review_cycle_failed", exc_info=True)
+            reviewed = []
         seen = {r["id"] for r in manual}
+        seen_reviewed = seen | {r["id"] for r in compiled}
         policy = {
             "version": f"v{version}",
-            "rules": manual + [r for r in compiled if r["id"] not in seen],
+            "rules": manual
+            + [r for r in compiled if r["id"] not in seen]
+            + [r for r in reviewed if r["id"] not in seen_reviewed],
         }
         snapshot = [
             {

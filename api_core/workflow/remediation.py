@@ -24,6 +24,7 @@ from django.db import connection
 from psycopg.types.json import Jsonb
 
 from api_core.authn.models import Actor
+from api_core.workflow import ai_feedback
 from api_core.workflow.ops_service import _reassign_approval_step, _reassign_executor
 from api_core.workflow.service import (
     SQL_INSERT_OUTBOX_EVENT,
@@ -323,6 +324,9 @@ def build_plan(*, actor: Actor, request_id: str) -> dict[str, Any]:
         for it in items:
             it["hours_to_due"] = round((it["due_at"] - now).total_seconds() / 3600, 1)
             it["candidates"] = _candidates(cursor, it, holder, window)
+            it["preferences"] = ai_feedback.ranking_preferences(
+                cursor, holder_id=holder, item_type_code=it["type_code"]
+            )
     absence_hours = max((window[1] - now).total_seconds() / 3600, 0)
     ranked = (
         {r["item_id"]: r for r in _rank(absence_hours, items).get("items", [])}
@@ -332,7 +336,7 @@ def build_plan(*, actor: Actor, request_id: str) -> dict[str, Any]:
     postpone_to = datetime.combine(window[1].date(), time(17, 30), TZ)
     out_items = []
     for it in items:
-        r = ranked.get(it["stage_id"], {})
+        r = _apply_preferences(ranked.get(it["stage_id"], {}), it)
         out_items.append(
             {
                 "stage_id": it["stage_id"],
@@ -357,6 +361,42 @@ def build_plan(*, actor: Actor, request_id: str) -> dict[str, Any]:
         "proposals": proposals,
         "items": out_items,
     }
+
+
+def _apply_preferences(ranked: dict[str, Any], item: dict[str, Any]) -> dict[str, Any]:
+    """Bộ nhớ ca cho xếp hạng: người quản lý đã chọn cho việc cùng loại của cùng người xin nghỉ lên đầu."""
+    if not item.get("preferences"):
+        return ranked
+    out = dict(ranked)
+    candidates = list(out.get("candidates") or [])
+    raw = {c["user_id"]: c for c in item.get("candidates") or []}
+    for pref in item["preferences"]:
+        pid = pref["candidate_id"]
+        if pid not in raw:
+            continue  # không còn hợp lệ (vắng, đổi vai trò): bỏ qua ca này
+        chosen = next((c for c in candidates if c["user_id"] == pid), None) or {
+            **raw[pid],
+            "score": None,
+            "why": [],
+        }
+        candidates = [c for c in candidates if c["user_id"] != pid]
+        chosen = {
+            **chosen,
+            "learned": True,
+            "why": [
+                f"quản lý đã chọn người này cho việc cùng loại ({pref['text']})",
+                *chosen.get("why", []),
+            ],
+        }
+        out["candidates"] = [chosen, *candidates][:5]
+        action = "DELEGATE_APPROVALS" if item["kind"] == "APPROVAL" else "REASSIGN_WORK"
+        out["suggestion"] = {
+            "action": action,
+            "why": f"giao cho {chosen.get('display_name')} theo lựa chọn trước đây của quản lý",
+        }
+        out["engine"] = f"{out.get('engine') or 'ranker'}+feedback-memory"
+        break
+    return out
 
 
 def _validate_confirm(body: dict[str, Any]) -> tuple[str, list[dict[str, Any]], str]:
@@ -426,11 +466,20 @@ def confirm_plan(
                     _postpone(cursor, actor, item, window, request_id, correlation_id)
                 )
             else:
-                eligible = {
-                    c["user_id"] for c in _candidates(cursor, item, holder, window)
-                }
-                if a["candidate_id"] not in eligible:
+                cands = _candidates(cursor, item, holder, window)
+                if a["candidate_id"] not in {c["user_id"] for c in cands}:
                     raise CommandError("CANDIDATE_NOT_ELIGIBLE", status=422)
+                _record_ranking_choice(
+                    cursor,
+                    actor,
+                    request_id,
+                    holder,
+                    item,
+                    cands,
+                    a["candidate_id"],
+                    now,
+                    window,
+                )
                 results.append(
                     _reassign(
                         cursor,
@@ -512,6 +561,19 @@ def dismiss_plan(
         row = cursor.fetchone()
         if not row:
             raise CommandError("PROPOSAL_ALREADY_DECIDED", status=409)
+        holder, _payload, _code, _status = _load_request(cursor, request_id)
+        ai_feedback.record(
+            cursor,
+            kind="REMEDIATION_DISMISSED",
+            request_id=request_id,
+            type_code=_type_code(cursor, request_id),
+            subject_id=holder,
+            actor_id=actor.id,
+            ai_decision={"case_code": row[0], "proposal_id": proposal_id},
+            human_decision={"decision": "dismiss"},
+            reason=reason.strip(),
+            case_codes=[row[0]],
+        )
         _append_request_audit(
             cursor,
             request_id=request_id,
@@ -523,6 +585,140 @@ def dismiss_plan(
             correlation_id=correlation_id,
         )
     return {"proposal_id": proposal_id, "state": "DISMISSED"}
+
+
+def _type_code(cursor, request_id: str) -> str:
+    cursor.execute(
+        "SELECT t.code FROM eas.request r JOIN eas.request_type t ON t.id = r.type_id WHERE r.id = %s",
+        [request_id],
+    )
+    return cursor.fetchone()[0]
+
+
+_FEATURES = (
+    "same_department",
+    "same_team",
+    "open_items",
+    "due_in_window",
+    "type_experience",
+    "is_superior",
+)
+
+
+def _record_ranking_choice(
+    cursor, actor, request_id, holder, item, cands, chosen_id, now, window
+) -> None:
+    """Quản lý chọn khác ứng viên ĐÃ HIỂN THỊ ở đầu (mô hình + bộ nhớ ca): lưu cặp ưu tiên thật.
+
+    So với thứ hạng đã hiển thị chứ không phải thứ hạng gốc của mô hình: nếu bộ nhớ đã đưa người cũ lên đầu
+    mà quản lý chọn người khác, lựa chọn mới phải được ghi để bộ nhớ không lặp lại gợi ý cũ.
+    """
+    if len(cands) < 2:
+        return
+    item = {
+        **item,
+        "candidates": cands,
+        "hours_to_due": round((item["due_at"] - now).total_seconds() / 3600, 1),
+        "preferences": ai_feedback.ranking_preferences(
+            cursor, holder_id=holder, item_type_code=item["type_code"]
+        ),
+    }
+    absence_hours = max((window[1] - now).total_seconds() / 3600, 0)
+    ranked = _apply_preferences(
+        (_rank(absence_hours, [item]).get("items") or [{}])[0], item
+    )
+    top = (ranked.get("candidates") or [{}])[0]
+    if not top.get("user_id") or top["user_id"] == chosen_id:
+        return
+    feats = {c["user_id"]: {k: c.get(k) for k in _FEATURES} for c in cands}
+    ai_feedback.record(
+        cursor,
+        kind="RANKING_OVERRIDDEN",
+        request_id=request_id,
+        type_code=item["type_code"],
+        subject_id=holder,
+        actor_id=actor.id,
+        ai_decision={
+            "candidate_id": top["user_id"],
+            "engine": ranked.get("engine"),
+            "features": feats.get(top["user_id"]),
+        },
+        human_decision={"candidate_id": chosen_id, "features": feats.get(chosen_id)},
+        reason=f"Việc {item['item_code']} ({item['kind']})",
+        # Cả nhóm ứng viên để học dồn: người được chọn được ưu tiên hơn mọi người còn lại.
+        signals={
+            "group": [
+                {**feats[c["user_id"]], "chosen": c["user_id"] == chosen_id}
+                for c in cands
+            ][:30]
+        },
+    )
+
+
+def mark_escalation_unnecessary(
+    *, actor: Actor, request_id: str, reason: str, correlation_id: str
+) -> dict:
+    """Quản lý xác nhận AI chuyển luồng nhầm: lần sau cùng người, cùng loại, cùng tình huống thì không chuyển."""
+    request_id = _canonical_uuid(request_id, "INVALID_REQUEST_ID")
+    if not isinstance(reason, str) or not 5 <= len(reason.strip()) <= 500:
+        raise CommandError("FEEDBACK_REASON_REQUIRED", status=422)
+    from django.db import transaction
+
+    with transaction.atomic(), connection.cursor() as cursor:
+        cursor.execute(SQL_LOCK_SECURITY)
+        _authorize_manager(cursor, actor, request_id)
+        if not ai_feedback.available(cursor):
+            raise CommandError("AI_FEEDBACK_NOT_INSTALLED", status=503)
+        cursor.execute(
+            "SELECT details FROM eas.audit_event WHERE request_id=%s AND action='AI_ESCALATED' "
+            "ORDER BY seq DESC LIMIT 1",
+            [request_id],
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise CommandError("REQUEST_NOT_ESCALATED", status=409)
+        cursor.execute(
+            "SELECT 1 FROM eas.ai_feedback WHERE request_id=%s AND kind='ESCALATION_UNNECESSARY'",
+            [request_id],
+        )
+        if cursor.fetchone():
+            raise CommandError("FEEDBACK_ALREADY_RECORDED", status=409)
+        details = row[0] or {}
+        codes = [
+            c.get("code")
+            for c in details.get("causes") or []
+            if c.get("source") == "BAD_CASE"
+        ]
+        holder, _payload, _code, _status = _load_request(cursor, request_id)
+        from api_core.workflow.bad_case_signals import safe_load_signals
+
+        feedback_id = ai_feedback.record(
+            cursor,
+            kind="ESCALATION_UNNECESSARY",
+            request_id=request_id,
+            type_code=_type_code(cursor, request_id),
+            subject_id=holder,
+            actor_id=actor.id,
+            ai_decision={
+                "escalate_to": details.get("to_lifecycle"),
+                "causes": details.get("causes") or [],
+            },
+            human_decision={"decision": "escalation_unnecessary"},
+            reason=reason.strip(),
+            case_codes=codes,
+            signals=safe_load_signals(request_id),
+        )
+        _append_request_audit(
+            cursor,
+            request_id=request_id,
+            actor_id=actor.id,
+            action="AI_ESCALATION_MARKED_UNNECESSARY",
+            target_type="ai_feedback",
+            target_id=feedback_id,
+            details={"case_codes": codes, "reason": reason.strip()[:300]},
+            correlation_id=correlation_id,
+        )
+    return {"feedback_id": feedback_id, "case_codes": codes}
 
 
 def _bump(cursor, item_request_id: str, next_status: str | None = None) -> None:

@@ -23,8 +23,14 @@ from .org_users_rbac import (
 from .overview import system_diagnostics, system_overview
 from .regulations_ai import (
     ai_engine_test_view,
+    ai_feedback_learn_view,
+    ai_feedback_retire_view,
+    ai_feedback_view,
     ai_retrain_trigger,
     ai_system_state_view,
+    clause_review_approve,
+    clause_review_reject,
+    clause_reviews_list,
     process_profile_assess_view,
     public_ai_status_view,
     regulation_detail_update_delete,
@@ -105,6 +111,19 @@ urlpatterns = [
     # Phase 5: Regulations & AI Engine Management
     path("regulations", regulations_list_create, name="admin-regulations"),
     path(
+        "regulations/clause-reviews", clause_reviews_list, name="admin-clause-reviews"
+    ),
+    path(
+        "regulations/clause-reviews/<uuid:review_id>/approve",
+        clause_review_approve,
+        name="admin-clause-review-approve",
+    ),
+    path(
+        "regulations/clause-reviews/<uuid:review_id>/reject",
+        clause_review_reject,
+        name="admin-clause-review-reject",
+    ),
+    path(
         "regulations/<uuid:reg_id>",
         regulation_detail_update_delete,
         name="admin-regulation-detail",
@@ -121,6 +140,17 @@ urlpatterns = [
         name="admin-ai-engine-process-profile",
     ),
     path("ai-engine/retrain", ai_retrain_trigger, name="admin-ai-engine-retrain"),
+    path("ai-engine/feedback", ai_feedback_view, name="admin-ai-feedback"),
+    path(
+        "ai-engine/feedback/learn",
+        ai_feedback_learn_view,
+        name="admin-ai-feedback-learn",
+    ),
+    path(
+        "ai-engine/feedback/<uuid:feedback_id>/retire",
+        ai_feedback_retire_view,
+        name="admin-ai-feedback-retire",
+    ),
     path("ai-engine/test", ai_engine_test_view, name="admin-ai-engine-test"),
     path("ai-status", public_ai_status_view, name="admin-ai-status"),
     # Phase 6: Mock API Management (Circuit Breaker) & System Versions Changelog

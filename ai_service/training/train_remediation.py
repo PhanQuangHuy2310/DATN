@@ -24,9 +24,10 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-DATA = ROOT / "ai_service" / "training" / "data"
-sys.path.insert(0, str(ROOT / "ai_service"))
+# Đường dẫn tính từ chính tệp: chạy được ở repo (ai_service/training) lẫn trong container (/app/training).
+AI_DIR = Path(__file__).resolve().parents[1]
+DATA = Path(__file__).resolve().parent / "data"
+sys.path.insert(0, str(AI_DIR))
 
 import remediation_ranker as rr
 

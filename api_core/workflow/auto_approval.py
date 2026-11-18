@@ -43,7 +43,7 @@ SQL_AUTO_APPROVE_CONTEXT = """
              WHERE e.request_id = r.id AND e.action = 'AI_AUTO_APPROVE_REVOKED'
            ),
            u.email, v.payload->>'room_code',
-           v.payload->>'start_date', v.payload->>'end_date'
+           v.payload->>'start_date', v.payload->>'end_date', r.requester_id::text
     FROM eas.request r
     JOIN eas.request_type rt ON rt.id = r.type_id
     JOIN eas.request_revision v ON v.id = r.current_revision_id
@@ -94,6 +94,7 @@ def _load_context(request_id: str) -> dict[str, Any] | None:
         "room_code",
         "start_date",
         "end_date",
+        "requester_id",
     )
     return dict(zip(keys, row, strict=True))
 
@@ -157,6 +158,7 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         _record_bad_cases(
             request_id, context["step_id"], verdict, signals, correlation_id
         )
+    verdict = _apply_feedback_memory(request_id, context, verdict, correlation_id)
     if may_escalate and verdict.get("escalate_to") in ("B", "C"):
         from api_core.workflow.escalation import escalate_request
 
@@ -228,6 +230,48 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         )
         return None
     return result.body
+
+
+def _apply_feedback_memory(
+    request_id, context, verdict, correlation_id
+) -> dict[str, Any]:
+    """Bộ nhớ ca (migration 24): không lặp lại quyết định con người đã sửa cho cùng người, cùng loại."""
+    from api_core.workflow import ai_feedback
+
+    try:
+        with connection.cursor() as cursor:
+            adjusted = ai_feedback.apply_to_verdict(
+                cursor,
+                verdict=verdict,
+                type_code=context["type_code"],
+                requester_id=context.get("requester_id"),
+                lifecycle=context["lifecycle"],
+            )
+    except Exception:
+        logger.warning(
+            "AI feedback memory unavailable: request=%s", request_id, exc_info=True
+        )
+        return verdict
+    if not adjusted.get("learned"):
+        return adjusted
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            _append_request_audit(
+                cursor,
+                request_id=request_id,
+                actor_id=None,
+                actor_kind="SYSTEM",
+                action="AI_LEARNED_FROM_FEEDBACK",
+                target_type="approval_step",
+                target_id=context["step_id"],
+                details={"applied": adjusted["learned"][:5]},
+                correlation_id=correlation_id,
+            )
+    except Exception:
+        logger.warning(
+            "AI learned audit skipped: request=%s", request_id, exc_info=True
+        )
+    return adjusted
 
 
 def _record_bad_cases(request_id, step_id, verdict, signals, correlation_id) -> None:
@@ -317,6 +361,37 @@ def _validate_revoke_input(body: dict[str, Any]) -> tuple[str, int]:
     if isinstance(version, bool) or not isinstance(version, int):
         raise CommandError("EXPECTED_VERSION_REQUIRED")
     return reason.strip(), version
+
+
+def _record_revoke_feedback(
+    cursor, request_id, type_id, requester_id, actor_id, decided_at, reason
+) -> None:
+    """Bộ nhớ ca: lần sau cùng người, cùng loại thì AI không tự duyệt (migration 24). Phụ trợ, lỗi bỏ qua."""
+    from api_core.workflow import ai_feedback
+    from api_core.workflow.bad_case_signals import safe_load_signals
+
+    try:
+        with transaction.atomic():
+            cursor.execute("SELECT code FROM eas.request_type WHERE id=%s", [type_id])
+            ai_feedback.record(
+                cursor,
+                kind="AUTO_APPROVE_REVOKED",
+                request_id=request_id,
+                type_code=cursor.fetchone()[0],
+                subject_id=requester_id,
+                actor_id=actor_id,
+                ai_decision={
+                    "decision": "auto_approve",
+                    "decided_at": decided_at.isoformat(),
+                },
+                human_decision={"decision": "manual_review"},
+                reason=reason,
+                signals=safe_load_signals(request_id),
+            )
+    except Exception:
+        logger.warning(
+            "revoke feedback not recorded: request=%s", request_id, exc_info=True
+        )
 
 
 def revoke_ai_auto_approval(
@@ -498,6 +573,9 @@ def revoke_ai_auto_approval(
                 Jsonb({"request_id": request_id, "step_id": first_step_id}),
                 f"request:{request_id}:ai-revoke:{new_revision_id}",
             ],
+        )
+        _record_revoke_feedback(
+            cursor, request_id, type_id, requester_id, actor.id, decided_at, reason
         )
         return (
             {

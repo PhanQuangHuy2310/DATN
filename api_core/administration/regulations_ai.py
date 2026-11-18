@@ -15,6 +15,7 @@ from uuid import uuid4
 from django.core.cache import cache
 from django.db import connection, transaction
 from django.http import HttpRequest, JsonResponse
+from psycopg.types.json import Jsonb
 
 from api_core.authn.module_access import ACTION_BY_METHOD, can
 from api_core.authn.service import require_actor
@@ -584,14 +585,28 @@ def _active_type_configs() -> list[dict[str, Any]]:
     with connection.cursor() as cur:
         cur.execute(ACTIVE_TYPES_SQL)
         rows = cur.fetchall()
-    keys = ("code", "name", "category", "description", "fields", "lifecycle", "risk_weight")
+    keys = (
+        "code",
+        "name",
+        "category",
+        "description",
+        "fields",
+        "lifecycle",
+        "risk_weight",
+    )
     return [
-        {**dict(zip(keys, r)), "fields": list(r[4] or [])[:100], "description": (r[3] or "")[:2000]}
+        {
+            **dict(zip(keys, r)),
+            "fields": list(r[4] or [])[:100],
+            "description": (r[3] or "")[:2000],
+        }
         for r in rows
     ]
 
 
-def _profile_call(request: HttpRequest, path: str, body: dict, timeout: float | None = None) -> JsonResponse | dict:
+def _profile_call(
+    request: HttpRequest, path: str, body: dict, timeout: float | None = None
+) -> JsonResponse | dict:
     import httpx
 
     try:
@@ -627,12 +642,20 @@ def regulation_impact_view(request: HttpRequest, reg_id) -> JsonResponse:
         return api_error(request, "INVALID_ENGINE", status=422)
     types = _active_type_configs()
     if engine == "ml":
-        result = _profile_call(request, "/ai/process-profile/regulation-impact", {"text": text, "types": types})
+        result = _profile_call(
+            request,
+            "/ai/process-profile/regulation-impact",
+            {"text": text, "types": types},
+        )
     else:
         result = _profile_call(
             request,
             "/ai/regulation-llm/analyze",
-            {"text": text, "types": types, "old_regulations": _other_regulations(str(reg_id))},
+            {
+                "text": text,
+                "types": types,
+                "old_regulations": _other_regulations(str(reg_id)),
+            },
             timeout=45.0,
         )
     if isinstance(result, JsonResponse):
@@ -662,7 +685,14 @@ def _other_regulations(reg_id: str) -> list[dict[str, Any]]:
             [reg_id],
         )
         rows = cur.fetchall()
-    return [{"code": r[0] or "", "title": (r[1] or "")[:300], "content": (r[2] or "")[:20000]} for r in rows]
+    return [
+        {
+            "code": r[0] or "",
+            "title": (r[1] or "")[:300],
+            "content": (r[2] or "")[:20000],
+        }
+        for r in rows
+    ]
 
 
 @require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
@@ -693,8 +723,291 @@ def process_profile_assess_view(request: HttpRequest) -> JsonResponse:
     result = _profile_call(
         request,
         "/ai/process-profile/assess",
-        {"name": name.strip(), "description": description, "category": category, "fields": fields},
+        {
+            "name": name.strip(),
+            "description": description,
+            "category": category,
+            "fields": fields,
+        },
     )
     if isinstance(result, JsonResponse):
         return result
     return JsonResponse(result)
+
+
+# ---------------------------------------------------------------------------
+# Hàng chờ câu quy định AI chưa tự hiểu được (migration 24)
+# ---------------------------------------------------------------------------
+
+
+def _clause_row(r) -> dict[str, Any]:
+    return {
+        "id": r[0],
+        "regulation_code": r[1],
+        "sentence": r[2],
+        "reason": r[3],
+        "suggestion": r[4] or {},
+        "state": r[5],
+        "approved_rules": r[6],
+        "decided_at": _iso(r[7]),
+        "note": r[8],
+        "created_at": _iso(r[9]),
+    }
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
+def clause_reviews_list(request: HttpRequest) -> JsonResponse:
+    """GET /api/v1/admin/regulations/clause-reviews?state=PENDING"""
+    if request.method != "GET":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    state = (request.GET.get("state") or "PENDING").upper()
+    if state not in ("PENDING", "APPROVED", "REJECTED", "ALL"):
+        return api_error(request, "VALIDATION_FAILED", status=422)
+    with connection.cursor() as cur:
+        cur.execute("SELECT to_regclass('eas.regulation_clause_review') IS NOT NULL")
+        if not cur.fetchone()[0]:
+            return JsonResponse({"items": [], "installed": False})
+        cur.execute(
+            """
+            SELECT id::text, regulation_code, sentence, reason, suggestion, state, approved_rules,
+                   decided_at, note, created_at
+            FROM eas.regulation_clause_review
+            WHERE %s = 'ALL' OR state = %s
+            ORDER BY created_at DESC LIMIT 200
+            """,
+            [state, state],
+        )
+        return JsonResponse(
+            {"items": [_clause_row(r) for r in cur.fetchall()], "installed": True}
+        )
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN")
+def clause_review_approve(request: HttpRequest, review_id) -> JsonResponse:
+    return clause_review_decide(request, review_id, "approve")
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN")
+def clause_review_reject(request: HttpRequest, review_id) -> JsonResponse:
+    return clause_review_decide(request, review_id, "reject")
+
+
+def clause_review_decide(
+    request: HttpRequest, review_id, decision: str
+) -> JsonResponse:
+    """POST .../clause-reviews/<id>/approve {rules:[...], note?} | .../reject {note}"""
+    from api_core.workflow.ai_learning import validate_review_rules
+
+    if request.method != "POST":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    if denied := _forbidden_unless_writer(request):
+        return denied
+    body, error = _parse(request)
+    if error:
+        return error
+    note = str(body.get("note") or "").strip()[:500] or None
+    with transaction.atomic(), connection.cursor() as cur:
+        cur.execute(
+            "SELECT state FROM eas.regulation_clause_review WHERE id = %s::uuid FOR UPDATE",
+            [str(review_id)],
+        )
+        row = cur.fetchone()
+        if not row:
+            return api_error(request, "NOT_FOUND", status=404)
+        if row[0] != "PENDING":
+            return api_error(request, "ALREADY_DECIDED", status=409)
+        rules = None
+        if decision == "approve":
+            cur.execute("SELECT code FROM eas.request_type WHERE is_active")
+            try:
+                rules = validate_review_rules(
+                    body.get("rules"), {r[0] for r in cur.fetchall()}
+                )
+            except ValueError as exc:
+                return api_error(
+                    request,
+                    "VALIDATION_FAILED",
+                    status=422,
+                    fields={"rules": [str(exc)]},
+                )
+        elif not note:
+            return api_error(
+                request,
+                "VALIDATION_FAILED",
+                status=422,
+                fields={"note": ["Cần lý do từ chối"]},
+            )
+        cur.execute(
+            """
+            UPDATE eas.regulation_clause_review
+            SET state = %s, approved_rules = %s, decided_by = %s, decided_at = statement_timestamp(), note = %s
+            WHERE id = %s::uuid
+            """,
+            [
+                "APPROVED" if decision == "approve" else "REJECTED",
+                Jsonb(rules) if rules else None,
+                request.actor.id,
+                note,
+                str(review_id),
+            ],
+        )
+        _append_admin_audit(
+            cur,
+            actor_id=request.actor.id,
+            action="REGULATION_CLAUSE_"
+            + ("APPROVED" if decision == "approve" else "REJECTED"),
+            target_type="regulation_clause_review",
+            target_id=str(review_id),
+            details={"rules": rules or []},
+            reason=note or "Duyệt cách hiểu điều khoản cho AI",
+            correlation_id=correlation_id(request),
+        )
+        job_id = None
+        if rules:
+            job_id = enqueue_learning(
+                cur,
+                reason="Admin duyệt cách hiểu điều khoản",
+                requested_by=request.actor.id,
+            )
+    return JsonResponse(
+        {
+            "id": str(review_id),
+            "state": "APPROVED" if rules else "REJECTED",
+            "job_id": job_id,
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Vòng phản hồi của AI (migration 24)
+# ---------------------------------------------------------------------------
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
+def ai_feedback_view(request: HttpRequest) -> JsonResponse:
+    """GET /api/v1/admin/ai-engine/feedback: thống kê + 100 phản hồi gần nhất."""
+    from api_core.workflow import ai_feedback
+
+    with connection.cursor() as cur:
+        summary = ai_feedback.feedback_summary(cur)
+        items = []
+        if summary.get("installed"):
+            cur.execute(
+                """
+                SELECT f.id::text, f.kind, r.code, f.type_code, f.case_codes, f.reason, u.display_name,
+                       f.created_at, f.retired_at, f.used_in_training
+                FROM eas.ai_feedback f JOIN eas.request r ON r.id = f.request_id
+                LEFT JOIN eas.app_user u ON u.id = f.actor_id
+                ORDER BY f.created_at DESC LIMIT 100
+                """
+            )
+            items = [
+                {
+                    "id": r[0],
+                    "kind": r[1],
+                    "request_code": r[2],
+                    "type_code": r[3],
+                    "case_codes": r[4],
+                    "reason": r[5],
+                    "actor": r[6],
+                    "created_at": _iso(r[7]),
+                    "retired_at": _iso(r[8]),
+                    "used_in_training": r[9],
+                }
+                for r in cur.fetchall()
+            ]
+    return JsonResponse(
+        {
+            "summary": summary,
+            "items": items,
+            "learning": cache.get(LEARNING_CACHE_KEY) or {"state": "IDLE"},
+        }
+    )
+
+
+LEARNING_CACHE_KEY = "eas:ai-feedback-learning"
+
+
+def _run_feedback_learning(actor_id: str, cid: str) -> None:
+    import threading
+
+    from django.db import close_old_connections
+
+    from api_core.workflow import ai_feedback
+
+    def job():
+        close_old_connections()
+        try:
+            result = ai_feedback.learn_from_feedback()
+        except Exception as exc:  # noqa: BLE001
+            result = {"status": "FAILED", "error": type(exc).__name__}
+        cache.set(
+            LEARNING_CACHE_KEY, {"state": "DONE", "result": result}, 7 * 24 * 3600
+        )
+        try:
+            with connection.cursor() as cur:
+                _append_admin_audit(
+                    cur,
+                    actor_id=actor_id,
+                    action="AI_FEEDBACK_LEARNING_RUN",
+                    target_type="ai_feedback",
+                    target_id="00000000-0000-0000-0000-000000000000",
+                    details={
+                        k: result.get(k)
+                        for k in ("status", "version", "reasons", "feedback_rows")
+                    },
+                    reason="Admin chạy học dồn từ phản hồi",
+                    correlation_id=cid,
+                )
+        finally:
+            close_old_connections()
+
+    threading.Thread(target=job, name="ai-feedback-learning", daemon=True).start()
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN")
+def ai_feedback_learn_view(request: HttpRequest) -> JsonResponse:
+    """POST /api/v1/admin/ai-engine/feedback/learn: chạy học dồn ở nền (≈1-2 phút); xem kết quả ở GET feedback."""
+    if request.method != "POST":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    current = cache.get(LEARNING_CACHE_KEY) or {}
+    if current.get("state") == "RUNNING":
+        return JsonResponse({"state": "RUNNING"}, status=202)
+    cache.set(LEARNING_CACHE_KEY, {"state": "RUNNING"}, 15 * 60)
+    _run_feedback_learning(request.actor.id, correlation_id(request))
+    return JsonResponse({"state": "RUNNING"}, status=202)
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN")
+def ai_feedback_retire_view(request: HttpRequest, feedback_id) -> JsonResponse:
+    """POST .../feedback/<id>/retire {note}: ngưng dùng một ca nhớ (vd. quản lý sửa nhầm)."""
+    if request.method != "POST":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    body, error = _parse(request)
+    if error:
+        return error
+    note = str(body.get("note") or "").strip()
+    if len(note) < 5:
+        return api_error(
+            request, "VALIDATION_FAILED", status=422, fields={"note": ["Cần lý do"]}
+        )
+    with transaction.atomic(), connection.cursor() as cur:
+        cur.execute(
+            "UPDATE eas.ai_feedback SET retired_at = statement_timestamp(), retired_by = %s "
+            "WHERE id = %s::uuid AND retired_at IS NULL RETURNING kind",
+            [request.actor.id, str(feedback_id)],
+        )
+        row = cur.fetchone()
+        if not row:
+            return api_error(request, "NOT_FOUND", status=404)
+        _append_admin_audit(
+            cur,
+            actor_id=request.actor.id,
+            action="AI_FEEDBACK_RETIRED",
+            target_type="ai_feedback",
+            target_id=str(feedback_id),
+            details={"kind": row[0]},
+            reason=note[:500],
+            correlation_id=correlation_id(request),
+        )
+    return JsonResponse({"id": str(feedback_id), "retired": True})

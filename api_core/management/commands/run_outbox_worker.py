@@ -19,6 +19,22 @@ from api_core.workflow.ai_learning import run_pending as run_learning_jobs
 logger = logging.getLogger(__name__)
 
 
+def _learn_from_feedback_if_new() -> None:
+    """Học dồn hằng ngày khi có lựa chọn mới của quản lý; lỗi không làm dừng worker."""
+    from django.db import connection
+
+    from api_core.workflow import ai_feedback
+
+    try:
+        with connection.cursor() as cursor:
+            if ai_feedback.new_ranking_feedback_count(cursor) == 0:
+                return
+        result = ai_feedback.learn_from_feedback()
+        logger.info("ai_feedback_learning status=%s", result.get("status"))
+    except Exception:
+        logger.warning("ai_feedback_learning_failed", exc_info=True)
+
+
 class Command(BaseCommand):
     help = "Claim and deliver EAS outbox events with lease/retry semantics."
 
@@ -49,6 +65,9 @@ class Command(BaseCommand):
             pass
 
         next_delegation_tick = 0.0
+        next_feedback_learning = (
+            time.monotonic() + 600
+        )  # lần đầu sau 10 phút, sau đó mỗi ngày
         while running:
             close_old_connections()
             try:
@@ -64,6 +83,9 @@ class Command(BaseCommand):
                 processed = run_outbox_batch(batch_size=batch_size)
                 # AI regulation learning jobs (leased: safe alongside API runners).
                 processed += run_learning_jobs()
+                if time.monotonic() >= next_feedback_learning:
+                    next_feedback_learning = time.monotonic() + 24 * 3600
+                    _learn_from_feedback_if_new()
             except Exception:
                 logger.exception("Error processing worker batch")
                 if options["once"]:

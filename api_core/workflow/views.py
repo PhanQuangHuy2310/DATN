@@ -825,6 +825,27 @@ def ai_remediation_confirm_view(request: HttpRequest, request_id: str) -> JsonRe
 
 @require_POST
 @require_actor()
+def ai_feedback_escalation_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    """Quản lý xác nhận AI chuyển luồng nhầm (bộ nhớ ca: lần sau cùng người, cùng loại thì không chuyển)."""
+    from api_core.workflow.remediation import mark_escalation_unnecessary
+
+    try:
+        body = parse_json_object(request)
+        result = mark_escalation_unnecessary(
+            actor=request.actor,
+            request_id=str(request_id),
+            reason=body.get("reason") or "",
+            correlation_id=correlation_id(request),
+        )
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse(result)
+
+
+@require_POST
+@require_actor()
 def ai_remediation_dismiss_view(
     request: HttpRequest, request_id: str, proposal_id: str
 ) -> JsonResponse:

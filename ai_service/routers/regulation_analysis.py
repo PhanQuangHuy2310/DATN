@@ -62,3 +62,41 @@ async def analyze(body: AnalyzeIn) -> dict[str, Any]:
     )
     out.pop("raw_response", None)
     return out
+
+
+class ClauseType(BaseModel):
+    code: str = Field(..., max_length=60)
+    name: str = Field("", max_length=200)
+    lifecycle: str | None = Field(None, max_length=1)
+
+
+class ClauseIn(BaseModel):
+    clause: str = Field(..., min_length=5, max_length=2000)
+    types: list[ClauseType] = Field(..., min_length=1, max_length=300)
+
+
+@router.post("/rules")
+async def clause_rules(body: ClauseIn) -> dict[str, Any]:
+    """Đề xuất luật có cấu trúc cho MỘT câu trình biên dịch chưa hiểu (chờ admin duyệt, không tự áp dụng).
+
+    Đầu ra đã qua kiểm tra bằng luật (regulation_rules_llm.validate). Không có khóa / lỗi Gemini thì trả
+    rules rỗng kèm lỗi, admin tự soạn luật.
+    """
+    try:
+        import regulation_rules_llm as rl
+    except ImportError:
+        from ai_service import regulation_rules_llm as rl
+    settings = get_settings()
+    if not settings.gemini_api_key:
+        return {"rules": [], "rejected": [], "error": "GEMINI_NOT_CONFIGURED"}
+    try:
+        return await asyncio.to_thread(
+            rl.extract,
+            body.clause,
+            [t.model_dump() for t in body.types],
+            api_key=settings.gemini_api_key,
+            model_name=settings.gemini_model,
+            timeout=25.0,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return {"rules": [], "rejected": [], "error": type(exc).__name__}

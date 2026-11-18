@@ -390,6 +390,36 @@ def compile_sentence(
     return rules
 
 
+def skip_reason(sentence: str, types: list[RequestTypeName]) -> str | None:
+    """Vì sao một câu CÓ yêu cầu kiểm soát lại không sinh được luật (để đưa lên admin duyệt); None nếu
+    câu không có yêu cầu kiểm soát hoặc đã biên dịch được."""
+    low = _ARTICLE_HEADER.sub("", fold(sentence), count=1)
+    manual = any(word in low for word in _MANUAL) or bool(_MANUAL_RE.search(low))
+    auto = not manual and any(word in low for word in _AUTO)
+    if not (manual or auto):
+        return None
+    scoped, masked = _scope(low, types)
+    parsed, unsupported = _parse(masked)
+    targeted = bool(scoped) or any(word in low for word in _EVERY) or bool(parsed.spans)
+    if not targeted:
+        return None
+    if unsupported:
+        return "Cận trên ('dưới', 'tối đa') hoặc cửa sổ thời gian ngoài 7/30 ngày/tháng"
+    if any(rx.search(masked) for rx in _UNSUPPORTED):
+        return "Điều kiện ngoài schema (phần trăm, khu vực, ngày hồi tố)"
+    if _unsupported_condition(masked, parsed):
+        return "Mệnh đề 'khi/nếu' có điều kiện AI chưa biểu diễn được"
+    if compile_sentence(sentence, types):
+        return None
+    if auto:
+        return "Cho phép tự duyệt kèm điều kiện ngữ cảnh (AI không tự mở rộng tự duyệt)"
+    return None
+
+
+def sentences(content: str) -> list[str]:
+    return [s.strip() for s in _SENTENCE.split(content or "") if s.strip()]
+
+
 def compile_text(
     code: str, content: str, types: list[RequestTypeName]
 ) -> list[dict[str, Any]]:

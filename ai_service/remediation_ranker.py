@@ -162,3 +162,89 @@ def model_info() -> dict[str, Any]:
             return json.load(handle)
     except FileNotFoundError:
         return {"model_version": MODEL_VERSION, "status": "NOT_TRAINED"}
+
+
+# --------------------------------------------------------------------------- học dồn từ phản hồi
+MIN_REAL_GROUPS = 1
+REAL_WEIGHT = 20          # mỗi lựa chọn thật của quản lý được nhân bản để có trọng lượng so với dữ liệu mô phỏng
+GATE_TOLERANCE = 0.01     # top-1 trên tập test đã băm không được giảm quá mức này
+
+
+def _top1(booster, groups) -> float:
+    """Tỉ lệ nhóm mà ứng viên điểm cao nhất là người được chọn (dự đoán một lần cho cả tập)."""
+    import numpy as np
+    import xgboost as xgb
+
+    if not groups:
+        return 0.0
+    rows = [vector(c) for g in groups for c in g]
+    scores = booster.predict(xgb.DMatrix(np.array(rows), feature_names=list(FEATURES)))
+    hit, pos = 0, 0
+    for g in groups:
+        part = scores[pos : pos + len(g)]
+        pos += len(g)
+        best = g[int(np.argmax(part))]
+        hit += bool(best.get("chosen") or best.get("relevance") == 3)
+    return round(hit / len(groups), 4)
+
+
+def retrain_with_feedback(real_groups: list[list[dict[str, Any]]]) -> dict[str, Any]:
+    """Huấn luyện lại với các lần quản lý chọn khác AI; chỉ thay mô hình khi qua cổng kiểm tra.
+
+    Cổng: (1) top-1 trên tập test mô phỏng ĐÃ BĂM (remediation_test.json) không giảm quá GATE_TOLERANCE;
+    (2) độ đúng trên chính các lựa chọn thật của quản lý không giảm. Không đạt thì giữ mô hình cũ.
+    """
+    import tempfile
+
+    import xgboost as xgb
+
+    real = [g for g in real_groups if len(g) >= 2 and sum(bool(c.get("chosen")) for c in g) == 1]
+    if len(real) < MIN_REAL_GROUPS:
+        return {"status": "NOT_ENOUGH_FEEDBACK", "real_groups": len(real)}
+    try:
+        from training import train_remediation as tr
+    except ImportError:
+        from ai_service.training import train_remediation as tr
+    test = tr.load_test()  # dừng nếu SHA-256 tập test đã đổi
+    old = _booster()
+    before = {"test_top1": _top1(old, test) if old else None, "real_top1": _top1(old, real) if old else None}
+
+    sim_train = tr.make_groups(seed=42, count=4000, heavy=False)
+    sim_dev = tr.make_groups(seed=7, count=800, heavy=False)
+    real_rel = [[{**c, "relevance": 3 if c.get("chosen") else 0} for c in g] for g in real]
+    xtr, ytr, qtr = tr.to_matrix(sim_train + real_rel * REAL_WEIGHT)
+    xdv, ydv, qdv = tr.to_matrix(sim_dev)
+    params = {"objective": "rank:pairwise", "eta": 0.1, "max_depth": 4, "min_child_weight": 2,
+              "subsample": 0.9, "eval_metric": "ndcg@3", "seed": 42}
+    booster = xgb.train(
+        params,
+        xgb.DMatrix(xtr, label=ytr, qid=qtr, feature_names=list(FEATURES)),
+        num_boost_round=600,
+        evals=[(xgb.DMatrix(xdv, label=ydv, qid=qdv, feature_names=list(FEATURES)), "dev")],
+        early_stopping_rounds=40,
+        verbose_eval=False,
+    )
+    trimmed = booster[: booster.best_iteration + 1]
+    after = {"test_top1": _top1(trimmed, test), "real_top1": _top1(trimmed, real)}
+    reasons = []
+    if before["test_top1"] is not None and after["test_top1"] < before["test_top1"] - GATE_TOLERANCE:
+        reasons.append(f"top-1 tập test giảm {before['test_top1']} -> {after['test_top1']}")
+    if before["real_top1"] is not None and after["real_top1"] < before["real_top1"]:
+        reasons.append(f"độ đúng trên lựa chọn thật giảm {before['real_top1']} -> {after['real_top1']}")
+    meta = model_info()
+    history = meta.get("feedback_history", [])
+    entry = {"real_groups": len(real), "before": before, "after": after,
+             "accepted": not reasons, "reasons": reasons}
+    if not reasons:
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(MODEL_PATH), suffix=".json")
+        os.close(fd)
+        trimmed.save_model(tmp)
+        os.replace(tmp, MODEL_PATH)
+        _model.update(booster=None, mtime=None)
+        version = f"{MODEL_VERSION}+fb{len([h for h in history if h.get('accepted')]) + 1}"
+        entry["version"] = version
+        meta["model_version"] = version
+    meta["feedback_history"] = [*history, entry][-50:]
+    with open(META_PATH, "w", encoding="utf-8") as handle:
+        json.dump(meta, handle, ensure_ascii=False, indent=1)
+    return {"status": "ACCEPTED" if not reasons else "REJECTED_BY_GATE", **entry}

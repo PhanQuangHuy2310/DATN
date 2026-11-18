@@ -98,6 +98,11 @@ urlpatterns = [
         name="delegation-revoke",
     ),
     path(
+        "requests/<uuid:request_id>/ai-feedback/escalation",
+        views.ai_feedback_escalation_view,
+        name="request-ai-feedback-escalation",
+    ),
+    path(
         "requests/<uuid:request_id>/ai-remediation",
         views.ai_remediation_plan_view,
         name="request-ai-remediation",
