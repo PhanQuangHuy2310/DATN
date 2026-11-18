@@ -16,7 +16,7 @@ try:
 except ImportError:
     HAS_XGB = False
 
-import remediation_ranker as rr  # noqa: E402
+import remediation_ranker as rr
 
 PEER = {"user_id": "peer", "same_department": 1, "same_team": 1, "open_items": 1, "due_in_window": 0,
         "type_experience": 6, "is_superior": 0}
