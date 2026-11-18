@@ -28,7 +28,7 @@ Phần lớn số dòng thêm (~74 nghìn) là dữ liệu huấn luyện, bộ 
 
 - **Khi ban hành hoặc sửa** (và nút "AI kiểm tra trước"), AI đọc văn bản và chặn hai loại lỗi, chỉ rõ từng câu:
   - **Lỗi ký tự:** hỏng mã hóa, mất dấu, ký tự lạ.
-  - **Mâu thuẫn:** một điều cho tự duyệt, một điều bắt duyệt thủ công, trong cùng văn bản hoặc với quy định đang hiệu lực. Ví dụ: "Điều 1 … nhưng Điều 5 của QC05 …".
+  - **Mâu thuẫn trong chính văn bản:** một điều cho tự duyệt, một điều bắt duyệt thủ công. Ví dụ: "Điều 1 … nhưng Điều 2 …".
 
   Văn bản lỗi không được lưu và không khoá hệ thống. Câu AI chưa hiểu và câu trùng lặp chỉ là lưu ý, không chặn.
 - **Trong lượt học**, AI đọc lại các văn bản đã đổi. Có lỗi lọt vào (ví dụ nhập thẳng CSDL), hoặc học thất bại sau mọi lần thử, thì:
@@ -37,6 +37,13 @@ Phần lớn số dòng thêm (~74 nghìn) là dữ liệu huấn luyện, bộ 
   - admin nhận thông báo.
 
   Văn bản không lỗi trong cùng đợt vẫn được học tiếp.
+- **Quy định mới thay thế quy định cũ tương tự** (ví dụ người dùng nêu: đang "trên 40 triệu phải duyệt", ban hành mới "trên 50 triệu" thì bỏ quy định 40 triệu).
+  - **Điều kiện thay thế:** hai luật của hai văn bản khác nhau, cùng loại đơn, cùng kiểu điều kiện (ngưỡng tiền / số ngày / lần lặp…) hoặc ngược chiều nhau.
+  - **Cách áp dụng:** luật mới hơn thắng, tính theo **từng câu** (lần đầu câu đó được áp dụng, lưu trong bộ luật đã áp dụng). Luật chung cho mọi loại chỉ bị thay ở đúng loại đơn đó (`except_types`).
+  - **Không thay thế:** hai điều trong cùng một văn bản; văn bản mới bị trả lại.
+  - **Hiển thị:** "AI kiểm tra trước" liệt kê "Sẽ thay thế…"; trang Quy định gạch điều cũ, ghi "thay bởi…"; người dùng được thông báo.
+  - **Thay đổi kéo theo:** xung đột với văn bản khác không còn là lỗi chặn (đã thành "thay thế"); văn bản tự mâu thuẫn trong chính nó vẫn bị chặn.
+  - **Kiểm thử thật:** `tests/live/test_regulation_supersede.py` **4/4**. Không cần migration: bộ luật đã áp dụng (jsonb) lưu thêm `origins` / `superseded`.
 - **Sửa lỗi có từ trước:** ban hành lại một mã quy định đã gỡ từng trả lỗi 500 vì cột mã là UNIQUE kể cả khi đã xóa mềm. Giờ hệ thống dùng lại dòng cũ.
 - **Kiểm thử thật** `tests/live/test_regulation_rejection.py`: **5/5**, gồm cả ca tắt ai-service để AI học thất bại.
 
@@ -62,7 +69,7 @@ Có 2 bộ test, mỗi bộ được băm trước khi huấn luyện. Bộ 2 l�
 | `tests/run_tests.py` | 260 OK |
 | Test AI (venv AI) | 43 OK |
 | Web (`npm test`) | 85/85 OK, build OK |
-| Kiểm thử thật (bản sao CSDL local) | Trả lại quy định lỗi 5/5; học bad case 4/4 (hai lần liên tiếp); học từ phản hồi 4/5; chuyển quy trình 4/6 |
+| Kiểm thử thật (bản sao CSDL local) | Thay thế quy định cũ 4/4; trả lại quy định lỗi 5/5; học bad case 4/4 (hai lần liên tiếp); học từ phản hồi 4/5; chuyển quy trình 4/6 |
 
 3 ca kiểm thử thật trượt (ESC-04, ESC-05, FB-03) do **dữ liệu test tích lũy trên bản local**, không phải lỗi code: một tài khoản đang giữ 46 việc chưa đóng, mà kế hoạch xử lý chỉ lấy 30 việc có hạn sớm nhất. Phần code đề xuất xử lý không đổi trong đợt sau cùng.
 

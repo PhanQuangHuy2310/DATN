@@ -3,6 +3,8 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **18/11 — Quy định mới thay thế quy định cũ tương tự** (40 tr -> 50 tr thì bỏ 40 tr): luật mới hơn thắng theo từng câu, chỉ trong phạm vi bị chồng; hiện "Sẽ thay thế…" khi kiểm tra trước, gạch điều cũ trên trang Quy định, thông báo cho người dùng. Không cần migration. Kiểm thử thật SP 4/4.
+- [x] **18/11 — Sửa giao diện điện thoại** (video): menu ngăn kéo, lớp phủ, ô giải thích, ô tìm kiếm sơ đồ; kiểm tra tự động `web_client/e2e/mobile_drawer_check.mjs`.
 - [x] **18/11 — AI đọc văn bản quy định, trả lỗi, trả lại bản lỗi** (theo trao đổi với trưởng nhóm):
   - Văn bản lỗi ký tự hoặc mâu thuẫn (trong văn bản, hoặc với quy định đang hiệu lực) bị chặn khi ban hành, kèm lỗi từng câu.
   - Lượt học phát hiện lỗi, hoặc học thất bại sau mọi lần thử: hiệu lực (văn bản + bộ luật AI) quay về bản đã áp dụng; bản lỗi vào `eas.regulation_rejection` (migration 26) để sửa và nạp lại; admin được báo.
