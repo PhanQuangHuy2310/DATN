@@ -61,6 +61,14 @@ def escalated_to(o, rid) -> str | None:
     return row[0] if row else None
 
 
+def regulation_escalation(o, rid) -> str | None:
+    """Luồng mà riêng QUY ĐỊNH đẩy hồ sơ sang (bỏ qua bad case khác, ví dụ gửi ngoài giờ khi chạy test ban đêm)."""
+    row = o.one("SELECT details FROM eas.audit_event WHERE request_id=%s AND action='AI_ESCALATED' "
+                "ORDER BY seq DESC LIMIT 1", rid)
+    causes = [c for c in ((row[0] or {}).get("causes") or []) if c.get("source") == "REGULATION"] if row else []
+    return max((c.get("escalate_to") or "" for c in causes), default=None) or None
+
+
 def publish(code, title, content):
     st, body = rej.admin().call("POST", "/api/v1/admin/regulations",
                                 {"code": code, "title": title, "category": "Quy định chung", "content": content})
@@ -157,9 +165,12 @@ def sp_05(o) -> dict:
             "discount_percent": pct})
 
     hi, lo = discount(20), discount(10)
-    check(escalated_to(o, hi) == "C", f"chiết khấu 20% không bị chuyển C: {escalated_to(o, hi)}")
-    check(escalated_to(o, lo) is None, f"chiết khấu 10% bị chuyển {escalated_to(o, lo)}")
-    return {"pass": True, "evidence": f"{o.req(hi)['code']} 20% -> chuyển C; {o.req(lo)['code']} 10% -> giữ A"}
+    # Chỉ xét nguyên nhân QUY ĐỊNH: chạy test ngoài giờ thì bad case "gửi hàng loạt ngoài giờ" có thể chuyển B (đúng).
+    check(regulation_escalation(o, hi) == "C", f"chiết khấu 20% không bị quy định chuyển C: {escalated_to(o, hi)}")
+    check(regulation_escalation(o, lo) is None, f"quy định 15% lại khớp chiết khấu 10% ({escalated_to(o, lo)})")
+    other = escalated_to(o, lo)
+    return {"pass": True, "evidence": f"{o.req(hi)['code']} 20% -> quy định chuyển C; {o.req(lo)['code']} 10% -> "
+                                      f"quy định không khớp" + (f" (bad case khác chuyển {other})" if other else "")}
 
 
 def sp_06(o) -> dict:
