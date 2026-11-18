@@ -5,6 +5,7 @@ import { api, peekResource, rememberResource } from "../api.js";
 import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
 import AiLearningPanel from "./AiLearningPanel.jsx";
+import { RegulationCheckList, RejectedRegulations } from "./RegulationCheck.jsx";
 
 const CATEGORIES = [
   "Tất cả",
@@ -43,6 +44,10 @@ export function RegulationsManagementPage() {
   const [formCategory, setFormCategory] = useState("Thời gian & Nghỉ phép");
   const [formContent, setFormContent] = useState("");
   const [formSummary, setFormSummary] = useState("");
+  // AI đọc văn bản trước khi ban hành: lỗi chặn + lưu ý, chỉ rõ từng câu (regulation_validation).
+  const [check, setCheck] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const [rejectedVersion, setRejectedVersion] = useState(0);
 
   const loadData = async (silent = false) => {
     try {
@@ -80,6 +85,7 @@ export function RegulationsManagementPage() {
     setFormCategory("Thời gian & Nghỉ phép");
     setFormContent("");
     setFormSummary("");
+    setCheck(null);
     setShowCreateModal(true);
   };
 
@@ -90,6 +96,49 @@ export function RegulationsManagementPage() {
     setFormCategory(reg.category || "Quy định chung");
     setFormContent(reg.content || "");
     setFormSummary("");
+    setCheck(null);
+  };
+
+  const runCheck = async () => {
+    if (!formTitle.trim() || !formContent.trim()) {
+      showToast("Nhập tiêu đề và nội dung trước khi để AI kiểm tra", "warning");
+      return;
+    }
+    setChecking(true);
+    try {
+      const res = await api(`${apiBase}/regulations/validate`, {
+        method: "POST",
+        silent: true,
+        body: JSON.stringify({ code: formCode.trim(), title: formTitle.trim(), category: formCategory, content: formContent.trim() }),
+      });
+      setCheck(res.validation);
+    } catch (err) {
+      showToast("AI chưa kiểm tra được văn bản: " + errorText(err), "error");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  // 422 REGULATION_INVALID: giữ form mở và hiện danh sách lỗi để sửa tại chỗ.
+  const handleInvalid = (err) => {
+    if (err?.body?.validation) {
+      setCheck(err.body.validation);
+      showToast(err.serverMessage || "AI phát hiện lỗi trong văn bản; xem danh sách bên dưới", "error");
+      return true;
+    }
+    return false;
+  };
+
+  const reviseRejected = (item) => {
+    const reg = regulations.find((r) => r.code === item.regulation_code);
+    if (item.action === "UPDATE" && reg) openEditModal(reg);
+    else {
+      openCreateModal();
+      setFormCode(item.regulation_code);
+    }
+    setFormTitle(item.rejected_title || "");
+    setFormContent(item.rejected_content || "");
+    setCheck({ errors: item.errors || [], warnings: item.warnings || [] });
   };
 
   const handleCreateSubmit = async (e) => {
@@ -109,10 +158,16 @@ export function RegulationsManagementPage() {
           content: formContent.trim(),
         }),
       });
-      showToast(res.message || "Đã thêm quy định mới và nâng phiên bản hệ thống!", "success");
+      showToast(
+        (res.message || "Đã thêm quy định mới và nâng phiên bản hệ thống!") +
+          (res.warnings?.length ? ` AI lưu ý ${res.warnings.length} điểm (câu chưa hiểu sẽ vào hàng chờ duyệt).` : ""),
+        "success",
+      );
       setShowCreateModal(false);
+      setRejectedVersion((v) => v + 1);
       void loadData();
     } catch (err) {
+      if (handleInvalid(err)) return;
       showToast("Lỗi khi thêm quy định: " + errorText(err), "error");
     } finally {
       setSubmitting(false);
@@ -136,10 +191,16 @@ export function RegulationsManagementPage() {
           change_summary: formSummary.trim(),
         }),
       });
-      showToast(res.message || "Đã cập nhật quy định và nâng phiên bản nhỏ!", "success");
+      showToast(
+        (res.message || "Đã cập nhật quy định và nâng phiên bản nhỏ!") +
+          (res.warnings?.length ? ` AI lưu ý ${res.warnings.length} điểm.` : ""),
+        "success",
+      );
       setEditingRegulation(null);
+      setRejectedVersion((v) => v + 1);
       void loadData();
     } catch (err) {
+      if (handleInvalid(err)) return;
       showToast("Lỗi khi cập nhật quy định: " + errorText(err), "error");
     } finally {
       setSubmitting(false);
@@ -304,6 +365,10 @@ export function RegulationsManagementPage() {
         )}
       </div>
 
+      {canUpdate && (
+        <RejectedRegulations apiBase={apiBase} onRevise={reviseRejected} version={rejectedVersion} />
+      )}
+
       {/* Regulations Table / Grid */}
       <div className="regulations-table-container">
         {loading ? (
@@ -467,7 +532,12 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
+              <RegulationCheckList check={check} />
+
               <div className="eas-modal-actions">
+                <button type="button" className="btn-secondary" onClick={runCheck} disabled={checking || submitting}>
+                  {checking ? "AI đang đọc văn bản..." : "AI kiểm tra trước"}
+                </button>
                 <button
                   type="button"
                   className="btn-secondary"
@@ -566,7 +636,12 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
+              <RegulationCheckList check={check} />
+
               <div className="eas-modal-actions">
+                <button type="button" className="btn-secondary" onClick={runCheck} disabled={checking || submitting}>
+                  {checking ? "AI đang đọc văn bản..." : "AI kiểm tra trước"}
+                </button>
                 <button
                   type="button"
                   className="btn-secondary"

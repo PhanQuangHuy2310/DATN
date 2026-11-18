@@ -5099,3 +5099,17 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .bad-case-evidence ul { list-style: none; padding-left: 0; }
 .bad-case-evidence li { margin-bottom: 8px; }
 .ai-escalation-why { margin-top: 2px; }
+
+/* AI kiểm tra văn bản quy định + quy định bị trả lại (migration 26) */
+.reg-check { margin: 12px 0; border: 1px solid var(--ds-line); border-radius: var(--ds-radius); padding: 10px 12px; background: var(--ds-surface); color: var(--ds-ink); }
+.reg-check-head { margin: 0 0 6px; font-weight: 600; }
+.reg-check-head.error { color: #c2410c; }
+.reg-check-head.ok { color: #2f8f5b; }
+.reg-check-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
+.reg-check-item { border-left: 3px solid #d9a404; padding: 4px 8px; }
+.reg-check-item.error { border-left-color: #c2410c; }
+.reg-check-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--ds-line); }
+.reg-rejected { margin: 16px 0; padding: 16px; border: 1px solid #c2410c; border-radius: var(--ds-radius); background: var(--ds-surface); color: var(--ds-ink); }
+.reg-rejected-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.reg-rejected-card { border: 1px solid var(--ds-line); border-radius: var(--ds-radius); padding: 12px; }
+.reg-rejected-content { white-space: pre-wrap; font-size: 13px; max-height: 240px; overflow: auto; }
