@@ -5074,3 +5074,8 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .ai-remedy-candidate span { line-height: 1.45; }
 .ai-remedy-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 640px) { .ai-remedy, .ai-escalation { padding: 12px; } }
+
+.ai-learning h3 { margin: 16px 0 6px; font-size: 15px; }
+.ai-learning-clause { padding: 12px 14px; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-canvas); }
+.ai-learning-json { width: 100%; box-sizing: border-box; font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: var(--ds-surface); color: var(--ds-ink); border: 1px solid var(--ds-line); border-radius: var(--ds-radius-sm); padding: 8px; }
+.ai-escalation-learn { margin-top: 8px; }

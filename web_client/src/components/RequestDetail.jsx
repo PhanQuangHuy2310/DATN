@@ -632,7 +632,7 @@ export default function RequestDetail({
               <Badge value={r.status} />
             </div>
             <ProgressSummary progress={r.progress} />
-            <EscalationBanner escalation={r.ai_escalation} />
+            <EscalationBanner escalation={r.ai_escalation} requestId={id} onChanged={resource.reload} />
             {r.ai_escalation?.pending_remediations > 0 && (
               <RemediationPanel requestId={id} onDone={resource.reload} />
             )}

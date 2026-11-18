@@ -18,8 +18,24 @@ const ACTION_TEXT = {
 
 const KIND_TEXT = { APPROVAL: "Bước duyệt", EXECUTION: "Việc thực hiện", ACCEPTANCE: "Nghiệm thu" };
 
-export function EscalationBanner({ escalation }) {
+export function EscalationBanner({ escalation, requestId, onChanged }) {
+  const [note, setNote] = useState("");
   if (!escalation) return null;
+
+  async function markWrong() {
+    const reason = window.prompt("Vì sao AI chuyển quy trình nhầm? (AI sẽ nhớ cho người này, loại đơn này)");
+    if (!reason || reason.trim().length < 5) return;
+    try {
+      await api(`/api/v1/requests/${requestId}/ai-feedback/escalation`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+      setNote("Đã ghi nhận: lần sau AI không chuyển quy trình cho trường hợp tương tự của người này.");
+      onChanged?.();
+    } catch (err) {
+      setNote(err?.message || "Chỉ người duyệt hồ sơ này mới đánh dấu được.");
+    }
+  }
   return (
     <section className="ai-escalation" aria-label="AI chuyển quy trình">
       <div className="ai-escalation-head">
@@ -39,12 +55,20 @@ export function EscalationBanner({ escalation }) {
           {escalation.causes.map((c) => (
             <li key={`${c.source}-${c.code}`}>
               <span className="ai-citation-badge applies">
-                {c.source === "REGULATION" ? "Quy định" : "Tình huống xấu"}
+                {c.source === "REGULATION" ? "Quy định" : c.source === "LEARNED" ? "Đã học từ phản hồi" : "Tình huống xấu"}
               </span>{" "}
               <code>{c.code}</code> {c.text}
             </li>
           ))}
         </ul>
+      )}
+      {requestId && (
+        <div className="ai-escalation-learn">
+          <button type="button" className="secondary" onClick={markWrong}>
+            AI chuyển nhầm
+          </button>
+          {note && <span className="muted"> {note}</span>}
+        </div>
       )}
     </section>
   );

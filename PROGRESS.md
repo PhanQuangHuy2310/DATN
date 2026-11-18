@@ -68,6 +68,13 @@ Các giai đoạn:
 - [x] G6. Xếp hạng người nhận việc thay (XGBoost rank:pairwise; test băm trước: top-1 0,898 so với ít việc nhất 0,328) + API xem/xác nhận/bỏ qua (`f38c91f`).
 - [x] G7. Banner chuyển quy trình + bảng đề xuất xử lý (`865cfbe`); live `tests/live/test_ai_escalation.py` ESC-00..05: 6/6 PASS (ban hành Quy chế 05/2026 → AI học → nâng luồng → quản lý xác nhận chuyển việc / lùi hạn).
 
+**18/11 — AI học từ phản hồi ('sai tối đa 1 lần')**, theo yêu cầu của bạn:
+- [x] Migration 24 + rollback: `eas.ai_feedback`, `eas.regulation_clause_review` (chạy thử trên local: áp / áp lại / rollback / áp lại).
+- [x] Ghi nhận phản hồi + bộ nhớ ca (`api_core/workflow/ai_feedback.py`), nút "AI chuyển nhầm".
+- [x] Học dồn có cổng (`manage.py ai_learn_from_feedback`, worker chạy mỗi ngày, admin bấm được).
+- [x] Hàng chờ câu quy định chưa hiểu, Gemini gợi ý, admin duyệt (trang Quy định).
+- [x] Đo: `tests/live/test_ai_feedback_learning.py` 5/5, lặp lại lỗi 0, học tràn 0 (`ai_service/training/data/feedback_learning_report.md`).
+
 ## Chưa làm
 - [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→10 và mock 004 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)
 - [ ] D. Chờ quyết định trưởng nhóm cho 4 mục bên dưới
@@ -82,6 +89,7 @@ Các giai đoạn:
 - 1.5: chỉ hoàn tác được hồ sơ vòng đời A đã COMPLETED (AI chỉ tự duyệt vòng đời A). Bất kỳ APPROVER trong phạm vi phòng/loại (trừ người tạo) đều thu hồi được, không chỉ người duyệt gốc.
 
 ## Việc tôi phải làm thủ công
+- **18/11: chạy `database/migrations/24_ai_feedback_learning.sql` trên Supabase SQL Editor sau migration 23.** Chưa chạy thì AI vẫn chạy bình thường nhưng không ghi nhớ phản hồi. Rollback: `database/migrations/rollback/24_ai_feedback_learning_rollback.sql` (xóa bộ nhớ ca, sao lưu trước nếu cần).
 - **18/11: chạy `database/migrations/23_ai_bad_case_escalation.sql` trên Supabase SQL Editor** (đã chạy thử trên Supabase local). Chưa chạy thì hệ thống vẫn chạy như cũ: AI chỉ chặn tự duyệt, không chuyển luồng (audit `AI_ESCALATION_SKIPPED` lý do `ESCALATION_RELEASE_MISSING`). Rollback: `database/migrations/rollback/23_ai_bad_case_escalation_rollback.sql` (tự từ chối nếu còn hồ sơ đã nâng luồng đang mở).
 - Chạy trên Supabase SQL Editor theo thứ tự (07 đã chạy): `database/migrations/08_ai_auto_approval.sql`, `09_request_catalog_v2.sql`, `10_approval_delegation_and_employee_code.sql`, rồi `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`; sau đó `python manage.py sync_employee_codes --apply`
 - Sau migration 08, nếu container AI đang có file quy định cũ: `python manage.py import_ai_policy_file ai_service/data/active_enterprise_policy.json --operator <email POLICY_ADMIN>`

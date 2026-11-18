@@ -4,6 +4,7 @@ import { usePermission } from "../hooks/usePermission.jsx";
 import { api, peekResource, rememberResource } from "../api.js";
 import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
+import AiLearningPanel from "./AiLearningPanel.jsx";
 
 const CATEGORIES = [
   "Tất cả",
@@ -697,6 +698,7 @@ export function RegulationsManagementPage() {
           </div>
         </div>
       )}
+      <AiLearningPanel canUpdate={canUpdate} />
           {toast && (
         <div className={`eas-toast-notification ${toast.type}`}>
           {toast.msg}

@@ -94,6 +94,17 @@ def expense(amount: int) -> dict:
     }
 
 
+def reset_leave_balance(o: t.Oracle, email: str) -> None:
+    """Chỉ trong BẢN SAO: trả lại quỹ phép năm (các lần chạy test lặp lại tiêu hết phép của cùng một người)."""
+    o.fixture(
+        """UPDATE mock_hr.leave_balance lb SET used_days = 0
+           FROM mock_hr.employee e JOIN eas.app_user u
+             ON u.employee_code = e.employee_code OR lower(u.email) = lower(e.work_email)
+           WHERE lb.employee_id = e.id AND lb.leave_type = 'ANNUAL' AND u.email = %s""",
+        email,
+    )
+
+
 def leave(day: date, handover_id: str) -> dict:
     return {
         "title": "Xin nghỉ phép ngày mai",
@@ -152,6 +163,7 @@ def esc_01(o: t.Oracle) -> str:
         f"bước duyệt đầu của hồ sơ giữ việc không giao cho X: {step}",
     )
     # X xin nghỉ ngày mai, chọn Y (nhân viên, không có quyền duyệt) làm người nhận bàn giao.
+    reset_leave_balance(o, x_email)
     rid, _, _ = t.submit(
         o, "LEAVE", x_email, leave(datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date() + timedelta(days=1), y_id)
     )
@@ -289,6 +301,7 @@ def _deadline_case(o: t.Oracle):
     held, _, _ = t.submit(o, "EXPENSE_CLAIM", y_email, expense(1_300_000))
     o.wait("""SELECT 1 FROM eas.approval_step s JOIN eas.workflow_instance i ON i.id=s.instance_id
               WHERE s.request_id=%s AND s.state='ACTIVE' AND i.state='ACTIVE'""", held)
+    reset_leave_balance(o, x_email)
     rid, _, _ = t.submit(o, "LEAVE", x_email, leave(datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
                                                      + timedelta(days=1), y_id))
     check(wait_escalated(o, rid) is not None, "hồ sơ nghỉ không được nâng luồng")
