@@ -8,3 +8,5 @@ ai_service/training/data/remediation_test.json -text
 ai_service/training/data/remediation_test.sha256 -text
 ai_service/training/data/risk_context_scenarios*.json -text
 ai_service/training/data/risk_context_scenarios*.sha256 -text
+ai_service/training/data/feedback_learning_episodes*.json -text
+ai_service/training/data/feedback_learning_episodes*.sha256 -text

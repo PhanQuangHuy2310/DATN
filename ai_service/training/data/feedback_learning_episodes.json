@@ -1,0 +1,54 @@
+{
+  "about": "Bộ tập kiểm tra 'sai tối đa 1 lần' (18/11/2026). Viết và băm SHA-256 TRƯỚC khi cài vòng phản hồi. Mỗi tập: (1) AI ra quyết định mà con người sửa; (2) một ca TƯƠNG TỰ ngay sau đó phải được xử lý đúng theo cách người đã sửa (không sai lặp lại); (3) một ca ĐỐI CHỨNG khác ngữ cảnh phải giữ nguyên hành vi cũ (không học tràn). Chạy bằng tests/live/test_ai_feedback_learning.py trên bản sao CSDL local.",
+  "metrics": {
+    "repeat_mistakes": "số tập mà bước (2) vẫn lặp lại đúng quyết định đã bị sửa; mục tiêu 0",
+    "over_generalization": "số tập mà bước (3) đổi hành vi so với trước khi học; mục tiêu 0"
+  },
+  "episodes": [
+    {
+      "id": "FB-01",
+      "kind": "AUTO_APPROVE_REVOKED",
+      "mistake": "AI tự duyệt một đơn Làm việc từ xa (WFH) của nhân viên X; quản lý thu hồi trong 24 giờ kèm lý do.",
+      "similar": "X gửi thêm một đơn WFH.",
+      "expected_similar": "AI KHÔNG tự duyệt; hồ sơ được chuyển sang luồng B, nguyên nhân dẫn chiếu ca đã bị thu hồi.",
+      "control": "Nhân viên Z (cùng loại đơn, chưa từng bị thu hồi) gửi đơn WFH.",
+      "expected_control": "AI vẫn tự duyệt như trước."
+    },
+    {
+      "id": "FB-02",
+      "kind": "ESCALATION_UNNECESSARY",
+      "mistake": "Đơn WFH của X bị AI chuyển sang luồng B vì BC_WFH_FREQUENT; quản lý đánh dấu 'AI chuyển nhầm' kèm lý do (vd. X làm dự án ở khách hàng, WFH theo thỏa thuận).",
+      "similar": "X gửi thêm một đơn WFH trong cùng tháng.",
+      "expected_similar": "AI KHÔNG chuyển sang B nữa (giữ luồng A, người duyệt thủ công), giải thích dẫn chiếu ca đã được quản lý xác nhận.",
+      "control": "Nhân viên W khác, cũng có trên 7 đơn WFH trong tháng, gửi đơn WFH.",
+      "expected_control": "AI vẫn chuyển sang luồng B (BC_WFH_FREQUENT)."
+    },
+    {
+      "id": "FB-03",
+      "kind": "RANKING_OVERRIDDEN",
+      "mistake": "Khi xử lý việc của người xin nghỉ H, AI xếp ứng viên P đứng đầu nhưng quản lý chọn ứng viên Q.",
+      "similar": "H lại xin nghỉ khi đang giữ một việc cùng loại; quản lý mở đề xuất xử lý.",
+      "expected_similar": "Q đứng đầu danh sách ứng viên (nếu vẫn hợp lệ), giải thích 'quản lý đã chọn người này cho việc cùng loại của H'.",
+      "control": "Một người xin nghỉ khác có việc cùng loại.",
+      "expected_control": "Thứ hạng do mô hình xếp, không bị ảnh hưởng bởi lựa chọn dành cho H."
+    },
+    {
+      "id": "FB-04",
+      "kind": "CLAUSE_UNPARSED",
+      "mistake": "Admin ban hành điều khoản có điều kiện ngoài schema (phần trăm chiết khấu); trình biên dịch bỏ qua câu đó.",
+      "similar": "Ngay sau khi AI học xong, câu đó xuất hiện trong hàng chờ duyệt của admin kèm cách hiểu do Gemini đề xuất (hoặc rỗng nếu Gemini không phản hồi); admin duyệt một luật.",
+      "expected_similar": "Sau khi AI học lại, luật đã duyệt có trong bộ luật đang áp dụng; câu đó không còn trong hàng chờ.",
+      "control": "Một câu có điều kiện được hỗ trợ (ngưỡng tiền) trong cùng văn bản.",
+      "expected_control": "Được biên dịch tự động, không vào hàng chờ."
+    },
+    {
+      "id": "FB-05",
+      "kind": "BATCH_RETRAIN_GATE",
+      "mistake": "Các lần quản lý chọn khác ứng viên đứng đầu được gom thành cặp ưu tiên thật.",
+      "similar": "Chạy học dồn: huấn luyện lại mô hình xếp hạng trên dữ liệu mô phỏng + cặp thật.",
+      "expected_similar": "Mô hình mới chỉ được thay vào khi top-1 trên tập test đã băm (remediation_test.json) không giảm quá 0,01 và độ đúng trên các cặp thật không giảm; nếu không đạt thì giữ mô hình cũ và ghi lý do.",
+      "control": "Chạy học dồn khi chưa có cặp thật nào.",
+      "expected_control": "Không huấn luyện lại, báo 'chưa đủ phản hồi'."
+    }
+  ]
+}
