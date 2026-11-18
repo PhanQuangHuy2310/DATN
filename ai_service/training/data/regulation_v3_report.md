@@ -51,6 +51,28 @@ Lần chạy đầu, SP-05 và SP-06 trượt vì **chính kịch bản test**, 
 
 AI làm đúng trong cả hai trường hợp. Đã sửa kịch bản để kiểm tra riêng luật quy định.
 
+## Dò ca oái oăm (19/11/2026): 6 lỗi an toàn, đã sửa
+
+Bộ ca ranh giới `tests/test_edge_cases.py` (bad case, bộ máy luật, trình biên dịch) tìm ra các câu mà trình biên dịch **mất điều kiện
+nhưng vẫn sinh luật**. Lỗi nặng nhất: luật thành "chặn MỌI đơn của loại đó".
+
+| Câu | Trước khi sửa | Sau khi sửa |
+|---|---|---|
+| "trên **50tr**" | mất ngưỡng, chặn mọi đơn thanh toán | > 50.000.000 (hiểu thêm tr / trđ / k) |
+| "trên **-5 triệu**" | mất ngưỡng, chặn mọi đơn | không sinh luật, admin duyệt ("số không rõ cận trên/dưới") |
+| "**không** bắt buộc duyệt thủ công" | đọc thành bắt buộc | không sinh luật; AI không tự nới lỏng kiểm soát |
+| "trên 50 triệu **và dưới 20 triệu**" | luật khoảng rỗng | không sinh luật ("khoảng rỗng") |
+| "trên **150%**", ngày bắt đầu **sau** ngày hết hiệu lực | luật vô nghĩa | không sinh luật, kèm lý do |
+| "Chiết khấu thương mại đặc biệt" (tên loại thiếu "Phê duyệt") | không nhận ra loại | khớp, nếu phần còn lại của tên có ≥ 4 từ |
+| Câu viết **không dấu** | bỏ qua im lặng | admin thấy lý do "câu viết không dấu" |
+
+Nguyên tắc: không chắc thì **không** sinh luật, đưa câu lên admin kèm lý do.
+
+Hồi quy sau khi sửa:
+- bộ v3: 40/40;
+- thay thế: 12/12;
+- bộ cũ: 28/30, không đổi.
+
 ## Giới hạn còn lại
 
 - Điều kiện theo số người, nhóm khách hàng, ngày lễ, "hồi tố" chung chung vẫn **không** tự hiểu. Câu có các điều kiện này vào hàng chờ duyệt cách hiểu của admin.
