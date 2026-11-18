@@ -601,7 +601,39 @@ def enforcement_probe(rule: dict[str, Any]) -> dict[str, Any]:
         probe["amount"] = total
         probe["requester_amount_7d"] = total * 2 + 1
         probe["requester_finance_count_7d"] = 3
+    # v3: cận trên, phần trăm, địa điểm, ngày đã quá N ngày, cửa sổ đếm khác 7/30 ngày/tháng.
+    if rule.get("amount_lte") is not None:
+        low = float(rule.get("amount_gt") or 0)
+        probe["amount"] = float(rule["amount_lte"]) if low + 1 > rule["amount_lte"] else min(low + 1, rule["amount_lte"])
+    if rule.get("days_lte") is not None:
+        probe["days_requested"] = int(min((rule.get("days_gt") or 0) + 1, rule["days_lte"]))
+    if rule.get("percent_gt") is not None or rule.get("percent_lte") is not None:
+        low = float(rule.get("percent_gt") if rule.get("percent_gt") is not None else -1)
+        probe["percent"] = min(low + 1, float(rule["percent_lte"])) if rule.get("percent_lte") is not None else low + 1
+    if rule.get("location_contains"):
+        probe["location_text"] = rule["location_contains"]
+    if rule.get("retro_days_gt") is not None:
+        probe["notice_hours"] = -24.0 * (int(rule["retro_days_gt"]) + 1)
+    if rule.get("repeat_count_gte") and (rule.get("repeat_window") or "ROLLING_30D") not in window_field:
+        from datetime import datetime as _dt
+        from zoneinfo import ZoneInfo as _Zone
+
+        today = _dt.now(_Zone("Asia/Ho_Chi_Minh")).date().isoformat()
+        probe["same_type_dates"] = [today] * (int(rule["repeat_count_gte"]) - 1)
     return probe
+
+
+def _verifiable(rule: dict[str, Any]) -> bool:
+    """Luật đang có hiệu lực hôm nay và không có vùng loại trừ (hồ sơ thử có thể rơi vào vùng đó)."""
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _Zone
+
+    today = _dt.now(_Zone("Asia/Ho_Chi_Minh")).date().isoformat()
+    if rule.get("effective_from") and rule["effective_from"] > today:
+        return False
+    if rule.get("effective_until") and rule["effective_until"] < today:
+        return False
+    return not rule.get("exclude")
 
 
 def apply_to_ai(policy: dict[str, Any]) -> dict[str, Any]:
@@ -626,7 +658,7 @@ def apply_to_ai(policy: dict[str, Any]) -> dict[str, Any]:
                 raise RuntimeError("AI service did not load the new policy")
             checks = 0
             for rule in policy["rules"]:
-                if rule.get("auto_approve") is not False:
+                if rule.get("auto_approve") is not False or not _verifiable(rule):
                     continue
                 probe = enforcement_probe(rule)
                 decision = client.post("/ai/auto-approve/evaluate", json=probe).json()
@@ -1124,7 +1156,7 @@ def process_job(job: dict[str, Any], owner: str) -> str:
         policy = {
             "version": f"v{version}",
             "rules": manual + kept,
-            "origins": precedence.next_origins(regulation_rules, origins, version),
+            "origins": precedence.next_origins(regulation_rules, origins, version, superseded),
             "superseded": superseded,
         }
         snapshot = [

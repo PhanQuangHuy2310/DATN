@@ -27,7 +27,7 @@ from api_core.workflow.regulation_compiler import (
     sentences,
     skip_reason,
 )
-from api_core.workflow.regulation_precedence import similar
+from api_core.workflow.regulation_precedence import overlaps, relation
 
 ERROR = "ERROR"
 WARNING = "WARNING"
@@ -170,19 +170,29 @@ def validate(
                     if b["code"] != code:
                         # Văn bản khác: văn bản đang ban hành là MỚI NHẤT nên thay thế luật cũ tương tự / ngược chiều
                         # (regulation_precedence), không còn là lỗi.
-                        if similar(ra, rb) and (a["sentence"], b["code"], b["sentence"]) not in seen_supersede:
+                        how = relation(ra, rb)
+                        if how and (a["sentence"], b["code"], b["sentence"]) not in seen_supersede:
                             seen_supersede.add((a["sentence"], b["code"], b["sentence"]))
                             only_type = ra.get("request_type") and not rb.get("request_type")
                             kind = name.get(ra.get("request_type") or rb.get("request_type") or "", "mọi loại yêu cầu")
+                            if how == "UNTIL":
+                                tail = f" (điều cũ còn áp đến trước ngày {ra['effective_from']})"
+                            elif how == "EXCLUDE" and not only_type:
+                                tail = " (chỉ trong vùng của điều mới; ngoài vùng đó điều cũ vẫn áp)"
+                            elif only_type:
+                                tail = " (chỉ với loại này; điều cũ vẫn áp cho các loại khác)"
+                            else:
+                                tail = ""
                             supersedes.append(_issue(
                                 INFO, "SUPERSEDES",
                                 f"Sẽ thay thế {_where(b, code)} ở {kind}: {_cond_text(ra)} thay cho {_cond_text(rb)}"
-                                + (" (chỉ với loại này; điều cũ vẫn áp cho các loại khác)" if only_type else "")
-                                + ". Khi AI áp dụng xong, điều cũ không còn hiệu lực.",
+                                + tail + ". Khi AI áp dụng xong, phần bị thay của điều cũ hết hiệu lực vĩnh viễn.",
                                 sentence=a["sentence"], article=a["article"],
                                 related={"code": b["code"], "article": b["article"], "sentence": b["sentence"][:400]},
                             ))
                         continue
+                    if not overlaps(ra, rb):
+                        continue  # cùng văn bản nhưng không chồng (vd. "trên 5 ngày" và "không quá 5 ngày")
                     if ra.get("auto_approve") is not None and rb.get("auto_approve") is not None \
                             and bool(ra["auto_approve"]) != bool(rb["auto_approve"]):
                         allow, deny = (ra, rb) if ra["auto_approve"] else (rb, ra)

@@ -109,11 +109,19 @@ class OverBlockingGuardTests(unittest.TestCase):
         for text in (
             "Mua sắm từ 15% ngân sách trở lên bắt buộc duyệt thủ công.",
             "Nghỉ phép khi đi nước ngoài phải được Trưởng bộ phận phê duyệt thủ công.",
-            "Điều chỉnh chấm công cho ngày đã quá 10 ngày bắt buộc duyệt thủ công.",
-            "Thanh toán chi phí dưới 1 triệu được tự động duyệt.",
+            "Hoàn tiền cho khách hàng thân thiết bắt buộc duyệt thủ công.",
+            "Đặt phòng họp dưới 10 người được tự động duyệt.",
+            "Nghỉ phép không quá 1 ngày và không trùng ngày lễ được tự động duyệt.",
         ):
             with self.subTest(text=text):
                 self.assertEqual(compile_text("R", text, TYPES), [])
+
+    def test_v3_understands_upper_bounds_and_retro_days(self):
+        # v2 bỏ qua hai câu này; v3 hiểu được (cận trên, ngày đã quá N ngày).
+        allow = compile_text("R", "Thanh toán chi phí dưới 1 triệu được tự động duyệt.", TYPES)
+        self.assertEqual((allow[0]["amount_lte"], allow[0]["auto_approve"]), (999_999, True))
+        retro = compile_text("R", "Điều chỉnh chấm công cho ngày đã quá 10 ngày bắt buộc duyệt thủ công.", TYPES)
+        self.assertEqual(retro[0]["retro_days_gt"], 10)
 
     def test_context_never_widens_auto_approval(self):
         text = "Nghỉ phép được tự động duyệt khi có việc đến hạn trong 24 giờ."

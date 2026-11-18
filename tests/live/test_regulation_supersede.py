@@ -15,6 +15,7 @@ Quy định do kiểm thử tạo được bãi bỏ ở cuối.
 
 from __future__ import annotations
 
+import json
 import sys
 import time
 import traceback
@@ -22,6 +23,7 @@ import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import test_bad_case_learning as bcl
 import test_regulation_rejection as rej
 import test_report_scenarios as t
 
@@ -120,9 +122,100 @@ def sp_04(o) -> dict:
     return {"pass": True, "evidence": "văn bản tự mâu thuẫn vẫn bị chặn 422"}
 
 
+PCT, RETRO = f"QD-PT-{SUFFIX}", f"QD-HT-{SUFFIX}"
+TODAY = None
+
+
+def submit_and_settle(o, type_code: str, payload: dict, email: str | None = None) -> str:
+    rid, _, _ = t.submit(o, type_code, email, payload)
+    o.wait("""SELECT 1 FROM eas.request r WHERE r.id=%s AND (r.status <> 'PENDING_APPROVAL' OR EXISTS (
+                SELECT 1 FROM eas.outbox_event e WHERE e.request_id=r.id AND e.event_type='APPROVAL_REQUESTED'
+                AND e.state IN ('SENT','DEAD')))""", rid, timeout=40)
+    REQUESTS.append(rid)
+    return rid
+
+
+def ai_auto_approved(o, rid) -> bool:
+    return bool(o.one("SELECT 1 FROM eas.approval_decision WHERE request_id=%s "
+                      "AND actor_id='00000002-0000-4000-8000-0000000000a1'", rid))
+
+
+def sp_05(o) -> dict:
+    """Điều kiện phần trăm (v3): chiết khấu từ 15% phải nghiệm thu -> 20% chuyển C, 10% thì không."""
+    publish(PCT, "Quy định chiết khấu (phần trăm)",
+            "Phê duyệt chiết khấu thương mại đặc biệt từ 15% trở lên bắt buộc Giám đốc phê duyệt thủ công kèm "
+            "nghiệm thu độc lập.")
+    status = rej.wait_learning(o)
+    check(status[0] == "APPLIED", f"AI không áp dụng quy định phần trăm: {status}")
+
+    def discount(pct: int) -> str:
+        return submit_and_settle(o, "SPECIAL_DISCOUNT", {
+            "title": "Chiết khấu kiểm thử phần trăm", "reason": "Kiểm thử điều kiện phần trăm",
+            # Mỗi đơn một khách khác nhau: tránh bad case "chiết khấu lặp lại cho cùng khách hàng".
+            "amount_vnd": 2_000_000, "customer_name": f"Khách kiểm thử {uuid.uuid4().hex[:6]}",
+            "deal_value_vnd": 20_000_000,
+            "discount_percent": pct})
+
+    hi, lo = discount(20), discount(10)
+    check(escalated_to(o, hi) == "C", f"chiết khấu 20% không bị chuyển C: {escalated_to(o, hi)}")
+    check(escalated_to(o, lo) is None, f"chiết khấu 10% bị chuyển {escalated_to(o, lo)}")
+    return {"pass": True, "evidence": f"{o.req(hi)['code']} 20% -> chuyển C; {o.req(lo)['code']} 10% -> giữ A"}
+
+
+def sp_06(o) -> dict:
+    """Điều kiện 'ngày đã quá N ngày' (v3): sửa công cho 10 ngày trước không được tự duyệt; hôm qua thì vẫn được."""
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    global TODAY
+    TODAY = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+
+    publish(RETRO, "Quy định điều chỉnh chấm công (hồi tố)",
+            "Yêu cầu Điều chỉnh chấm công cho ngày đã quá 7 ngày bắt buộc Trưởng bộ phận phê duyệt thủ công.")
+    status = rej.wait_learning(o)
+    check(status[0] == "APPLIED", f"AI không áp dụng quy định hồi tố: {status}")
+    email = bcl.staff(o)
+
+    def adjust(days_ago: int) -> str:
+        return submit_and_settle(o, "ATTENDANCE_ADJUSTMENT", {
+            "title": "Điều chỉnh chấm công kiểm thử", "reason": "Quên chấm công, kiểm thử điều kiện hồi tố",
+            "change_type": "Quên chấm công", "work_date": (TODAY - timedelta(days=days_ago)).isoformat()},
+            email)
+
+    old, recent = adjust(10), adjust(1)
+    # Kiểm tra đúng luật hồi tố (tín hiệu thật của hồ sơ -> AI), tách khỏi các bad case khác (vd. gửi ngoài giờ).
+    hit_old, hit_recent = retro_rule_applies(old), retro_rule_applies(recent)
+    check(hit_old, "luật 'ngày đã quá 7 ngày' không khớp đơn sửa công cho 10 ngày trước")
+    check(not hit_recent, "luật 'ngày đã quá 7 ngày' khớp nhầm đơn sửa công cho hôm qua")
+    check(not ai_auto_approved(o, old), "đơn sửa công cho 10 ngày trước vẫn được AI tự duyệt")
+    return {"pass": True, "evidence": (f"{o.req(old)['code']} (10 ngày trước): luật hồi tố khớp, không tự duyệt; "
+                                       f"{o.req(recent)['code']} (hôm qua): luật hồi tố không khớp")}
+
+
+def retro_rule_applies(rid: str) -> bool:
+    """Tín hiệu thật của hồ sơ (API core tính) gửi sang AI; luật hồi tố có nằm trong các điều khoản khớp không."""
+    import subprocess
+
+    code = "\n".join([
+        "import json",
+        "from api_core.workflow.bad_case_signals import load_signals",
+        "from api_core.workflow.bad_case_learning import safe_detector_config",
+        "from api_core.integrations.ai_service import ai_client_sync",
+        f"rid = '{rid}'",
+        ("v = ai_client_sync.evaluate_auto_approve(request_id=rid, request_type='ATTENDANCE_ADJUSTMENT',"
+         " lifecycle_template='A', risk_score=1, requester_name='kt', requester_dept='kt', amount=0.0,"
+         " days_requested=0, correlation_id=None, signals=load_signals(rid), bad_case_config=safe_detector_config())"),
+        "print(json.dumps([c['rule_id'] for c in v.get('citations') or [] if c.get('applies')]))",
+    ])
+    out = subprocess.run(["docker", "compose", "exec", "-T", "api", "python", "manage.py", "shell", "-c", code],
+                         cwd=rej.ROOT, capture_output=True, text=True, timeout=120, check=False).stdout
+    ids = json.loads(out.strip().splitlines()[-1]) if out.strip() else []
+    return any(i.startswith(RETRO) for i in ids)
+
+
 def cleanup(o) -> None:
     a = rej.admin()
-    for code in (NEW, OLD):
+    for code in (NEW, OLD, PCT, RETRO):
         row = o.one("SELECT id::text FROM eas.company_regulations WHERE code=%s AND NOT is_deleted", code)
         if row:
             a.call("DELETE", f"/api/v1/admin/regulations/{row[0]}", {})
@@ -141,7 +234,8 @@ def main() -> int:
     rej.wait_learning(o)
     results = []
     try:
-        for code, fn in {"SP-01": sp_01, "SP-02": sp_02, "SP-03": sp_03, "SP-04": sp_04}.items():
+        for code, fn in {"SP-01": sp_01, "SP-02": sp_02, "SP-03": sp_03, "SP-04": sp_04, "SP-05": sp_05,
+                         "SP-06": sp_06}.items():
             start = time.time()
             try:
                 r = fn(o)

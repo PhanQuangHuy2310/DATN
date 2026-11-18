@@ -1,0 +1,295 @@
+{
+ "about": "Ảnh chụp danh mục loại yêu cầu đang hoạt động (mã, tên, luồng) để chấm trình biên dịch quy định tái lập được.",
+ "types": [
+  {
+   "code": "ACCESS",
+   "name": "Cấp tài khoản & quyền truy cập",
+   "lifecycle": "B"
+  },
+  {
+   "code": "ACCESS_FACILITY",
+   "name": "Cấp thẻ ra vào",
+   "lifecycle": "B"
+  },
+  {
+   "code": "ADVANCE_LARGE",
+   "name": "Tạm ứng dự án lớn (>50tr)",
+   "lifecycle": "B"
+  },
+  {
+   "code": "ADVANCE_MEDIUM",
+   "name": "Tạm ứng chi phí (10-50tr)",
+   "lifecycle": "B"
+  },
+  {
+   "code": "ADVANCE_SMALL",
+   "name": "Tạm ứng chi phí (<10tr)",
+   "lifecycle": "B"
+  },
+  {
+   "code": "ASSET_DISPOSAL",
+   "name": "Thanh lý & hủy tài sản cố định",
+   "lifecycle": "C"
+  },
+  {
+   "code": "ATTENDANCE_ADJUSTMENT",
+   "name": "Điều chỉnh chấm công",
+   "lifecycle": "A"
+  },
+  {
+   "code": "BUDGET_REALLOCATION",
+   "name": "Điều chuyển & bổ sung ngân sách liên bộ phận",
+   "lifecycle": "C"
+  },
+  {
+   "code": "BUSINESS_TRIP",
+   "name": "Đăng ký đi công tác",
+   "lifecycle": "B"
+  },
+  {
+   "code": "CONTRACT_APPROVAL",
+   "name": "Duyệt hợp đồng",
+   "lifecycle": "C"
+  },
+  {
+   "code": "CROSS_DEPT_SUPPORT",
+   "name": "Hỗ trợ liên phòng ban",
+   "lifecycle": "C"
+  },
+  {
+   "code": "DATA_UAT_EXPORT",
+   "name": "Trích xuất dữ liệu / UAT",
+   "lifecycle": "B"
+  },
+  {
+   "code": "DISCIPLINE_REQ",
+   "name": "Đề xuất kỷ luật",
+   "lifecycle": "B"
+  },
+  {
+   "code": "DOCUMENT_SEAL",
+   "name": "Đóng dấu / ký văn bản",
+   "lifecycle": "B"
+  },
+  {
+   "code": "EMPLOYEE_ONBOARDING",
+   "name": "Tiếp nhận nhân viên mới",
+   "lifecycle": "C"
+  },
+  {
+   "code": "EQUIPMENT",
+   "name": "Mua sắm thiết bị / tài sản",
+   "lifecycle": "C"
+  },
+  {
+   "code": "EQUIPMENT_BORROW",
+   "name": "Mượn thiết bị / đồ dùng",
+   "lifecycle": "C"
+  },
+  {
+   "code": "EXPENSE_CLAIM",
+   "name": "Thanh toán chi phí",
+   "lifecycle": "A"
+  },
+  {
+   "code": "FACILITY_REPAIR",
+   "name": "Sửa chữa sự cố văn phòng",
+   "lifecycle": "C"
+  },
+  {
+   "code": "FEATURE_RELEASE",
+   "name": "Feature Request / Release",
+   "lifecycle": "C"
+  },
+  {
+   "code": "FLASH_SALE_VOUCHER",
+   "name": "Flash Sale / Voucher",
+   "lifecycle": "B"
+  },
+  {
+   "code": "HR_CERTIFICATE",
+   "name": "Xin giấy xác nhận công tác / thu nhập",
+   "lifecycle": "B"
+  },
+  {
+   "code": "INTERNAL_TRANSFER",
+   "name": "Điều chuyển nội bộ",
+   "lifecycle": "B"
+  },
+  {
+   "code": "IT_SUPPORT",
+   "name": "Yêu cầu hỗ trợ IT",
+   "lifecycle": "B"
+  },
+  {
+   "code": "LAPTOP_PROVISION",
+   "name": "Cấp máy tính / thiết bị làm việc",
+   "lifecycle": "C"
+  },
+  {
+   "code": "LEAVE",
+   "name": "Nghỉ phép",
+   "lifecycle": "A"
+  },
+  {
+   "code": "LEAVE_SPECIAL",
+   "name": "Nghỉ phép đặc biệt",
+   "lifecycle": "A"
+  },
+  {
+   "code": "MARKETING_CAMPAIGN",
+   "name": "Ngân sách chiến dịch Marketing & Sự kiện",
+   "lifecycle": "C"
+  },
+  {
+   "code": "NDA_PRIVACY_CLEARANCE",
+   "name": "Thẩm định NDA & chia sẻ dữ liệu đối tác",
+   "lifecycle": "B"
+  },
+  {
+   "code": "OFFICE_SUPPLIES",
+   "name": "Cấp văn phòng phẩm",
+   "lifecycle": "B"
+  },
+  {
+   "code": "OVERTIME_REQ",
+   "name": "Đăng ký làm thêm giờ (OT)",
+   "lifecycle": "B"
+  },
+  {
+   "code": "POLICY_ISSUANCE",
+   "name": "Ban hành quy chế nội bộ",
+   "lifecycle": "B"
+  },
+  {
+   "code": "PROD_DATA_ACCESS",
+   "name": "Cấp quyền Dữ liệu nhạy cảm/Server",
+   "lifecycle": "C"
+  },
+  {
+   "code": "PROJECT_INITIATION",
+   "name": "Đề xuất khởi tạo dự án",
+   "lifecycle": "C"
+  },
+  {
+   "code": "PROMOTION_REQ",
+   "name": "Đề xuất thăng chức",
+   "lifecycle": "B"
+  },
+  {
+   "code": "PURCHASE_REQUEST",
+   "name": "Đề nghị mua sắm",
+   "lifecycle": "B"
+  },
+  {
+   "code": "RECRUITMENT_REQ",
+   "name": "Yêu cầu tuyển dụng nhân sự",
+   "lifecycle": "C"
+  },
+  {
+   "code": "REFUND_COMPENSATION",
+   "name": "Hoàn tiền / Đền bù",
+   "lifecycle": "A"
+  },
+  {
+   "code": "REIMBURSEMENT",
+   "name": "Quyết toán tạm ứng",
+   "lifecycle": "B"
+  },
+  {
+   "code": "RESIGNATION",
+   "name": "Thôi việc / Bàn giao",
+   "lifecycle": "C"
+  },
+  {
+   "code": "RESOURCE_REVOKE",
+   "name": "Thu hồi tài khoản / thiết bị",
+   "lifecycle": "C"
+  },
+  {
+   "code": "REWARD_REQ",
+   "name": "Đề xuất khen thưởng",
+   "lifecycle": "B"
+  },
+  {
+   "code": "ROOM_BOOKING",
+   "name": "Đặt phòng họp",
+   "lifecycle": "A"
+  },
+  {
+   "code": "SAAS_LICENSE_BUY",
+   "name": "Mua bản quyền phần mềm mới",
+   "lifecycle": "C"
+  },
+  {
+   "code": "SALARY_ADJUSTMENT",
+   "name": "Điều chỉnh lương",
+   "lifecycle": "B"
+  },
+  {
+   "code": "SALARY_ADVANCE",
+   "name": "Ứng lương",
+   "lifecycle": "B"
+  },
+  {
+   "code": "SECURITY_INCIDENT_HOTFIX",
+   "name": "Khắc phục sự cố bảo mật & Hotfix khẩn cấp",
+   "lifecycle": "C"
+  },
+  {
+   "code": "SERVER_FIREWALL",
+   "name": "Cấp Server / Firewall",
+   "lifecycle": "C"
+  },
+  {
+   "code": "SPECIAL_DISCOUNT",
+   "name": "Phê duyệt chiết khấu thương mại đặc biệt",
+   "lifecycle": "A"
+  },
+  {
+   "code": "SUPPLIER_ONBOARDING",
+   "name": "Thẩm định & phê duyệt nhà cung cấp mới",
+   "lifecycle": "B"
+  },
+  {
+   "code": "TASK_REQUEST",
+   "name": "Yêu cầu xử lý công việc",
+   "lifecycle": "C"
+  },
+  {
+   "code": "TAX_INVOICE_ISSUE",
+   "name": "Phát hành / điều chỉnh hóa đơn VAT",
+   "lifecycle": "B"
+  },
+  {
+   "code": "TRAINING_COURSE",
+   "name": "Đăng ký đào tạo & chứng chỉ nghề nghiệp",
+   "lifecycle": "B"
+  },
+  {
+   "code": "VEHICLE_BOOKING",
+   "name": "Mượn xe công vụ",
+   "lifecycle": "C"
+  },
+  {
+   "code": "VENDOR_PAYMENT",
+   "name": "Thanh toán Hợp đồng Vendor",
+   "lifecycle": "C"
+  },
+  {
+   "code": "VISITOR_SECURITY_PASS",
+   "name": "Thẻ an ninh khách & đối tác ra vào",
+   "lifecycle": "A"
+  },
+  {
+   "code": "WAREHOUSE_TRANSFER",
+   "name": "Luân chuyển kho",
+   "lifecycle": "B"
+  },
+  {
+   "code": "WFH_REQ",
+   "name": "Làm việc từ xa (WFH)",
+   "lifecycle": "A"
+  }
+ ]
+}

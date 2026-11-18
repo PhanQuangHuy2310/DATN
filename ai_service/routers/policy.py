@@ -10,8 +10,11 @@ lực ngay ở request kế tiếp mà không cần train lại model hay restar
 
 import json
 import os
+import re
 import tempfile
-from datetime import datetime, timezone
+import unicodedata
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, model_validator
@@ -26,7 +29,16 @@ POLICY_FILE = os.path.join(DATA_DIR, "active_enterprise_policy.json")
 _cache: dict = {"mtime": None, "path": None, "policy": None}
 
 
-WINDOWS = ("CALENDAR_MONTH", "ROLLING_7D", "ROLLING_30D")
+WINDOWS = ("CALENDAR_MONTH", "ROLLING_7D", "ROLLING_30D", "CALENDAR_QUARTER", "CALENDAR_YEAR")
+WINDOW_RE = re.compile(r"^(?:CALENDAR_(?:MONTH|QUARTER|YEAR)|ROLLING_(?:[1-9]\d{0,2})D)$")
+DATE_RE = r"^\d{4}-\d{2}-\d{2}$"
+TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+# Khóa điều kiện được phép trong một vùng loại trừ (vùng đã bị quy định mới hơn thay thế).
+EXCLUDE_KEYS = {
+    "request_type", "amount_gt", "amount_lte", "days_gt", "days_lte", "percent_gt", "percent_lte",
+    "location_contains", "due_within_hours", "require_no_handover", "repeat_count_gte", "repeat_window",
+    "split_suspect", "split_total_gt", "retro_days_gt", "effective_from", "effective_until",
+}
 
 
 class PolicyRule(BaseModel):
@@ -52,6 +64,17 @@ class PolicyRule(BaseModel):
     auto_approve: bool | None = None
     escalate_to: str | None = None
     approvers: list[str] | None = Field(None, max_length=6)
+    # v3: cận trên, phần trăm, địa điểm, ngày đã quá N ngày, ngày hiệu lực.
+    amount_lte: float | None = Field(None, ge=0)
+    days_lte: int | None = Field(None, ge=0)
+    percent_gt: float | None = Field(None, ge=0, le=100)
+    percent_lte: float | None = Field(None, ge=0, le=100)
+    location_contains: str | None = Field(None, min_length=1, max_length=120)
+    retro_days_gt: int | None = Field(None, ge=0, le=3660)
+    effective_from: str | None = Field(None, pattern=DATE_RE)
+    effective_until: str | None = Field(None, pattern=DATE_RE)
+    # Vùng đã bị quy định mới hơn thay thế: luật KHÔNG áp khi hồ sơ thỏa một vùng loại trừ.
+    exclude: list[dict] = Field(default_factory=list, max_length=20)
     # Luật áp cho mọi loại nhưng đã bị quy định mới thay thế ở vài loại (api_core regulation_precedence).
     except_types: list[str] = Field(default_factory=list, max_length=60)
     source_code: str | None = Field(None, max_length=30)
@@ -60,10 +83,13 @@ class PolicyRule(BaseModel):
     def has_effect(self):
         if self.min_risk is None and self.auto_approve is None:
             raise ValueError("rule needs min_risk or auto_approve")
-        if self.repeat_window is not None and self.repeat_window not in WINDOWS:
+        if self.repeat_window is not None and not WINDOW_RE.match(self.repeat_window):
             raise ValueError(
-                "repeat_window must be CALENDAR_MONTH, ROLLING_7D or ROLLING_30D"
+                "repeat_window must be CALENDAR_MONTH/QUARTER/YEAR or ROLLING_<N>D"
             )
+        for zone in self.exclude:
+            if not isinstance(zone, dict) or not zone or set(zone) - EXCLUDE_KEYS:
+                raise ValueError("exclude zones may only use condition keys")
         if self.escalate_to is not None and self.escalate_to not in ("B", "C"):
             raise ValueError("escalate_to must be B or C")
         if self.auto_approve is True and (
@@ -84,6 +110,12 @@ class PolicySignals(BaseModel):
     same_type_count_month: int = Field(0, ge=0)
     requester_amount_7d: float = Field(0.0, ge=0)
     requester_finance_count_7d: int = Field(0, ge=0)
+    # v3
+    percent: float | None = Field(None, ge=0, le=100)
+    location_text: str = Field("", max_length=600)
+    notice_hours: float | None = None
+    same_type_dates: list[str] = Field(default_factory=list, max_length=500)  # hồ sơ cùng loại TRƯỚC đây
+    today: str | None = Field(None, pattern=DATE_RE)  # mặc định: hôm nay giờ Việt Nam (để kiểm thử)
 
 
 class PolicyDocument(BaseModel):
@@ -166,7 +198,50 @@ _WINDOW_TEXT = {
     "CALENDAR_MONTH": "trong tháng",
     "ROLLING_7D": "trong 7 ngày",
     "ROLLING_30D": "trong 30 ngày",
+    "CALENDAR_QUARTER": "trong quý",
+    "CALENDAR_YEAR": "trong năm",
 }
+
+
+def _today(sig: PolicySignals) -> date:
+    return date.fromisoformat(sig.today) if sig.today else datetime.now(TZ).date()
+
+
+def _fold(text: str) -> str:
+    low = unicodedata.normalize("NFC", text or "").lower().replace("đ", "d")
+    plain = "".join(c for c in unicodedata.normalize("NFD", low) if unicodedata.category(c) != "Mn")
+    return " ".join(plain.split())
+
+
+def _window_count(window: str, sig: PolicySignals) -> int:
+    """Số hồ sơ cùng loại trong cửa sổ, KỂ CẢ hồ sơ này."""
+    if window in _WINDOW_FIELD:
+        return getattr(sig, _WINDOW_FIELD[window])
+    today = _today(sig)
+    dates = []
+    for raw in sig.same_type_dates:
+        try:
+            dates.append(date.fromisoformat(str(raw)[:10]))
+        except ValueError:
+            continue
+    if window == "CALENDAR_QUARTER":
+        q = (today.month - 1) // 3
+        hits = [d for d in dates if d.year == today.year and (d.month - 1) // 3 == q]
+    elif window == "CALENDAR_YEAR":
+        hits = [d for d in dates if d.year == today.year]
+    else:
+        n = int(window[len("ROLLING_"):-1])
+        hits = [d for d in dates if today - timedelta(days=n) < d <= today]
+    return len(hits) + 1
+
+
+def _window_text(window: str) -> str:
+    return _WINDOW_TEXT.get(window) or f"trong {window[len('ROLLING_'):-1]} ngày"
+
+
+from contextvars import ContextVar
+
+_current_type: ContextVar[str] = ContextVar("policy_request_type", default="")
 
 
 def _checks(
@@ -201,13 +276,13 @@ def _checks(
             )
     if rule.repeat_count_gte:
         window = rule.repeat_window or "ROLLING_30D"
-        count = getattr(sig, _WINDOW_FIELD[window])
+        count = _window_count(window, sig)
         hit = count >= rule.repeat_count_gte
         sign = "≥" if hit else "<"
         out.append(
             (
                 hit,
-                f"Đây là lần thứ {count} {_WINDOW_TEXT[window]} ({sign} {rule.repeat_count_gte})",
+                f"Đây là lần thứ {count} {_window_text(window)} ({sign} {rule.repeat_count_gte})",
             )
         )
     if rule.split_suspect:
@@ -220,6 +295,49 @@ def _checks(
             f"hồ sơ này {_vnd(amount)}"
         )
         out.append((hit, text + (": dấu hiệu chia nhỏ" if hit else "")))
+    if rule.amount_lte is not None:
+        hit = amount <= rule.amount_lte
+        out.append((hit, f"Số tiền {_vnd(amount)} {'≤' if hit else '>'} {_vnd(rule.amount_lte)}"))
+    if rule.days_lte is not None:
+        hit = days <= rule.days_lte
+        out.append((hit, f"Số ngày {days} {'≤' if hit else '>'} {rule.days_lte} ngày"))
+    for key, cmp in (("percent_gt", lambda v, r: v > r), ("percent_lte", lambda v, r: v <= r)):
+        ref = getattr(rule, key)
+        if ref is None:
+            continue
+        if sig.percent is None:
+            out.append((False, "Hồ sơ không có tỉ lệ phần trăm"))
+        else:
+            hit = cmp(sig.percent, ref)
+            word = (">" if hit else "≤") if key == "percent_gt" else ("≤" if hit else ">")
+            out.append((hit, f"Tỉ lệ {sig.percent:g}% {word} {ref:g}%"))
+    if rule.location_contains:
+        hit = _fold(rule.location_contains) in _fold(sig.location_text)
+        out.append((hit, f"Địa điểm {'thuộc' if hit else 'không thuộc'} “{rule.location_contains}”"))
+    if rule.retro_days_gt is not None:
+        if sig.notice_hours is None:
+            out.append((False, "Không xác định được ngày của hồ sơ"))
+        else:
+            retro = -sig.notice_hours / 24
+            hit = retro > rule.retro_days_gt
+            text = f"Ngày của hồ sơ cách lúc gửi {max(retro, 0):.0f} ngày ({'>' if hit else '≤'} {rule.retro_days_gt})"
+            out.append((hit, text))
+    today = _today(sig)
+    if rule.effective_from:
+        hit = today >= date.fromisoformat(rule.effective_from)
+        out.append((hit, f"Hiệu lực từ {rule.effective_from}" + ("" if hit else " (chưa tới ngày)")))
+    if rule.effective_until:
+        hit = today <= date.fromisoformat(rule.effective_until)
+        out.append((hit, f"Hiệu lực đến {rule.effective_until}" + ("" if hit else " (đã hết hiệu lực)")))
+    for zone in rule.exclude:
+        try:
+            probe = PolicyRule(id="exclude", auto_approve=False, **zone)
+        except ValueError:
+            continue
+        inside = covers(probe, _current_type.get()) if probe.request_type else True
+        if inside and all(h for h, _t in _checks(probe, amount, days, sig)):
+            out.append((False, "Thuộc vùng đã được quy định mới hơn thay thế"))
+            break
     return out
 
 
@@ -239,9 +357,13 @@ def rule_applies(
 ) -> bool:
     if not covers(rule, request_type):
         return False
-    return all(
-        hit for hit, _text in _checks(rule, amount, days, sig or PolicySignals())
-    )
+    token = _current_type.set(request_type)
+    try:
+        return all(
+            hit for hit, _text in _checks(rule, amount, days, sig or PolicySignals())
+        )
+    finally:
+        _current_type.reset(token)
 
 
 def apply_policy(

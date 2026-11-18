@@ -94,7 +94,7 @@ class ValidateTests(unittest.TestCase):
                              others=[{"code": "QC05", "content": qc05()}])
         self.assertTrue(dup["ok"])
         self.assertIn("SUPERSEDES", kinds(dup, "supersedes"))
-        unparsed = self.run_check("Phê duyệt chiết khấu thương mại đặc biệt từ 15% trở lên phải qua Ban Giám đốc.")
+        unparsed = self.run_check("Yêu cầu Hoàn tiền / Đền bù cho khách hàng thân thiết bắt buộc duyệt thủ công.")
         self.assertTrue(unparsed["ok"])
         self.assertTrue(any(k in ("UNPARSED", "NO_CONTROL") for k in kinds(unparsed, "warnings")))
 
@@ -127,8 +127,34 @@ class PrecedenceTests(unittest.TestCase):
         ids = {r["id"]: r for r in kept}
         self.assertNotIn("QDCU-1-EXPENSE_CLAIM", ids)
         self.assertIn("QDCU-2-LEAVE", ids)  # khác kiểu điều kiện: giữ
-        self.assertEqual(ids["REGALL-1-X"]["except_types"], ["EXPENSE_CLAIM"])
+        # Luật chung "mọi loại" chỉ bị thay ở loại Thanh toán (vùng loại trừ cả loại đó).
+        self.assertEqual(ids["REGALL-1-X"]["exclude"], [{"request_type": "EXPENSE_CLAIM"}])
         self.assertEqual({(e["old_code"], e["scope"]) for e in sup}, {("QDCU", "ALL"), ("REGALL", "TYPE")})
+
+    def test_bounded_new_rule_only_excludes_its_range(self):
+        old = rule("QDCU-1-REFUND", "Hoàn tiền trên 4 triệu duyệt thủ công", request_type="REFUND",
+                   amount_gt=4_000_000, auto_approve=False)
+        new = rule("QDMOI-1-REFUND", "Hoàn tiền 4-6 triệu được tự duyệt", request_type="REFUND",
+                   amount_gt=3_999_999, amount_lte=6_000_000, auto_approve=True)
+        kept, sup = resolve([old, new], self.origins(old))
+        zone = next(r for r in kept if r["id"] == "QDCU-1-REFUND")["exclude"][0]
+        self.assertEqual((zone["amount_gt"], zone["amount_lte"]), (3_999_999, 6_000_000))
+        self.assertEqual(sup[0]["scope"], "PART")
+
+    def test_future_effective_date_keeps_old_rule_until_the_day_before(self):
+        new = rule("QDMOI-1-LEAVE", "Từ 01/01/2027 nghỉ trên 7 ngày duyệt", request_type="LEAVE", days_gt=7,
+                   auto_approve=False, effective_from="2027-01-01")
+        old = rule("QDCU-2-LEAVE", "Nghỉ trên 4 ngày duyệt", request_type="LEAVE", days_gt=4, auto_approve=False)
+        kept, _sup = resolve([old, new], self.origins(old))
+        self.assertEqual(next(r for r in kept if r["id"] == "QDCU-2-LEAVE")["effective_until"], "2026-12-31")
+
+    def test_replacement_is_permanent_after_new_regulation_is_removed(self):
+        origins = self.origins(self.OLD40, version="3.0")
+        _kept, sup = resolve([self.OLD40, self.NEW50], origins)
+        origins = next_origins([self.OLD40, self.NEW50], origins, "4.0", sup)
+        kept, sup = resolve([self.OLD40], origins)  # QD mới bị bãi bỏ
+        self.assertEqual(kept, [])
+        self.assertTrue(sup[0]["persisted"])
 
     def test_without_a_newer_sentence_nothing_is_replaced(self):
         kept, sup = resolve([self.OLD40, self.ALL100], self.origins(self.OLD40, self.ALL100))

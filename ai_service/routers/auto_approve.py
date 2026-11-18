@@ -109,6 +109,10 @@ class AutoApproveInput(BaseModel):
     start_day_of_month: int | None = Field(None, ge=1, le=31)
     start_weekday: int | None = Field(None, ge=1, le=7)
     submit_hour: int | None = Field(None, ge=0, le=23)
+    # Luật quy định v3: phần trăm chiết khấu, địa điểm, ngày các hồ sơ cùng loại trước đây.
+    percent: float | None = Field(None, ge=0, le=100)
+    location_text: str = Field("", max_length=600)
+    same_type_dates: list[str] = Field(default_factory=list, max_length=500)
     # Bảng eas.bad_case (migration 25): bad case học được đang ACTIVE và điều chỉnh danh mục có sẵn.
     learned_bad_cases: list[LearnedBadCase] = Field(default_factory=list, max_length=200)
     bad_case_overrides: dict[str, BadCaseOverride] = Field(default_factory=dict)
@@ -123,6 +127,10 @@ class AutoApproveInput(BaseModel):
             same_type_count_month=self.same_type_count_month,
             requester_amount_7d=self.requester_amount_7d,
             requester_finance_count_7d=self.requester_finance_count_7d,
+            percent=self.percent,
+            location_text=self.location_text,
+            notice_hours=self.notice_hours,
+            same_type_dates=self.same_type_dates,
         )
 
 
