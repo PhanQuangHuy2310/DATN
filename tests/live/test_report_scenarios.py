@@ -164,7 +164,12 @@ class Oracle:
               AND NOT EXISTS (SELECT 1 FROM eas.role_membership r WHERE r.user_id=u.id
                               AND r.role IN ('OPS_ADMIN','POLICY_ADMIN','DIRECTOR','VICE_DIRECTOR') AND r.revoked_at IS NULL)
               AND EXISTS (SELECT 1 FROM eas.role_membership r WHERE r.user_id=u.id AND r.role='STAFF' AND r.revoked_at IS NULL)
-            ORDER BY md5(u.email || %s) LIMIT 1""", lifecycle_type)
+              -- Bỏ người đã có nhiều hồ sơ cùng loại trong tháng do chạy test lặp lại: AI sẽ (đúng) coi đó là
+              -- tình huống xấu (BC_WFH_FREQUENT, BC_REPEATED_EXEMPTION) và chuyển hồ sơ sang luồng B.
+              AND (SELECT count(*) FROM eas.request q JOIN eas.request_type qt ON qt.id=q.type_id
+                   WHERE q.requester_id=u.id AND qt.code=%s
+                     AND q.created_at > date_trunc('month', now())) < 3
+            ORDER BY md5(u.email || %s) LIMIT 1""", lifecycle_type, lifecycle_type)
         return row[0]
 
     def fixture(self, sql: str, *args) -> None:
