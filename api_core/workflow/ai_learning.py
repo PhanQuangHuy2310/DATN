@@ -55,6 +55,14 @@ class TransientLearningError(RuntimeError):
     """Retryable failure (AI service unreachable, timeout)."""
 
 
+class RegulationRejected(RuntimeError):
+    """Văn bản thay đổi có lỗi chặn (lỗi ký tự, mâu thuẫn): không học, trả lại đúng các văn bản lỗi (migration 26)."""
+
+    def __init__(self, checks: dict[str, dict[str, Any]]):
+        self.checks = checks
+        super().__init__("regulation validation failed")
+
+
 # ---------------------------------------------------------------------------
 # 1. Regulation compiler: Vietnamese text -> policy rules (pure functions)
 #    Cài đặt ở regulation_compiler.py (v2: điều kiện ngữ cảnh deadline / lặp lại /
@@ -783,33 +791,131 @@ def _fail(job: dict[str, Any], owner: str, error: str, *, retry: bool) -> None:
                 [error[:2000], job["id"]],
             )
             step = (cursor.fetchone() or (3,))[0]
+            # Trả lại mọi thay đổi chưa áp dụng được: hiệu lực (văn bản + bộ luật) quay về bản đã áp dụng (migration 26).
+            from api_core.workflow import regulation_rejection as rejection
+
+            rejected = []
+            try:
+                with transaction.atomic():
+                    rejected = rejection.rollback_to_applied(
+                        cursor, job_id=job["id"], cause="TECHNICAL", message=error
+                    ) or []
+            except Exception:  # khôi phục lỗi không được làm treo tác vụ: giữ cách cũ, vẫn báo admin
+                logger.exception("regulation_rollback_failed job=%s", job["id"])
+                rejected = []
             cursor.execute(
                 """
                 UPDATE eas.ai_system_state
-                SET sync_status = 'ERROR', current_step_index = %s, client_maintenance_lock = false,
+                SET sync_status = %s, current_step_index = %s, client_maintenance_lock = false,
                     current_step_label = %s, steps_detail = %s, updated_at = now()
                 WHERE id = 1
                 """,
                 [
+                    "COMPLETED" if rejected else "ERROR",
                     max(step, 1),
-                    f"AI chưa học được quy định v{job['target_version']}: giữ bộ luật cũ",
+                    f"Đã trả lại {', '.join(r['code'] for r in rejected)}: giữ bản đã áp dụng"
+                    if rejected
+                    else f"AI chưa học được quy định v{job['target_version']}: giữ bộ luật cũ",
                     Jsonb(steps_detail(max(step, 1), failed=True)),
                 ],
             )
+            if rejected:
+                title, summary = rejection.announcement_text(rejected, "TECHNICAL", error)
+            else:
+                title = f"AI chưa áp dụng được quy định v{job['target_version']}"
+                summary = (
+                    f"Sau {job['attempts']} lần thử, AI chưa học được bộ quy định mới; hệ thống giữ bộ luật đang "
+                    f"hiệu lực và đã mở khoá đăng nhập. Lỗi: {error[:300]}. Kiểm tra AI service rồi bấm "
+                    "\u201cHọc lại\u201d trong Quản trị AI."
+                )
             cursor.execute(
                 """
                 INSERT INTO eas.system_announcement (job_id, audience, kind, version, title, summary, changes, guidance)
-                VALUES (%s, 'ADMIN', 'REGULATION_UPDATE_FAILED', %s, %s, %s, '[]'::jsonb, '[]'::jsonb)
+                VALUES (%s, 'ADMIN', %s, %s, %s, %s, %s, '[]'::jsonb)
                 ON CONFLICT (job_id) DO NOTHING
                 """,
                 [
                     job["id"],
+                    "REGULATION_REJECTED" if rejected else "REGULATION_UPDATE_FAILED",
                     job["target_version"],
-                    f"AI chưa áp dụng được quy định v{job['target_version']}",
-                    f"Sau {job['attempts']} lần thử, AI chưa học được bộ quy định mới; hệ thống giữ bộ luật đang hiệu lực và đã mở khoá đăng nhập. Lỗi: {error[:300]}. Kiểm tra AI service rồi bấm “Học lại” trong Quản trị AI.",
+                    title,
+                    summary,
+                    Jsonb(rejected),
                 ],
             )
     invalidate_lock_cache()
+
+
+def _reject(job: dict[str, Any], owner: str, checks: dict[str, dict[str, Any]]) -> str:
+    """Trả lại các văn bản có lỗi chặn và báo admin; còn thay đổi hợp lệ khác thì học lại ngay phần đó."""
+    from api_core.workflow import regulation_rejection as rejection
+    from api_core.workflow.regulation_validation import summary_text
+
+    bad = {code: r for code, r in checks.items() if not r["ok"]}
+    message = "; ".join(f"{code}: {summary_text(r, 2)}" for code, r in bad.items())
+    with transaction.atomic(), connection.cursor() as cursor:
+        rejected = rejection.rollback_to_applied(
+            cursor,
+            job_id=job["id"],
+            cause="VALIDATION",
+            message=message,
+            validation=checks,
+            only_codes=set(bad),
+        )
+    if not rejected:  # chưa có migration 26 hoặc chưa từng áp dụng: giữ cách cũ (thất bại, giữ bộ luật cũ)
+        _fail(job, owner, f"Văn bản quy định có lỗi: {message}", retry=False)
+        return "FAILED"
+    with transaction.atomic(), connection.cursor() as cursor:
+        regulations, _types, previous = _load_inputs(cursor)
+        remaining = rejection.changes(regulations, previous["snapshot"])
+        if remaining:
+            # Văn bản khác trong cùng đợt không lỗi: học lại ngay phần đó (vẫn giữ khoá bảo trì).
+            cursor.execute(
+                """
+                UPDATE eas.ai_learning_job
+                SET status = 'QUEUED', rerun_requested = false, attempts = 0, lease_owner = NULL,
+                    lease_until = NULL, step = 1, progress = 0, not_before = statement_timestamp(), error = %s,
+                    step_label = 'Đã trả lại văn bản lỗi, AI học phần còn lại', updated_at = statement_timestamp()
+                WHERE id = %s
+                """,
+                [message[:2000], job["id"]],
+            )
+            announce_job = None
+        else:
+            cursor.execute(
+                """
+                UPDATE eas.ai_learning_job
+                SET status = 'FAILED', error = %s, diff = %s, finished_at = statement_timestamp(),
+                    lease_owner = NULL, lease_until = NULL,
+                    step_label = 'Trả lại văn bản lỗi, giữ bản đã áp dụng', updated_at = statement_timestamp()
+                WHERE id = %s
+                """,
+                [message[:2000], Jsonb(rejected), job["id"]],
+            )
+            cursor.execute(
+                """
+                UPDATE eas.ai_system_state
+                SET sync_status = 'COMPLETED', current_step_index = 2, client_maintenance_lock = false,
+                    current_step_label = %s, steps_detail = %s, updated_at = now()
+                WHERE id = 1
+                """,
+                [
+                    f"Đã trả lại {', '.join(r['code'] for r in rejected)}: văn bản có lỗi",
+                    Jsonb(steps_detail(2, failed=True)),
+                ],
+            )
+            announce_job = job["id"]
+        title, summary = rejection.announcement_text(rejected, "VALIDATION", message)
+        cursor.execute(
+            """
+            INSERT INTO eas.system_announcement (job_id, audience, kind, version, title, summary, changes, guidance)
+            VALUES (%s, 'ADMIN', 'REGULATION_REJECTED', %s, %s, %s, %s, '[]'::jsonb)
+            ON CONFLICT (job_id) DO NOTHING
+            """,
+            [announce_job, job["target_version"], title, summary, Jsonb(rejected)],
+        )
+    invalidate_lock_cache()
+    return "REJECTED"
 
 
 RULE_KEYS = {
@@ -974,6 +1080,14 @@ def process_job(job: dict[str, Any], owner: str) -> str:
         with connection.cursor() as cursor:
             regulations, types, previous = _load_inputs(cursor)
             manual = _manual_rules(cursor)
+        # Đọc và kiểm tra văn bản đã đổi so với bản đang áp dụng TRƯỚC khi học: lỗi ký tự, mâu thuẫn giữa các điều.
+        from api_core.workflow import regulation_rejection as rejection
+
+        checks = rejection.validate_changes(
+            regulations, rejection.changes(regulations, previous["snapshot"]), types
+        )
+        if any(not c["ok"] for c in checks.values()):
+            raise RegulationRejected(checks)
         version = job["target_version"].lstrip("v")
         _progress(job["id"], owner, 2, STEP_LABELS[2])
         time.sleep(2.5)
@@ -1026,6 +1140,8 @@ def process_job(job: dict[str, Any], owner: str) -> str:
             },
         )
         return "APPLIED" if applied else "REQUEUED"
+    except RegulationRejected as exc:
+        return _reject(job, owner, exc.checks)
     except TransientLearningError as exc:
         _fail(job, owner, str(exc), retry=True)
         return "RETRY"

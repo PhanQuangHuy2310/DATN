@@ -37,6 +37,9 @@ from .regulations_ai import (
     public_ai_status_view,
     regulation_detail_update_delete,
     regulation_impact_view,
+    regulation_rejection_dismiss,
+    regulation_rejections_list,
+    regulation_validate_view,
     regulations_list_create,
 )
 from .views import access_matrix_view, api_catalog_view, records
@@ -112,6 +115,13 @@ urlpatterns = [
     ),
     # Phase 5: Regulations & AI Engine Management
     path("regulations", regulations_list_create, name="admin-regulations"),
+    path("regulations/validate", regulation_validate_view, name="admin-regulation-validate"),
+    path("regulations/rejections", regulation_rejections_list, name="admin-regulation-rejections"),
+    path(
+        "regulations/rejections/<uuid:rejection_id>/dismiss",
+        regulation_rejection_dismiss,
+        name="admin-regulation-rejection-dismiss",
+    ),
     path(
         "regulations/clause-reviews", clause_reviews_list, name="admin-clause-reviews"
     ),

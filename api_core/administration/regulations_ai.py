@@ -174,6 +174,134 @@ def _list_regulations() -> list[dict]:
         return [_serialize_regulation(r) for r in cur.fetchall()]
 
 
+def _content_check(cur, *, code: str, fields: dict) -> dict[str, Any]:
+    """AI đọc văn bản trước khi lưu: lỗi ký tự, mâu thuẫn giữa các điều / với quy định đang hiệu lực."""
+    from api_core.workflow.regulation_compiler import RequestTypeName
+    from api_core.workflow.regulation_validation import validate
+
+    cur.execute("SELECT code, name, lifecycle FROM eas.request_type WHERE is_active")
+    types = [RequestTypeName(code=r[0], name=r[1] or "", lifecycle=(r[2] or "").strip() or None)
+             for r in cur.fetchall()]
+    cur.execute(
+        "SELECT code, title, content FROM eas.company_regulations WHERE NOT is_deleted AND code <> %s",
+        [code],
+    )
+    others = [{"code": r[0], "title": r[1], "content": r[2] or ""} for r in cur.fetchall()]
+    return validate(code=code or "MỚI", title=fields["title"], content=fields["content"], types=types,
+                    others=others)
+
+
+def _invalid_regulation(request: HttpRequest, check: dict[str, Any]) -> JsonResponse:
+    """422 kèm danh sách lỗi từng câu để admin sửa; không lưu, không khoá hệ thống."""
+    response = JsonResponse(
+        {
+            "error": {
+                "code": "REGULATION_INVALID",
+                "message": f"AI phát hiện {len(check['errors'])} lỗi trong văn bản; sửa rồi ban hành lại.",
+            },
+            "validation": check,
+            "correlation_id": correlation_id(request),
+        },
+        status=422,
+    )
+    response["X-Correlation-ID"] = request.correlation_id
+    return response
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN")
+def regulation_validate_view(request: HttpRequest) -> JsonResponse:
+    """POST /api/v1/admin/regulations/validate {code?, title, content}: AI kiểm tra văn bản, không lưu."""
+    if request.method != "POST":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    body, error = _parse(request)
+    if error:
+        return error
+    fields, errors = _validated_fields(body)
+    if errors:
+        return api_error(request, "VALIDATION_FAILED", status=422, fields=errors)
+    code = str(body.get("code", "")).strip().upper()[:30]
+    with connection.cursor() as cur:
+        return JsonResponse({"validation": _content_check(cur, code=code, fields=fields)})
+
+
+def _rejection_row(r) -> dict[str, Any]:
+    keys = ("id", "regulation_code", "action", "cause", "rejected_title", "rejected_content", "rejected_version",
+            "restored_version", "errors", "warnings", "message", "state", "note", "created_at", "resolved_at")
+    item = dict(zip(keys, r, strict=True))
+    item["created_at"] = _iso(item["created_at"])
+    item["resolved_at"] = _iso(item["resolved_at"])
+    return item
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
+def regulation_rejections_list(request: HttpRequest) -> JsonResponse:
+    """GET /api/v1/admin/regulations/rejections?state=OPEN: quy định bị trả lại + lỗi từng câu (migration 26)."""
+    if request.method != "GET":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    state = (request.GET.get("state") or "OPEN").upper()
+    if state not in ("OPEN", "RESOLVED", "DISMISSED", "ALL"):
+        return api_error(request, "VALIDATION_FAILED", status=422)
+    with connection.cursor() as cur:
+        cur.execute("SELECT to_regclass('eas.regulation_rejection') IS NOT NULL")
+        if not cur.fetchone()[0]:
+            return JsonResponse({"items": [], "installed": False})
+        cur.execute(
+            """
+            SELECT id::text, regulation_code, action, cause, rejected_title, rejected_content, rejected_version,
+                   restored_version, errors, warnings, message, state, note, created_at, resolved_at
+            FROM eas.regulation_rejection
+            WHERE %s = 'ALL' OR state = %s
+            ORDER BY created_at DESC LIMIT 100
+            """,
+            [state, state],
+        )
+        return JsonResponse({"items": [_rejection_row(r) for r in cur.fetchall()], "installed": True})
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN")
+def regulation_rejection_dismiss(request: HttpRequest, rejection_id) -> JsonResponse:
+    """POST .../rejections/<id>/dismiss {note}: admin bỏ qua bản bị trả lại (không nạp lại)."""
+    if request.method != "POST":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    if denied := _forbidden_unless_writer(request):
+        return denied
+    body, error = _parse(request)
+    if error:
+        return error
+    note = str(body.get("note") or "").strip()
+    if len(note) < 5:
+        return api_error(request, "VALIDATION_FAILED", status=422, fields={"note": ["Cần lý do (≥ 5 ký tự)"]})
+    with transaction.atomic(), connection.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE eas.regulation_rejection
+            SET state = 'DISMISSED', resolved_by = %s, resolved_at = statement_timestamp(), note = %s
+            WHERE id = %s::uuid AND state = 'OPEN' RETURNING regulation_code
+            """,
+            [request.actor.id, note[:500], str(rejection_id)],
+        )
+        row = cur.fetchone()
+        if not row:
+            return api_error(request, "NOT_FOUND", status=404)
+        _append_admin_audit(
+            cur,
+            actor_id=request.actor.id,
+            action="REGULATION_REJECTION_DISMISSED",
+            target_type="regulation_rejection",
+            target_id=str(rejection_id),
+            details={"code": row[0]},
+            reason=note if len(note) >= 10 else f"Bỏ qua bản bị trả lại {row[0]}: {note}",
+            correlation_id=correlation_id(request),
+        )
+    return JsonResponse({"id": str(rejection_id), "state": "DISMISSED"})
+
+
+def _resolve_rejections(cur, request: HttpRequest, code: str) -> None:
+    from api_core.workflow.regulation_rejection import resolve_open
+
+    resolve_open(cur, code=code, actor_id=request.actor.id, note="Admin đã sửa và nạp lại")
+
+
 @require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
 def regulations_list_create(request: HttpRequest) -> JsonResponse:
     """GET list (+ AI state) / POST create (major version, AI relearns)."""
@@ -212,21 +340,49 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
         )
         if cur.fetchone():
             return api_error(request, "REGULATION_CODE_EXISTS", status=409)
-        cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
-            f"""
-            INSERT INTO eas.company_regulations (code, title, category, content, is_deleted, updated_by)
-            VALUES (%s, %s, %s, %s, false, %s)
-            RETURNING {REGULATION_COLUMNS}
-            """,
-            [
-                code,
-                fields["title"],
-                fields["category"],
-                fields["content"],
-                request.actor.display_name,
-            ],
+        check = _content_check(cur, code=code, fields=fields)
+        if not check["ok"]:
+            return _invalid_regulation(request, check)
+        # Mã là UNIQUE kể cả khi đã gỡ (xóa mềm): ban hành lại một mã từng bị gỡ / bị trả lại thì dùng lại dòng đó.
+        cur.execute(
+            "SELECT id::text FROM eas.company_regulations WHERE code = %s AND is_deleted FOR UPDATE",
+            [code],
         )
+        retired = cur.fetchone()
+        if retired:
+            cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
+                f"""
+                UPDATE eas.company_regulations
+                SET is_deleted = false, title = %s, category = %s, content = %s, updated_by = %s
+                WHERE id = %s RETURNING {REGULATION_COLUMNS}
+                """,
+                [fields["title"], fields["category"], fields["content"], request.actor.display_name, retired[0]],
+            )
+        else:
+            cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
+                f"""
+                INSERT INTO eas.company_regulations (code, title, category, content, is_deleted, updated_by)
+                VALUES (%s, %s, %s, %s, false, %s)
+                RETURNING {REGULATION_COLUMNS}
+                """,
+                [
+                    code,
+                    fields["title"],
+                    fields["category"],
+                    fields["content"],
+                    request.actor.display_name,
+                ],
+            )
         regulation = _serialize_regulation(cur.fetchone())
+        if retired:
+            cur.execute(
+                """
+                UPDATE eas.regulation_versions SET change_summary = %s
+                WHERE id = (SELECT id FROM eas.regulation_versions WHERE regulation_id = %s
+                            ORDER BY created_at DESC LIMIT 1)
+                """,
+                [f'Ban hành lại quy định "{fields["title"]}"', retired[0]],
+            )
         _audit(
             cur,
             request,
@@ -239,6 +395,7 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
             reason=f"Ban hành {code}: {fields['title']}",
             requested_by=request.actor.id,
         )
+        _resolve_rejections(cur, request, code)
 
     version = _v(regulation["version_string"])
     return JsonResponse(
@@ -248,6 +405,7 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
             "new_version": version,
             "version_type": "MAJOR",
             "maintenance_active": True,
+            "warnings": check["warnings"],
         },
         status=201,
     )
@@ -353,6 +511,9 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
                     "maintenance_active": False,
                 }
             )
+        check = _content_check(cur, code=current["code"], fields=fields)
+        if not check["ok"]:
+            return _invalid_regulation(request, check)
         cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
             f"""
             UPDATE eas.company_regulations SET title = %s, category = %s, content = %s, updated_by = %s
@@ -379,6 +540,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
             reason=summary,
         )
         enqueue_learning(cur, reason=summary, requested_by=request.actor.id)
+        _resolve_rejections(cur, request, current["code"])
 
     version = _v(regulation["version_string"])
     return JsonResponse(
@@ -388,6 +550,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
             "new_version": version,
             "version_type": "MINOR",
             "maintenance_active": True,
+            "warnings": check["warnings"],
         }
     )
 
