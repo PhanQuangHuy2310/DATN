@@ -1011,3 +1011,111 @@ def ai_feedback_retire_view(request: HttpRequest, feedback_id) -> JsonResponse:
             correlation_id=correlation_id(request),
         )
     return JsonResponse({"id": str(feedback_id), "retired": True})
+
+
+# ---------------------------------------------------------------------------
+# Danh mục bad case trong CSDL (migration 25): bad case có sẵn, bad case AI học được, ứng viên chờ admin
+# ---------------------------------------------------------------------------
+BAD_CASE_STATES = ("CANDIDATE", "ACTIVE", "REJECTED", "RETIRED", "ALL")
+BAD_CASE_DECISIONS = ("approve", "reject", "retire", "enable")
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
+def bad_cases_list(request: HttpRequest) -> JsonResponse:
+    """GET /api/v1/admin/ai-engine/bad-cases?state=ALL: danh mục + đánh giá của AI + lý do thu hồi gần nhất."""
+    from api_core.workflow import bad_case_learning
+
+    if request.method != "GET":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    state = (request.GET.get("state") or "ALL").upper()
+    if state not in BAD_CASE_STATES:
+        return api_error(request, "VALIDATION_FAILED", status=422)
+    with connection.cursor() as cur:
+        if not bad_case_learning.available(cur):
+            return JsonResponse({"items": [], "installed": False})
+        cur.execute(
+            """
+            SELECT b.id::text, b.code, b.title, b.rationale, b.condition_text, b.request_types, b.detector,
+                   b.base_code, b.condition, b.verdict, b.feature, b.risk, b.escalate_to, b.source, b.state,
+                   b.evaluation, b.activated_by, b.activated_at, b.note, b.decided_at, b.created_at, b.updated_at,
+                   (SELECT count(*) FROM eas.bad_case_evidence e WHERE e.bad_case_id = b.id),
+                   (SELECT coalesce(jsonb_agg(x ORDER BY x.created_at DESC), '[]'::jsonb) FROM (
+                      SELECT e.reason, e.verdict, e.confidence, e.created_at, r.code AS request_code,
+                             u.display_name AS approver, e.analysis->>'explanation' AS explanation,
+                             e.analysis->>'why_missed' AS why_missed
+                      FROM eas.bad_case_evidence e
+                      JOIN eas.request r ON r.id = e.request_id
+                      LEFT JOIN eas.app_user u ON u.id = e.approver_id
+                      WHERE e.bad_case_id = b.id ORDER BY e.created_at DESC LIMIT 5) x)
+            FROM eas.bad_case b
+            WHERE %s = 'ALL' OR b.state = %s
+            ORDER BY CASE b.state WHEN 'CANDIDATE' THEN 0 WHEN 'ACTIVE' THEN 1 ELSE 2 END,
+                     b.detector = 'BUILTIN', b.updated_at DESC
+            LIMIT 300
+            """,
+            [state, state],
+        )
+        keys = ("id", "code", "title", "rationale", "condition_text", "request_types", "detector", "base_code",
+                "condition", "verdict", "feature", "risk", "escalate_to", "source", "state", "evaluation",
+                "activated_by", "activated_at", "note", "decided_at", "created_at", "updated_at",
+                "evidence_count", "evidence")
+        items = []
+        for r in cur.fetchall():
+            item = dict(zip(keys, r, strict=True))
+            for k in ("activated_at", "decided_at", "created_at", "updated_at"):
+                item[k] = _iso(item[k])
+            items.append(item)
+        cur.execute(
+            """
+            SELECT e.verdict, count(*) FROM eas.bad_case_evidence e
+            WHERE e.created_at > now() - interval '90 days' GROUP BY 1
+            """
+        )
+        verdicts = dict(cur.fetchall())
+    return JsonResponse({"items": items, "installed": True, "verdicts_90d": verdicts,
+                         "thresholds": {"window_days": bad_case_learning.WINDOW_DAYS,
+                                        "min_evidence": bad_case_learning.MIN_EVIDENCE,
+                                        "min_requesters": bad_case_learning.MIN_REQUESTERS,
+                                        "min_approvers": bad_case_learning.MIN_APPROVERS,
+                                        "max_coverage": bad_case_learning.MAX_COVERAGE}})
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN")
+def bad_case_decide_view(request: HttpRequest, case_id, decision: str) -> JsonResponse:
+    """POST .../bad-cases/<id>/approve {title?, rationale?, condition?, request_types?, risk?, escalate_to?, note?}
+    | /reject {note} | /retire {note} | /enable {note?}"""
+    from api_core.workflow import bad_case_learning
+
+    if request.method != "POST":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    if decision not in BAD_CASE_DECISIONS:
+        return api_error(request, "NOT_FOUND", status=404)
+    if denied := _forbidden_unless_writer(request):
+        return denied
+    body, error = _parse(request)
+    if error:
+        return error
+    try:
+        with transaction.atomic(), connection.cursor() as cur:
+            result = bad_case_learning.admin_decide(
+                cur, case_id=str(case_id), actor_id=request.actor.id, decision=decision, body=body
+            )
+            note = str(body.get("note") or "").strip()
+            _append_admin_audit(
+                cur,
+                actor_id=request.actor.id,
+                action=f"BAD_CASE_{decision.upper()}",
+                target_type="bad_case",
+                target_id=str(case_id),
+                details={"code": result["code"], "state": result["state"]},
+                reason=note if len(note) >= 10 else f"Admin {decision} bad case {result['code']}",
+                correlation_id=correlation_id(request),
+            )
+    except LookupError:
+        return api_error(request, "NOT_FOUND", status=404)
+    except PermissionError:
+        return api_error(request, "ALREADY_DECIDED", status=409)
+    except ValueError as exc:
+        field, _, message = str(exc).partition(": ")
+        return api_error(request, "VALIDATION_FAILED", status=422, fields={field or "body": [message or str(exc)]})
+    return JsonResponse(result)

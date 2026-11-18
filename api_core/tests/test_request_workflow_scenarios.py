@@ -194,6 +194,13 @@ class AutoApproveIntegrationTests(SimpleTestCase):
         )
         stub.start()
         self.addCleanup(stub.stop)
+        # Bảng bad case (migration 25) có kiểm thử riêng (test_bad_case_learning.py).
+        config = _patch(
+            "api_core.workflow.bad_case_learning.safe_detector_config",
+            return_value={"learned_bad_cases": [], "bad_case_overrides": {}},
+        )
+        config.start()
+        self.addCleanup(config.stop)
         self.request_id = str(uuid4())
         self.context = {
             "status": "PENDING_APPROVAL",

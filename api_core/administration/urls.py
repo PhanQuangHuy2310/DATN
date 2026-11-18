@@ -28,6 +28,8 @@ from .regulations_ai import (
     ai_feedback_view,
     ai_retrain_trigger,
     ai_system_state_view,
+    bad_case_decide_view,
+    bad_cases_list,
     clause_review_approve,
     clause_review_reject,
     clause_reviews_list,
@@ -141,6 +143,12 @@ urlpatterns = [
     ),
     path("ai-engine/retrain", ai_retrain_trigger, name="admin-ai-engine-retrain"),
     path("ai-engine/feedback", ai_feedback_view, name="admin-ai-feedback"),
+    path("ai-engine/bad-cases", bad_cases_list, name="admin-bad-cases"),
+    path(
+        "ai-engine/bad-cases/<uuid:case_id>/<str:decision>",
+        bad_case_decide_view,
+        name="admin-bad-case-decide",
+    ),
     path(
         "ai-engine/feedback/learn",
         ai_feedback_learn_view,

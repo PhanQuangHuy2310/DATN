@@ -247,7 +247,13 @@ EMPTY: dict[str, Any] = {
     "off_hours_count_7d": 0,
     "uncovered_work": 0,
     "handover_named": False,
+    # đặc trưng của chính hồ sơ (bad case học được, workflow/bad_case_learning.py)
+    "notice_hours": None,
+    "start_day_of_month": None,
+    "start_weekday": None,
+    "submit_hour": None,
 }
+REQUEST_FEATURES = ("notice_hours", "start_day_of_month", "start_weekday", "submit_hour")
 
 
 def load_signals(request_id: str) -> dict[str, Any]:
@@ -287,7 +293,21 @@ def load_signals(request_id: str) -> dict[str, Any]:
         "off_hours_count_7d": int(row[19] or 0),
         "uncovered_work": int(row[20] or 0),
         "handover_named": bool(row[21]),
+        **_request_features(request_id),
     }
+
+
+def _request_features(request_id: str) -> dict:
+    """Số giờ báo trước, ngày/thứ bắt đầu, giờ gửi; lỗi (vd. thiếu cột) thì để trống, không chặn luồng duyệt."""
+    from api_core.workflow.bad_case_learning import request_features
+
+    try:
+        with connection.cursor() as cursor:
+            feats = request_features(cursor, request_id)
+    except Exception:
+        logger.warning("request features unavailable: request=%s", request_id, exc_info=True)
+        return dict.fromkeys(REQUEST_FEATURES)
+    return {k: feats.get(k) for k in REQUEST_FEATURES}
 
 
 def safe_load_signals(request_id: str) -> dict[str, Any]:

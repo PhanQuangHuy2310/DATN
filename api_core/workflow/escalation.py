@@ -277,6 +277,9 @@ def _escalate(cursor, request_id, step_id, target, verdict, signals, correlation
             "code": str(c.get("code") or ""),
             "escalate_to": c.get("escalate_to"),
             "text": str(c.get("text") or "")[:400],
+            # Vì sao đó là bad case (tác hại, cột eas.bad_case.rationale) và nguồn: danh mục có sẵn / học được.
+            "why": str(c.get("why") or "")[:600] or None,
+            "origin": c.get("origin"),
         }
         for c in verdict.get("escalation_causes") or []
     ][:8]

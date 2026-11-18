@@ -35,6 +35,18 @@ def _learn_from_feedback_if_new() -> None:
         logger.warning("ai_feedback_learning_failed", exc_info=True)
 
 
+def _analyze_revoke_reasons() -> None:
+    """Lý do thu hồi chưa được phân tích (AI service tắt lúc thu hồi) -> học bad case (migration 25)."""
+    from api_core.workflow import bad_case_learning
+
+    try:
+        done = bad_case_learning.sweep()
+        if done:
+            logger.info("bad_case_reasons_analyzed count=%s", done)
+    except Exception:
+        logger.warning("bad_case_sweep_failed", exc_info=True)
+
+
 class Command(BaseCommand):
     help = "Claim and deliver EAS outbox events with lease/retry semantics."
 
@@ -65,6 +77,7 @@ class Command(BaseCommand):
             pass
 
         next_delegation_tick = 0.0
+        next_reason_sweep = time.monotonic() + 60
         next_feedback_learning = (
             time.monotonic() + 600
         )  # lần đầu sau 10 phút, sau đó mỗi ngày
@@ -83,6 +96,9 @@ class Command(BaseCommand):
                 processed = run_outbox_batch(batch_size=batch_size)
                 # AI regulation learning jobs (leased: safe alongside API runners).
                 processed += run_learning_jobs()
+                if time.monotonic() >= next_reason_sweep:
+                    next_reason_sweep = time.monotonic() + 300
+                    _analyze_revoke_reasons()
                 if time.monotonic() >= next_feedback_learning:
                     next_feedback_learning = time.monotonic() + 24 * 3600
                     _learn_from_feedback_if_new()

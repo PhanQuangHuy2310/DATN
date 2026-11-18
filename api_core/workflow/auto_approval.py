@@ -136,6 +136,7 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         return None
 
     from api_core.integrations.ai_service import ai_client_sync
+    from api_core.workflow.bad_case_learning import safe_detector_config
     from api_core.workflow.bad_case_signals import safe_load_signals
 
     signals = safe_load_signals(request_id)
@@ -153,6 +154,7 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         days_requested=_requested_days(context),
         correlation_id=correlation_id,
         signals=signals,
+        bad_case_config=safe_detector_config(),
     )
     if verdict.get("bad_cases"):
         _record_bad_cases(
@@ -363,17 +365,31 @@ def _validate_revoke_input(body: dict[str, Any]) -> tuple[str, int]:
     return reason.strip(), version
 
 
+def _snapshot_for_learning(request_id: str) -> dict[str, Any]:
+    """Tín hiệu + đặc trưng của bản AI đã duyệt, lấy TRƯỚC khi thu hồi tạo bản mới (mốc = lúc gửi bản đó)."""
+    from api_core.workflow.bad_case_learning import request_features
+    from api_core.workflow.bad_case_signals import safe_load_signals
+
+    signals = safe_load_signals(request_id)
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            signals.update(request_features(cursor, request_id))
+    except Exception:
+        logger.warning("request features not captured: request=%s", request_id, exc_info=True)
+    return signals
+
+
 def _record_revoke_feedback(
-    cursor, request_id, type_id, requester_id, actor_id, decided_at, reason
+    cursor, request_id, type_id, requester_id, actor_id, decided_at, reason, signals=None
 ) -> None:
-    """Bộ nhớ ca: lần sau cùng người, cùng loại thì AI không tự duyệt (migration 24). Phụ trợ, lỗi bỏ qua."""
+    """Bộ nhớ ca (migration 24) + học bad case từ lý do (migration 25, phân tích sau khi lưu). Lỗi bỏ qua."""
     from api_core.workflow import ai_feedback
     from api_core.workflow.bad_case_signals import safe_load_signals
 
     try:
         with transaction.atomic():
             cursor.execute("SELECT code FROM eas.request_type WHERE id=%s", [type_id])
-            ai_feedback.record(
+            feedback_id = ai_feedback.record(
                 cursor,
                 kind="AUTO_APPROVE_REVOKED",
                 request_id=request_id,
@@ -386,8 +402,12 @@ def _record_revoke_feedback(
                 },
                 human_decision={"decision": "manual_review"},
                 reason=reason,
-                signals=safe_load_signals(request_id),
+                signals=signals if signals is not None else safe_load_signals(request_id),
             )
+        if feedback_id:
+            from api_core.workflow.bad_case_learning import analyze_in_background
+
+            transaction.on_commit(lambda: analyze_in_background(feedback_id))
     except Exception:
         logger.warning(
             "revoke feedback not recorded: request=%s", request_id, exc_info=True
@@ -469,6 +489,7 @@ def revoke_ai_auto_approval(
         ):
             raise CommandError("FORBIDDEN", status=403)
 
+        learning_snapshot = _snapshot_for_learning(request_id)
         now = datetime.now(timezone.utc)
         cursor.execute(
             """
@@ -575,7 +596,14 @@ def revoke_ai_auto_approval(
             ],
         )
         _record_revoke_feedback(
-            cursor, request_id, type_id, requester_id, actor.id, decided_at, reason
+            cursor,
+            request_id,
+            type_id,
+            requester_id,
+            actor.id,
+            decided_at,
+            reason,
+            signals=learning_snapshot,
         )
         return (
             {
