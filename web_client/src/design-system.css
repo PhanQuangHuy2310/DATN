@@ -5054,3 +5054,23 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .ai-type-switch > span { flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere; }
 .ai-type-switch button { white-space: nowrap; }
 .ai-type-switch-suggest { border-left-color: var(--ds-warning); background: var(--ds-warning-soft); }
+
+/* AI chuyển quy trình A -> B/C và đề xuất xử lý (bad cases, 18/11/2026). */
+.ai-escalation { margin: var(--ds-space-3, 12px) 0; padding: 14px 16px; border: 1px solid var(--ds-warning); border-radius: var(--ds-radius); background: var(--ds-warning-soft); }
+.ai-escalation-head { display: flex; align-items: center; gap: 10px; color: var(--ds-ink); }
+.ai-escalation-badge { display: inline-grid; place-items: center; min-width: 28px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--ds-warning); color: #fff; font-size: 12px; font-weight: 700; }
+.ai-escalation p { margin: 6px 0 0; }
+.ai-escalation-causes { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; color: var(--ds-ink); }
+.ai-escalation-causes code { font-size: 12.5px; }
+.ai-remedy { margin: var(--ds-space-3, 12px) 0; padding: 16px; border: 1px solid var(--ds-line); border-radius: var(--ds-radius); background: var(--ds-surface); box-shadow: var(--ds-shadow); }
+.ai-remedy h2 { margin: 0 0 6px; font-size: 17px; }
+.ai-remedy-items { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 10px; }
+.ai-remedy-item { padding: 12px 14px; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-sm); background: var(--ds-canvas); }
+.ai-remedy-item-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.ai-remedy-item p { margin: 4px 0; }
+.ai-remedy-suggestion { color: var(--ds-ink); }
+.ai-remedy-choices { display: grid; gap: 6px; margin-top: 6px; }
+.ai-remedy-choices label { display: flex; gap: 6px; align-items: flex-start; font-size: 14px; color: var(--ds-ink); }
+.ai-remedy-candidate span { line-height: 1.45; }
+.ai-remedy-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 640px) { .ai-remedy, .ai-escalation { padding: 12px; } }

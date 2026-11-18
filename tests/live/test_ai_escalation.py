@@ -105,6 +105,34 @@ def leave(day: date, handover_id: str) -> dict:
     }
 
 
+QC05_TEXT = 'Điều 1 (Chặn duyệt tự động Nghỉ phép khi vướng hạn chót công việc): Đối với yêu cầu Nghỉ phép hoặc Nghỉ phép đặc biệt kéo dài từ 1 ngày trở lên trong giai đoạn nhân sự đang giữ tác vụ có hạn chót gấp trong 24 giờ chưa bàn giao, hệ thống không được tự động duyệt mà bắt buộc phải qua Trưởng bộ phận và Nhân sự phê duyệt thủ công. Điều 2 (Chặn lạm dụng Điều chỉnh chấm công lặp lại có hệ thống): Đối với yêu cầu Điều chỉnh chấm công khi nhân sự giải trình quên chấm công, đi muộn hoặc về sớm lặp lại từ lần thứ 4 trong tháng, hệ thống không tự động duyệt và bắt buộc Trưởng bộ phận phê duyệt thủ công. Điều 3 (Kiểm soát hạn mức Thanh toán chi phí và Quyết toán tạm ứng): Đối với yêu cầu Thanh toán chi phí hoặc Quyết toán tạm ứng có giá trị từ 20 triệu đồng trở lên, hệ thống không được tự động phê duyệt mà phải qua Kế toán kiểm soát và trình Ban Giám đốc phê duyệt. Điều 4 (Chống chia nhỏ chứng từ Tạm ứng và Thanh toán để lách hạn mức): Đối với đề xuất Thanh toán chi phí, Tạm ứng chi phí (<10tr) và Tạm ứng chi phí (10-50tr) có giá trị từ 15 triệu đồng trở lên hoặc có dấu hiệu chia nhỏ hóa đơn liên tiếp, hệ thống bắt buộc trình Kế toán và Ban Giám đốc phê duyệt thủ công kèm nghiệm thu độc lập. Điều 5 (Kiểm soát Hoàn tiền và Làm việc từ xa rủi ro cao): Đối với yêu cầu Hoàn tiền / Đền bù có giá trị trên 2 triệu đồng, hệ thống không được tự động duyệt mà bắt buộc phải được phê duyệt thủ công. Đối với yêu cầu Làm việc từ xa (WFH) kéo dài trên 2 ngày, hệ thống bắt buộc phải qua Trưởng bộ phận phê duyệt thủ công.'
+
+
+def esc_00(o: t.Oracle) -> str:
+    """Bước 1 kịch bản demo: ban hành Quy chế 05/2026 -> AI học -> luật có điều kiện ngữ cảnh được nạp."""
+    admin = t.login("admin@eas.com", portal="admin")
+    code = "QC05-" + uuid.uuid4().hex[:6].upper()
+    st, body = admin.call("POST", "/api/v1/admin/regulations", {
+        "code": code, "title": "Quy chế 05/2026 về nghỉ phép, chấm công và hạn mức tài chính",
+        "category": "Quy định chung", "content": QC05_TEXT})
+    check(st in (200, 201), f"ban hành quy chế thất bại: HTTP {st} {body}")
+    state = o.wait("SELECT sync_status, applied_policy FROM eas.ai_system_state WHERE id=1", timeout=90,
+                   want=lambda v: v and v[0] in ("COMPLETED", "FAILED") and v[1]
+                   and any(str(r.get("id", "")).startswith(code) for r in v[1].get("rules", [])))
+    check(state and state[0] == "COMPLETED", f"AI chưa học xong quy chế: {state and state[0]}")
+    rules = [r for r in state[1]["rules"] if str(r.get("id", "")).startswith(code)]
+    by = {(r.get("request_type"), tuple(k for k in ("due_within_hours", "repeat_count_gte", "split_suspect",
+                                                    "amount_gt", "days_gt") if r.get(k) is not None)) for r in rules}
+    check(("LEAVE", ("due_within_hours", "days_gt")) in by, f"thiếu luật nghỉ phép có điều kiện deadline: {by}")
+    check(("ATTENDANCE_ADJUSTMENT", ("repeat_count_gte",)) in by, f"thiếu luật chấm công lần thứ 4: {by}")
+    check(("EXPENSE_CLAIM", ("split_suspect",)) in by, f"thiếu luật chia nhỏ: {by}")
+    blanket = [r for r in rules if r.get("request_type") in ("LEAVE", "ATTENDANCE_ADJUSTMENT")
+               and not any(r.get(k) for k in ("due_within_hours", "repeat_count_gte"))]
+    check(not blanket, f"có luật chặn tràn cả loại: {[r['id'] for r in blanket]}")
+    esc = sorted({r["request_type"] + "->" + r["escalate_to"] for r in rules if r.get("escalate_to")})
+    return f"{code}: AI học xong ({len(rules)} luật), không luật chặn tràn; nâng luồng: {', '.join(esc)}"
+
+
 def esc_01(o: t.Oracle) -> str:
     row = manager_with_team(o)
     check(
@@ -306,7 +334,7 @@ def esc_05(o: t.Oracle) -> str:
             f"{after:%d/%m %H:%M} (sau ngày đi làm lại), người gửi được báo; sửa hạn không cờ bị chặn (23514)")
 
 
-CASES = {"ESC-01": esc_01, "ESC-02": esc_02, "ESC-03": esc_03, "ESC-04": esc_04, "ESC-05": esc_05}
+CASES = {"ESC-00": esc_00, "ESC-01": esc_01, "ESC-02": esc_02, "ESC-03": esc_03, "ESC-04": esc_04, "ESC-05": esc_05}
 
 
 def main() -> int:

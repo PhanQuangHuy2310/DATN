@@ -1,6 +1,7 @@
 import FullHistory from "./FullHistory.jsx";
 import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { AiSummary } from "./AiAssist.jsx";
+import { EscalationBanner, RemediationPanel } from "./AiEscalation.jsx";
 import { AiAdviceCard, AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
 import { DetailSkeleton, EmptyState, PageTabs, WorkflowTimeline } from "./design.jsx";
 import { requestActionPayload } from "../actionPayload.js";
@@ -631,6 +632,10 @@ export default function RequestDetail({
               <Badge value={r.status} />
             </div>
             <ProgressSummary progress={r.progress} />
+            <EscalationBanner escalation={r.ai_escalation} />
+            {r.ai_escalation?.pending_remediations > 0 && (
+              <RemediationPanel requestId={id} onDone={resource.reload} />
+            )}
             <PageTabs
               label="Nội dung hồ sơ"
               value={tab}

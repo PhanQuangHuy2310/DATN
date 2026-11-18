@@ -612,10 +612,12 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
 
         with connection.cursor() as cursor:
             ai_approval = ai_approval_info(cursor, row[0], row[3])
+    ai_escalation = _ai_escalation_info(row[0])
     return JsonResponse(
         {
             "request": {
                 "ai_auto_approval": ai_approval,
+                "ai_escalation": ai_escalation,
                 "id": row[0],
                 "code": row[1],
                 "type_code": row[2],
@@ -762,6 +764,41 @@ def delegation_revoke_view(request: HttpRequest, delegation_id) -> JsonResponse:
     except CommandError as exc:
         return api_error(request, exc.code, status=exc.status, fields=exc.fields)
     return JsonResponse({**result, "correlation_id": correlation_id(request)})
+
+
+def _ai_escalation_info(request_id: str) -> dict[str, Any] | None:
+    """Lần AI nâng luồng gần nhất (A -> B/C) và số đề xuất xử lý còn chờ quản lý quyết định."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT details, occurred_at FROM eas.audit_event
+                WHERE request_id = %s AND action = 'AI_ESCALATED'
+                ORDER BY seq DESC LIMIT 1
+                """,
+                [request_id],
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            details = row[0] or {}
+            cursor.execute("SELECT to_regclass('eas.ai_remediation') IS NOT NULL")
+            pending = 0
+            if cursor.fetchone()[0]:
+                cursor.execute(
+                    "SELECT count(*) FROM eas.ai_remediation WHERE request_id=%s AND state='PROPOSED'",
+                    [request_id],
+                )
+                pending = int(cursor.fetchone()[0])
+    except DatabaseError:
+        return None
+    return {
+        "from_lifecycle": details.get("from_lifecycle"),
+        "to_lifecycle": details.get("to_lifecycle"),
+        "causes": details.get("causes") or [],
+        "occurred_at": row[1].isoformat() if row[1] else None,
+        "pending_remediations": pending,
+    }
 
 
 @require_GET
