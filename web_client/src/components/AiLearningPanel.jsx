@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { date } from "../domain.js";
+import BadCasePanel from "./BadCasePanel.jsx";
 
 const KIND_TEXT = {
   AUTO_APPROVE_REVOKED: "Thu hồi tự duyệt",
@@ -113,6 +114,8 @@ export default function AiLearningPanel({ canUpdate }) {
         Mỗi lần người sửa quyết định của AI được ghi nhớ và dùng ngay ở hồ sơ tương tự (cùng người, cùng loại);
         định kỳ AI học dồn và chỉ thay mô hình khi không kém mô hình cũ.
       </p>
+
+      <BadCasePanel canUpdate={canUpdate} />
 
       <h3>Câu quy định chờ duyệt cách hiểu ({clauses?.items?.length ?? "…"})</h3>
       {clauses?.items?.length ? (

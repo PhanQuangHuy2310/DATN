@@ -55,9 +55,16 @@ export function EscalationBanner({ escalation, requestId, onChanged }) {
           {escalation.causes.map((c) => (
             <li key={`${c.source}-${c.code}`}>
               <span className="ai-citation-badge applies">
-                {c.source === "REGULATION" ? "Quy định" : c.source === "LEARNED" ? "Đã học từ phản hồi" : "Tình huống xấu"}
+                {c.source === "REGULATION"
+                  ? "Quy định"
+                  : c.source === "LEARNED"
+                    ? "Đã học từ phản hồi"
+                    : c.origin === "LEARNED_CASE"
+                      ? "Bad case AI học được"
+                      : "Bad case"}
               </span>{" "}
               <code>{c.code}</code> {c.text}
+              {c.why && <div className="muted ai-escalation-why">Vì sao là bad case: {c.why}</div>}
             </li>
           ))}
         </ul>
