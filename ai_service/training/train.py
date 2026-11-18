@@ -69,7 +69,7 @@ PUBLIC_TRAIN_PATH = DATA_DIR / "request_public_train.json"
 EVAL_PUBLIC_PATH = DATA_DIR / "request_eval_public.json"
 REPORT_PATH = DATA_DIR / "training_report.md"
 
-PIPELINE_VERSION = "catalog-v2-public-1"
+PIPELINE_VERSION = "catalog-v2-public-2-context"
 # Số bản sao của mỗi câu thật khi ghép với ~38.000 câu tổng hợp (luân phiên có dấu /
 # không dấu). 0 = không dùng dữ liệu thật; giá trị được chọn trên tập dev.
 PUBLIC_WEIGHTS = (0, 3, 6)
@@ -642,7 +642,15 @@ RISK_FEATURES = [
     "high_rejection_rate",
     "is_off_hours",
     "is_template_matched",
+    # Ngữ cảnh vận hành (18/11/2026, HUONG_DAN_TRAIN_AI.md mục 4.2): tính từ CSDL ở
+    # api_core/workflow/bad_case_signals.py, cùng nghĩa ở routers/risk.py.
+    "pending_work_due_24h",
+    "work_due_in_absence",
+    "handover_uncovered",
+    "team_absence_ratio",
+    "same_type_count_30d",
 ]
+CONTEXT_CATEGORIES = {"ABSENCE"}
 
 
 def risk_domain(code: str, catalog: dict[str, Any]) -> str:
@@ -687,6 +695,20 @@ def _risk_label(row: dict[str, Any], typical_high: float, rng: random.Random) ->
     if row["user_tenure_months"] < 3 and row["risk_weight"] >= 3:
         score += 1
         flags += 1
+    if row["category"] in CONTEXT_CATEGORIES:
+        # Ví dụ của thầy: xin nghỉ khi đang giữ việc sắp hết hạn mà không ai làm thay được.
+        if row["pending_work_due_24h"] > 0 and row["handover_uncovered"]:
+            score = max(score + 2, 4)
+            flags += 1
+        elif row["work_due_in_absence"] > 0 and row["handover_uncovered"]:
+            score += 1
+            flags += 1
+        if row["team_absence_ratio"] >= 0.4:
+            score += 1
+            flags += 1
+        if row["same_type_count_30d"] >= 4:
+            score += 1
+            flags += 1
     if row["user_role"] in ("manager", "director") and flags == 0:
         score -= 1
     if rng.random() < 0.03:  # reviewers disagree on a few borderline cases
@@ -755,7 +777,20 @@ def build_risk_dataset(
                 "is_off_hours": int(rng.random() < 0.12),
                 "is_split_amount_suspect": int(amount > 0 and rng.random() < 0.03),
                 "is_template_matched": int(rng.random() < 0.92),
+                # Ngữ cảnh vận hành, sinh cho MỌI loại để mô hình học được nó chỉ có tác dụng
+                # với nhóm vắng mặt (ABSENCE).
+                "pending_work_due_24h": 0 if rng.random() < 0.75 else rng.randint(1, 4),
+                "work_due_in_absence": 0 if rng.random() < 0.8 else rng.randint(1, 3),
+                "team_absence_ratio": round(
+                    rng.uniform(0.35, 0.8) if rng.random() < 0.1 else rng.betavariate(1.3, 7), 3
+                ),
+                "same_type_count_30d": (
+                    rng.randint(4, 10) if rng.random() < 0.08 else min(3, int(rng.expovariate(1 / 1.2)))
+                ),
             }
+            row["handover_uncovered"] = int(
+                (row["pending_work_due_24h"] > 0 or row["work_due_in_absence"] > 0) and rng.random() < 0.45
+            )
             row["risk_score"] = _risk_label(row, profile[1] if profile else 0.0, rng)
             rows.append(row)
     return pd.DataFrame(rows)
@@ -797,6 +832,11 @@ def risk_features(frame: pd.DataFrame, encoders: dict[str, dict[str, int]]) -> p
         "past_rejection_rate",
         "is_off_hours",
         "is_template_matched",
+        "pending_work_due_24h",
+        "work_due_in_absence",
+        "handover_uncovered",
+        "team_absence_ratio",
+        "same_type_count_30d",
     ):
         out[column] = frame[column]
     out["no_receipt_has_amount"] = ((amount > 0) & (frame["has_receipt"] == 0)).astype(int)
@@ -921,7 +961,10 @@ def train_risk(
         "Mô phỏng: điểm gốc = risk_weight của loại; vượt ngân sách còn lại = 5; "
         "nghi chia nhỏ +2 (tối thiểu 4); vượt mức thông thường +1/+2; thiếu chứng từ "
         "thanh toán +1; tỷ lệ bị từ chối >30% +1; ngoài giờ (có tiền hoặc IT) +1; sai "
-        "biểu mẫu +1; thâm niên <3 tháng với loại rủi ro ≥3 +1; quản lý không có cờ "
+        "biểu mẫu +1; thâm niên <3 tháng với loại rủi ro ≥3 +1; ngữ cảnh (chỉ nhóm vắng mặt "
+        "ABSENCE): giữ việc đến hạn ≤24h mà bàn giao không làm thay được -> tối thiểu 4 (+2), "
+        "có việc đến hạn trong thời gian vắng mà bàn giao không làm thay được +1, đồng nghiệp "
+        "vắng trùng ngày ≥40% +1, lần thứ ≥4 cùng loại trong 30 ngày +1; quản lý không có cờ "
         "-1; 3% nhiễu ±1."
     )
     return results

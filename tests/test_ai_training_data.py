@@ -109,6 +109,7 @@ class TrainingDataTests(unittest.TestCase):
                 "__init__.py",
                 "eval_regulation_compiler.py",
                 "eval_regulation_llm.py",
+                "eval_risk_context.py",
                 "regulation_compiler_v1_baseline.py",
                 "run_regulation_rules_llm.py",
                 "train.py",

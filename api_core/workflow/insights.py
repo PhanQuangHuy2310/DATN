@@ -741,6 +741,7 @@ def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]
         num_attachments=int(attachment_count or 0),
         description_length=len(description),
         correlation_id=cid,
+        **_risk_context(_bad_case_signals(request_id)),
     )
     risk_score = risk.get("risk_score")
     stages.append(
@@ -889,6 +890,19 @@ def list_ai_assessments(actor: Actor, request_id: str) -> dict[str, Any]:
             for r in cursor.fetchall()
         ]
     return {"items": items}
+
+
+def _risk_context(sig: dict) -> dict:
+    """Đặc trưng ngữ cảnh cho mô hình rủi ro (cùng nghĩa với train.py / routers/risk.py)."""
+    due_24h = sum(1 for h in sig.get("open_work_due_hours") or [] if h <= 24)
+    in_absence = int(sig.get("work_due_in_absence") or 0)
+    return {
+        "pending_work_due_24h": due_24h,
+        "work_due_in_absence": in_absence,
+        "handover_uncovered": int(bool(due_24h or in_absence) and not sig.get("handover_assigned")),
+        "team_absence_ratio": float(sig.get("team_absence_ratio") or 0.0),
+        "same_type_count_30d": int(sig.get("same_type_count_30d") or 0),
+    }
 
 
 def _bad_case_signals(request_id: str) -> dict:

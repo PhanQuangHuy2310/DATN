@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "pipeline_version": "catalog-v2-public-1",
+  "pipeline_version": "catalog-v2-public-2-context",
   "request_type": [
     "ACCESS",
     "ACCESS_FACILITY",

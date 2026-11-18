@@ -204,6 +204,12 @@ class RiskInput(BaseModel):
     )
     is_template_matched: int = Field(1, description="1 nếu điền đúng biểu mẫu chuẩn")
     description_length: int = Field(150, ge=0, description="Độ dài nội dung mô tả")
+    # Ngữ cảnh vận hành (api_core/workflow/bad_case_signals.py); chỉ có tác dụng với nhóm vắng mặt.
+    pending_work_due_24h: int = Field(0, ge=0, le=10_000, description="Việc đang giữ đến hạn ≤24h")
+    work_due_in_absence: int = Field(0, ge=0, le=10_000, description="Việc đến hạn trong thời gian vắng")
+    handover_uncovered: int = Field(0, ge=0, le=1, description="1 nếu không ai được bàn giao làm thay được")
+    team_absence_ratio: float = Field(0.0, ge=0, le=1, description="Tỉ lệ đồng nghiệp vắng trùng ngày")
+    same_type_count_30d: int = Field(0, ge=0, le=10_000, description="Số hồ sơ cùng loại trong 30 ngày")
 
     @model_validator(mode="before")
     @classmethod
@@ -262,9 +268,39 @@ RISK_LABELS = {1: "low", 2: "medium", 3: "medium", 4: "high", 5: "critical"}
 # ---------------------------------------------------------------------------
 
 
+ABSENCE_TYPES = {"LEAVE", "LEAVE_SPECIAL", "ATTENDANCE_ADJUSTMENT", "WFH_REQ", "BUSINESS_TRIP"}
+
+
+def context_reasons(inp: RiskInput) -> dict:
+    """Giải thích phần ngữ cảnh theo đúng luật gán nhãn (train.py label_policy), kể cả khi XGBoost chấm."""
+    code = resolve_request_type(inp.request_type, inp.amount_vnd)
+    if code not in ABSENCE_TYPES:
+        return {}
+    out: dict = {}
+    if inp.pending_work_due_24h > 0 and inp.handover_uncovered:
+        out["deadline_conflict"] = (
+            f"+2, tối thiểu 4 (đang giữ {inp.pending_work_due_24h} việc hết hạn trong 24 giờ, "
+            "người được bàn giao không làm thay được)"
+        )
+    elif inp.work_due_in_absence > 0 and inp.handover_uncovered:
+        out["work_in_absence"] = (
+            f"+1 ({inp.work_due_in_absence} việc đến hạn trong thời gian vắng, chưa có người làm thay)"
+        )
+    if inp.team_absence_ratio >= 0.4:
+        out["team_absence"] = f"+1 ({inp.team_absence_ratio:.0%} đồng nghiệp đã vắng trùng ngày)"
+    if inp.same_type_count_30d >= 4:
+        out["repeated"] = f"+1 (lần thứ {inp.same_type_count_30d} cùng loại trong 30 ngày)"
+    return out
+
+
 def rule_based_score(inp: RiskInput) -> tuple[int, dict]:
     score = inp.risk_weight
     reasons: dict = {}
+    ctx = context_reasons(inp)
+    if "deadline_conflict" in ctx:
+        score = max(score + 2, 4)
+    score += sum(1 for k in ("work_in_absence", "team_absence", "repeated") if k in ctx)
+    reasons.update(ctx)
 
     if inp.amount_vnd > inp.budget_remaining_vnd and inp.amount_vnd > 0:
         score += 3
@@ -335,6 +371,11 @@ def build_feature_vector(
         "high_rejection_rate": float(inp.past_rejection_rate > 0.25),
         "is_off_hours": float(inp.is_off_hours),
         "is_template_matched": float(inp.is_template_matched),
+        "pending_work_due_24h": float(inp.pending_work_due_24h),
+        "work_due_in_absence": float(inp.work_due_in_absence),
+        "handover_uncovered": float(inp.handover_uncovered),
+        "team_absence_ratio": float(inp.team_absence_ratio),
+        "same_type_count_30d": float(inp.same_type_count_30d),
     }
 
     if feature_cols:
@@ -392,6 +433,7 @@ def score_risk(body: RiskInput):
                 "request_type_resolved": resolved_type,
                 "top_features": top_features,
                 "proba_per_class": [round(float(p), 4) for p in probs],
+                "context_reasons": context_reasons(body),
             }
             fallback = False
 

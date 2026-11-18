@@ -85,7 +85,10 @@ def _booster():
     except FileNotFoundError:
         return None
     if _model["mtime"] != mtime:
-        import xgboost as xgb
+        try:
+            import xgboost as xgb
+        except ImportError:  # môi trường không có xgboost: dùng mốc dự phòng
+            return None
 
         booster = xgb.Booster()
         booster.load_model(MODEL_PATH)

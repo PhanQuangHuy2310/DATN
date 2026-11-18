@@ -1,0 +1,308 @@
+{
+ "summary": {
+  "before": {
+   "exact": 10,
+   "within_one": 15,
+   "n": 24,
+   "context_changes_exact": 0,
+   "context_changes_n": 14
+  },
+  "after": {
+   "exact": 18,
+   "within_one": 23,
+   "n": 24,
+   "context_changes_exact": 8,
+   "context_changes_n": 14
+  }
+ },
+ "rows": [
+  {
+   "model": "before",
+   "id": "RC01",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC02",
+   "expected": 4,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC03",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC04",
+   "expected": 3,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC05",
+   "expected": 3,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC06",
+   "expected": 5,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC07",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC08",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC09",
+   "expected": 4,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC10",
+   "expected": 4,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC11",
+   "expected": 1,
+   "got": 1
+  },
+  {
+   "model": "before",
+   "id": "RC12",
+   "expected": 2,
+   "got": 1
+  },
+  {
+   "model": "before",
+   "id": "RC13",
+   "expected": 1,
+   "got": 1
+  },
+  {
+   "model": "before",
+   "id": "RC14",
+   "expected": 4,
+   "got": 1
+  },
+  {
+   "model": "before",
+   "id": "RC15",
+   "expected": 1,
+   "got": 1
+  },
+  {
+   "model": "before",
+   "id": "RC16",
+   "expected": 2,
+   "got": 1
+  },
+  {
+   "model": "before",
+   "id": "RC17",
+   "expected": 3,
+   "got": 1
+  },
+  {
+   "model": "before",
+   "id": "RC18",
+   "expected": 3,
+   "got": 3
+  },
+  {
+   "model": "before",
+   "id": "RC19",
+   "expected": 5,
+   "got": 3
+  },
+  {
+   "model": "before",
+   "id": "RC20",
+   "expected": 4,
+   "got": 3
+  },
+  {
+   "model": "before",
+   "id": "RC21",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "before",
+   "id": "RC22",
+   "expected": 1,
+   "got": 1
+  },
+  {
+   "model": "before",
+   "id": "RC23",
+   "expected": 4,
+   "got": 1
+  },
+  {
+   "model": "before",
+   "id": "RC24",
+   "expected": 3,
+   "got": 1
+  },
+  {
+   "model": "after",
+   "id": "RC01",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC02",
+   "expected": 4,
+   "got": 4
+  },
+  {
+   "model": "after",
+   "id": "RC03",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC04",
+   "expected": 3,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC05",
+   "expected": 3,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC06",
+   "expected": 5,
+   "got": 5
+  },
+  {
+   "model": "after",
+   "id": "RC07",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC08",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC09",
+   "expected": 4,
+   "got": 4
+  },
+  {
+   "model": "after",
+   "id": "RC10",
+   "expected": 4,
+   "got": 3
+  },
+  {
+   "model": "after",
+   "id": "RC11",
+   "expected": 1,
+   "got": 1
+  },
+  {
+   "model": "after",
+   "id": "RC12",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC13",
+   "expected": 1,
+   "got": 1
+  },
+  {
+   "model": "after",
+   "id": "RC14",
+   "expected": 4,
+   "got": 4
+  },
+  {
+   "model": "after",
+   "id": "RC15",
+   "expected": 1,
+   "got": 1
+  },
+  {
+   "model": "after",
+   "id": "RC16",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC17",
+   "expected": 3,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC18",
+   "expected": 3,
+   "got": 3
+  },
+  {
+   "model": "after",
+   "id": "RC19",
+   "expected": 5,
+   "got": 3
+  },
+  {
+   "model": "after",
+   "id": "RC20",
+   "expected": 4,
+   "got": 3
+  },
+  {
+   "model": "after",
+   "id": "RC21",
+   "expected": 2,
+   "got": 2
+  },
+  {
+   "model": "after",
+   "id": "RC22",
+   "expected": 1,
+   "got": 1
+  },
+  {
+   "model": "after",
+   "id": "RC23",
+   "expected": 4,
+   "got": 4
+  },
+  {
+   "model": "after",
+   "id": "RC24",
+   "expected": 3,
+   "got": 3
+  }
+ ]
+}

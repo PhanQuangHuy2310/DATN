@@ -62,11 +62,11 @@ Các giai đoạn:
 - [x] G0. Chốt phần AI dở dang ngày 17/11: 5 commit (`2812554`..`e8330ba`), test xanh.
 - [x] G1. Danh mục 12 tình huống xấu (`ai_service/data/bad_case_catalog.json`, Gemini 3.5 Flash-Lite sinh 30 ứng viên, nhóm rà) + tín hiệu SQL mới (`47a7895`).
 - [x] G2. Trình biên dịch quy định v2 (`8866a60`). Tập test băm trước 30 điều: v1 13/30 (chặn tràn 13), **v2 29/30 (chặn tràn 0)**, Gemini 25/30 (chặn tràn 3). Báo cáo: `ai_service/training/data/regulation_compiler_report.md`.
-- [ ] G3. Phát hiện bad case từ dữ liệu thật + huấn luyện lại XGBoost với đặc trưng bad case (so trước/sau trên tập holdout).
+- [x] G3. Mô hình rủi ro + 5 đặc trưng ngữ cảnh. 24 kịch bản băm trước: trước 10/24 (ngữ cảnh 0/14), sau 18/24 (ngữ cảnh 8/14); Master 0,966 → 0,955 (giảm). Báo cáo `ai_service/training/data/risk_context_report.md`.
 - [x] G4. Migration 23 + rollback (`41c141e`), chạy thử trên Supabase local: áp / áp lại / rollback / áp lại đều đúng.
 - [x] G5. Chuyển hồ sơ A → B/C (`api_core/workflow/escalation.py`); live `tests/live/test_ai_escalation.py` 3/3 PASS.
-- [ ] G6. Mô hình đề xuất xử lý (xếp hạng người nhận bàn giao, chọn chuyển việc hay lùi hạn) + API quản lý xác nhận.
-- [ ] G7. Giao diện + kiểm thử live theo kịch bản demo của Huy.
+- [x] G6. Xếp hạng người nhận việc thay (XGBoost rank:pairwise; test băm trước: top-1 0,898 so với ít việc nhất 0,328) + API xem/xác nhận/bỏ qua (`f38c91f`).
+- [x] G7. Banner chuyển quy trình + bảng đề xuất xử lý (`865cfbe`); live `tests/live/test_ai_escalation.py` ESC-00..05: 6/6 PASS (ban hành Quy chế 05/2026 → AI học → nâng luồng → quản lý xác nhận chuyển việc / lùi hạn).
 
 ## Chưa làm
 - [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→10 và mock 004 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)

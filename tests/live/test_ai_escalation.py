@@ -204,7 +204,26 @@ def esc_01(o: t.Oracle) -> str:
 
 
 def esc_02(o: t.Oracle) -> str:
-    email = o.requester("EXPENSE_SPLIT")
+    # Người chưa có hồ sơ tài chính nào trong 7 ngày (chạy lại nhiều lần vẫn đúng).
+    email = o.one(
+        """
+        SELECT u.email FROM eas.app_user u
+        JOIN eas.app_user m ON m.id = u.manager_id AND m.is_active
+        WHERE u.is_active AND u.email NOT LIKE 'admin%%' AND NOT u.is_system_account
+          AND EXISTS (SELECT 1 FROM eas.role_membership r WHERE r.user_id=u.id AND r.role='REQUESTER'
+                      AND r.revoked_at IS NULL)
+          AND EXISTS (SELECT 1 FROM eas.role_membership r WHERE r.user_id=u.id AND r.role='STAFF'
+                      AND r.revoked_at IS NULL)
+          AND NOT EXISTS (SELECT 1 FROM eas.role_membership r WHERE r.user_id=u.id
+                          AND r.role IN ('OPS_ADMIN','POLICY_ADMIN','DIRECTOR','VICE_DIRECTOR','APPROVER')
+                          AND r.revoked_at IS NULL)
+          AND NOT EXISTS (SELECT 1 FROM eas.request r JOIN eas.request_type t ON t.id=r.type_id
+                          WHERE r.requester_id=u.id AND t.code IN ('EXPENSE_CLAIM','REIMBURSEMENT',
+                            'ADVANCE_SMALL','ADVANCE_MEDIUM','ADVANCE_LARGE','REFUND_COMPENSATION',
+                            'SALARY_ADVANCE')
+                            AND r.created_at > now() - interval '7 days')
+        ORDER BY md5(u.email || now()::text) LIMIT 1"""
+    )[0]
     rids = []
     for _ in range(3):
         rid, _, _ = t.submit(o, "EXPENSE_CLAIM", email, expense(9_500_000))
@@ -223,14 +242,14 @@ def esc_02(o: t.Oracle) -> str:
         lc and lc[0] == "C" and lc[1] and lc[2],
         f"phiên duyệt luồng C thiếu người xử lý/nghiệm thu: {lc}",
     )
-    first_two = [lifecycle_of(o, r) for r in rids[:2]]
-    check(
-        all(x and x[0] == "A" for x in first_two),
-        f"hai hồ sơ đầu lẽ ra giữ luồng A: {first_two}",
-    )
+    first = lifecycle_of(o, rids[0])
+    check(first and first[0] == "A", f"hồ sơ đầu tiên lẽ ra giữ luồng A: {first}")
+    # Hồ sơ thứ hai (tổng 19 triệu) lên C khi Quy chế 05/2026 Điều 4 (ngưỡng 15 triệu) đang hiệu lực.
+    second = lifecycle_of(o, rids[1])
     return (
-        f"{email}: 3 đề nghị 9,5 triệu; hồ sơ thứ ba {o.req(rids[2])['code']} -> A→C "
-        f"(người xử lý {o.email(lc[1])}, nghiệm thu {o.email(lc[2])}); hai hồ sơ đầu giữ A"
+        f"{email}: 3 đề nghị 9,5 triệu; hồ sơ đầu giữ A; hồ sơ thứ hai "
+        f"{second[0] if second else '?'}; hồ sơ thứ ba {o.req(rids[2])['code']} -> A→C "
+        f"(người xử lý {o.email(lc[1])}, nghiệm thu {o.email(lc[2])})"
     )
 
 
