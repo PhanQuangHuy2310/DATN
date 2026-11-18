@@ -1193,6 +1193,20 @@ export function AdminOverview({ navigate, user }) {
   </section>;
 }
 
+/** Màn hình hẹp (menu là ngăn kéo trượt): trạng thái "thu gọn" của màn hình lớn không áp vào ngăn kéo. */
+const NARROW_QUERY = "(max-width: 800px)";
+function useNarrowScreen() {
+  const [narrow, setNarrow] = useState(() => Boolean(window.matchMedia?.(NARROW_QUERY).matches));
+  useEffect(() => {
+    const mq = window.matchMedia?.(NARROW_QUERY);
+    if (!mq) return undefined;
+    const onChange = () => setNarrow(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+  return narrow;
+}
+
 function readFlag(key) { try { return window.localStorage.getItem(key) === "1"; } catch { return false; } }
 // Screens shared with the admin portal, opened in the employee portal through
 // /api/v1/workspace (module rights granted by the admin). Loaded on demand.
@@ -1244,8 +1258,10 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
     [revision, setRevision] = useState(0),
     [menuOpen, setMenuOpen] = useState(false),
     [searchText, setSearchText] = useState(""),
-    [collapsed, setCollapsed] = useState(() => readFlag("eas.sidebarCollapsed")),
+    [storedCollapsed, setCollapsed] = useState(() => readFlag("eas.sidebarCollapsed")),
     [closedGroups, setClosedGroups] = useState(() => new Set());
+  const narrow = useNarrowScreen();
+  const collapsed = storedCollapsed && !narrow;
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const main = document.getElementById("main");

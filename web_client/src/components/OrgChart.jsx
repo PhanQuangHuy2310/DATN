@@ -153,7 +153,7 @@ export default function OrgChart({ navigate, portal = "client", user }) {
             <input
               type="search"
               aria-label="Tìm kiếm trong sơ đồ tổ chức"
-              placeholder={canSeeAllRosters ? "Tìm kiếm phòng ban, nhân sự, chức danh..." : isDepartmentManager ? "Tìm phòng ban hoặc nhân viên phòng bạn…" : "Tìm kiếm phòng ban…"}
+              placeholder={canSeeAllRosters ? "Tìm phòng ban, nhân sự…" : isDepartmentManager ? "Tìm phòng ban hoặc nhân viên phòng bạn…" : "Tìm kiếm phòng ban…"}
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setSearchNotice(""); }}
               className="org-search-input"
