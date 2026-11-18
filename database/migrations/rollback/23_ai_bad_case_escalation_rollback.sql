@@ -10,6 +10,11 @@ SELECT eas.lock_security(true);
 
 DO $guard$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'eas' AND table_name = 'config_release' AND column_name = 'escalation') THEN
+    RAISE EXCEPTION 'Rollback 23: CSDL này CHƯA chạy migration 23, không có gì để gỡ. '
+      'Muốn cài thì chạy database/migrations/23_ai_bad_case_escalation.sql (không phải file trong thư mục rollback).';
+  END IF;
   IF EXISTS (
     SELECT 1 FROM eas.request r
     JOIN eas.request_revision v ON v.id = r.current_revision_id
