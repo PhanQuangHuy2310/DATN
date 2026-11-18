@@ -16,13 +16,15 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields
 from functools import lru_cache
 from typing import Any
 
 try:
+    from bad_case_reason import FEATURES, _fmt, condition_matches
     from nlp_text import canonical_request_type
 except ImportError:  # chạy từ gốc repo
+    from ai_service.bad_case_reason import FEATURES, _fmt, condition_matches
     from ai_service.nlp_text import canonical_request_type
 
 CATALOG_PATH = os.path.join(
@@ -69,6 +71,13 @@ class Signals:
         0  # việc đến hạn mà người nhận bàn giao không đủ vai trò làm thay
     )
     handover_named: bool = False  # đơn có điền người nhận bàn giao
+    # đặc trưng của chính hồ sơ (cho bad case học được từ lý do thu hồi, bad_case_reason.FEATURES)
+    days_requested: int = 0
+    requester_rejected_30d: int = 0
+    notice_hours: float | None = None
+    start_day_of_month: int | None = None
+    start_weekday: int | None = None
+    submit_hour: int | None = None
 
     @classmethod
     def from_input(cls, body: Any) -> Signals:
@@ -279,18 +288,37 @@ DETECTORS = {
 }
 
 
+def _learned_message(case: dict, values: dict) -> tuple[str, dict]:
+    evidence = {t["feature"]: values.get(t["feature"]) for t in case["condition"]["all"]}
+    shown = "; ".join(
+        f"{FEATURES[k]['label']} = {_fmt(k, v)}" for k, v in evidence.items() if v is not None
+    )
+    return f"{case['title']}: {shown} ({case.get('condition_text') or ''}).", evidence
+
+
 def evaluate(
     sig: Signals,
     catalog: dict[str, Any] | None = None,
     split_threshold: float | None = None,
+    learned: list[dict[str, Any]] | None = None,
+    overrides: dict[str, dict[str, Any]] | None = None,
 ) -> BadCaseResult:
-    """Mọi tình huống xấu khớp với hồ sơ, theo thứ tự trong danh mục."""
+    """Mọi tình huống xấu khớp với hồ sơ: danh mục có sẵn rồi bad case học được (bảng eas.bad_case).
+
+    overrides: {mã: {"disabled": bool, "extra_types": [...]}} do API core đọc từ eas.bad_case (admin ngưng một
+    bad case có sẵn, hoặc bad case SCOPE mở rộng sang loại đơn khác). learned: bad case RULE đang ACTIVE
+    [{code, title, rationale, request_types, condition, condition_text, risk, escalate_to}].
+    """
     catalog = catalog or load_catalog()
+    overrides = overrides or {}
     code = canonical_request_type(sig.request_type)
     actions = catalog.get("remediation_actions", {})
     out = BadCaseResult()
     for case in catalog["cases"]:
-        types = case.get("request_types") or []
+        override = overrides.get(case["code"]) or {}
+        if override.get("disabled"):
+            continue
+        types = list(case.get("request_types") or []) + list(override.get("extra_types") or [])
         if "*" not in types and code not in types:
             continue
         detector = DETECTORS.get(case["code"])
@@ -306,6 +334,7 @@ def evaluate(
             {
                 "code": case["code"],
                 "title": case.get("title"),
+                "rationale": case.get("harm"),
                 "risk": int(case["risk"]),
                 "escalate_to": case.get("escalate_to"),
                 "action": "BLOCK_AUTO_APPROVE_AND_ESCALATE",
@@ -316,6 +345,35 @@ def evaluate(
                     for a in case.get("remediation") or []
                 ],
                 "catalog_version": catalog.get("version"),
+                "source": "CATALOG" if code in (case.get("request_types") or []) or "*" in (case.get("request_types") or []) else "SCOPE",
             }
         )
+    if learned:
+        values = asdict(sig)
+        for case in learned:
+            types = case.get("request_types") or []
+            if "*" not in types and code not in types:
+                continue
+            try:
+                hit = condition_matches(case.get("condition"), values)
+            except (KeyError, TypeError, ValueError):
+                hit = False
+            if not hit:
+                continue
+            message, evidence = _learned_message(case, values)
+            out.cases.append(
+                {
+                    "code": case["code"],
+                    "title": case.get("title"),
+                    "rationale": case.get("rationale"),
+                    "risk": int(case.get("risk") or 3),
+                    "escalate_to": case.get("escalate_to") or "B",
+                    "action": "BLOCK_AUTO_APPROVE_AND_ESCALATE",
+                    "message": message,
+                    "evidence": evidence,
+                    "remediation": [],
+                    "catalog_version": "learned",
+                    "source": "LEARNED_CASE",
+                }
+            )
     return out

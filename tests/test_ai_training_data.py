@@ -100,7 +100,8 @@ class TrainingDataTests(unittest.TestCase):
     def test_training_scripts_are_the_known_entry_points(self):
         # train.py: phân loại + rủi ro; train_process_profile.py: luồng/trọng số;
         # eval_regulation_llm.py: chấm phân tích quy định; eval_regulation_compiler.py (+ mốc v1 đóng băng,
-        # run_regulation_rules_llm.py): chấm hiểu quy định có điều kiện ngữ cảnh.
+        # run_regulation_rules_llm.py): chấm hiểu quy định có điều kiện ngữ cảnh; gen_bad_case_reasons.py +
+        # train_bad_case_reason.py: phân loại lý do thu hồi tự duyệt để học bad case (migration 25).
         # Script mới phải được thêm có chủ đích.
         scripts = sorted(p.name for p in (AI / "training").glob("*.py"))
         self.assertEqual(
@@ -110,9 +111,11 @@ class TrainingDataTests(unittest.TestCase):
                 "eval_regulation_compiler.py",
                 "eval_regulation_llm.py",
                 "eval_risk_context.py",
+                "gen_bad_case_reasons.py",
                 "regulation_compiler_v1_baseline.py",
                 "run_regulation_rules_llm.py",
                 "train.py",
+                "train_bad_case_reason.py",
                 "train_process_profile.py",
                 "train_remediation.py",
             ],

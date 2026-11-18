@@ -1,0 +1,26 @@
+[
+ {
+  "code": "BL-01",
+  "seconds": 41.5,
+  "pass": true,
+  "evidence": "3 lý do -> [('ONE_OFF', 'notice_hours', 'CANDIDATE'), ('NEW_PATTERN', 'start_weekday', 'CANDIDATE'), ('ONE_OFF', 'notice_hours', 'ACTIVE')]; bad case BC_NOTICE_HOURS_WFH_REQ (Đủ để thành bad case: 3 lần thu hồi từ 3 người gửi, 3 người duyệt, điều kiện đo được và không chặn tràn lan. AI tự thêm vào danh mục và dùng từ hồ sơ kế tiếp.); người thứ tư EAS-2026-000366 chuyển B vì BC_NOTICE_HOURS_WFH_REQ: “Người duyệt đã thu hồi quyết định tự duyệt của AI vì: “Cứ báo WFH đột xuất, khôn…”; đối chứng EAS-2026-000367 vẫn tự duyệt"
+ },
+ {
+  "code": "BL-02",
+  "seconds": 11.1,
+  "pass": true,
+  "evidence": "EAS-2026-000368: ONE_OFF (chắc 0.599); AI: Chưa đủ để AI tự tạo bad case vì: AI hiểu lý do là riêng của từng hồ sơ; chỉ coi là kiểu chung khi lặp lại ở nhiều người gửi và nhiều người …; hỏi: Có tạo bad case “Lý do riêng: Em ghi thiếu danh sách công việc trong ngày, bổ sung rồi gửi…; admin từ chối"
+ },
+ {
+  "code": "BL-03",
+  "seconds": 10.2,
+  "pass": true,
+  "evidence": "EAS-2026-000369: khớp BC_WFH_FREQUENT; vì sao bỏ sót: Hồ sơ chưa vượt ngưỡng của BC_WFH_FREQUENT (Đây là đơn WFH thứ 8 trở lên trong tháng dương lịch.); giá trị lúc đó: wfh_count_month = 1."
+ },
+ {
+  "code": "BL-04",
+  "seconds": 25.9,
+  "pass": true,
+  "evidence": "EAS-2026-000370: ứng viên BC_START_WEEKDAY_WFH_REQ (AI đề xuất điều kiện {'all': [{'op': 'in', 'value': [5], 'feature': 'start_weekday'}]}); admin tạo -> EAS-2026-000371 thứ Sáu chuyển B; EAS-2026-000372 thứ Tư vẫn tự duyệt"
+ }
+]

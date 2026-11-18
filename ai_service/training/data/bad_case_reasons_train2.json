@@ -1,0 +1,4492 @@
+{
+ "about": "Lượt 2 của gen_bad_case_reasons.py (--v2); không thấy bộ kiểm tra.",
+ "model": "gemini-3.5-flash-lite",
+ "items": [
+  {
+   "type": "LEAVE",
+   "reason": "Việc sát hạn chưa bàn giao cho ai mà đã đòi nghỉ thế em",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "bao nhieu viec gap phai xu ly xong da roi hay xin nghi",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Deadline dự án tới đít rồi, bàn giao xong xuôi mới duyệt nghỉ nhé",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "chua thay ban giao task quan trong nao ca, tam hoan don nay",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Giữ việc gấp mà tự ý nghỉ thế này thì ảnh hưởng tiến độ chung",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "lam an chán the, viec chua xong da doi ve som",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh phải thu hồi để em xử lý nốt đống task tồn đọng chiều nay",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "hom nay nhieu viec den han lam sao ma nghi dc",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Chưa thấy chốt phương án bàn giao với team nên anh chưa cho nghỉ",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "de xu ly xong viec da roi tinh chuyen nghi phep sau nha",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nhiệm vụ trọng tâm đang treo, không thể duyệt đơn lúc này",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "viec dang gap ma nghi thi khach hang phan nan chet",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Em phải giao việc lại cho Lan rồi mới được phép nghỉ đặc biệt",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "tu choi don vi con nhieu task den han chua xong",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Trách nhiệm chính chưa hoàn thành, thu hồi đơn gấp",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "sao lai tu y xin nghi luc dang nhieu viec the nay",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Cần hoàn tất báo cáo gấp trước khi nghỉ, hẹn dịp khác nhé",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "gap task lon ma chua ban giao thi khong duyet nua",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Anh thu hồi đơn vì em còn lượt duyệt quan trọng trong ngày",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "giai quyet xong viec ton roi muon nghi gi thi nghi",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Về sớm nhưng việc đến hạn chưa xong thì không hợp lý đâu",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "doi cham cong gi tam nay, lo lam task di em",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Xin điều chỉnh giờ nhưng việc tồn đọng chưa ai gánh hộ",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "chua thay ban giao viec cho ai ca, tu y ve som la hong",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cam kết với phòng ban khác đang bị treo, em phải ở lại làm",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "dang nhieu viec gap the nay ma doi ve som a",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hệ thống tự duyệt nhầm vì em còn task sát nút chưa xong",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "lam xong viec roi hay lam don dieu chinh cham cong",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Anh phải hủy đơn vì em giữ nghiệm thu quan trọng chiều nay",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "bo do viec la khong duoc dau, o lai hoan thanh di",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Bàn giao cho Lan lúc nó đang ngập việc, kẹt thế này khéo hỏng hết việc chung.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "ong tu nhan ban giao ma chinh ong cung xin nghi cung thoi gian, thua.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Người nhận bàn giao đang quá tải, không thể cáng đáng thêm việc lúc này.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "nhan ban giao ma viec den han ngap dau, co ma lo viec cua no con chua xong.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Check lai thay ong nay cung dang co lich nghi trung ngay, huy thoi.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Giao cho nguoi dang qua tai thi chi co rot viec, de xu ly lai sau.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "thang em nhan ban giao dang om 4 viec deadline, sao ma lam thay dc.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nhìn lịch thấy người nhận bàn giao cũng nghỉ phép ngày đó, duyệt thế nào được.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Ban giao tren giay thoi chu thuc te qua tai nang ne, thu hoi gap.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "ong duoc chi dinh nhan viec cung dang trong dien nghi phep, hong chuyen.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "De xuong lai nhe, ong nhan ban giao dang ban biu tat mat kia.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "nguoi nhan thay the cung dang co viec den han chong cheo, khong on.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Quá tải việc rồi, nhận thay thế chỉ thêm ách tắc chứ giải quyết gì đâu.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Huy quyet dinh de sap xep lai nguoi thay the cho hop ly hon.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nhan ban giao ma ong nay cung xin nghi phep dot do, sua lai thoi.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Tình hình này người nhận bàn giao không kham nổi việc phát sinh đâu.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "ong nay nhan giup nhung chuc viec dang ton dong con chua xong nua la.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Thu hồi để làm rõ lại phương án bàn giao, tránh trễ tiến độ dự án.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nguoi duoc giao viec thay cung dang ngap ngua lich hop va deadline.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Thay đổi nhân sự nhận bàn giao vì người cũ đang bị quá tải nặng.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Check ky lai thi thay nguoi nhan ban giao cung xin phep nghi roi.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "lam an the nay gay tac nghe nghen, tam thoi thu hoi don nay nha.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "ong nhan ban giao dang om qua nhieu viec cung thoi gian, khong kha thi.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "ban giao tren giay la chinh, nguoi ta dau con thoi gian ma lam thay.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nhan thay the ma chinh no cung dang nghi thi ai lam, huy nhe.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Thu hồi gấp vì người nhận bàn giao đang gánh tới mấy việc đến hạn.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Khong on dau, nguoi nhan ban giao cung dang trong thoi gian di cong tac.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Can nhac lai vi nguoi thay the dang qua tai, viec se bi ngung tre.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nguoi nhan ban giao dang qua tai, khong the nhan them viec luc nay.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Huy de bat lam lai khau ban giao cho chac an, tranh sot viec.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "phong vang qua roi, hon 40% nghi trung ngay nay khong du nguoi truc",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Ngày này phòng đã quá tải lịch nghỉ, em dời lại giúp anh nhé.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nhom minh kẹt người qua, hon nua team da nghi 40% roi em nhe",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Phòng vắng quá 40% nhân sự rồi, tạm hoãn đơn này nha.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "sao nghi cung ngay ma dong nguoi the, thoi o lai giup phong nhe",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Trùng lịch nghỉ với nhiều anh em quá, dịch vụ nội bộ ngưng mất.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "tinh hinh chung la phong qua nhieu nguoi nghi, khong du nguoi truc",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Hơn nửa phòng nghỉ ngày đó rồi, em đổi lịch khác đi.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "khong du nguoi lam viec vi trung nhieu lich nghi qua em oi",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Team mình đang kẹt vụ dịch vụ, quá nửa nghỉ rồi không duyệt nữa.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "ngay nay ng nghi tren 40% roi, ai truc phong nua",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đông người nghỉ trùng ngày này quá, hệ thống dịch vụ dễ đứt gãy.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "phong thieu nguoi tram trọng, em thong cam doi ngay khac nha",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Gần nửa phòng nghỉ mất tiêu rồi, để dịp khác em nhé.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "khong on dau em, 40% nghi roi lay ai xu ly cong viec",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Số người nghỉ đã vượt mức cho phép, tạm gác đơn này lại.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nhieu nguoi xin nghi trung ngay nay qua, anh phai thu hoi",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Phòng không thể vắng thêm người nữa, thông cảm cho anh.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "qua tai nghi phep roi em, de hom khac di nhe",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Trùng lịch với khối người rồi, ở lại trực phòng hộ anh.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "can nhac lai giup anh vi phong dang vang tren 40%",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Dịch vụ nội bộ đang cần người, ngày đó đông người nghỉ quá.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "khong du nguoi truc quay lai ngay do, em doi lich nhe",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Vắng dữ dội quá rồi, hủy đơn này để đảm bảo nhân sự.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "hon 40% nhan su di vang, khong the duyet them don nay",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Lịch nghỉ trùng nhiều quá rồi, em xem đổi sang tuần sau.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "phong dang thieu nguoi tram trong, thong cam nha em",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đã quá hạn mức nghỉ chung ngày, tạm dừng duyệt đơn.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "ngay nay ca phong nghi het roi, ai lam thay em",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nghỉ chi mà đông thế, dịch vụ phòng ngưng hoạt động mất.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Sửa chấm công lần thứ 4 rồi đấy, ko chấp nhận việc lạm dụng cơ chế tự duyệt ntn.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Tháng này sửa giờ giấc quá nhiều lần, yêu cầu lên gặp trực tiếp để giải trình.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Dùng ngưỡng miễn trừ để che đậy việc đi muộn thường xuyên là không được.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "sua gio lien tục ca thang nay, ko the de AI tu duyet nua nhe.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Đã nhắc nhở về giờ giấc mà vẫn tái diễn việc điều chỉnh chấm công liên tục.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lạm dụng tính năng tự động để hợp thức hóa thời gian làm việc là vi phạm nội quy.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "4 lan sua cham cong trong 30 ngay la qua han muc cho phep roi.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hệ thống duyệt nhầm đơn này vì đây đã là lần thứ tư trong tháng bạn xin điều chỉnh.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Không thể cứ đi muộn về sớm rồi dùng đơn tự động để né tránh chế độ.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "tinh trang sua gio co he thong rui, anh phai huy de kiem tra lai.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cần chấn chỉnh ngay thói quen đi muộn thay vì liên tục nộp đơn điều chỉnh.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Việc lặp lại lỗi chấm công nhiều lần thế này ảnh hưởng xấu đến kỷ luật chung.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thu hồi quyết định vì đã vượt quá số lần điều chỉnh chấm công tối đa trong tháng.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "nhieu lan sua cham cong qua roi, dung co lạm dụng nua nha.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Tôi phải thu hồi đơn này để rà soát lại toàn bộ lịch sử chấm công gần đây.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cố tình lợi dụng kẽ hở tự duyệt để che giấu việc chấp hành giờ giấc kém.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Sửa giờ lần thứ tư là có vấn đề rồi, không duyệt nữa nhé.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Yêu cầu dừng ngay việc dùng đơn điều chỉnh để hợp thức hóa việc trễ giờ.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "lam dung co che tu duyet qua nhieu lan trong 30 ngay qua.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Đơn này bị hủy do có dấu hiệu lạm dụng tính năng miễn trừ chấm công.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thấy bạn sửa giờ liên tục nên tôi phải can thiệp thủ công ngay lập tức.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Không chấp nhận việc tháng nào cũng xin điều chỉnh giờ làm 4-5 lần.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "sua gio thu 4 roi, yeu cau giai trinh ro rang nhe.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cần nghiêm túc xem lại ý thức chấp hành giờ giấc, không thể cứ thích là sửa.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "AI duyệt nhầm trường hợp lặp lại lỗi hệ thống này rồi, xin phép hủy.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lạm dụng cơ chế quá mức cho phép, đề nghị gặp tôi trao đổi trực tiếp.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "tu dong sua cham cong hoai la hong day nhe.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hủy đơn để nhắc nhở về việc tuân thủ giờ làm việc chung của công ty.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Đã phát hiện dấu hiệu lạm dụng ngưỡng miễn trừ để che lấp việc đi trễ.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Qua nhieu don dieu chinh trong 1 thang, buoc phai thu hoi de kiem tra.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Tháng này wfh 8 đơn rồi, em lên cty làm việc đi",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Quá nhieu buoi wfh trong thang nay, can len cty gap team",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Đơn wfh thứ 8 rồi, không duyệt nữa nhé",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "wfh suot ngay the nay la khong on dau em oi",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Nhà mình ở ẩn quen rồi hay sao mà tháng này xin wfh tận 8 lần vậy",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "nghi o nha nhieu qua roi, tuan sau len van phong 100%",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Yêu cầu thu hồi vì lạm dụng hình thức làm việc từ xa quá mức",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "wfh nua la thanh mac dinh mat, len cty thoi",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Thấy em wfh dày đặc quá nên anh phải kéo lại, cần tương tác trực tiếp",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "suot ngay wfh ne tranh cham cong la anh khong thich dau nhe",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Không thể để tình trạng wfh vô tội vạ thế này được, quay lại văn phòng gấp",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "lam on len cty hop truc tiep giup anh cai",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Đã nhắc nhở về việc wfh nhiều nhưng vẫn tái diễn, hủy đơn này nhé",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "wfh nhieu qua mat het tinh ket noi trong team roi",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hơn 8 đơn wfh trong một tháng là quá giới hạn cho phép rồi em",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "thoi di lam lai binh thuong di em oi, o nha mai chan lam",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Dừng ngay việc trốn họp trực tiếp bằng cách xin wfh liên tục nhé",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "nhin danh sach wfh nguyen thang thay qua nhieu, huy thoi",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Đề nghị chấm dứt ngay thói quen wfh liên miên từ bây giờ",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "wfh nhieu the nay la anh khong duyet nua dau nha",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Làm việc nhóm mà cứ wfh mãi thì hiệu quả đâu ra nữa",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "thang nay wfh qua nhieu roi, tuan sau len cty day du nha",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hủy quyết định tự động vì số lượng đơn wfh đã vượt mức quy định",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "o nha tron cham cong hoai la khong duoc dau do",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Anh thu hồi đơn này để em chuẩn bị tinh thần lên công ty làm việc",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "wfh 8 buoi la qua nhieu cho mot thang roi day",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Cần gặp trực tiếp để trao đổi công việc, không duyệt wfh nữa",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "thoi len van phong di em, wfh mai ko tien",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Việc wfh đã biến thành thói quen né tránh văn phòng, dừng lại nhé",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "lam on len cty lam viec gium anh cai nha",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Sao lại xé nhỏ hóa đơn ra thế này, gom lại để trình sếp lớn duyệt nhé.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Mới tuần trước vừa hoàn tiền xong, sao giờ lại lập thêm đơn nhỏ nữa để né hạn mức.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "tach don ne ngan sach roi, huy de gop chung",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Đề nghị gom các khoản thanh toán này thành một hồ sơ duy nhất để chuyển Kế toán trưởng.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chiêu chia nhỏ hóa đơn này không qua được mắt tôi đâu, làm lại đơn đi.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "chi phi nay bi rach ra nhieu don nho de ne duyet, yeu cau nop lai mot ho so thoi",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cố tình tách đôi đơn chi phí để nằm dưới mức tự duyệt chứ gì, thu hồi ngay.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tổng tiền đợt này vượt khung rồi, không được tách nhỏ lẻ kiểu này đâu em.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "tach don ne han muc ne",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Hành vi tách nhỏ chứng từ để né cấp phê duyệt cấp cao là không hợp lệ.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Sao cứ chia nhỏ mấy khoản này ra làm gì, gộp chung lại để trình Giám đốc.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "khong duoc tach hoa don de tranh kiem tra",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Lại thêm một cái đơn nhỏ nữa trong tuần, rõ ràng là cố tình lách luật.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Doanh nghiệp không chấp nhận việc chia nhỏ chi phí để qua mặt hệ thống tự duyệt.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "tach nho de tranh trinh ke toan truong la anh khong duyet dau day nhe",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cần gộp tất cả các khoản hoàn tiền trong tuần thành một bộ hồ sơ hoàn chỉnh.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cái này vượt hạn mức tổng rồi, không được xé lẻ hóa đơn ra như vậy.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "lam lai don gop chung di, dung co tach ra de ne duyet nua",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hệ thống vừa báo có dấu hiệu tách đơn tài chính, anh phải thu hồi gấp.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cố tình lập nhiều đơn giá trị nhỏ để trốn cấp duyệt cao hơn là sai quy định.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "tach bill de ne duyet la hong roi",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Đề xuất này liên quan đến khoản tiền lớn bị xé nhỏ, buộc phải chuyển cấp trên.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Không thể duyệt mấy cái đơn tách lẻ kiểu này được đâu, gom lại đi.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "gom don lai di em, xé nho the nay de ne han muc la khong xong dau",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Phát hiện dấu hiệu cố tình né hạn mức bằng cách chia nhỏ hóa đơn chi phí.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lại tách đơn hoàn tiền à, tổng lại là vượt mức tự duyệt rồi đấy.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "chi phi nay bi chia nho de ne sếp lon duyet",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Hủy đơn này để gộp chung vào hồ sơ tuần trước cho đúng quy trình tài chính.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Đừng có chia nhỏ chi phí ra thành nhiều đơn để lừa hệ thống tự động.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "tach don ne nguyen tac tai chinh",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn này thanh toán rồi, sao lại nộp lại thế em?",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trung lap so hoa don, da duyet o ho so truoc do.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trùng số hóa đơn với bên thanh toán đợt trước rồi nhé.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chung tu nay da duoc quyet toan trong thang nay.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Phát hiện hóa đơn đã xài ở đơn khác, hệ thống quét nhầm.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "So hoa don nay trung khop voi mot bill da thanh toan.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn bị dùng 2 lần rồi em ơi, không duyệt khoản này.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Check lai thay bill nay daclaim tien roi nha.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chứng từ này đã nằm trong một hồ sơ hoàn tiền khác.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trung hoa don roi, ko thanh toan hai lan duoc dau.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Số invoice này đã được thanh toán từ tuần trước rồi.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Huy don vi so hoa don da duoc dung oho so khac.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Nhà cung cấp xuất trùng hoặc bên mình nộp nhầm hai lần.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Bill nay da thanh toan roi, anh thu hoi nhe.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn này đã được quyết toán rồi, hủy nha.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trung so invoice voi ho so khac chua bi huy.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Khoản này thanh toán trùng chứng từ, phải hủy gấp.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hoa don da dung de thanh toan o don khac roi.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trùng lặp số hóa đơn, tránh việc chi trả hai lần.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Phat hien trung so hoa don voi 1 ho so cu.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn đã dùng rồi mà sao vẫn đưa vào đây vậy em?",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trung invoice number voi chi phi da duyet.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Số hóa đơn này đã khớp với một đơn chi trả trước đó.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chung tu trung lap, ko the thanh toan hai lan.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "AI duyệt nhầm hóa đơn cũ đã được thanh toán từ trước.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Bill nay da dc xu ly o yeu cau truoc do.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Phát hiện trùng chứng từ thanh toán, xin phép hủy.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "So hoa don nay da su dung roi, cancel nhe.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn này đã được dùng thanh toán ở hồ sơ khác.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trung hoa don roi em, de anh thu hoi lai.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Mới hoàn tiền tuần này rồi mà sao lắm thế, tạm dừng để check lại các khoản.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "refund gi ma don dap vay, de anh kiem tra lai ky hon nhe.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khoản thứ ba trong tuần rồi, cần rà soát gấp các chi phí phát sinh.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "nhieu khoanhoan the nay la bat thuong, thu hoi de xem xet lai.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Dừng đơn này lại nhé, tuần này em làm mấy phiếu hoàn tiền liên tiếp rồi đấy.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "sao tuan nay xin hoan tien nhieu the, anh phai xem lai het.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cần kiểm tra kỹ nguyên nhân tại sao lại có nhiều đơn hoàn tiền dồn dập như vậy.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hoan tien gi ma nhieu don the, tam hoan de doi giai trinh.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh thu hồi để kiểm tra tính hợp lý vì em gửi quá nhiều đơn hoàn tiền trong 7 ngày.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "nhieu khoan nho gop lai cung nhieu, de anh check lai da.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tạm thu hồi đơn này do dạo này có dấu hiệu hoàn tiền quá nhiều lần.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "sao nop lam don refund the, tam dung de anh xem xet.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFND_COMPENSATION",
+   "reason": "Yêu cầu giải trình rõ các khoản hoàn tiền liên tiếp trong thời gian ngắn.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "tu nay den mai dung lam don nua nhe, anh phai kiem tra lai.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Thấy nhiều khoản hoàn tiền nhỏ quá, thu hồi để kiểm soát lại dòng tiền.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "lai hoan tien nua a, de anh xem lai tong the da.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Hệ thống tự duyệt nhưng nhìn lại thấy em gửi đơn hoàn tiền hơi dày đấy.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "nhieu don hoan tien qua, de anh doi chieu lai voi phong tai chinh.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tạm dừng xử lý để xác minh các khoản hoàn tiền dồn dập trong tuần qua.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "sao ma hoan tien nhieu the, anh phai xem lai chung tu goc.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Thu hồi gấp đơn này vì thấy số lượng đơn hoàn tiền trong tuần đã vượt mức.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "de anh check lai may cai don hoan tien gan day xem sao.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Các khoản hoàn tiền lặp lại quá nhanh, cần kiểm tra lại ngay.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "ko the de duyet tu dong nhieu khoan hoan nhu nay duoc.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh phải kéo đơn này lại để check kỹ lịch sử hoàn tiền mấy ngày qua.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "lam don hoan tien lien tuc the, de anh xem co van de gi ko.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tạm hoãn duyệt đơn hoàn tiền này để đối chiếu lại với các khoản trước.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "nhieu khoanhoan qua, dung lai de anh kiem tra cho chac.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Nhìn danh sách hoàn tiền thấy dày đặc quá nên anh phải thu hồi lại.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "sao tuan nay xin hoan tien lam the, de anh xem lai.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách này vừa mới xin ck cách đây mấy ngày, sao lại lập thêm đơn nữa thế này.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Trung chiết khấu liên tục cho một khách là vi phạm biên lợi nhuận, phải dừng ngay.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "vừa duyệt ck tuan truoc xong nay lai lap don moi, ko dc dau em oi",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Cộng dồn kiểu này âm mất vốn, hủy để check lại với sales.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách hàng cũ đã hưởng ưu đãi trong tuần rồi, không thể áp dụng chồng chéo thế này được.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "chiết khấu lặp nhìu lần cho 1 cty là ko hợp lệ, anh thu hồi nha",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Vượt biên độ cho phép rồi, đơn này phải xem xét lại hạn mức.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Hệ thống tự duyệt nhầm do tách đơn, khách này tuần trước vừa nhận một suất.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "khách nhận ck 2 lan trong 7 ngay la ko dung quy dinh",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Cần kiểm tra lại lịch sử giao dịch của khách này trước khi cấp thêm ưu đãi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Trùng tên khách hàng nhận discount cách đây mấy ngày, hủy đơn gấp.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "sao lai chiet khau lien tuc the, gay lo la chet dở",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Việc lặp lại chính sách giảm giá trong thời gian ngắn làm ảnh hưởng doanh thu.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Nhân viên sales đẩy đơn liên tục cho một đối tác mà không để ý biên lợi nhuận.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "huy don nay nhe, vua chiet khau tuan truoc xong lai xin tiep",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Không được phép cấp ưu đãi dồn dập cho cùng một đối tượng trong vòng một tuần.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Check lại thấy trùng khách với đơn tuần rồi, thu hồi để bảo toàn biên lợi nhuận.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "khach cu vua lap don ck xong lai lam don nua, tu choi thoi",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Cộng dồn mức giảm giá thế này là lẹm vào phần lãi của công ty đấy.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "AI tự duyệt nhưng sót vụ khách này đã nhận ưu đãi cách đây 5 ngày.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "cung mot khach ma xin chiet khau hai lan trong tuan la ko on",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Yêu cầu bộ phận kinh doanh giải trình về việc xin giảm giá lặp lại.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Hạn mức chiết khấu trong 7 ngày đã cạn, không thể duyệt thêm đơn này.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "suyt nua thi qua man, khach nay vua duoc giam gia hom thu bay ma",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Phát hiện có sự trùng lặp về đối tượng nhận ưu đãi trong tuần qua.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Thu hồi quyết định để tránh vượt ngưỡng chiết khấu tối đa cho phép.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "vua an chiet khau xong lai doi tiep, huy nhe",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Lỗi hệ thống không quét được lịch sử cũ của khách, đành phải giữ lại.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Không thể duyệt hai đơn giảm giá sát nhau cho cùng một khách hàng.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "dung cap chiet khau day dac cho 1 khach nhu the nay nua em nhe",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "chu tri hop di cong tac sao dat phong lam gi",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách đến mà Lan nghỉ phép rồi, hủy pass nhé.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hom nay ong chu tri nghi om, huy phong hop gap.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Sếp đi công tác ngày đón khách, thu hồi thẻ.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "phong dat cho cuoc hop ma truong ban xin nghi roi",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Người tiếp khách xin WFH mất tiêu, hủy nha.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Chủ trì cuộc họp đang nghỉ phép, hủy phòng.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach vao khong co ai tiep do nghi phep",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hủy đặt phòng vì người tổ chức bận đi công tác.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Huy the vi nguoi don khach dot xuat nghi om.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "nguoi chu tri vang mat, huy phong hop nay nhe",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Anh Tú nghỉ đúng hôm khách đến, thu hồi thẻ khách.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "dat phong hop ma nguoi chu tri lai xin nghi phep",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Hủy nhé, người đón khách vắng mặt hôm nay.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Khách mời và chủ trì đều vắng, hủy phòng gấp.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khong co nguoi don nen huy the an ninh thoi",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Người setup họp nghỉ phép, phòng giữ vô ích.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thu hồi thẻ vì người tiếp khách bận đi công tác.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "nhan su chu tri hop nghi roi, huy phong nhe",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Đợi khách vào không ai tiếp vì chủ nhà nghỉ.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hủy lịch họp do người chủ trì nghỉ đột xuất.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "nguoi don khach di cong tac, huy pass khach",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Chủ trì cuộc họp nghỉ việc riêng, hủy phòng.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Hủy pass, người đón khách trùng lịch nghỉ phép.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "phong de trong vi nguoi chu tri xin nghi phep",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Không ai ra sảnh đón vì nhân viên xin nghỉ.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hủy phòng gấp do chủ trì cuộc họp vắng mặt.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach den ko co ai tiep do nguoi don nghi",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Người tổ chức họp đi công tác, hủy phòng nhé.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thu hồi thẻ vì người tiếp khách đang nghỉ ốm.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thằng này hay gian lận ngày phép lắm, ko cho AI duyệt nữa.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Lịch sử đã ghi nhận 2 lần sai phạm WFH, dừng ngay việc tự duyệt.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "sua cham cong qua nhieu lan bat thuong, de anh xu ly tay.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Đã bị thu hồi 2 lần vì gian lận chi phí, không thể tin tưởng được.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Hoàn tiền kiểu này có vấn đề, trước đây từng bị gạt 2 bận rồi.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "nhan vien nay hay lam sai quy trinh chieu khau, can kiem tra ky.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Lạm dụng đặt phòng họp liên tục dù lịch sử từng bị nhắc nhở.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Cấp thẻ khách bừa bãi, rủi ro an ninh quá lớn từ bạn này.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "nghi dac biet ma hay khai khong, da bi huy 2 lan roi do.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Cần can thiệp thủ công vì nhân sự này từng vi phạm quy định nghỉ.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Đứa này hay trốn việc ngày WFH, không để AI duyệt linh tinh.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "sua gio lien tuc, truoc da bi t thu hoi 2 lan roi nhe.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hồ sơ thanh toán có mùi, lịch sử đã chứng minh không nên tin.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lại đòi hoàn tiền bất thường, ca này phải xem xét kỹ lưỡng.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "chiet khau vo ly, da canh cao 2 lan ma van chung nao tat nay.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Chiếm dụng phòng họp trái quy định, từng bị hủy vé 2 bận.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Dắt người lạ vào công ty trái phép, không cho tự động nữa.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "nghi phep dac biet hay gian lan, dung cho ai duyet nua.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Tiền lệ xấu đã rõ, nhân viên này không xứng đáng được AI ưu ái.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Cứ WFH là mất tích, đã bị phạt 2 lần mà vẫn ngựa quen đường cũ.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "gian lan cham cong quen thoi, de anh tu tay duyet cho chac.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Kê khai chi phí không minh bạch, hồ sơ từng bị đánh rớt nhiều lần.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Yêu cầu hoàn tiền đáng ngờ, tránh lặp lại rủi ro đã xảy ra.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "giam gia vo nguyen tac, truoc da bi huy 2 lan roi day.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Đặt phòng ảo gây nghẽn hệ thống, trường hợp này quá quen rồi.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Cấp thẻ khách không đúng quy chế, cần quản lý chặt chẽ hơn.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "xin nghi kieu nay la co van de, da bi gach 2 lan roi.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Lại định lách luật ngày nghỉ hả, anh phải tự duyệt đơn này.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Lạm dụng quyền lợi WFH, hệ thống không được phép tự duyệt nữa.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "sua gio cham cong bat thuong, dung de may tu quyet dinh nua.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Gửi loạt đơn lúc nửa đêm qua khôn quá đấy, định lừa hệ thống tự duyệt à?",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Sao cứ nhằm mấy giờ nghỉ lễ để nộp tiền thế hả em?",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "lam don ngoai gio lien tuc de ne mat quan ly la khong xong dau nhe",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Lại bài ca nộp hồ sơ tầm nửa đêm để bẫy AI duyệt hộ đúng không?",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Mấy đơn này toàn tống đi lúc sáng sớm tinh mơ, tưởng anh không soi à.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "nhieu don gui bu gio lam the nay la co y do khac roi",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Tranh thủ cuối tuần không ai để ý để ép hệ thống tự duyệt à Lan?",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Cứ nhằm lúc nửa đêm làm phát ba bốn đơn, khôn thế quê anh đầy.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "gui don luc nua dem the nay la vi phạm quy tắc roài",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh thấy em toàn nộp đơn lúc nửa đêm để né kiểm soát đấy nhé.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cố tình nộp dồn dập ngoài giờ hành chính để đánh lừa AI chứ gì.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "lam an kieu gi ma toan nop chieu muộn voi dem hom the",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tưởng né được giờ làm việc là AI duyệt cho qua cửa hả?",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lại bài cũ rích là tranh thủ lúc nghỉ lễ để tống đơn đi.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "nop don ngoai gio lien tuc de ne thuc te la anh khong duyet dau",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Sao cứ chọn tầm nửa đêm để nộp loạt hồ sơ thế này em?",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cố tình lách luật gửi đơn lúc nửa đêm để hệ thống tự duyệt.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "tranh thu ngay nghi de tat toan nhieu don qua nhi",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Chiêu trò gửi đơn lúc nửa đêm không qua được mắt anh đâu.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Cứ nhằm lúc mọi người nghỉ ngơi để tống đơn đi là không ổn.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "gui 3 don lien tuc vao nua dem de lua may la hong roi",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tưởng qua mặt được hệ thống khi nộp đơn ngoài giờ à?",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Sao cứ tầm nửa đêm là em lại gửi loạt đơn thế?",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "lam don tat ca vao gio nay de qua mat AI chu gi",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Lại tranh thủ lúc nửa đêm để tống đơn chờ AI duyệt hộ.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cố tình dồn đơn gửi ngoài giờ hành chính là có vấn đề.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "nop don tam nay la anh phai kiem tra lai tu dau day",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Chiêu trò lợi dụng lúc vắng người để né duyệt là hỏng.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cứ nhằm lúc nghỉ lễ để nộp hàng loạt đơn thế này à?",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "gui don luc nua dem de ne quan ly la khong duoc dau",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini-v2"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "thang nao cu cuoi tuan la xin nghi, anh thay khong on",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nhap nham ngay xin phep, cho anh huy de tao don khac nhe",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay dang ky wfh vao thu hai, can len cty hop truc tiep",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "sep vua doi lich hop sang thu hai nen phai vao van phong",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "thang nay quen cham cong qua nhieu lan roi day em",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hom qua may cham van tay bi loi nen anh duyet lai cho dung",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "chi phi tiep khach cu day vao sat ngay chot so la sao",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "thieu hoa don do chi, cho em bo sung roi nop lai nhe",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hoan tien doi tac nay hay phat sinh vao cuoi thang lam",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "khach da nhan duoc tien chuyen khoan truc tiep, huy don nay thoi",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "muc chiet khau nay vuot qua bien do thong thuong hay dung",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "doi tac vua goi dien xin giu nguyen gia, khong ap dung nua",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "dat phong hop lon ma cu bao truoc co vai tieng thoi a",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "cuoc hop da bi huy vi doi tac hoan lich dot xuat",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "lam the cho khach vao khu vuc nhay cam la phai can nhac",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach doi lich sang tuan sau moi ghe tham van phong",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "nghi che do kieu nay hay bi trung vao dot chay hang",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "em xin doi sang tuan sau vi viec gia da xong xuoi",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "cu gan tet la xin nghi dai ngay, anh chua the dong y",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "vo chong anh vua doi lai lich nghi mat gia dinh",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "lam viec tu xa ma cu chon dung ngay co su kien lon",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "em da len cty kip thoi nen khong can wfh nua nhe",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "sua gio lam viec lien tục vao thu sau la co van de",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "do chi quen bam the thoi, anh xem xet lai giup em",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "hoa don an uong cu nop vao buoi dem muon la sao",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "nhap nham so tien thanh toan, cho anh sua lai ti nhe",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "khoan hoan tien nay co gia tri bat thuong so voi anh em",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "chung tu nay bi trung lap voi thang truoc, anh thu hoi",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "chiet khau cao the nay hay duoc ap dung cho khach cu",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "khach hang vua thong bao rut gon quy mo don hang",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "dat phong lien tuc ca tuan ma khong thay dung toi",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "doi sang phong nho hon vi so luong nguoi tham gia it",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "tao the khach ngoai nhieu the nay de gay mat an ninh",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach vua bao hoan lai lich hen vi ốm",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "nghi viec rieng ma cu doi vao dau tuan la khong tien",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "su viec gia dinh da duoc giai quyet xong som",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "thang nao em cung xin nghi phep vao giua tuan het vay",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "xin phep huy don de chuyen sang nghi bu vao cuoi tuan",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay dang ky wfh vao ngay hop chien luoc cua phong",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "sep yeu cau tat ca co mat truc tiep tai van phong",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hay quen check in check out vao thu hai dau tuan",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "anh nham ngay cham cong cua thang truoc, huy nhe",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "chi phi van phong cu don dập vao nhung ngay cuoi tuan",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "phong ke toán bao sai ma so thue tren hoa don",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hoan tien cho khach hay bi trung lap vao dip cao diem",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "khach da dong y nhan voucher thay vi hoan tien mat",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "chiet khau dac biet hay duoc xin vao sat gio chot don",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "nhap sai ten khach hang tren he thống, xin phep lam lai",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "dat phong hop ca ngay ma cu sat gio moi xin la sao",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "doi phong khac rong hon vi co them khach VIP tham du",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "dang ky the cho nhieu nguoi vao khu vuc nhay cam qua",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "thay doi danh sach nguoi vao lam viec, cho anh huy don",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "nghi om hay keo dai vao nhung ngay nhieu viec nhat",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "bac si da cho xuat vien som hon du kien ban dau",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "hay xin nghi phep dot xuat vao dung ngay hop tong ket",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "em da doi lai lich kham benh sang buoi toi roi",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "dang ky wfh lien tuc vao nhung ngay can tuong tac nhom",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "may tinh nha bi hong nen phai len cty lam viec",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "sua gio cham cong qua nhieu lan trong cung mot thang",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "xin huy de nop lai bang cham cong co xac nhan cua HR",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Lần nào sát hạn nộp cũng xin nghỉ, team kẹt việc xử không kịp.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Lan nhắn nhầm ngày nghỉ, cần hủy đơn để tạo lại đơn mới.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Thứ hai đầu tuần hay wfh, trong khi có họp quan trọng với sếp lớn.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Sếp đổi lịch họp toàn công ty nên anh Tú xin rút đơn wfh.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cuối tháng hay dồn hóa đơn tiếp khách mức cao để thanh toán gấp.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Quên đính kèm hóa đơn đỏ, gửi bổ sung sau nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hay đặt phòng lớn mà dùng có mấy người, gây lãng phí chung.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Khách hủy lịch phút chót nên trả lại phòng họp này.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thường xuyên đăng ký thẻ khách vào giờ cao điểm rất mất trật tự.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách bận giờ này không qua được, hủy thẻ nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Mấy deal cận biên lợi nhuận thấp cứ tự duyệt, rủi ro cao lắm.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách đổi ý mua gói khác, hủy mã chiết khấu này.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Quên chấm công liên tục mấy ngày liền, cần chấn chỉnh lại.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Chấm nhầm ca trực, nhờ admin xóa giúp đơn này.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tháng này bị từ chối mấy đơn rồi mà vẫn cứ gửi hoàn tiền vô lý.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khách nhận đủ hàng rồi không cần hoàn tiền nữa.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Hay xin nghỉ việc riêng vào mấy ngày sát deadline dự án.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Việc gia đình đã giải quyết xong, xin đi làm lại bình thường.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Cuối tuần hay đăng ký wfh với lý do khó kiểm tra tiến độ.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hôm đó công ty có liên hoan nên hủy wfh lên văn phòng.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cứ qua ngày 25 là hàng loạt chi phí ăn uống bất thường đổ về.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Nhập nhầm số tiền thanh toán, xin hủy làm đơn khác.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Mấy phòng view đẹp hay bị chiếm dụng làm việc riêng dài ngày.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Đổi phòng nhỏ hơn vì số lượng tham gia ít đi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Tạo thẻ khách liên tục cho người lạ vào khu vực nhạy cảm.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách dời lịch sang tuần sau, hủy đơn tạo mới.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Mức giảm giá này vượt khung thường lệ đối với khách mới.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách chưa thanh toán cọc, tạm thu hồi chờ xác nhận.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thường xuyên yêu cầu giải trình chấm công vào ngày nghỉ.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hôm đó thực ra đi muộn chứ không phải lỗi hệ thống.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lịch sử hay có tranh chấp tiền bạc với khách hàng.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Chuyển nhầm tài khoản người nhận, hủy gấp.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Cứ đến mùa cao điểm là xin nghỉ dài ngày không báo trước.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Dời lịch nghỉ sang tháng sau do dự án thiếu người.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Gửi đơn wfh lúc nửa đêm sát giờ làm việc hôm sau.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Sáng mai có việc bận đột xuất nên xin đổi sang nghỉ phép.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn taxi đi lại quá nhiều trong một tuần bất thường.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Quên lấy hóa đơn VAT, xin thu hồi để gộp sau.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hay đặt phòng họp gấp vào khung giờ cao điểm toàn công ty.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Họp online qua zoom nên không cần dùng phòng nữa.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Đăng ký quá nhiều khách cùng lúc không rõ mục đích công việc.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Đối tác hủy chuyến công tác phút chót.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Hay xin chính sách giá đặc biệt cho các đối tượng rủi ro.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Sếp yêu cầu kiểm tra lại hạn mức tài chính của deal này.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hay chỉnh sửa giờ ra vào ở các mốc thời gian nhạy cảm.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Chấm công bằng tay thành công rồi, hủy đơn thừa đi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Mấy đơn hoàn tiền giá trị lớn lần nào cũng phải xem xét kỹ.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khách đồng ý đổi sản phẩm thay vì nhận tiền hoàn.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Thường xuyên xin nghỉ đột xuất vào thứ sáu hàng tuần.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đã đổi ca cho đồng nghiệp nên không cần nghỉ nữa.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Đăng ký wfh liên tục vào các ngày có lịch thanh tra kho.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Phải lên công ty kiểm hàng trực tiếp cùng kiểm toán.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chi phí tiếp khách vượt định mức thông thường của cấp nhân viên.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Thanh toán nhầm thẻ cá nhân, cần làm lại quy trình.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Đặt phòng họp liên tục nhưng tỉ lệ sử dụng thực tế rất thấp.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Thay đổi địa điểm họp xuống sảnh chung.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Hay dẫn khách ra vào ngoài giờ quy định của tòa nhà.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách đến trễ giờ bảo vệ đã nghỉ, hủy đơn này.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Thường xuyên áp dụng mức chiết khấu tối đa cho khách mới.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách đổi ý không mua gói dịch vụ này nữa.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "thang nao cu den ngay 25 la xin nghi",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nhap nhầm thoi gian xin nghi, de anh sua lai cho.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "cu thu sau la dang ky wfh, ko hop ly",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hom nay phai len cty hop truc tiep voi doi tac.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "hay gui don thanh toan vao nua dem",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "thieu hoa don do chi chua kip chup lai.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "thang nay quen cham cong lien tuc",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hom do may quet the bi loi nen cham thieu.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "dat phong hop toan vao gio cao diem",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "doi lich sang phong lon hon vi doi tac dong nguoi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hay yeu cau hoan tien voi ly do chung chung",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "chua co xac nhan cua ke toan ve khoan nay.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "ap dung chiet khau cao cho khach moi",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "nhap nham ty le chiet khau, de tao lai don khac.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "hay dang ky the khach sat gio",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach doi lich sang tuan sau roi nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "cu gan cuoi tuan la xin nghi dot xuat",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "em quen chua nop giay xac nhan benh vien.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "thang nao cung nghi phep vao dau thang",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "sep goi gap nen phai huy lich nghi hom nay.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay xin wfh vao thu hai",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "phai xuong kho xu ly hang gap voi khach.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "de xuat chi phi hay gui vao sang som",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "anh nham tien te, phai la vnd ko phai usd.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hay quen cham cong vao thu bay",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hom do nghi phep roi nen ko can dieu chinh.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "dat phong lien tuc ca tuan",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "hop xong som nen huy lich dat phong chieu.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hay doi hoan tien phi di lai",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "gui nham bill cua thang truoc.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "hay xin chiet khau vuot han muc",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "khach da doi y khong mua goi nay nua.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "dang ky the cho nhieu khach cung luc",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach hoan cuoc hop den chieu mai.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "hay xin nghi vao giua tuan",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "nhap sai ngay bat dau nghi phep.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "cu den ngay 15 la xin nghi",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "thay doi ke hoach, anh di lam binh thuong.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay dang ky wfh vao thu nam",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "co viec rieng dot xuat phai xin nghi luon.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "gui chi phi vao cuoi tuan",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "thieu chu ky cua truong phong.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hay sua gio cham cong qua nhieu",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "cham cong lai vi thieu anh chup van tay.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "dat phong hop vao buoi chieu",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "doi sang phong nho hon vi it nguoi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "yeu cau hoan tien bat thuong",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "nhap sai ma so giao dich.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "hay xin chiet khau cho khach quen",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "khach da thanh toan du, khong can chiet khau.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "dang ky the khach vao dau tuan",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach bao huy chuyen tham vi ban.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "hay xin nghi vao thu ba",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "gui nham don cua thang truoc.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "cu cuoi thang la xin nghi dai ngay",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "doi lai ngay nghi sang tuan sau.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay dang ky wfh vao thu tu",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "sep yeu cau len cty hop khan.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "gui hoa don thanh toan qua tre",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "hoa don bi rach, dang doi ben ban xuat lai.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "thang nao cu den ngay 28 la thay xin nghi, bat hop ly ghe",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Lan nhap nham nam cua don xin phep, em sua lai giup anh nha.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "cu thu hai dau tuan la quen cham cong, nhin ghet that",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Quen chup man hinh xac nhan, bo sung giup anh nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "thanh nien nay hay dang ky wfh vao thu sau, nghi ngo qua",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hoi chieu nay hop truc tiep nhe, doi lai lich ho anh.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "chi phi tiep khach gi ma cu sat cuoi thang la doi thanh toan",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Thieu hoa don do, gui bu vao he thong nha em.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "thang nao cung thay co khoan hoan tien nho nho, ky cuc",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khach nay da duoc xu ly bu tru rieng roi, huy don nay di.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "hay giam gia sau vao khung gio chieu toi, can xem xet lai",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khach nay doi y khong mua nua, dung chay chinh sach nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "cu dat phong hop lon vao sang thu hai ma ko thay dung",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Doi sang phong nho giup anh vi cuoc hop it nguoi thoi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "hay dan khach la vao gio cao diem, anh khong an tam",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khach doi lich sang tuan sau roi, tat ma the nay di.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "cu sat tet la xin phep dac biet, kho chap nhan ghe",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Anh nham ngay, de anh tao lai don khac cho chuan.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nhan vien nay cu hay nghi dot xuat sau ngay luong ve",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Em nhap thieu giay xac nhan benh vien, nop lai nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "thang nao cung quen cham cong ve, chan that day",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Anh Tu nhac nhieu roi, lan nay thieu chu ky cua truong bo phan.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay xin wfh vao ngay tro giang thieu nguoi, kho hieu",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Chieu nay co viec dot xuat tai van phong, len cong ty nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "cu cuoi tuan la nop bill an uong, kiem tra ky thoi",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Bill nay khong dung quy dinh cong ty, doi lai giup anh.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "nhung khoanhoan tien nho the nay xu ly hoai, met",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khach da nhan duoc hang thay the roi, khong hoan tien nua.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "hay chieu dai doi tac cuoi thang, can siet lai",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Chua co phe duyet cuasep lon cho muc chiet khau nay.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "hay chiem phong hop VIP ca ngay, anh khong thich",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Doi lai thoi gian vi phong do dang sua chua he thong.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "hay lam the cho khach vao khu vuc nhay cam",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thieu chung minh nhan dan cua khach, bo sung nha.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "cu thu bay laxin nghi nua ngay, nghi ngo trat tu",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Huy don vi em da di lam lai binh thuong roi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hay quen check out vao buoi chieu, lanh chanh",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Sai gio cham cong roi, sua lai thanh 17h giup anh.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay xin wfh ca tuan vao mua mua, khong on",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Sep yeu cau tat ca len van phong tuan nay.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "hay nop chi phi taxi vao dem muộn, de y",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Quen dinh kem file hop dong, gui lai nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hay yeu cau bu tien do giao hang cham",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khach da dong y nhan voucher thay vi hoan tien.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "hay xin uu dai dac biet cho khach moi",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khach nay huy hop dong roi, dung ap dung nua.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "hay dat phong hop vao gio nghi trua",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Chuyen sang hop online nhe, khoi can dat phong.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "hay dan nguoi ngoai vao khu vuc ky thuat",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Doi ten khach vi nguoi di khac voi danh sach.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "hay xin nghi viec rieng vao dau thang",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Thay doi ngay nghi sang tuan sau giup em nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "cu gan tet la xin nghi phep nam, kho duyet",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Em da huy lich nay voi phong nhan su roi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hay sua gio vao lam vao thu hai",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "May cham cong bi loi, de anh tu dieu chinh.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay xin wfh vao ngay hop tong ket",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Cuoc hop da bi hoan, em len cong ty binh thuong.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "hay nop hoa don tiep khach le te",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hoa don bi rach, chup lai net hon nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Lan nhap nham ngay nghi, de anh tao lai don khac.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay dang ky wfh vao thu hai de tranh hop",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Em nay doi y xin len van phong lam truc tiep.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "cu cuoi thang la quen cham cong, lap lai hoai nha",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Quen dinh kem anh chup man hinh may cham cong.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "lan nao di an cung khai muc gan toi han, can kiem tra lai",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Thieu hoa so do, em bo sung som nhe.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hay hoan tien cho khach nay vao sat gio chot",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khach vua huy yeu cau hoan tien roi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "chiet khau cao ntn hay ap dung cho don sat thoi han",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Sai ma hop dong nen phai sua lai.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "hay dat phong lon vao gio cao diem roi bo trong",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Doi lai thoi gian hop vi sep ban.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "thuong xuyen xin the khach vao buoi toi muon",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khach doi lich sang sang mai.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "thoi diem nay hay xin nghi dot xuat, anh khong duyet nua",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nhan vien nay da thong bao rut lai don.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nguoi nay hay xin nghi vao thu sáu",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Chuyen sang lam bua khac roi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "cu dau tuan la doi wfh, can nhac ky",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Em xin huy de o lai hop truc tiep.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hay quen cham cong vao ngay giua tuan",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cham nham ca lam viec.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "chi phi tiep khach luon sat muc tran",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Nham tien te VND thanh USD.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hay yeu cau hoan tien nhanh trong dem",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Da xuat hoa so moi thay the.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "hay xin chiet khau lon vao cuoi thang",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Chua co chu ky cua truong phong.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "hay dat phong hop lien tuc ca tuan",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phong bi hong thiet bi.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "thuong lam the khach vao phut chot",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khach khong den nua.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "hay xin nghi vao nhung ngay dac biet",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Gia dinh da giai quyet xong viec.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nguoi nay hay nghi dai ngay bat thuong",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Xin doi lai ngay nghi ngan hon.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay wfh vao nhung ngay co viec quan trong",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Sep yeu cau len cong ty.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hay dieu chinh cham cong nhieu lan trong thang",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Quen chon dung du an.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "chi phi di lai hay bi vuot muc trung binh",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Up nham bill thang truoc.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hay doi hoan tien voi ly do chung chung",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khach da nhan duoc hang.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "hay xin chiet khau cho khach hang moi",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khach doi y khong mua nua.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "hay dat phong vao gio an trua",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Doi sang phong nho hon.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "hay dan nhieu khach vao khu vuc nhay cam",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Sai ho ten khach.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "hay xin nghi dot xuat khi co du an lon",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Da sap xep duoc nguoi thay the.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "hay xin nghi vao thu hai dau tuan",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Con bi sot nen xin nghi bua khac.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay xin wfh vao nhung ngay troi mua",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Xe bi hong nen phai wfh.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "hay thanh toan hoa don vao nua dem",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Thieu chu ky xac nhan cua quan ly.",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nhap nham ngay xin phep, de anh sua lai cho",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "hay dang ky wfh vao thu hai voi thu sau lam",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "em doi y khong wfh nua do phai len cty hop",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "sua cham cong kieu nay thuong xuyen qua, can nhac",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "wen quet van tay buoi sang, da nhac em nay",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "cu cuoi thang la don chi phi cu don dập gửi lên",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "thieu hoa don do, gui lai giup anh nha",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "hay hoan tien cho khach nay bat thuong lam nhe",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "khach huy yeu cau hoan roi, bo don nay nhe",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "chiet khau cao the nay ai ma duyet cho duoc",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "go nham so tien, de tao lai don moi nhe",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "dat phong hop toan vao gio cao diem hang tuan",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "doi lich hop sang chieu mai roi, huy phong nay",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "dang ky the khach cho doi tac nay hoi nhieu",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach hoan lich khong qua nua, huy the nhe",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "nghi phep dac biet vao dip nhạy cảm hay gap",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "em ghi sai loai phep, doi lai giup anh",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "cu gan tet la xin nghi dai ngay, kho cho team",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "chon nham ngay bat dau nghi, cho xoa lam lai",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "th hay xin lam o nha vao thu hai dau tuan",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "co viec dot xuat nen thoi khong wfh nua",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "thang nay quen cham cong hoi nhieu lan day",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "nhap sai khung gio cham cong, de anh chinh lai",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "khoan chi phi nay hay phat sinh bat thuong",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "up thieu chung tu goc roi, bo sung nha",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "doi tac nay hay doi hoan tien le te",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "nhap sai so tai khoan cua khach roi em oi",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "hay xin chiet khấu khung nay cho khach la",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "khach khong mua nua nen huy ma giam gia nay",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "dat phong toan vao thu nam hang tuan",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "doi phong khac rong hon vi dong nguoi hop",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "dang ky the cho khach vao buoi toi hay co",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach doi ten nguoi vao, de tao don moi",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "hay xin nghi viec rieng vao giua tuan",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "em huy don do thay doi ke hoach ca nhan",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "th hay xin nghi vao thu sau hang tuan",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "do sếp giao viec gap nen thoi khong nghi nua",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "cu gan cuoi tuan la lai xin wfh ca ngay",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "sang mai phai len cty gap khach nen huy wfh",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "hay quen check in check out qua vay em",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "ghi nham ly do giai trình, de anh sua lai",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "hoa don tiep khach hay vuot dinh muc",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "nhap sai ma du an, de lam lai don khac",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "cac khoan hoan tien nho le nay hay lap lai",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "da xu ly ngoai he thong, huy don nay di",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "hay yeu cau chiet khau ngoai le cho khach",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "nhap nham phan tram chiet khau, sua lai nhe",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "hay dat phong lon cho it nguoi",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "hop online nen khong can dung phong nua",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "lam the khach vao gio chieu hay bi",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "khach den som hon gio dang ky, da cap the khac",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "xin nghi che do vao ngay dau thang hay thay",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "ngay do co viec nha xong som nen di lam binh thuong",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "nguoi nay hay xin phep vao phut chot",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "em bi nham nam khi nhap don xin phep",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "dang ky wfh dot ngot qua sat ngay",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "tuong nha co tho sua dien nhung huy roi",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "gui don thanh toan vao nua dem hay thay",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini-v2-pair"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "nhap trung hoa don da thanh toan thang truoc",
+   "label": "ONE_OFF",
+   "source": "gemini-v2-pair"
+  }
+ ]
+}

@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from routers import (
     auto_approve,
+    bad_case_learning,
     classify,
     mock_context,
     ocr,
@@ -171,6 +172,9 @@ app.include_router(
 )
 app.include_router(
     remediation.router, prefix="/ai/remediation", tags=["Remediation (bad cases)"]
+)
+app.include_router(
+    bad_case_learning.router, prefix="/ai/bad-case", tags=["Bad case learning"]
 )
 
 

@@ -21,12 +21,13 @@ except (ImportError, AttributeError):
 
 from fastapi import APIRouter
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 try:
+    import bad_case_reason
     import bad_cases
 except ImportError:
-    from ai_service import bad_cases
+    from ai_service import bad_case_reason, bad_cases
 
 from .mock_context import lookup_facility_available, lookup_leave_balance
 from .policy import PolicySignals, apply_policy, matched_escalation, policy_citations
@@ -38,6 +39,27 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
+
+
+class LearnedBadCase(BaseModel):
+    code: str = Field(..., pattern=r"^BC_[A-Z0-9_]{2,57}$")
+    title: str = Field(..., max_length=200)
+    rationale: str = Field("", max_length=2000)
+    request_types: list[str] = Field(..., min_length=1, max_length=60)
+    condition: dict
+    condition_text: str | None = Field(None, max_length=1000)
+    risk: int = Field(3, ge=1, le=5)
+    escalate_to: str = Field("B", pattern=r"^[BC]$")
+
+    @field_validator("condition")
+    @classmethod
+    def _valid_condition(cls, value: dict) -> dict:
+        return bad_case_reason.validate_condition(value)
+
+
+class BadCaseOverride(BaseModel):
+    disabled: bool = False
+    extra_types: list[str] = Field(default_factory=list, max_length=60)
 
 
 class AutoApproveInput(BaseModel):
@@ -82,6 +104,14 @@ class AutoApproveInput(BaseModel):
     off_hours_count_7d: int = Field(0, ge=0, le=10_000)
     uncovered_work: int = Field(0, ge=0, le=10_000)
     handover_named: bool = False
+    # Đặc trưng của chính hồ sơ (bad case học từ lý do thu hồi, bad_case_reason.FEATURES).
+    notice_hours: float | None = Field(None, ge=-100_000, le=100_000)
+    start_day_of_month: int | None = Field(None, ge=1, le=31)
+    start_weekday: int | None = Field(None, ge=1, le=7)
+    submit_hour: int | None = Field(None, ge=0, le=23)
+    # Bảng eas.bad_case (migration 25): bad case học được đang ACTIVE và điều chỉnh danh mục có sẵn.
+    learned_bad_cases: list[LearnedBadCase] = Field(default_factory=list, max_length=200)
+    bad_case_overrides: dict[str, BadCaseOverride] = Field(default_factory=dict)
 
     def policy_signals(self) -> PolicySignals:
         return PolicySignals(
@@ -274,7 +304,11 @@ async def evaluate_auto_approve(body: AutoApproveInput):
     signals = body.policy_signals()
 
     # --- Gate -1: Suy luận tình huống xấu từ ngữ cảnh vận hành ---
-    bad = bad_cases.evaluate(bad_cases.Signals.from_input(body))
+    bad = bad_cases.evaluate(
+        bad_cases.Signals.from_input(body),
+        learned=[c.model_dump() for c in body.learned_bad_cases],
+        overrides={k: v.model_dump() for k, v in body.bad_case_overrides.items()},
+    )
     for case in bad.cases:
         detail_reasons.append(f"⛔ [{case['code']}] {case['message']}")
     if bad.blocked:
@@ -341,6 +375,8 @@ async def evaluate_auto_approve(body: AutoApproveInput):
             "code": c["code"],
             "escalate_to": c.get("escalate_to"),
             "text": c["message"],
+            "why": c.get("rationale"),
+            "origin": c.get("source"),
         }
         for c in bad.cases
         if c.get("escalate_to")
