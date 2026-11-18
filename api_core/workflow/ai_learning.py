@@ -610,7 +610,9 @@ def apply_to_ai(policy: dict[str, Any]) -> dict[str, Any]:
 
     try:
         with _ai_http() as client:
-            pushed = client.post("/ai/policy/rules", json=policy)
+            pushed = client.post(
+                "/ai/policy/rules", json={"version": policy["version"], "rules": policy["rules"]}
+            )
             if pushed.status_code >= 500:
                 raise TransientLearningError(f"AI service HTTP {pushed.status_code}")
             if pushed.status_code != 200:
@@ -652,7 +654,10 @@ def _restore_previous(previous_policy: dict[str, Any]) -> None:
         return
     try:
         with _ai_http() as client:
-            client.post("/ai/policy/rules", json=previous_policy)
+            client.post(
+                "/ai/policy/rules",
+                json={"version": previous_policy["version"], "rules": previous_policy.get("rules") or []},
+            )
     except Exception:
         logger.warning("ai_policy_restore_failed", exc_info=True)
 
@@ -1101,11 +1106,26 @@ def process_job(job: dict[str, Any], owner: str) -> str:
             reviewed = []
         seen = {r["id"] for r in manual}
         seen_reviewed = seen | {r["id"] for r in compiled}
+        # Văn bản mới thay thế luật tương tự / ngược chiều của văn bản cũ (regulation_precedence): 40 tr -> 50 tr.
+        from api_core.workflow import regulation_precedence as precedence
+
+        codes = sorted({r["code"] for r in regulations}, key=len, reverse=True)
+
+        def _tag(rule: dict[str, Any]) -> dict[str, Any]:
+            base = rule["id"].removeprefix("REV-")
+            code = next((c for c in codes if base.startswith(f"{c}-")), None)
+            return {**rule, "source_code": code} if code else rule
+
+        regulation_rules = [_tag(r) for r in compiled if r["id"] not in seen] + [
+            _tag(r) for r in reviewed if r["id"] not in seen_reviewed
+        ]
+        origins = (previous["policy"] or {}).get("origins") or {}
+        kept, superseded = precedence.resolve(regulation_rules, origins)
         policy = {
             "version": f"v{version}",
-            "rules": manual
-            + [r for r in compiled if r["id"] not in seen]
-            + [r for r in reviewed if r["id"] not in seen_reviewed],
+            "rules": manual + kept,
+            "origins": precedence.next_origins(regulation_rules, origins, version),
+            "superseded": superseded,
         }
         snapshot = [
             {
@@ -1130,6 +1150,13 @@ def process_job(job: dict[str, Any], owner: str) -> str:
             rules=policy["rules"],
             type_names={t.code: t.name for t in types},
         )
+        before = {(e["old_rule"], e["new_rule"]) for e in (previous["policy"] or {}).get("superseded") or []}
+        names = {t.code: t.name for t in types}
+        announcement["changes"] = [
+            {"kind": "RULE_SUPERSEDED", "title": precedence.describe(e, names)}
+            for e in superseded
+            if (e["old_rule"], e["new_rule"]) not in before
+        ] + list(announcement.get("changes") or [])
         applied = _finish_applied(
             job,
             owner,

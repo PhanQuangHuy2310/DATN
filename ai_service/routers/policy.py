@@ -52,6 +52,9 @@ class PolicyRule(BaseModel):
     auto_approve: bool | None = None
     escalate_to: str | None = None
     approvers: list[str] | None = Field(None, max_length=6)
+    # Luật áp cho mọi loại nhưng đã bị quy định mới thay thế ở vài loại (api_core regulation_precedence).
+    except_types: list[str] = Field(default_factory=list, max_length=60)
+    source_code: str | None = Field(None, max_length=30)
 
     @model_validator(mode="after")
     def has_effect(self):
@@ -220,6 +223,13 @@ def _checks(
     return out
 
 
+def covers(rule: PolicyRule, request_type: str) -> bool:
+    """Luật có áp cho loại yêu cầu này không (đúng loại hoặc mọi loại, trừ loại đã bị quy định mới thay thế)."""
+    if rule.request_type and rule.request_type != request_type:
+        return False
+    return request_type not in rule.except_types
+
+
 def rule_applies(
     rule: PolicyRule,
     request_type: str,
@@ -227,7 +237,7 @@ def rule_applies(
     days: int,
     sig: PolicySignals | None,
 ) -> bool:
-    if rule.request_type and rule.request_type != request_type:
+    if not covers(rule, request_type):
         return False
     return all(
         hit for hit, _text in _checks(rule, amount, days, sig or PolicySignals())
@@ -363,7 +373,7 @@ def policy_citations(
     citations = [
         _citation(rule, policy.version, amount, days, signals)
         for rule in policy.rules
-        if not rule.request_type or rule.request_type == request_type
+        if covers(rule, request_type)
     ]
     citations.sort(key=lambda c: not c["applies"])
     return citations

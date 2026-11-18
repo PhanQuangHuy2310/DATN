@@ -10,6 +10,7 @@ if REPO not in sys.path:
     sys.path.insert(0, REPO)
 
 from api_core.workflow.regulation_compiler import RequestTypeName
+from api_core.workflow.regulation_precedence import next_origins, resolve
 from api_core.workflow.regulation_rejection import changes
 from api_core.workflow.regulation_validation import validate
 
@@ -56,11 +57,27 @@ class ValidateTests(unittest.TestCase):
         self.assertIn("Điều 2", error["message"])
         self.assertEqual(error["related"]["article"], "Điều 2")
 
-    def test_contradiction_with_regulation_in_force(self):
+    def test_opposite_rule_in_another_regulation_is_replaced_not_blocked(self):
+        # Quy định mới thắng quy định cũ: không còn là lỗi, AI báo sẽ thay thế điều nào.
         result = self.run_check("Điều 1: Yêu cầu Làm việc từ xa (WFH) được tự động duyệt.",
                                 others=[{"code": "QC05", "content": qc05()}])
-        self.assertEqual(kinds(result), ["CONTRADICTION"])
-        self.assertIn("QC05", result["errors"][0]["message"])
+        self.assertTrue(result["ok"], result["errors"])
+        self.assertEqual(kinds(result, "supersedes"), ["SUPERSEDES"])
+        self.assertIn("Điều 5 của QC05", result["supersedes"][0]["message"])
+
+    def test_higher_threshold_replaces_the_old_one(self):
+        old = {"code": "QD-CU", "content": "Điều 1: Yêu cầu Thanh toán chi phí từ 40 triệu đồng trở lên bắt buộc "
+                                           "Kế toán phê duyệt thủ công."}
+        result = self.run_check("Điều 1: Yêu cầu Thanh toán chi phí từ 50 triệu đồng trở lên bắt buộc Giám đốc phê "
+                                "duyệt thủ công.", others=[old])
+        self.assertTrue(result["ok"])
+        self.assertIn("49.999.999 thay cho số tiền > 39.999.999", result["supersedes"][0]["message"])
+
+    def test_different_condition_kind_does_not_replace(self):
+        old = {"code": "QD-CU", "content": "Yêu cầu Nghỉ phép từ 5 ngày trở lên bắt buộc duyệt thủ công."}
+        result = self.run_check("Yêu cầu Thanh toán chi phí từ 50 triệu đồng trở lên bắt buộc duyệt thủ công.",
+                                others=[old])
+        self.assertEqual(result["supersedes"], [])
 
     def test_broken_encoding_and_lost_diacritics_are_blocked(self):
         mojibake = "Äiá»u 1: YÃªu cáº§u Nghá»‰ phÃ©p tá»« 5 ngÃ y báº¯t buá»™c duyá»‡t thá»§ cÃ´ng."
@@ -76,13 +93,60 @@ class ValidateTests(unittest.TestCase):
         dup = self.run_check("Yêu cầu Hoàn tiền / Đền bù có giá trị trên 2 triệu đồng không được tự động duyệt.",
                              others=[{"code": "QC05", "content": qc05()}])
         self.assertTrue(dup["ok"])
-        self.assertIn("DUPLICATE", kinds(dup, "warnings"))
+        self.assertIn("SUPERSEDES", kinds(dup, "supersedes"))
         unparsed = self.run_check("Phê duyệt chiết khấu thương mại đặc biệt từ 15% trở lên phải qua Ban Giám đốc.")
         self.assertTrue(unparsed["ok"])
         self.assertTrue(any(k in ("UNPARSED", "NO_CONTROL") for k in kinds(unparsed, "warnings")))
 
     def test_empty_content_is_an_error(self):
         self.assertIn("EMPTY", kinds(self.run_check("   ")))
+
+
+def rule(rid, text, **kw):
+    return {"id": rid, "description": text, "source_code": rid.rsplit("-", 2)[0], **kw}
+
+
+class PrecedenceTests(unittest.TestCase):
+    """Quy định mới thắng quy định cũ tương tự (40 tr -> 50 tr), từng câu, chỉ trong phạm vi bị chồng."""
+
+    OLD40 = rule("QDCU-1-EXPENSE_CLAIM", "Thanh toán từ 40 triệu duyệt thủ công", request_type="EXPENSE_CLAIM",
+                 amount_gt=39_999_999, auto_approve=False)
+    LEAVE = rule("QDCU-2-LEAVE", "Nghỉ phép từ 5 ngày duyệt thủ công", request_type="LEAVE", days_gt=4,
+                 auto_approve=False)
+    ALL100 = rule("REGALL-1-X", "Mọi yêu cầu trên 100 triệu duyệt thủ công", amount_gt=100_000_000,
+                  auto_approve=False)
+    NEW50 = rule("QDMOI-1-EXPENSE_CLAIM", "Thanh toán từ 50 triệu Giám đốc duyệt", request_type="EXPENSE_CLAIM",
+                 amount_gt=49_999_999, auto_approve=False, approvers=["DIRECTOR"])
+
+    def origins(self, *rules, version="3.0"):
+        return next_origins(list(rules), {}, version)
+
+    def test_new_threshold_drops_the_old_one_and_narrows_general_rule(self):
+        kept, sup = resolve([self.OLD40, self.LEAVE, self.ALL100, self.NEW50],
+                            self.origins(self.OLD40, self.LEAVE, self.ALL100))
+        ids = {r["id"]: r for r in kept}
+        self.assertNotIn("QDCU-1-EXPENSE_CLAIM", ids)
+        self.assertIn("QDCU-2-LEAVE", ids)  # khác kiểu điều kiện: giữ
+        self.assertEqual(ids["REGALL-1-X"]["except_types"], ["EXPENSE_CLAIM"])
+        self.assertEqual({(e["old_code"], e["scope"]) for e in sup}, {("QDCU", "ALL"), ("REGALL", "TYPE")})
+
+    def test_without_a_newer_sentence_nothing_is_replaced(self):
+        kept, sup = resolve([self.OLD40, self.ALL100], self.origins(self.OLD40, self.ALL100))
+        self.assertEqual(sup, [])
+        self.assertEqual(len(kept), 2)
+
+    def test_rules_of_the_same_regulation_never_replace_each_other(self):
+        same = rule("QDCU-3-EXPENSE_CLAIM", "Thanh toán từ 60 triệu duyệt", request_type="EXPENSE_CLAIM",
+                    amount_gt=60_000_000, auto_approve=False)
+        _kept, sup = resolve([self.OLD40, same], self.origins(self.OLD40))
+        self.assertEqual(sup, [])
+
+    def test_older_sentence_keeps_its_age_when_other_sentences_change(self):
+        origins = self.origins(self.OLD40, version="3.0")
+        origins.update(self.origins(self.NEW50, version="5.0"))
+        # Văn bản cũ được sửa ở câu khác (lên phiên bản 7.0) nhưng câu 40 tr vẫn là câu cũ -> 50 tr vẫn thắng.
+        _kept, sup = resolve([self.OLD40, self.NEW50, self.LEAVE], origins)
+        self.assertEqual([e["old_rule"] for e in sup], ["QDCU-1-EXPENSE_CLAIM"])
 
 
 class ChangesTests(unittest.TestCase):
