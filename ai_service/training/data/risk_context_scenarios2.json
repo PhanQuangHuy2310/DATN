@@ -1,0 +1,327 @@
+{
+ "about": "Bộ kịch bản ngữ cảnh thứ 2 (19/11/2026), băm SHA-256 TRƯỚC khi huấn luyện lại lần 2. Khác bộ 1: risk_weight lấy đúng theo catalog (bộ 1 dùng LEAVE=2 theo ví dụ của thầy, ngoài phân phối train); nhiều ca ranh giới (40% vs 39%, lần 4 vs lần 3, đã có người làm thay, kẹp ở 5) và ngữ cảnh trên loại KHÔNG thuộc nhóm vắng mặt (phải không đổi). Đáp án tính theo luật gán nhãn train.py (không nhiễu).",
+ "policy": "Như bộ 1.",
+ "scenarios": [
+  {
+   "id": "RD01",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {},
+   "expected": 1,
+   "note": "nghỉ bình thường"
+  },
+  {
+   "id": "RD02",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "pending_work_due_24h": 1,
+    "handover_uncovered": 1
+   },
+   "expected": 4,
+   "note": "1 việc hết hạn trong 24h, không ai làm thay"
+  },
+  {
+   "id": "RD03",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "pending_work_due_24h": 3,
+    "handover_uncovered": 0
+   },
+   "expected": 1,
+   "note": "có việc gấp nhưng đã có người làm thay"
+  },
+  {
+   "id": "RD04",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "work_due_in_absence": 2,
+    "handover_uncovered": 1
+   },
+   "expected": 2,
+   "note": "việc đến hạn trong lúc nghỉ, không ai làm thay"
+  },
+  {
+   "id": "RD05",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "pending_work_due_24h": 1,
+    "handover_uncovered": 1,
+    "work_due_in_absence": 2
+   },
+   "expected": 4,
+   "note": "cả hai loại việc: chỉ tính mức nặng hơn"
+  },
+  {
+   "id": "RD06",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "team_absence_ratio": 0.4
+   },
+   "expected": 2,
+   "note": "đồng nghiệp vắng đúng 40% (ranh giới)"
+  },
+  {
+   "id": "RD07",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "team_absence_ratio": 0.39
+   },
+   "expected": 1,
+   "note": "đồng nghiệp vắng 39% (dưới ngưỡng)"
+  },
+  {
+   "id": "RD08",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "same_type_count_30d": 4
+   },
+   "expected": 2,
+   "note": "lần thứ 4 trong 30 ngày (ranh giới)"
+  },
+  {
+   "id": "RD09",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "same_type_count_30d": 3
+   },
+   "expected": 1,
+   "note": "lần thứ 3 (dưới ngưỡng)"
+  },
+  {
+   "id": "RD10",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "pending_work_due_24h": 2,
+    "handover_uncovered": 1,
+    "team_absence_ratio": 0.5,
+    "same_type_count_30d": 5
+   },
+   "expected": 5,
+   "note": "dồn mọi cờ: kẹp ở 5"
+  },
+  {
+   "id": "RD11",
+   "request_type": "LEAVE",
+   "risk_weight": 1,
+   "context": {
+    "team_absence_ratio": 0.6,
+    "same_type_count_30d": 6
+   },
+   "expected": 3,
+   "note": "vắng đông + nghỉ nhiều lần"
+  },
+  {
+   "id": "RD12",
+   "request_type": "WFH_REQ",
+   "risk_weight": 1,
+   "context": {
+    "pending_work_due_24h": 2,
+    "handover_uncovered": 1
+   },
+   "expected": 4,
+   "note": "WFH khi giữ việc gấp không ai làm thay"
+  },
+  {
+   "id": "RD13",
+   "request_type": "WFH_REQ",
+   "risk_weight": 1,
+   "context": {
+    "same_type_count_30d": 8
+   },
+   "expected": 2,
+   "note": "WFH lần thứ 8"
+  },
+  {
+   "id": "RD14",
+   "request_type": "WFH_REQ",
+   "risk_weight": 1,
+   "context": {
+    "work_due_in_absence": 1,
+    "handover_uncovered": 1,
+    "team_absence_ratio": 0.45
+   },
+   "expected": 3,
+   "note": "WFH, việc đến hạn + vắng đông"
+  },
+  {
+   "id": "RD15",
+   "request_type": "LEAVE_SPECIAL",
+   "risk_weight": 2,
+   "context": {},
+   "expected": 2,
+   "note": "nghỉ đặc biệt bình thường"
+  },
+  {
+   "id": "RD16",
+   "request_type": "LEAVE_SPECIAL",
+   "risk_weight": 2,
+   "context": {
+    "pending_work_due_24h": 1,
+    "handover_uncovered": 1
+   },
+   "expected": 4,
+   "note": "nghỉ đặc biệt khi giữ việc gấp"
+  },
+  {
+   "id": "RD17",
+   "request_type": "LEAVE_SPECIAL",
+   "risk_weight": 2,
+   "context": {
+    "work_due_in_absence": 3,
+    "handover_uncovered": 1
+   },
+   "expected": 3,
+   "note": "nghỉ đặc biệt, việc đến hạn trong lúc nghỉ"
+  },
+  {
+   "id": "RD18",
+   "request_type": "BUSINESS_TRIP",
+   "risk_weight": 3,
+   "context": {},
+   "expected": 3,
+   "note": "công tác bình thường"
+  },
+  {
+   "id": "RD19",
+   "request_type": "BUSINESS_TRIP",
+   "risk_weight": 3,
+   "context": {
+    "pending_work_due_24h": 1,
+    "handover_uncovered": 1
+   },
+   "expected": 5,
+   "note": "công tác khi giữ việc gấp không ai làm thay"
+  },
+  {
+   "id": "RD20",
+   "request_type": "BUSINESS_TRIP",
+   "risk_weight": 3,
+   "context": {
+    "work_due_in_absence": 1,
+    "handover_uncovered": 1
+   },
+   "expected": 4,
+   "note": "công tác, việc đến hạn trong chuyến đi"
+  },
+  {
+   "id": "RD21",
+   "request_type": "BUSINESS_TRIP",
+   "risk_weight": 3,
+   "context": {
+    "team_absence_ratio": 0.5
+   },
+   "expected": 4,
+   "note": "công tác khi nửa nhóm vắng"
+  },
+  {
+   "id": "RD22",
+   "request_type": "BUSINESS_TRIP",
+   "risk_weight": 3,
+   "context": {
+    "pending_work_due_24h": 4,
+    "handover_uncovered": 0
+   },
+   "expected": 3,
+   "note": "công tác, việc gấp đã có người làm thay"
+  },
+  {
+   "id": "RD23",
+   "request_type": "ATTENDANCE_ADJUSTMENT",
+   "risk_weight": 1,
+   "context": {
+    "same_type_count_30d": 4
+   },
+   "expected": 2,
+   "note": "sửa công lần thứ 4"
+  },
+  {
+   "id": "RD24",
+   "request_type": "ATTENDANCE_ADJUSTMENT",
+   "risk_weight": 1,
+   "context": {
+    "pending_work_due_24h": 2,
+    "handover_uncovered": 1
+   },
+   "expected": 4,
+   "note": "sửa công khi giữ việc gấp (nhóm vắng mặt, luật vẫn áp)"
+  },
+  {
+   "id": "RD25",
+   "request_type": "OVERTIME_REQ",
+   "risk_weight": 2,
+   "context": {
+    "pending_work_due_24h": 3,
+    "handover_uncovered": 1,
+    "team_absence_ratio": 0.7
+   },
+   "expected": 2,
+   "note": "không thuộc nhóm vắng mặt: ngữ cảnh không có tác dụng"
+  },
+  {
+   "id": "RD26",
+   "request_type": "EXPENSE_CLAIM",
+   "risk_weight": 3,
+   "context": {
+    "pending_work_due_24h": 2,
+    "handover_uncovered": 1,
+    "same_type_count_30d": 6
+   },
+   "expected": 3,
+   "note": "thanh toán: ngữ cảnh không có tác dụng"
+  },
+  {
+   "id": "RD27",
+   "request_type": "TRAINING_COURSE",
+   "risk_weight": 2,
+   "context": {
+    "same_type_count_30d": 5,
+    "team_absence_ratio": 0.5
+   },
+   "expected": 2,
+   "note": "đào tạo: ngữ cảnh không có tác dụng"
+  },
+  {
+   "id": "RD28",
+   "request_type": "ROOM_BOOKING",
+   "risk_weight": 1,
+   "context": {
+    "pending_work_due_24h": 2,
+    "handover_uncovered": 1
+   },
+   "expected": 1,
+   "note": "đặt phòng: ngữ cảnh không có tác dụng"
+  },
+  {
+   "id": "RD29",
+   "request_type": "PROMOTION_REQ",
+   "risk_weight": 4,
+   "context": {
+    "work_due_in_absence": 2,
+    "handover_uncovered": 1
+   },
+   "expected": 4,
+   "note": "thăng chức: ngữ cảnh không có tác dụng"
+  },
+  {
+   "id": "RD30",
+   "request_type": "SALARY_ADJUSTMENT",
+   "risk_weight": 5,
+   "context": {
+    "pending_work_due_24h": 1,
+    "handover_uncovered": 1,
+    "team_absence_ratio": 0.5
+   },
+   "expected": 5,
+   "note": "điều chỉnh lương: đã ở mức 5"
+  }
+ ]
+}
