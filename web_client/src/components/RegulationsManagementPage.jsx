@@ -5,7 +5,7 @@ import { api, peekResource, rememberResource } from "../api.js";
 import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
 import AiLearningPanel from "./AiLearningPanel.jsx";
-import { RegulationCheckList, RejectedRegulations } from "./RegulationCheck.jsx";
+import { RegulationCheckList, RejectedRegulations, SupersededNotes } from "./RegulationCheck.jsx";
 
 const CATEGORIES = [
   "Tất cả",
@@ -390,6 +390,7 @@ export function RegulationsManagementPage() {
                     <span className="reg-code">{reg.code}</span>
                     <span className="reg-category">{reg.category}</span>
                     <span className="reg-version">v{reg.version_string || "1.0"}</span>
+                    <SupersededNotes regulation={reg} compact />
                   </div>
                   <div className="regulation-actions">
                     <button
@@ -737,6 +738,7 @@ export function RegulationsManagementPage() {
                 <h4>Nội dung điều khoản hiện tại (Phiên bản v{viewingRegulation.version_string || "1.0"})</h4>
                 <div className="regulation-full-text">{viewingRegulation.content}</div>
               </div>
+              <SupersededNotes regulation={viewingRegulation} />
 
               {viewingRegulation.history && viewingRegulation.history.length > 0 && (
                 <div className="regulation-history-section">

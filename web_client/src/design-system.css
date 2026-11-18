@@ -5134,3 +5134,10 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
     box-shadow: none; transform: none; outline: none; cursor: default;
   }
 }
+
+/* Quy định mới thay thế quy định cũ tương tự (regulation_precedence) */
+.reg-check-item.info { border-left-color: var(--ds-primary, #2563eb); }
+.reg-superseded-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--ds-line); color: var(--ds-ink); }
+.reg-superseded { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--ds-line); border-radius: var(--ds-radius); }
+.reg-superseded h4 { margin: 0 0 6px; }
+.reg-superseded ul { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
