@@ -1,6 +1,7 @@
 r"""So sánh mô hình rủi ro TRƯỚC và SAU khi thêm đặc trưng ngữ cảnh trên 24 kịch bản đã băm.
 
   ai_service\.venv-ai\Scripts\python ai_service\training\eval_risk_context.py --before <thư mục model cũ>
+  ... --set 2 --json ai_service/training/data/risk_context_results2.json   # bộ thứ 2 (19/11, ranh giới)
 
 Kịch bản: training/data/risk_context_scenarios.json (băm trước khi huấn luyện lại). Mô hình cũ không có
 cột ngữ cảnh nên chỉ thấy trọng số gốc; đây đúng là điểm thầy góp ý.
@@ -56,10 +57,12 @@ def predict(folder: Path, scenario: dict) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--before", required=True, help="thư mục chứa mô hình trước khi thêm ngữ cảnh")
+    ap.add_argument("--set", choices=("1", "2"), default="1", help="bộ kịch bản: 1 (18/11) hoặc 2 (19/11)")
     ap.add_argument("--json", default=str(DATA / "risk_context_results.json"))
     a = ap.parse_args()
-    raw = (DATA / "risk_context_scenarios.json").read_bytes()
-    want = (DATA / "risk_context_scenarios.sha256").read_text(encoding="ascii").split()[0]
+    stem = "risk_context_scenarios" + ("" if a.set == "1" else a.set)
+    raw = (DATA / f"{stem}.json").read_bytes()
+    want = (DATA / f"{stem}.sha256").read_text(encoding="ascii").split()[0]
     if hashlib.sha256(raw).hexdigest() != want:
         sys.exit("SHA-256 kịch bản đã đổi; từ chối chấm.")
     scenarios = json.loads(raw)["scenarios"]
