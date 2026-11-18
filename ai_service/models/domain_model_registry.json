@@ -1,5 +1,5 @@
 {
-  "pipeline_version": "catalog-v2-unified-1",
+  "pipeline_version": "catalog-v2-public-2-context",
   "type_domains": {
     "ACCESS": "it",
     "ACCESS_FACILITY": "master",
@@ -92,8 +92,8 @@
   "finance": {
     "model_file": "risk_model_finance.pkl",
     "features_file": "feature_cols_finance.json",
-    "accuracy": 0.9537,
-    "f1_macro": 0.9465,
+    "accuracy": 0.9588,
+    "f1_macro": 0.9549,
     "rows": 28500,
     "request_types": [
       "ADVANCE_LARGE",
@@ -120,8 +120,8 @@
   "hr": {
     "model_file": "risk_model_hr.pkl",
     "features_file": "feature_cols_hr.json",
-    "accuracy": 0.9742,
-    "f1_macro": 0.9741,
+    "accuracy": 0.9597,
+    "f1_macro": 0.961,
     "rows": 24000,
     "request_types": [
       "ATTENDANCE_ADJUSTMENT",
@@ -145,8 +145,8 @@
   "it": {
     "model_file": "risk_model_it.pkl",
     "features_file": "feature_cols_it.json",
-    "accuracy": 0.9753,
-    "f1_macro": 0.9723,
+    "accuracy": 0.9733,
+    "f1_macro": 0.9717,
     "rows": 13500,
     "request_types": [
       "ACCESS",

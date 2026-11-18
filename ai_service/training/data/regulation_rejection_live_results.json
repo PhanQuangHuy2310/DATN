@@ -1,0 +1,32 @@
+[
+ {
+  "code": "RV-01",
+  "seconds": 0.8,
+  "pass": true,
+  "evidence": "422, AI: Mâu thuẫn ở Hoàn tiền / Đền bù: Điều 1 cho AI tự duyệt (số tiền > 5.000.000), nhưng Điều 2 bắt duyệt thủ công (số tiền > 3.000.000). Hồ sơ thỏa cả hai điều kiện…; không lưu, không khoá"
+ },
+ {
+  "code": "RV-02",
+  "seconds": 1.0,
+  "pass": true,
+  "evidence": "hỏng mã hóa -> Chữ tiếng Việt bị hỏng mã hóa (ví dụ \"Ä‘\" thay cho \"đ\"): lưu lại file dạng UTF-8 rồi dán l…; văn bản đúng -> ok, hiểu 1 luật"
+ },
+ {
+  "code": "RV-03",
+  "seconds": 3.7,
+  "pass": true,
+  "evidence": "lượt học trả lại QD-KT-2CDEA (CREATE): QD-KT-2CDEA: Điều 1: Mâu thuẫn ở Hoàn tiền / Đền bù: Điều 1 cho AI tự duyệt (số tiền > 5.000.000), nhưng Điều 2 bắt duyệ…; báo admin “Quy định QD-KT-2CDEA bị trả lại: văn bản có lỗi”; mở khoá, bộ luật giữ nguyên; lịch sử: “Trả lại quy định mới QD-KT-2CDEA (bản 28.0 có lỗi), gỡ khỏi hiệu lực”"
+ },
+ {
+  "code": "RV-04",
+  "seconds": 12.6,
+  "pass": true,
+  "evidence": "nạp lại QD-KT-2CDEA -> APPLIED, bản bị trả lại RESOLVED, luật có hiệu lực"
+ },
+ {
+  "code": "RV-05",
+  "seconds": 118.8,
+  "pass": true,
+  "evidence": "AI tắt -> FAILED sau mọi lần thử; nội dung QD-KT-2CDEA quay về bản đã áp dụng; bản sửa được giữ (TECHNICAL, OPEN) để nạp lại; đã mở khoá"
+ }
+]

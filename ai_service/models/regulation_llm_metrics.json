@@ -1,0 +1,3579 @@
+{
+ "engine": "regulation-llm-1",
+ "model": "gemini-3.5-flash-lite",
+ "run_at": "2026-11-17 18:50:02 +0700",
+ "prompt_template_sha256": "381e30b1dc9b3dfe29067abc252152149f09f4a5b4fe732002bbef9a5c7b5ddb",
+ "total": {
+  "llm": {
+   "scenarios_pass": 25,
+   "scenarios": 30,
+   "required_changes_found": "21/22",
+   "kept_unchanged": "7/9",
+   "no_change_scenarios_ok": "1/3",
+   "proposals_total": 29,
+   "proposals_outside_answer_key": 4
+  },
+  "process_profile": {
+   "scenarios_pass": 18,
+   "scenarios": 30,
+   "required_changes_found": "10/22",
+   "kept_unchanged": "9/9",
+   "no_change_scenarios_ok": "3/3",
+   "proposals_total": 18,
+   "proposals_outside_answer_key": 7
+  },
+  "rules": {
+   "scenarios_pass": 17,
+   "scenarios": 30,
+   "required_changes_found": "9/22",
+   "kept_unchanged": "8/9",
+   "no_change_scenarios_ok": "3/3",
+   "proposals_total": 17,
+   "proposals_outside_answer_key": 7
+  }
+ },
+ "by_set": {
+  "QD-01..10": {
+   "llm": {
+    "summary": {
+     "scenarios_pass": 8,
+     "scenarios": 10,
+     "required_changes_found": "8/8",
+     "kept_unchanged": "4/5",
+     "no_change_scenarios_ok": "0/1",
+     "proposals_total": 12,
+     "proposals_outside_answer_key": 2
+    },
+    "rows": [
+     {
+      "id": "QD-01",
+      "title": "Nghiệm thu bắt buộc khi mua sắm",
+      "related": [
+       "EQUIPMENT",
+       "PURCHASE_REQUEST",
+       "SUPPLIER_ONBOARDING",
+       "EQUIPMENT_BORROW",
+       "LEAVE_SPECIAL",
+       "RESIGNATION",
+       "EXPENSE_CLAIM",
+       "TRAINING_COURSE",
+       "RESOURCE_REVOKE",
+       "ASSET_DISPOSAL",
+       "SPECIAL_DISCOUNT",
+       "ROOM_BOOKING"
+      ],
+      "proposals": [
+       {
+        "code": "PURCHASE_REQUEST",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Quy định mới yêu cầu bổ sung bước kiểm tra/nghiệm thu kết quả trước khi thanh toán, làm tăng mức độ kiểm soát từ luồng B (3 bước) lên luồng C (4 bước) và tăng trọng số rủi ro."
+        ]
+       },
+       {
+        "code": "EQUIPMENT",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "Quy định mới yêu cầu bổ sung bước nghiệm thu chặt chẽ từ người sử dụng trước khi thanh toán, củng cố và nâng mức kiểm soát lên cấp cao nhất của loại tài sản/thiết bị."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "PURCHASE_REQUEST",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       },
+       {
+        "kind": "giữ nguyên",
+        "code": "EQUIPMENT",
+        "ok": false,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        }
+       },
+       {
+        "kind": "giữ nguyên",
+        "code": "LAPTOP_PROVISION",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-02",
+      "title": "Bảo vệ dữ liệu cá nhân khách hàng",
+      "related": [
+       "NDA_PRIVACY_CLEARANCE",
+       "ACCESS",
+       "LEAVE",
+       "DATA_UAT_EXPORT",
+       "RECRUITMENT_REQ",
+       "INTERNAL_TRANSFER",
+       "SUPPLIER_ONBOARDING",
+       "LEAVE_SPECIAL",
+       "MARKETING_CAMPAIGN",
+       "BUSINESS_TRIP",
+       "ACCESS_FACILITY",
+       "TRAINING_COURSE"
+      ],
+      "proposals": [
+       {
+        "code": "NDA_PRIVACY_CLEARANCE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "Liên quan đến việc chia sẻ dữ liệu đối tác và bảo mật thông tin cá nhân khách hàng, cần nâng lên luồng C và trọng số tối đa theo quy định mới về Nghị định 13/2023/NĐ-CP."
+        ]
+       },
+       {
+        "code": "ACCESS",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "Yêu cầu cấp tài khoản & quyền truy cập có thể bao gồm quyền truy cập dữ liệu cá nhân khách hàng, cần được kiểm soát chặt theo luồng C và trọng số rủi ro cao."
+        ]
+       },
+       {
+        "code": "DATA_UAT_EXPORT",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "Yêu cầu trích xuất dữ liệu trực tiếp liên quan đến hành vi trích xuất dữ liệu ra ngoài hệ thống, bắt buộc nâng lên luồng C (4 bước) và trọng số 5."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "DATA_UAT_EXPORT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "related": true
+       },
+       {
+        "kind": "phải đổi",
+        "code": "NDA_PRIVACY_CLEARANCE",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "related": true
+       },
+       {
+        "kind": "giữ nguyên",
+        "code": "PROD_DATA_ACCESS",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [
+       "ACCESS"
+      ],
+      "pass": true
+     },
+     {
+      "id": "QD-03",
+      "title": "Đi muộn và quên chấm công (ví dụ của giảng viên)",
+      "related": [
+       "EQUIPMENT_BORROW",
+       "HR_CERTIFICATE",
+       "EQUIPMENT",
+       "BUDGET_REALLOCATION",
+       "ATTENDANCE_ADJUSTMENT",
+       "LEAVE",
+       "BUSINESS_TRIP",
+       "LEAVE_SPECIAL",
+       "EMPLOYEE_ONBOARDING",
+       "IT_SUPPORT",
+       "INTERNAL_TRANSFER",
+       "VEHICLE_BOOKING"
+      ],
+      "proposals": [
+       {
+        "code": "ATTENDANCE_ADJUSTMENT",
+        "current": {
+         "lifecycle": "A",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "Quy định mới yêu cầu trưởng bộ phận xác nhận đối với trường hợp đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng, làm tăng số bước xử lý từ 2 bước (luồng A) lên 3 bước (luồng B) và tăng trọng số rủi ro từ 1 lên 3."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "ATTENDANCE_ADJUSTMENT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-04",
+      "title": "Giới hạn làm việc từ xa",
+      "related": [
+       "WFH_REQ",
+       "ROOM_BOOKING",
+       "SPECIAL_DISCOUNT",
+       "TASK_REQUEST",
+       "BUDGET_REALLOCATION",
+       "LAPTOP_PROVISION",
+       "LEAVE_SPECIAL",
+       "SUPPLIER_ONBOARDING",
+       "RESIGNATION",
+       "EQUIPMENT",
+       "TRAINING_COURSE",
+       "EQUIPMENT_BORROW"
+      ],
+      "proposals": [
+       {
+        "code": "WFH_REQ",
+        "current": {
+         "lifecycle": "A",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "Quy định mới yêu cầu làm việc từ xa trên 2 ngày mỗi tuần phải có kế hoạch chi tiết và trưởng bộ phận phê duyệt, làm tăng thêm bước thẩm định của trưởng bộ phận (luồng B) và nâng trọng số rủi ro."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "WFH_REQ",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-05",
+      "title": "Hội đồng thanh lý tài sản",
+      "related": [
+       "ASSET_DISPOSAL",
+       "TAX_INVOICE_ISSUE",
+       "RESIGNATION",
+       "SECURITY_INCIDENT_HOTFIX",
+       "DOCUMENT_SEAL",
+       "EQUIPMENT",
+       "INTERNAL_TRANSFER",
+       "RECRUITMENT_REQ",
+       "VENDOR_PAYMENT",
+       "BUDGET_REALLOCATION",
+       "NDA_PRIVACY_CLEARANCE",
+       "EXPENSE_CLAIM"
+      ],
+      "proposals": [
+       {
+        "code": "ASSET_DISPOSAL",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "Quy định mới yêu cầu kiểm soát chặt chẽ hơn thông qua việc bắt buộc thành lập hội đồng, có biên bản định giá, biên bản bàn giao và bắt buộc báo cáo Ban Giám đốc đối với tài sản giá trị trên 100 triệu đồng, do đó cần tăng trọng số rủi ro lên mức tối đa."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "ASSET_DISPOSAL",
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        }
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-06",
+      "title": "Quy định trang phục (không liên quan)",
+      "related": [
+       "EMPLOYEE_ONBOARDING",
+       "HR_CERTIFICATE",
+       "EXPENSE_CLAIM",
+       "BUSINESS_TRIP",
+       "INTERNAL_TRANSFER",
+       "SPECIAL_DISCOUNT",
+       "TRAINING_COURSE",
+       "ACCESS_FACILITY",
+       "VISITOR_SECURITY_PASS",
+       "LEAVE_SPECIAL",
+       "BUDGET_REALLOCATION",
+       "SECURITY_INCIDENT_HOTFIX"
+      ],
+      "proposals": [
+       {
+        "code": "VISITOR_SECURITY_PASS",
+        "current": {
+         "lifecycle": "A",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "reasons": [
+         "Quy định mới yêu cầu kiểm soát việc tiếp khách (liên quan đến khách và đối tác ra vào), cần nâng luồng từ A lên B và tăng trọng số để bộ phận chuyên môn/an ninh thẩm định việc tuân thủ đồng phục và quy chế đón tiếp."
+        ]
+       }
+      ],
+      "checks": [],
+      "extra_proposals": [
+       "VISITOR_SECURITY_PASS"
+      ],
+      "pass": false
+     },
+     {
+      "id": "QD-07",
+      "title": "Thẩm định hợp đồng giá trị lớn",
+      "related": [
+       "TAX_INVOICE_ISSUE",
+       "CONTRACT_APPROVAL",
+       "SUPPLIER_ONBOARDING",
+       "DOCUMENT_SEAL",
+       "ROOM_BOOKING",
+       "NDA_PRIVACY_CLEARANCE",
+       "VENDOR_PAYMENT",
+       "ASSET_DISPOSAL",
+       "SPECIAL_DISCOUNT",
+       "BUDGET_REALLOCATION",
+       "LEAVE",
+       "SECURITY_INCIDENT_HOTFIX"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "CONTRACT_APPROVAL",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-08",
+      "title": "Đánh giá hiệu quả chương trình khuyến mãi",
+      "related": [
+       "MARKETING_CAMPAIGN",
+       "TAX_INVOICE_ISSUE",
+       "BUDGET_REALLOCATION",
+       "SUPPLIER_ONBOARDING",
+       "ASSET_DISPOSAL",
+       "TRAINING_COURSE",
+       "SPECIAL_DISCOUNT",
+       "SECURITY_INCIDENT_HOTFIX",
+       "VISITOR_SECURITY_PASS",
+       "INTERNAL_TRANSFER",
+       "FLASH_SALE_VOUCHER",
+       "EQUIPMENT_BORROW"
+      ],
+      "proposals": [
+       {
+        "code": "FLASH_SALE_VOUCHER",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 4
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "Quy định mới yêu cầu các chương trình khuyến mãi, phát hành voucher có giá trị giảm giá lớn (>200 triệu) phải được nghiệm thu, đánh giá hiệu quả sau chiến dịch (kiểm soát chặt 4 bước, nâng từ luồng B lên C và tăng trọng số lên 5)"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "FLASH_SALE_VOUCHER",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-09",
+      "title": "Sự cố IT trên hệ thống production",
+      "related": [
+       "IT_SUPPORT",
+       "CROSS_DEPT_SUPPORT",
+       "SECURITY_INCIDENT_HOTFIX",
+       "PROD_DATA_ACCESS",
+       "VISITOR_SECURITY_PASS",
+       "NDA_PRIVACY_CLEARANCE",
+       "SPECIAL_DISCOUNT",
+       "EQUIPMENT",
+       "ACCESS",
+       "TASK_REQUEST",
+       "DATA_UAT_EXPORT",
+       "BUDGET_REALLOCATION"
+      ],
+      "proposals": [
+       {
+        "code": "IT_SUPPORT",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng theo quy định mới phải được xếp mức khẩn cấp và rủi ro cao (trọng số 5), do đó cần nâng luồng xử lý lên C (4 bước, kiểm soát chặt) thay vì luồng B và trọng số 1 như trước đây."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "IT_SUPPORT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-10",
+      "title": "Đặt phòng họp có khách bên ngoài",
+      "related": [
+       "ROOM_BOOKING",
+       "BUSINESS_TRIP",
+       "BUDGET_REALLOCATION",
+       "TAX_INVOICE_ISSUE",
+       "TRAINING_COURSE",
+       "ACCESS_FACILITY",
+       "LEAVE_SPECIAL",
+       "NDA_PRIVACY_CLEARANCE",
+       "HR_CERTIFICATE",
+       "VISITOR_SECURITY_PASS",
+       "SPECIAL_DISCOUNT",
+       "ASSET_DISPOSAL"
+      ],
+      "proposals": [
+       {
+        "code": "ROOM_BOOKING",
+        "current": {
+         "lifecycle": "A",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "Yêu cầu có sự tham gia của bộ phận hành chính xác nhận và điều kiện kiểm soát chặt hơn đối với quy mô lớn hoặc có khách bên ngoài, do đó cần nâng từ luồng A lên luồng B và tăng trọng số từ 1 lên 3."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "ROOM_BOOKING",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     }
+    ]
+   },
+   "process_profile": {
+    "summary": {
+     "scenarios_pass": 5,
+     "scenarios": 10,
+     "required_changes_found": "3/8",
+     "kept_unchanged": "5/5",
+     "no_change_scenarios_ok": "1/1",
+     "proposals_total": 8,
+     "proposals_outside_answer_key": 4
+    },
+    "rows": [
+     {
+      "id": "QD-01",
+      "title": "Nghiệm thu bắt buộc khi mua sắm",
+      "related": [
+       "EQUIPMENT",
+       "PURCHASE_REQUEST",
+       "SUPPLIER_ONBOARDING"
+      ],
+      "proposals": [
+       {
+        "code": "PURCHASE_REQUEST",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "có giá trị tiền / ngân sách",
+         "cần người thực hiện",
+         "cần bàn giao / nghiệm thu",
+         "liên quan bên ngoài"
+        ]
+       },
+       {
+        "code": "SUPPLIER_ONBOARDING",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "có giá trị tiền / ngân sách",
+         "cần người thực hiện",
+         "cần bàn giao / nghiệm thu",
+         "liên quan bên ngoài"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "PURCHASE_REQUEST",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       },
+       {
+        "kind": "giữ nguyên",
+        "code": "EQUIPMENT",
+        "ok": true,
+        "got": null
+       },
+       {
+        "kind": "giữ nguyên",
+        "code": "LAPTOP_PROVISION",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [
+       "SUPPLIER_ONBOARDING"
+      ],
+      "pass": true
+     },
+     {
+      "id": "QD-02",
+      "title": "Bảo vệ dữ liệu cá nhân khách hàng",
+      "related": [
+       "NDA_PRIVACY_CLEARANCE"
+      ],
+      "proposals": [
+       {
+        "code": "NDA_PRIVACY_CLEARANCE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "cần người thực hiện",
+         "liên quan bên ngoài",
+         "được xếp rủi ro cao"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "DATA_UAT_EXPORT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": false
+       },
+       {
+        "kind": "phải đổi",
+        "code": "NDA_PRIVACY_CLEARANCE",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "related": true
+       },
+       {
+        "kind": "giữ nguyên",
+        "code": "PROD_DATA_ACCESS",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-03",
+      "title": "Đi muộn và quên chấm công (ví dụ của giảng viên)",
+      "related": [
+       "EQUIPMENT_BORROW",
+       "HR_CERTIFICATE",
+       "EQUIPMENT"
+      ],
+      "proposals": [
+       {
+        "code": "EQUIPMENT_BORROW",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "tác động nhân sự",
+         "đòi hỏi cấp có thẩm quyền cao",
+         "tác vụ thường nhật, tự phục vụ"
+        ]
+       },
+       {
+        "code": "HR_CERTIFICATE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "reasons": [
+         "tác động nhân sự",
+         "đòi hỏi cấp có thẩm quyền cao",
+         "tác vụ thường nhật, tự phục vụ"
+        ]
+       },
+       {
+        "code": "EQUIPMENT",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "tác động nhân sự",
+         "đòi hỏi cấp có thẩm quyền cao",
+         "tác vụ thường nhật, tự phục vụ"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "ATTENDANCE_ADJUSTMENT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": false
+       }
+      ],
+      "extra_proposals": [
+       "EQUIPMENT_BORROW",
+       "HR_CERTIFICATE",
+       "EQUIPMENT"
+      ],
+      "pass": false
+     },
+     {
+      "id": "QD-04",
+      "title": "Giới hạn làm việc từ xa",
+      "related": [
+       "WFH_REQ"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "WFH_REQ",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-05",
+      "title": "Hội đồng thanh lý tài sản",
+      "related": [
+       "ASSET_DISPOSAL"
+      ],
+      "proposals": [
+       {
+        "code": "ASSET_DISPOSAL",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "có giá trị tiền / ngân sách",
+         "khó đảo ngược",
+         "đòi hỏi cấp có thẩm quyền cao",
+         "mức tiền được nêu"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "ASSET_DISPOSAL",
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        }
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-06",
+      "title": "Quy định trang phục (không liên quan)",
+      "related": [
+       "EMPLOYEE_ONBOARDING"
+      ],
+      "proposals": [],
+      "checks": [],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-07",
+      "title": "Thẩm định hợp đồng giá trị lớn",
+      "related": [
+       "TAX_INVOICE_ISSUE"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "CONTRACT_APPROVAL",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-08",
+      "title": "Đánh giá hiệu quả chương trình khuyến mãi",
+      "related": [
+       "MARKETING_CAMPAIGN",
+       "TAX_INVOICE_ISSUE"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "FLASH_SALE_VOUCHER",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": false,
+        "got": null,
+        "related": false
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-09",
+      "title": "Sự cố IT trên hệ thống production",
+      "related": [
+       "IT_SUPPORT"
+      ],
+      "proposals": [
+       {
+        "code": "IT_SUPPORT",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "cần người thực hiện",
+         "liên quan dữ liệu nhạy cảm / hạ tầng",
+         "liên quan bên ngoài",
+         "được xếp rủi ro cao"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "IT_SUPPORT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-10",
+      "title": "Đặt phòng họp có khách bên ngoài",
+      "related": [
+       "ROOM_BOOKING"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "ROOM_BOOKING",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     }
+    ]
+   },
+   "rules": {
+    "summary": {
+     "scenarios_pass": 5,
+     "scenarios": 10,
+     "required_changes_found": "2/8",
+     "kept_unchanged": "5/5",
+     "no_change_scenarios_ok": "1/1",
+     "proposals_total": 6,
+     "proposals_outside_answer_key": 4
+    },
+    "rows": [
+     {
+      "id": "QD-01",
+      "title": "Nghiệm thu bắt buộc khi mua sắm",
+      "related": [
+       "EQUIPMENT",
+       "PURCHASE_REQUEST",
+       "SUPPLIER_ONBOARDING"
+      ],
+      "proposals": [
+       {
+        "code": "PURCHASE_REQUEST",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       },
+       {
+        "code": "SUPPLIER_ONBOARDING",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "PURCHASE_REQUEST",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "related": true
+       },
+       {
+        "kind": "giữ nguyên",
+        "code": "EQUIPMENT",
+        "ok": true,
+        "got": null
+       },
+       {
+        "kind": "giữ nguyên",
+        "code": "LAPTOP_PROVISION",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [
+       "SUPPLIER_ONBOARDING"
+      ],
+      "pass": true
+     },
+     {
+      "id": "QD-02",
+      "title": "Bảo vệ dữ liệu cá nhân khách hàng",
+      "related": [
+       "NDA_PRIVACY_CLEARANCE"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "DATA_UAT_EXPORT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": false
+       },
+       {
+        "kind": "phải đổi",
+        "code": "NDA_PRIVACY_CLEARANCE",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       },
+       {
+        "kind": "giữ nguyên",
+        "code": "PROD_DATA_ACCESS",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-03",
+      "title": "Đi muộn và quên chấm công (ví dụ của giảng viên)",
+      "related": [
+       "EQUIPMENT_BORROW",
+       "HR_CERTIFICATE",
+       "EQUIPMENT"
+      ],
+      "proposals": [
+       {
+        "code": "EQUIPMENT_BORROW",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 1
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       },
+       {
+        "code": "EQUIPMENT",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "ATTENDANCE_ADJUSTMENT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": false
+       }
+      ],
+      "extra_proposals": [
+       "EQUIPMENT_BORROW",
+       "EQUIPMENT"
+      ],
+      "pass": false
+     },
+     {
+      "id": "QD-04",
+      "title": "Giới hạn làm việc từ xa",
+      "related": [
+       "WFH_REQ"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "WFH_REQ",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-05",
+      "title": "Hội đồng thanh lý tài sản",
+      "related": [
+       "ASSET_DISPOSAL"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "ASSET_DISPOSAL",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-06",
+      "title": "Quy định trang phục (không liên quan)",
+      "related": [
+       "EMPLOYEE_ONBOARDING"
+      ],
+      "proposals": [],
+      "checks": [],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-07",
+      "title": "Thẩm định hợp đồng giá trị lớn",
+      "related": [
+       "TAX_INVOICE_ISSUE"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "CONTRACT_APPROVAL",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-08",
+      "title": "Đánh giá hiệu quả chương trình khuyến mãi",
+      "related": [
+       "MARKETING_CAMPAIGN",
+       "TAX_INVOICE_ISSUE"
+      ],
+      "proposals": [
+       {
+        "code": "TAX_INVOICE_ISSUE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 1
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "FLASH_SALE_VOUCHER",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": false,
+        "got": null,
+        "related": false
+       }
+      ],
+      "extra_proposals": [
+       "TAX_INVOICE_ISSUE"
+      ],
+      "pass": false
+     },
+     {
+      "id": "QD-09",
+      "title": "Sự cố IT trên hệ thống production",
+      "related": [
+       "IT_SUPPORT"
+      ],
+      "proposals": [
+       {
+        "code": "IT_SUPPORT",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "IT_SUPPORT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-10",
+      "title": "Đặt phòng họp có khách bên ngoài",
+      "related": [
+       "ROOM_BOOKING"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "ROOM_BOOKING",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     }
+    ]
+   }
+  },
+  "QD-11..20": {
+   "llm": {
+    "summary": {
+     "scenarios_pass": 8,
+     "scenarios": 10,
+     "required_changes_found": "6/7",
+     "kept_unchanged": "1/2",
+     "no_change_scenarios_ok": "1/1",
+     "proposals_total": 9,
+     "proposals_outside_answer_key": 1
+    },
+    "rows": [
+     {
+      "id": "QD-11",
+      "title": "Thẩm định an ninh khi cấp server/firewall production",
+      "related": [
+       "SERVER_FIREWALL",
+       "ACCESS",
+       "VISITOR_SECURITY_PASS",
+       "ACCESS_FACILITY",
+       "PROD_DATA_ACCESS",
+       "SUPPLIER_ONBOARDING",
+       "SECURITY_INCIDENT_HOTFIX",
+       "IT_SUPPORT",
+       "RECRUITMENT_REQ",
+       "NDA_PRIVACY_CLEARANCE",
+       "EQUIPMENT",
+       "LEAVE_SPECIAL"
+      ],
+      "proposals": [
+       {
+        "code": "SERVER_FIREWALL",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "Yêu cầu cấp server hoặc mở firewall cho môi trường production thuộc đối tượng của quy định mới, bắt buộc phải nâng mức trọng số lên cao nhất (mức 5) và đảm bảo luồng kiểm soát chặt (luồng C) bao gồm thẩm định từ bộ phận An ninh thông tin."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SERVER_FIREWALL",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-12",
+      "title": "Điều xe công vụ đi ngoại tỉnh",
+      "related": [
+       "VEHICLE_BOOKING",
+       "RESIGNATION",
+       "TAX_INVOICE_ISSUE",
+       "BUSINESS_TRIP",
+       "EQUIPMENT_BORROW",
+       "TRAINING_COURSE",
+       "INTERNAL_TRANSFER",
+       "BUDGET_REALLOCATION",
+       "SECURITY_INCIDENT_HOTFIX",
+       "ATTENDANCE_ADJUSTMENT",
+       "RECRUITMENT_REQ",
+       "DOCUMENT_SEAL"
+      ],
+      "proposals": [
+       {
+        "code": "VEHICLE_BOOKING",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Quy định mới yêu cầu kiểm soát chặt chẽ hơn đối với việc mượn xe công vụ đi ngoại tỉnh, bắt buộc phải có lệnh điều xe của Ban Giám đốc và biên bản bàn giao khi trả, do đó cần nâng trọng số rủi ro lên mức cao để phản ánh đúng mức độ kiểm soát."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "VEHICLE_BOOKING",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-13",
+      "title": "Định mức văn phòng phẩm (nới lỏng)",
+      "related": [
+       "OFFICE_SUPPLIES",
+       "SUPPLIER_ONBOARDING",
+       "BUDGET_REALLOCATION",
+       "NDA_PRIVACY_CLEARANCE",
+       "ROOM_BOOKING",
+       "INTERNAL_TRANSFER",
+       "SPECIAL_DISCOUNT",
+       "CONTRACT_APPROVAL",
+       "FACILITY_REPAIR",
+       "VISITOR_SECURITY_PASS",
+       "LEAVE",
+       "ACCESS"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "OFFICE_SUPPLIES",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-14",
+      "title": "Hoàn tiền, đền bù khách hàng giá trị lớn",
+      "related": [
+       "REFUND_COMPENSATION",
+       "SPECIAL_DISCOUNT",
+       "SUPPLIER_ONBOARDING",
+       "EXPENSE_CLAIM",
+       "TRAINING_COURSE",
+       "BUDGET_REALLOCATION",
+       "VISITOR_SECURITY_PASS",
+       "TAX_INVOICE_ISSUE",
+       "ACCESS",
+       "ROOM_BOOKING",
+       "ASSET_DISPOSAL",
+       "DOCUMENT_SEAL"
+      ],
+      "proposals": [
+       {
+        "code": "REFUND_COMPENSATION",
+        "current": {
+         "lifecycle": "A",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Quy định mới yêu cầu các khoản hoàn tiền, đền bù cho khách hàng trên 50 triệu đồng phải qua nhiều cấp phê duyệt (Kế toán trưởng và Ban Giám đốc) và kiểm soát chặt chẽ (đối soát chứng từ), do đó cần nâng luồng từ A lên C và tăng trọng số từ 2 lên 4."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "REFUND_COMPENSATION",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-15",
+      "title": "Nghiệm thu kết quả đào tạo chi phí cao",
+      "related": [
+       "TRAINING_COURSE",
+       "TAX_INVOICE_ISSUE",
+       "MARKETING_CAMPAIGN",
+       "ASSET_DISPOSAL",
+       "EXPENSE_CLAIM",
+       "ROOM_BOOKING",
+       "SECURITY_INCIDENT_HOTFIX",
+       "RESOURCE_REVOKE",
+       "PROJECT_INITIATION",
+       "LAPTOP_PROVISION",
+       "BUDGET_REALLOCATION",
+       "ADVANCE_SMALL"
+      ],
+      "proposals": [
+       {
+        "code": "TRAINING_COURSE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Quy định mới yêu cầu khóa học trên 30 triệu phải ký cam kết, nghiệm thu và đánh giá hiệu quả. Luồng B hiện tại (2 bước) không đủ để kiểm soát việc nghiệm thu kết quả và cấp thẩm quyền phê duyệt cam kết làm việc, do đó cần nâng lên luồng C (4 bước, kiểm soát chặt) và tăng trọng số lên 4."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "TRAINING_COURSE",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-16",
+      "title": "Khách vào khu vực phòng máy chủ",
+      "related": [
+       "VISITOR_SECURITY_PASS",
+       "ACCESS_FACILITY",
+       "HR_CERTIFICATE",
+       "ROOM_BOOKING",
+       "LAPTOP_PROVISION",
+       "INTERNAL_TRANSFER",
+       "EMPLOYEE_ONBOARDING",
+       "TRAINING_COURSE",
+       "BUDGET_REALLOCATION",
+       "ASSET_DISPOSAL",
+       "RECRUITMENT_REQ",
+       "RESIGNATION"
+      ],
+      "proposals": [
+       {
+        "code": "VISITOR_SECURITY_PASS",
+        "current": {
+         "lifecycle": "A",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "Khu vực phòng máy chủ là khu vực trọng điểm, yêu cầu kiểm soát chặt chẽ việc ra vào của khách và đối tác thông qua thẩm định/phê duyệt của bộ phận An ninh và có nhân viên đi kèm, do đó cần nâng luồng từ A lên B và tăng trọng số rủi ro từ 1 lên 3."
+        ]
+       },
+       {
+        "code": "ACCESS_FACILITY",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Việc cấp thẻ ra vào khu vực phòng máy chủ cho đối tượng khách/đối tác liên quan đến quy định kiểm soát an ninh nghiêm ngặt, cần quy trình 4 bước kiểm tra/nghiệm thu và nâng trọng số lên 4."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "VISITOR_SECURITY_PASS",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [
+       "ACCESS_FACILITY"
+      ],
+      "pass": true
+     },
+     {
+      "id": "QD-17",
+      "title": "Tiệc tất niên (không liên quan)",
+      "related": [
+       "TRAINING_COURSE",
+       "ACCESS_FACILITY",
+       "EMPLOYEE_ONBOARDING",
+       "PROMOTION_REQ",
+       "EXPENSE_CLAIM",
+       "VENDOR_PAYMENT",
+       "HR_CERTIFICATE",
+       "RECRUITMENT_REQ",
+       "VISITOR_SECURITY_PASS",
+       "INTERNAL_TRANSFER",
+       "REIMBURSEMENT",
+       "LEAVE"
+      ],
+      "proposals": [],
+      "checks": [],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-18",
+      "title": "Chiết khấu thương mại vượt ngưỡng",
+      "related": [
+       "SPECIAL_DISCOUNT",
+       "LEAVE_SPECIAL",
+       "TAX_INVOICE_ISSUE",
+       "CONTRACT_APPROVAL",
+       "ASSET_DISPOSAL",
+       "BUSINESS_TRIP",
+       "SUPPLIER_ONBOARDING",
+       "REWARD_REQ",
+       "VISITOR_SECURITY_PASS",
+       "VENDOR_PAYMENT",
+       "BUDGET_REALLOCATION",
+       "LEAVE"
+      ],
+      "proposals": [
+       {
+        "code": "SPECIAL_DISCOUNT",
+        "current": {
+         "lifecycle": "A",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "Quy định mới yêu cầu chiết khấu thương mại đặc biệt trên 15% phải qua phê duyệt của Giám đốc kinh doanh và ghi rõ trong hợp đồng, do đó cần nâng luồng từ A lên B và tăng trọng số lên tương ứng để kiểm soát chặt chẽ hơn."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SPECIAL_DISCOUNT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-19",
+      "title": "Khen thưởng giá trị lớn",
+      "related": [
+       "REWARD_REQ",
+       "TAX_INVOICE_ISSUE",
+       "SPECIAL_DISCOUNT",
+       "PROJECT_INITIATION",
+       "DISCIPLINE_REQ",
+       "DOCUMENT_SEAL",
+       "CROSS_DEPT_SUPPORT",
+       "SUPPLIER_ONBOARDING",
+       "CONTRACT_APPROVAL",
+       "SECURITY_INCIDENT_HOTFIX",
+       "DATA_UAT_EXPORT",
+       "IT_SUPPORT"
+      ],
+      "proposals": [
+       {
+        "code": "REWARD_REQ",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Đề xuất khen thưởng có giá trị từ 20 triệu đồng trở lên phải được Ban Giám đốc phê duyệt, do đó cần nâng luồng từ B lên C và tăng trọng số từ 3 lên 4 để đảm bảo kiểm soát chặt chẽ ở cấp thẩm quyền cao."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "REWARD_REQ",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-20",
+      "title": "Hội đồng lương",
+      "related": [
+       "SALARY_ADJUSTMENT",
+       "SALARY_ADVANCE",
+       "SUPPLIER_ONBOARDING",
+       "ATTENDANCE_ADJUSTMENT",
+       "TAX_INVOICE_ISSUE",
+       "RECRUITMENT_REQ",
+       "REWARD_REQ",
+       "NDA_PRIVACY_CLEARANCE",
+       "SPECIAL_DISCOUNT",
+       "PROJECT_INITIATION",
+       "DISCIPLINE_REQ",
+       "DOCUMENT_SEAL"
+      ],
+      "proposals": [
+       {
+        "code": "SALARY_ADJUSTMENT",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 5
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "Quy định mới yêu cầu thêm cấp thẩm quyền phê duyệt là Ban Giám đốc và qua Hội đồng lương thẩm định, làm tăng mức độ kiểm soát từ luồng B lên luồng C (4 bước, kiểm soát chặt)."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "SALARY_ADJUSTMENT",
+        "ok": false,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        }
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     }
+    ]
+   },
+   "process_profile": {
+    "summary": {
+     "scenarios_pass": 6,
+     "scenarios": 10,
+     "required_changes_found": "3/7",
+     "kept_unchanged": "2/2",
+     "no_change_scenarios_ok": "1/1",
+     "proposals_total": 3,
+     "proposals_outside_answer_key": 0
+    },
+    "rows": [
+     {
+      "id": "QD-11",
+      "title": "Thẩm định an ninh khi cấp server/firewall production",
+      "related": [
+       "SERVER_FIREWALL"
+      ],
+      "proposals": [
+       {
+        "code": "SERVER_FIREWALL",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "cần người thực hiện",
+         "ràng buộc pháp lý",
+         "được xếp rủi ro cao"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SERVER_FIREWALL",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-12",
+      "title": "Điều xe công vụ đi ngoại tỉnh",
+      "related": [
+       "VEHICLE_BOOKING"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "VEHICLE_BOOKING",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-13",
+      "title": "Định mức văn phòng phẩm (nới lỏng)",
+      "related": [
+       "OFFICE_SUPPLIES",
+       "SUPPLIER_ONBOARDING"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "OFFICE_SUPPLIES",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-14",
+      "title": "Hoàn tiền, đền bù khách hàng giá trị lớn",
+      "related": [
+       "REFUND_COMPENSATION"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "REFUND_COMPENSATION",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-15",
+      "title": "Nghiệm thu kết quả đào tạo chi phí cao",
+      "related": [
+       "TRAINING_COURSE"
+      ],
+      "proposals": [
+       {
+        "code": "TRAINING_COURSE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "reasons": [
+         "cần bàn giao / nghiệm thu",
+         "mức tiền được nêu"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "TRAINING_COURSE",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-16",
+      "title": "Khách vào khu vực phòng máy chủ",
+      "related": [
+       "VISITOR_SECURITY_PASS"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "VISITOR_SECURITY_PASS",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-17",
+      "title": "Tiệc tất niên (không liên quan)",
+      "related": [
+       "TRAINING_COURSE",
+       "ACCESS_FACILITY",
+       "EMPLOYEE_ONBOARDING"
+      ],
+      "proposals": [],
+      "checks": [],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-18",
+      "title": "Chiết khấu thương mại vượt ngưỡng",
+      "related": [
+       "SPECIAL_DISCOUNT"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SPECIAL_DISCOUNT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-19",
+      "title": "Khen thưởng giá trị lớn",
+      "related": [
+       "REWARD_REQ"
+      ],
+      "proposals": [
+       {
+        "code": "REWARD_REQ",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "có giá trị tiền / ngân sách",
+         "cần người thực hiện",
+         "tác động nhân sự",
+         "đòi hỏi cấp có thẩm quyền cao",
+         "mức tiền được nêu"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "REWARD_REQ",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-20",
+      "title": "Hội đồng lương",
+      "related": [
+       "SALARY_ADJUSTMENT"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "SALARY_ADJUSTMENT",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     }
+    ]
+   },
+   "rules": {
+    "summary": {
+     "scenarios_pass": 5,
+     "scenarios": 10,
+     "required_changes_found": "3/7",
+     "kept_unchanged": "1/2",
+     "no_change_scenarios_ok": "1/1",
+     "proposals_total": 5,
+     "proposals_outside_answer_key": 1
+    },
+    "rows": [
+     {
+      "id": "QD-11",
+      "title": "Thẩm định an ninh khi cấp server/firewall production",
+      "related": [
+       "SERVER_FIREWALL"
+      ],
+      "proposals": [
+       {
+        "code": "SERVER_FIREWALL",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SERVER_FIREWALL",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-12",
+      "title": "Điều xe công vụ đi ngoại tỉnh",
+      "related": [
+       "VEHICLE_BOOKING"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "VEHICLE_BOOKING",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-13",
+      "title": "Định mức văn phòng phẩm (nới lỏng)",
+      "related": [
+       "OFFICE_SUPPLIES",
+       "SUPPLIER_ONBOARDING"
+      ],
+      "proposals": [
+       {
+        "code": "SUPPLIER_ONBOARDING",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "OFFICE_SUPPLIES",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [
+       "SUPPLIER_ONBOARDING"
+      ],
+      "pass": true
+     },
+     {
+      "id": "QD-14",
+      "title": "Hoàn tiền, đền bù khách hàng giá trị lớn",
+      "related": [
+       "REFUND_COMPENSATION"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "REFUND_COMPENSATION",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-15",
+      "title": "Nghiệm thu kết quả đào tạo chi phí cao",
+      "related": [
+       "TRAINING_COURSE"
+      ],
+      "proposals": [
+       {
+        "code": "TRAINING_COURSE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "TRAINING_COURSE",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-16",
+      "title": "Khách vào khu vực phòng máy chủ",
+      "related": [
+       "VISITOR_SECURITY_PASS"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "VISITOR_SECURITY_PASS",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-17",
+      "title": "Tiệc tất niên (không liên quan)",
+      "related": [
+       "TRAINING_COURSE",
+       "ACCESS_FACILITY",
+       "EMPLOYEE_ONBOARDING"
+      ],
+      "proposals": [],
+      "checks": [],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-18",
+      "title": "Chiết khấu thương mại vượt ngưỡng",
+      "related": [
+       "SPECIAL_DISCOUNT"
+      ],
+      "proposals": [
+       {
+        "code": "SPECIAL_DISCOUNT",
+        "current": {
+         "lifecycle": "A",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "A",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SPECIAL_DISCOUNT",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "A",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-19",
+      "title": "Khen thưởng giá trị lớn",
+      "related": [
+       "REWARD_REQ"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "REWARD_REQ",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-20",
+      "title": "Hội đồng lương",
+      "related": [
+       "SALARY_ADJUSTMENT"
+      ],
+      "proposals": [
+       {
+        "code": "SALARY_ADJUSTMENT",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 5
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "SALARY_ADJUSTMENT",
+        "ok": false,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        }
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     }
+    ]
+   }
+  },
+  "QD-21..30": {
+   "llm": {
+    "summary": {
+     "scenarios_pass": 9,
+     "scenarios": 10,
+     "required_changes_found": "7/7",
+     "kept_unchanged": "2/2",
+     "no_change_scenarios_ok": "0/1",
+     "proposals_total": 8,
+     "proposals_outside_answer_key": 1
+    },
+    "rows": [
+     {
+      "id": "QD-21",
+      "title": "Giới hạn làm thêm giờ",
+      "related": [
+       "OVERTIME_REQ",
+       "LEAVE",
+       "SPECIAL_DISCOUNT",
+       "SUPPLIER_ONBOARDING",
+       "BUDGET_REALLOCATION",
+       "BUSINESS_TRIP",
+       "ACCESS_FACILITY",
+       "CONTRACT_APPROVAL",
+       "TRAINING_COURSE",
+       "TAX_INVOICE_ISSUE",
+       "DISCIPLINE_REQ",
+       "DOCUMENT_SEAL"
+      ],
+      "proposals": [
+       {
+        "code": "OVERTIME_REQ",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Yêu cầu làm thêm giờ trên 40 giờ mỗi tháng cần có sự phê duyệt của Giám đốc (cấp thẩm quyền cao) và kiểm soát chặt chẽ theo giới hạn pháp luật, do đó cần nâng luồng từ B lên C và tăng trọng số rủi ro."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "OVERTIME_REQ",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-22",
+      "title": "Sửa chữa văn phòng chi phí lớn",
+      "related": [
+       "FACILITY_REPAIR",
+       "ASSET_DISPOSAL",
+       "SECURITY_INCIDENT_HOTFIX",
+       "DOCUMENT_SEAL",
+       "TRAINING_COURSE",
+       "SPECIAL_DISCOUNT",
+       "VISITOR_SECURITY_PASS",
+       "OFFICE_SUPPLIES",
+       "TAX_INVOICE_ISSUE",
+       "BUDGET_REALLOCATION",
+       "IT_SUPPORT",
+       "ROOM_BOOKING"
+      ],
+      "proposals": [
+       {
+        "code": "FACILITY_REPAIR",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Quy định mới yêu cầu chi phí trên 20 triệu đồng phải có báo giá và được Ban Giám đốc phê duyệt, do đó cần bổ sung trường amount_vnd và nâng trọng số rủi ro lên mức kiểm soát chặt (luồng C, trọng số 4) để đảm bảo tuân thủ."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "FACILITY_REPAIR",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-23",
+      "title": "Công tác nước ngoài",
+      "related": [
+       "BUSINESS_TRIP",
+       "EXPENSE_CLAIM",
+       "REIMBURSEMENT",
+       "SPECIAL_DISCOUNT",
+       "BUDGET_REALLOCATION",
+       "SUPPLIER_ONBOARDING",
+       "TRAINING_COURSE",
+       "ADVANCE_MEDIUM",
+       "INTERNAL_TRANSFER",
+       "ADVANCE_SMALL",
+       "HR_CERTIFICATE",
+       "CONTRACT_APPROVAL"
+      ],
+      "proposals": [
+       {
+        "code": "BUSINESS_TRIP",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Quy định mới yêu cầu Ban Giám đốc phê duyệt, quyết toán chi phí và nộp báo cáo kết quả sau chuyến đi đối với đi công tác nước ngoài, đòi hỏi luồng kiểm soát chặt chẽ 4 bước (C) và tăng trọng số rủi ro lên 4."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "BUSINESS_TRIP",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-24",
+      "title": "Tự động hóa giấy xác nhận (nới lỏng)",
+      "related": [
+       "HR_CERTIFICATE",
+       "BUSINESS_TRIP",
+       "RECRUITMENT_REQ",
+       "INTERNAL_TRANSFER",
+       "ACCESS",
+       "EMPLOYEE_ONBOARDING",
+       "BUDGET_REALLOCATION",
+       "MARKETING_CAMPAIGN",
+       "TRAINING_COURSE",
+       "LEAVE",
+       "REWARD_REQ",
+       "EQUIPMENT"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "HR_CERTIFICATE",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-25",
+      "title": "Phần mềm xử lý dữ liệu cá nhân",
+      "related": [
+       "SAAS_LICENSE_BUY",
+       "NDA_PRIVACY_CLEARANCE",
+       "VISITOR_SECURITY_PASS",
+       "INTERNAL_TRANSFER",
+       "BUDGET_REALLOCATION",
+       "PROD_DATA_ACCESS",
+       "RECRUITMENT_REQ",
+       "SECURITY_INCIDENT_HOTFIX",
+       "TASK_REQUEST",
+       "SPECIAL_DISCOUNT",
+       "ASSET_DISPOSAL",
+       "ACCESS"
+      ],
+      "proposals": [
+       {
+        "code": "SAAS_LICENSE_BUY",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Bổ sung thêm bước thẩm định bảo mật từ bộ phận An ninh thông tin và tăng trọng số rủi ro do liên quan đến dữ liệu cá nhân của khách hàng."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SAAS_LICENSE_BUY",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-26",
+      "title": "Giờ mở cửa bãi đỗ xe (không liên quan)",
+      "related": [
+       "OVERTIME_REQ",
+       "LEAVE_SPECIAL",
+       "TRAINING_COURSE",
+       "BUDGET_REALLOCATION",
+       "REFUND_COMPENSATION",
+       "VEHICLE_BOOKING",
+       "TAX_INVOICE_ISSUE",
+       "EQUIPMENT",
+       "WFH_REQ",
+       "EQUIPMENT_BORROW",
+       "SUPPLIER_ONBOARDING",
+       "RECRUITMENT_REQ"
+      ],
+      "proposals": [
+       {
+        "code": "VEHICLE_BOOKING",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "Quy định mới giới hạn giờ hoạt động bãi đỗ xe tầng hầm từ 6h đến 22h, làm phát sinh rủi ro về thời gian giao nhận/sử dụng xe công vụ ngoài giờ, đòi hỏi siết chặt kiểm soát và nâng trọng số rủi ro."
+        ]
+       }
+      ],
+      "checks": [],
+      "extra_proposals": [
+       "VEHICLE_BOOKING"
+      ],
+      "pass": false
+     },
+     {
+      "id": "QD-27",
+      "title": "Kiểm kê khi luân chuyển kho giá trị lớn",
+      "related": [
+       "TAX_INVOICE_ISSUE",
+       "RESIGNATION",
+       "WAREHOUSE_TRANSFER",
+       "ASSET_DISPOSAL",
+       "INTERNAL_TRANSFER",
+       "BUDGET_REALLOCATION",
+       "TRAINING_COURSE",
+       "SECURITY_INCIDENT_HOTFIX",
+       "SPECIAL_DISCOUNT",
+       "LEAVE_SPECIAL",
+       "RECRUITMENT_REQ",
+       "EQUIPMENT_BORROW"
+      ],
+      "proposals": [
+       {
+        "code": "WAREHOUSE_TRANSFER",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Quy định mới yêu cầu kiểm soát chặt (thêm bước kiểm tra/nghiệm thu kết quả từ kế toán kho) đối với việc luân chuyển kho có giá trị trên 1 tỷ đồng, do đó cần nâng luồng từ B lên C và tăng trọng số từ 3 lên 4."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "WAREHOUSE_TRANSFER",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-28",
+      "title": "Đối chiếu nghiệm thu trước khi trả vendor",
+      "related": [
+       "VENDOR_PAYMENT",
+       "EXPENSE_CLAIM",
+       "TAX_INVOICE_ISSUE",
+       "RECRUITMENT_REQ",
+       "LEAVE_SPECIAL",
+       "ROOM_BOOKING",
+       "VISITOR_SECURITY_PASS",
+       "TRAINING_COURSE",
+       "CONTRACT_APPROVAL",
+       "SUPPLIER_ONBOARDING",
+       "SPECIAL_DISCOUNT",
+       "RESOURCE_REVOKE"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "VENDOR_PAYMENT",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-29",
+      "title": "Ứng lương vượt mức",
+      "related": [
+       "SALARY_ADVANCE",
+       "SALARY_ADJUSTMENT",
+       "SPECIAL_DISCOUNT",
+       "EXPENSE_CLAIM",
+       "RECRUITMENT_REQ",
+       "LEAVE_SPECIAL",
+       "SUPPLIER_ONBOARDING",
+       "REIMBURSEMENT",
+       "VENDOR_PAYMENT",
+       "PROMOTION_REQ",
+       "ACCESS",
+       "CONTRACT_APPROVAL"
+      ],
+      "proposals": [
+       {
+        "code": "SALARY_ADVANCE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "Yêu cầu ứng lương vượt 50% lương tháng cần nâng luồng lên C (4 bước) và tăng trọng số lên 4 để đảm bảo sự phê duyệt của Kế toán trưởng và Giám đốc."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SALARY_ADVANCE",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-30",
+      "title": "Thu hồi quyền khi nghỉ việc",
+      "related": [
+       "ACCESS",
+       "RESOURCE_REVOKE",
+       "INTERNAL_TRANSFER",
+       "HR_CERTIFICATE",
+       "TRAINING_COURSE",
+       "EMPLOYEE_ONBOARDING",
+       "VISITOR_SECURITY_PASS",
+       "ROOM_BOOKING",
+       "RECRUITMENT_REQ",
+       "SECURITY_INCIDENT_HOTFIX",
+       "LEAVE",
+       "MARKETING_CAMPAIGN"
+      ],
+      "proposals": [
+       {
+        "code": "RESOURCE_REVOKE",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "Yêu cầu kiểm soát chặt chẽ với xác nhận từ An ninh thông tin và giới hạn thời gian nghiêm ngặt trong 24 giờ đối với hệ thống production."
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "RESOURCE_REVOKE",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     }
+    ]
+   },
+   "process_profile": {
+    "summary": {
+     "scenarios_pass": 7,
+     "scenarios": 10,
+     "required_changes_found": "4/7",
+     "kept_unchanged": "2/2",
+     "no_change_scenarios_ok": "1/1",
+     "proposals_total": 7,
+     "proposals_outside_answer_key": 3
+    },
+    "rows": [
+     {
+      "id": "QD-21",
+      "title": "Giới hạn làm thêm giờ",
+      "related": [
+       "OVERTIME_REQ"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "OVERTIME_REQ",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-22",
+      "title": "Sửa chữa văn phòng chi phí lớn",
+      "related": [
+       "FACILITY_REPAIR"
+      ],
+      "proposals": [
+       {
+        "code": "FACILITY_REPAIR",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "có giá trị tiền / ngân sách",
+         "cần người thực hiện",
+         "liên quan dữ liệu nhạy cảm / hạ tầng",
+         "đòi hỏi cấp có thẩm quyền cao",
+         "mức tiền được nêu"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "FACILITY_REPAIR",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-23",
+      "title": "Công tác nước ngoài",
+      "related": [
+       "BUSINESS_TRIP",
+       "EXPENSE_CLAIM"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "BUSINESS_TRIP",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-24",
+      "title": "Tự động hóa giấy xác nhận (nới lỏng)",
+      "related": [
+       "HR_CERTIFICATE"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "HR_CERTIFICATE",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-25",
+      "title": "Phần mềm xử lý dữ liệu cá nhân",
+      "related": [
+       "SAAS_LICENSE_BUY",
+       "NDA_PRIVACY_CLEARANCE"
+      ],
+      "proposals": [
+       {
+        "code": "SAAS_LICENSE_BUY",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "cần người thực hiện",
+         "liên quan dữ liệu nhạy cảm / hạ tầng",
+         "ràng buộc pháp lý",
+         "liên quan bên ngoài"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SAAS_LICENSE_BUY",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-26",
+      "title": "Giờ mở cửa bãi đỗ xe (không liên quan)",
+      "related": [
+       "OVERTIME_REQ"
+      ],
+      "proposals": [],
+      "checks": [],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-27",
+      "title": "Kiểm kê khi luân chuyển kho giá trị lớn",
+      "related": [
+       "TAX_INVOICE_ISSUE",
+       "RESIGNATION",
+       "WAREHOUSE_TRANSFER"
+      ],
+      "proposals": [
+       {
+        "code": "TAX_INVOICE_ISSUE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "reasons": [
+         "cần người thực hiện",
+         "cần bàn giao / nghiệm thu",
+         "mức tiền được nêu"
+        ]
+       },
+       {
+        "code": "RESIGNATION",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "có giá trị tiền / ngân sách",
+         "cần người thực hiện",
+         "cần bàn giao / nghiệm thu",
+         "mức tiền được nêu"
+        ]
+       },
+       {
+        "code": "WAREHOUSE_TRANSFER",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "có giá trị tiền / ngân sách",
+         "cần người thực hiện",
+         "cần bàn giao / nghiệm thu",
+         "mức tiền được nêu"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "WAREHOUSE_TRANSFER",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [
+       "TAX_INVOICE_ISSUE",
+       "RESIGNATION"
+      ],
+      "pass": true
+     },
+     {
+      "id": "QD-28",
+      "title": "Đối chiếu nghiệm thu trước khi trả vendor",
+      "related": [
+       "VENDOR_PAYMENT"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "VENDOR_PAYMENT",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-29",
+      "title": "Ứng lương vượt mức",
+      "related": [
+       "SALARY_ADVANCE"
+      ],
+      "proposals": [
+       {
+        "code": "SALARY_ADVANCE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "tác động nhân sự",
+         "đòi hỏi cấp có thẩm quyền cao"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SALARY_ADVANCE",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-30",
+      "title": "Thu hồi quyền khi nghỉ việc",
+      "related": [
+       "ACCESS"
+      ],
+      "proposals": [
+       {
+        "code": "ACCESS",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "cần người thực hiện",
+         "liên quan dữ liệu nhạy cảm / hạ tầng",
+         "khó đảo ngược",
+         "đòi hỏi cấp có thẩm quyền cao"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "RESOURCE_REVOKE",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": false
+       }
+      ],
+      "extra_proposals": [
+       "ACCESS"
+      ],
+      "pass": false
+     }
+    ]
+   },
+   "rules": {
+    "summary": {
+     "scenarios_pass": 7,
+     "scenarios": 10,
+     "required_changes_found": "4/7",
+     "kept_unchanged": "2/2",
+     "no_change_scenarios_ok": "1/1",
+     "proposals_total": 6,
+     "proposals_outside_answer_key": 2
+    },
+    "rows": [
+     {
+      "id": "QD-21",
+      "title": "Giới hạn làm thêm giờ",
+      "related": [
+       "OVERTIME_REQ"
+      ],
+      "proposals": [
+       {
+        "code": "OVERTIME_REQ",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "OVERTIME_REQ",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-22",
+      "title": "Sửa chữa văn phòng chi phí lớn",
+      "related": [
+       "FACILITY_REPAIR"
+      ],
+      "proposals": [
+       {
+        "code": "FACILITY_REPAIR",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 2
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "FACILITY_REPAIR",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-23",
+      "title": "Công tác nước ngoài",
+      "related": [
+       "BUSINESS_TRIP",
+       "EXPENSE_CLAIM"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "BUSINESS_TRIP",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-24",
+      "title": "Tự động hóa giấy xác nhận (nới lỏng)",
+      "related": [
+       "HR_CERTIFICATE"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "HR_CERTIFICATE",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-25",
+      "title": "Phần mềm xử lý dữ liệu cá nhân",
+      "related": [
+       "SAAS_LICENSE_BUY",
+       "NDA_PRIVACY_CLEARANCE"
+      ],
+      "proposals": [
+       {
+        "code": "SAAS_LICENSE_BUY",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SAAS_LICENSE_BUY",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-26",
+      "title": "Giờ mở cửa bãi đỗ xe (không liên quan)",
+      "related": [
+       "OVERTIME_REQ"
+      ],
+      "proposals": [],
+      "checks": [],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-27",
+      "title": "Kiểm kê khi luân chuyển kho giá trị lớn",
+      "related": [
+       "TAX_INVOICE_ISSUE",
+       "RESIGNATION",
+       "WAREHOUSE_TRANSFER"
+      ],
+      "proposals": [
+       {
+        "code": "TAX_INVOICE_ISSUE",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 1
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 1
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       },
+       {
+        "code": "RESIGNATION",
+        "current": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 5
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       },
+       {
+        "code": "WAREHOUSE_TRANSFER",
+        "current": {
+         "lifecycle": "B",
+         "risk_weight": 3
+        },
+        "proposed": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "reasons": [
+         "luật từ khóa"
+        ]
+       }
+      ],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "WAREHOUSE_TRANSFER",
+        "expected": {
+         "lifecycle": "C"
+        },
+        "ok": true,
+        "got": {
+         "lifecycle": "C",
+         "risk_weight": 4
+        },
+        "related": true
+       }
+      ],
+      "extra_proposals": [
+       "TAX_INVOICE_ISSUE",
+       "RESIGNATION"
+      ],
+      "pass": true
+     },
+     {
+      "id": "QD-28",
+      "title": "Đối chiếu nghiệm thu trước khi trả vendor",
+      "related": [
+       "VENDOR_PAYMENT"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "giữ nguyên",
+        "code": "VENDOR_PAYMENT",
+        "ok": true,
+        "got": null
+       }
+      ],
+      "extra_proposals": [],
+      "pass": true
+     },
+     {
+      "id": "QD-29",
+      "title": "Ứng lương vượt mức",
+      "related": [
+       "SALARY_ADVANCE"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "SALARY_ADVANCE",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": true
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     },
+     {
+      "id": "QD-30",
+      "title": "Thu hồi quyền khi nghỉ việc",
+      "related": [
+       "ACCESS"
+      ],
+      "proposals": [],
+      "checks": [
+       {
+        "kind": "phải đổi",
+        "code": "RESOURCE_REVOKE",
+        "expected": {
+         "weight": "up"
+        },
+        "ok": false,
+        "got": null,
+        "related": false
+       }
+      ],
+      "extra_proposals": [],
+      "pass": false
+     }
+    ]
+   }
+  }
+ },
+ "stats": {
+  "retrieval_recall": "29/31",
+  "fallbacks": 0,
+  "latency_ms_p50": 2196.2,
+  "latency_ms_max": 11429.2,
+  "tokens_total": 39507,
+  "proposals_grounded": "29/29",
+  "rejected_by_validator": 1,
+  "atomic_rules_total": 33
+ }
+}

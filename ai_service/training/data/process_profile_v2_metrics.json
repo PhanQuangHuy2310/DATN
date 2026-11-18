@@ -1,0 +1,1695 @@
+{
+ "version": "process-profile-2",
+ "trained_at": "2026-11-17 14:41:50 +0700",
+ "chosen": "C=1.0, có TF-IDF từ",
+ "config": {
+  "lc_c": 1.0,
+  "use_words": true
+ },
+ "variants": {
+  "C=0.3, có TF-IDF từ": {
+   "lifecycle": {
+    "accuracy": 0.552,
+    "macro_f1": 0.568
+   },
+   "risk_weight": {
+    "mae": 0.914,
+    "exact": 0.362,
+    "within_1": 0.793
+   },
+   "confusion_ABC": [
+    [
+     6,
+     2,
+     0
+    ],
+    [
+     3,
+     13,
+     12
+    ],
+    [
+     2,
+     7,
+     13
+    ]
+   ]
+  },
+  "C=1.0, có TF-IDF từ": {
+   "lifecycle": {
+    "accuracy": 0.569,
+    "macro_f1": 0.592
+   },
+   "risk_weight": {
+    "mae": 0.914,
+    "exact": 0.362,
+    "within_1": 0.793
+   },
+   "confusion_ABC": [
+    [
+     5,
+     2,
+     1
+    ],
+    [
+     2,
+     15,
+     11
+    ],
+    [
+     0,
+     9,
+     13
+    ]
+   ]
+  },
+  "C=3.0, có TF-IDF từ": {
+   "lifecycle": {
+    "accuracy": 0.569,
+    "macro_f1": 0.59
+   },
+   "risk_weight": {
+    "mae": 0.914,
+    "exact": 0.362,
+    "within_1": 0.793
+   },
+   "confusion_ABC": [
+    [
+     5,
+     2,
+     1
+    ],
+    [
+     2,
+     16,
+     10
+    ],
+    [
+     0,
+     10,
+     12
+    ]
+   ]
+  },
+  "C=0.3, không TF-IDF từ": {
+   "lifecycle": {
+    "accuracy": 0.552,
+    "macro_f1": 0.566
+   },
+   "risk_weight": {
+    "mae": 1.0,
+    "exact": 0.276,
+    "within_1": 0.776
+   },
+   "confusion_ABC": [
+    [
+     7,
+     1,
+     0
+    ],
+    [
+     5,
+     11,
+     12
+    ],
+    [
+     2,
+     6,
+     14
+    ]
+   ]
+  },
+  "C=1.0, không TF-IDF từ": {
+   "lifecycle": {
+    "accuracy": 0.534,
+    "macro_f1": 0.555
+   },
+   "risk_weight": {
+    "mae": 1.0,
+    "exact": 0.276,
+    "within_1": 0.776
+   },
+   "confusion_ABC": [
+    [
+     6,
+     2,
+     0
+    ],
+    [
+     5,
+     11,
+     12
+    ],
+    [
+     0,
+     8,
+     14
+    ]
+   ]
+  },
+  "C=3.0, không TF-IDF từ": {
+   "lifecycle": {
+    "accuracy": 0.517,
+    "macro_f1": 0.533
+   },
+   "risk_weight": {
+    "mae": 1.0,
+    "exact": 0.276,
+    "within_1": 0.776
+   },
+   "confusion_ABC": [
+    [
+     5,
+     2,
+     1
+    ],
+    [
+     4,
+     12,
+     12
+    ],
+    [
+     0,
+     9,
+     13
+    ]
+   ]
+  }
+ },
+ "loo": {
+  "n": 58,
+  "label_distribution": {
+   "lifecycle": {
+    "B": 28,
+    "C": 22,
+    "A": 8
+   },
+   "risk_weight": {
+    "1": 9,
+    "2": 18,
+    "3": 15,
+    "4": 10,
+    "5": 6
+   }
+  },
+  "model": {
+   "lifecycle": {
+    "accuracy": 0.569,
+    "macro_f1": 0.592
+   },
+   "risk_weight": {
+    "mae": 0.914,
+    "exact": 0.362,
+    "within_1": 0.793
+   },
+   "confusion_ABC": [
+    [
+     5,
+     2,
+     1
+    ],
+    [
+     2,
+     15,
+     11
+    ],
+    [
+     0,
+     9,
+     13
+    ]
+   ]
+  },
+  "baseline_majority": {
+   "lifecycle": {
+    "accuracy": 0.483,
+    "macro_f1": 0.217
+   },
+   "risk_weight": {
+    "mae": 1.0,
+    "exact": 0.259,
+    "within_1": 0.741
+   }
+  },
+  "baseline_rules": {
+   "lifecycle": {
+    "accuracy": 0.517,
+    "macro_f1": 0.51
+   },
+   "risk_weight": {
+    "mae": 0.776,
+    "exact": 0.379,
+    "within_1": 0.862
+   }
+  },
+  "errors": [
+   {
+    "code": "ACCESS",
+    "true": [
+     "B",
+     2
+    ],
+    "pred": [
+     "C",
+     3
+    ],
+    "reasons": [
+     "liên quan dữ liệu nhạy cảm / hạ tầng",
+     "số trường biểu mẫu",
+     "thuộc nhóm PROVISION"
+    ]
+   },
+   {
+    "code": "ADVANCE_LARGE",
+    "true": [
+     "B",
+     4
+    ],
+    "pred": [
+     "C",
+     2
+    ],
+    "reasons": [
+     "cần bàn giao / nghiệm thu",
+     "số trường biểu mẫu",
+     "biểu mẫu có trường số tiền"
+    ]
+   },
+   {
+    "code": "BUDGET_REALLOCATION",
+    "true": [
+     "C",
+     5
+    ],
+    "pred": [
+     "B",
+     4
+    ],
+    "reasons": [
+     "cần người thực hiện",
+     "biểu mẫu có trường số tiền",
+     "thuộc nhóm PROCUREMENT"
+    ]
+   },
+   {
+    "code": "BUSINESS_TRIP",
+    "true": [
+     "B",
+     3
+    ],
+    "pred": [
+     "A",
+     3
+    ],
+    "reasons": [
+     "số trường biểu mẫu",
+     "thuộc nhóm ABSENCE",
+     "có giá trị tiền / ngân sách"
+    ]
+   },
+   {
+    "code": "CONTRACT_APPROVAL",
+    "true": [
+     "C",
+     5
+    ],
+    "pred": [
+     "B",
+     3
+    ],
+    "reasons": [
+     "ràng buộc pháp lý",
+     "thuộc nhóm LEGAL",
+     "biểu mẫu có trường số tiền"
+    ]
+   },
+   {
+    "code": "DATA_UAT_EXPORT",
+    "true": [
+     "B",
+     3
+    ],
+    "pred": [
+     "C",
+     3
+    ],
+    "reasons": [
+     "thuộc nhóm WORK",
+     "số trường biểu mẫu",
+     "liên quan dữ liệu nhạy cảm / hạ tầng"
+    ]
+   },
+   {
+    "code": "EMPLOYEE_ONBOARDING",
+    "true": [
+     "C",
+     3
+    ],
+    "pred": [
+     "B",
+     2
+    ],
+    "reasons": [
+     "cần người thực hiện",
+     "thuộc nhóm PEOPLE",
+     "có cụm từ \"name\""
+    ]
+   },
+   {
+    "code": "FACILITY_REPAIR",
+    "true": [
+     "C",
+     2
+    ],
+    "pred": [
+     "B",
+     2
+    ],
+    "reasons": [
+     "cần người thực hiện",
+     "liên quan dữ liệu nhạy cảm / hạ tầng",
+     "thuộc nhóm SUPPORT"
+    ]
+   },
+   {
+    "code": "FLASH_SALE_VOUCHER",
+    "true": [
+     "B",
+     4
+    ],
+    "pred": [
+     "C",
+     3
+    ],
+    "reasons": [
+     "số trường biểu mẫu",
+     "thuộc nhóm SALES",
+     "biểu mẫu có khoảng thời gian"
+    ]
+   },
+   {
+    "code": "IT_SUPPORT",
+    "true": [
+     "B",
+     1
+    ],
+    "pred": [
+     "C",
+     2
+    ],
+    "reasons": [
+     "cần bàn giao / nghiệm thu",
+     "số trường biểu mẫu",
+     "thuộc nhóm SUPPORT"
+    ]
+   },
+   {
+    "code": "LEAVE",
+    "true": [
+     "B",
+     2
+    ],
+    "pred": [
+     "A",
+     1
+    ],
+    "reasons": [
+     "tác vụ thường nhật, tự phục vụ",
+     "số trường biểu mẫu",
+     "thuộc nhóm ABSENCE"
+    ]
+   },
+   {
+    "code": "LEAVE_SPECIAL",
+    "true": [
+     "A",
+     2
+    ],
+    "pred": [
+     "B",
+     2
+    ],
+    "reasons": [
+     "biểu mẫu có khoảng thời gian",
+     "biểu mẫu chỉ định người khác",
+     "có cụm từ \"nghi\""
+    ]
+   },
+   {
+    "code": "MARKETING_CAMPAIGN",
+    "true": [
+     "C",
+     4
+    ],
+    "pred": [
+     "B",
+     4
+    ],
+    "reasons": [
+     "biểu mẫu có khoảng thời gian",
+     "biểu mẫu có trường số tiền",
+     "thuộc nhóm SALES"
+    ]
+   },
+   {
+    "code": "NDA_PRIVACY_CLEARANCE",
+    "true": [
+     "B",
+     2
+    ],
+    "pred": [
+     "C",
+     5
+    ],
+    "reasons": [
+     "liên quan dữ liệu nhạy cảm / hạ tầng",
+     "ràng buộc pháp lý",
+     "số trường biểu mẫu"
+    ]
+   },
+   {
+    "code": "OVERTIME_REQ",
+    "true": [
+     "B",
+     2
+    ],
+    "pred": [
+     "C",
+     3
+    ],
+    "reasons": [
+     "số trường biểu mẫu",
+     "có cụm từ \"date\"",
+     "có cụm từ \"lam\""
+    ]
+   },
+   {
+    "code": "POLICY_ISSUANCE",
+    "true": [
+     "B",
+     4
+    ],
+    "pred": [
+     "B",
+     2
+    ],
+    "reasons": [
+     "cần người thực hiện",
+     "ràng buộc pháp lý",
+     "thuộc nhóm LEGAL"
+    ]
+   },
+   {
+    "code": "PROD_DATA_ACCESS",
+    "true": [
+     "C",
+     5
+    ],
+    "pred": [
+     "C",
+     2
+    ],
+    "reasons": [
+     "liên quan dữ liệu nhạy cảm / hạ tầng",
+     "số trường biểu mẫu",
+     "thuộc nhóm PROVISION"
+    ]
+   },
+   {
+    "code": "PROJECT_INITIATION",
+    "true": [
+     "C",
+     4
+    ],
+    "pred": [
+     "B",
+     3
+    ],
+    "reasons": [
+     "cần người thực hiện",
+     "biểu mẫu có khoảng thời gian",
+     "biểu mẫu có trường số tiền"
+    ]
+   },
+   {
+    "code": "PROMOTION_REQ",
+    "true": [
+     "B",
+     4
+    ],
+    "pred": [
+     "C",
+     4
+    ],
+    "reasons": [
+     "số trường biểu mẫu",
+     "tác động nhân sự",
+     "có cụm từ \"position\""
+    ]
+   },
+   {
+    "code": "PURCHASE_REQUEST",
+    "true": [
+     "B",
+     3
+    ],
+    "pred": [
+     "C",
+     3
+    ],
+    "reasons": [
+     "số trường biểu mẫu",
+     "thuộc nhóm PROCUREMENT",
+     "biểu mẫu có trường số tiền"
+    ]
+   },
+   {
+    "code": "RECRUITMENT_REQ",
+    "true": [
+     "C",
+     4
+    ],
+    "pred": [
+     "B",
+     5
+    ],
+    "reasons": [
+     "cần người thực hiện",
+     "thuộc nhóm PEOPLE",
+     "tác động nhân sự"
+    ]
+   },
+   {
+    "code": "REFUND_COMPENSATION",
+    "true": [
+     "A",
+     2
+    ],
+    "pred": [
+     "B",
+     3
+    ],
+    "reasons": [
+     "thuộc nhóm PAYMENT",
+     "biểu mẫu có trường số tiền",
+     "có giá trị tiền / ngân sách"
+    ]
+   },
+   {
+    "code": "SALARY_ADJUSTMENT",
+    "true": [
+     "B",
+     5
+    ],
+    "pred": [
+     "C",
+     3
+    ],
+    "reasons": [
+     "số trường biểu mẫu",
+     "tác động nhân sự",
+     "biểu mẫu có trường số tiền"
+    ]
+   },
+   {
+    "code": "SALARY_ADVANCE",
+    "true": [
+     "B",
+     2
+    ],
+    "pred": [
+     "B",
+     4
+    ],
+    "reasons": [
+     "thuộc nhóm PAYMENT",
+     "biểu mẫu có trường số tiền",
+     "có cụm từ \"ung\""
+    ]
+   },
+   {
+    "code": "SECURITY_INCIDENT_HOTFIX",
+    "true": [
+     "C",
+     5
+    ],
+    "pred": [
+     "C",
+     3
+    ],
+    "reasons": [
+     "liên quan dữ liệu nhạy cảm / hạ tầng",
+     "số trường biểu mẫu",
+     "thuộc nhóm SUPPORT"
+    ]
+   },
+   {
+    "code": "TASK_REQUEST",
+    "true": [
+     "C",
+     1
+    ],
+    "pred": [
+     "B",
+     2
+    ],
+    "reasons": [
+     "cần người thực hiện",
+     "có cụm từ \"cau\"",
+     "có cụm từ \"yeu cau\""
+    ]
+   },
+   {
+    "code": "TAX_INVOICE_ISSUE",
+    "true": [
+     "B",
+     1
+    ],
+    "pred": [
+     "B",
+     4
+    ],
+    "reasons": [
+     "cần người thực hiện",
+     "ràng buộc pháp lý",
+     "thuộc nhóm PAYMENT"
+    ]
+   },
+   {
+    "code": "TRAINING_COURSE",
+    "true": [
+     "B",
+     2
+    ],
+    "pred": [
+     "C",
+     4
+    ],
+    "reasons": [
+     "số trường biểu mẫu",
+     "biểu mẫu có khoảng thời gian",
+     "thuộc nhóm PEOPLE"
+    ]
+   },
+   {
+    "code": "VENDOR_PAYMENT",
+    "true": [
+     "C",
+     5
+    ],
+    "pred": [
+     "B",
+     2
+    ],
+    "reasons": [
+     "ràng buộc pháp lý",
+     "thuộc nhóm PAYMENT",
+     "biểu mẫu có trường số tiền"
+    ]
+   },
+   {
+    "code": "VISITOR_SECURITY_PASS",
+    "true": [
+     "A",
+     1
+    ],
+    "pred": [
+     "C",
+     3
+    ],
+    "reasons": [
+     "số trường biểu mẫu",
+     "thuộc nhóm PROVISION",
+     "có cụm từ \"sach\""
+    ]
+   }
+  ]
+ },
+ "baselines": {
+  "majority": {
+   "lifecycle": {
+    "accuracy": 0.483,
+    "macro_f1": 0.217
+   },
+   "risk_weight": {
+    "mae": 1.0,
+    "exact": 0.259,
+    "within_1": 0.741
+   }
+  },
+  "rules": {
+   "lifecycle": {
+    "accuracy": 0.517,
+    "macro_f1": 0.51
+   },
+   "risk_weight": {
+    "mae": 0.776,
+    "exact": 0.379,
+    "within_1": 0.862
+   }
+  }
+ },
+ "dev": {
+  "summary": {
+   "scenarios_pass": 5,
+   "scenarios": 10,
+   "required_changes_found": "2/8",
+   "kept_unchanged": "5/5",
+   "no_change_scenarios_ok": "1/1",
+   "proposals_total": 5,
+   "proposals_outside_answer_key": 3
+  },
+  "rows": [
+   {
+    "id": "QD-01",
+    "title": "Nghiệm thu bắt buộc khi mua sắm",
+    "related": [
+     "EQUIPMENT",
+     "PURCHASE_REQUEST",
+     "SUPPLIER_ONBOARDING"
+    ],
+    "proposals": [
+     {
+      "code": "PURCHASE_REQUEST",
+      "current": {
+       "lifecycle": "B",
+       "risk_weight": 3
+      },
+      "proposed": {
+       "lifecycle": "C",
+       "risk_weight": 3
+      },
+      "reasons": [
+       "có giá trị tiền / ngân sách",
+       "cần người thực hiện",
+       "cần bàn giao / nghiệm thu",
+       "liên quan bên ngoài"
+      ]
+     },
+     {
+      "code": "SUPPLIER_ONBOARDING",
+      "current": {
+       "lifecycle": "B",
+       "risk_weight": 3
+      },
+      "proposed": {
+       "lifecycle": "C",
+       "risk_weight": 3
+      },
+      "reasons": [
+       "có giá trị tiền / ngân sách",
+       "cần người thực hiện",
+       "cần bàn giao / nghiệm thu",
+       "liên quan bên ngoài"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "PURCHASE_REQUEST",
+      "expected": {
+       "lifecycle": "C"
+      },
+      "ok": true,
+      "got": {
+       "lifecycle": "C",
+       "risk_weight": 3
+      },
+      "related": true
+     },
+     {
+      "kind": "giữ nguyên",
+      "code": "EQUIPMENT",
+      "ok": true,
+      "got": null
+     },
+     {
+      "kind": "giữ nguyên",
+      "code": "LAPTOP_PROVISION",
+      "ok": true,
+      "got": null
+     }
+    ],
+    "extra_proposals": [
+     "SUPPLIER_ONBOARDING"
+    ],
+    "pass": true
+   },
+   {
+    "id": "QD-02",
+    "title": "Bảo vệ dữ liệu cá nhân khách hàng",
+    "related": [
+     "NDA_PRIVACY_CLEARANCE"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "DATA_UAT_EXPORT",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": false
+     },
+     {
+      "kind": "phải đổi",
+      "code": "NDA_PRIVACY_CLEARANCE",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     },
+     {
+      "kind": "giữ nguyên",
+      "code": "PROD_DATA_ACCESS",
+      "ok": true,
+      "got": null
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-03",
+    "title": "Đi muộn và quên chấm công (ví dụ của giảng viên)",
+    "related": [
+     "EQUIPMENT_BORROW",
+     "HR_CERTIFICATE",
+     "EQUIPMENT"
+    ],
+    "proposals": [
+     {
+      "code": "EQUIPMENT_BORROW",
+      "current": {
+       "lifecycle": "C",
+       "risk_weight": 2
+      },
+      "proposed": {
+       "lifecycle": "C",
+       "risk_weight": 1
+      },
+      "reasons": [
+       "tác động nhân sự",
+       "đòi hỏi cấp có thẩm quyền cao",
+       "tác vụ thường nhật, tự phục vụ"
+      ]
+     },
+     {
+      "code": "EQUIPMENT",
+      "current": {
+       "lifecycle": "C",
+       "risk_weight": 3
+      },
+      "proposed": {
+       "lifecycle": "C",
+       "risk_weight": 2
+      },
+      "reasons": [
+       "tác động nhân sự",
+       "đòi hỏi cấp có thẩm quyền cao",
+       "tác vụ thường nhật, tự phục vụ"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "ATTENDANCE_ADJUSTMENT",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": false
+     }
+    ],
+    "extra_proposals": [
+     "EQUIPMENT_BORROW",
+     "EQUIPMENT"
+    ],
+    "pass": false
+   },
+   {
+    "id": "QD-04",
+    "title": "Giới hạn làm việc từ xa",
+    "related": [
+     "WFH_REQ"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "WFH_REQ",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-05",
+    "title": "Hội đồng thanh lý tài sản",
+    "related": [
+     "ASSET_DISPOSAL"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "giữ nguyên",
+      "code": "ASSET_DISPOSAL",
+      "ok": true,
+      "got": null
+     }
+    ],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-06",
+    "title": "Quy định trang phục (không liên quan)",
+    "related": [
+     "EMPLOYEE_ONBOARDING"
+    ],
+    "proposals": [],
+    "checks": [],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-07",
+    "title": "Thẩm định hợp đồng giá trị lớn",
+    "related": [
+     "TAX_INVOICE_ISSUE"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "giữ nguyên",
+      "code": "CONTRACT_APPROVAL",
+      "ok": true,
+      "got": null
+     }
+    ],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-08",
+    "title": "Đánh giá hiệu quả chương trình khuyến mãi",
+    "related": [
+     "MARKETING_CAMPAIGN",
+     "TAX_INVOICE_ISSUE"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "FLASH_SALE_VOUCHER",
+      "expected": {
+       "lifecycle": "C"
+      },
+      "ok": false,
+      "got": null,
+      "related": false
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-09",
+    "title": "Sự cố IT trên hệ thống production",
+    "related": [
+     "IT_SUPPORT"
+    ],
+    "proposals": [
+     {
+      "code": "IT_SUPPORT",
+      "current": {
+       "lifecycle": "B",
+       "risk_weight": 1
+      },
+      "proposed": {
+       "lifecycle": "B",
+       "risk_weight": 3
+      },
+      "reasons": [
+       "cần người thực hiện",
+       "liên quan dữ liệu nhạy cảm / hạ tầng",
+       "liên quan bên ngoài",
+       "được xếp rủi ro cao"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "IT_SUPPORT",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": true,
+      "got": {
+       "lifecycle": "B",
+       "risk_weight": 3
+      },
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-10",
+    "title": "Đặt phòng họp có khách bên ngoài",
+    "related": [
+     "ROOM_BOOKING"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "ROOM_BOOKING",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   }
+  ]
+ },
+ "holdout": {
+  "summary": {
+   "scenarios_pass": 4,
+   "scenarios": 10,
+   "required_changes_found": "1/7",
+   "kept_unchanged": "2/2",
+   "no_change_scenarios_ok": "1/1",
+   "proposals_total": 4,
+   "proposals_outside_answer_key": 1
+  },
+  "rows": [
+   {
+    "id": "QD-11",
+    "title": "Thẩm định an ninh khi cấp server/firewall production",
+    "related": [
+     "SERVER_FIREWALL"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "SERVER_FIREWALL",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-12",
+    "title": "Điều xe công vụ đi ngoại tỉnh",
+    "related": [
+     "VEHICLE_BOOKING"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "VEHICLE_BOOKING",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-13",
+    "title": "Định mức văn phòng phẩm (nới lỏng)",
+    "related": [
+     "OFFICE_SUPPLIES",
+     "SUPPLIER_ONBOARDING"
+    ],
+    "proposals": [
+     {
+      "code": "SUPPLIER_ONBOARDING",
+      "current": {
+       "lifecycle": "B",
+       "risk_weight": 3
+      },
+      "proposed": {
+       "lifecycle": "B",
+       "risk_weight": 2
+      },
+      "reasons": [
+       "cần người thực hiện",
+       "đòi hỏi cấp có thẩm quyền cao",
+       "tác vụ thường nhật, tự phục vụ"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "giữ nguyên",
+      "code": "OFFICE_SUPPLIES",
+      "ok": true,
+      "got": null
+     }
+    ],
+    "extra_proposals": [
+     "SUPPLIER_ONBOARDING"
+    ],
+    "pass": true
+   },
+   {
+    "id": "QD-14",
+    "title": "Hoàn tiền, đền bù khách hàng giá trị lớn",
+    "related": [
+     "REFUND_COMPENSATION"
+    ],
+    "proposals": [
+     {
+      "code": "REFUND_COMPENSATION",
+      "current": {
+       "lifecycle": "A",
+       "risk_weight": 2
+      },
+      "proposed": {
+       "lifecycle": "A",
+       "risk_weight": 1
+      },
+      "reasons": [
+       "liên quan bên ngoài",
+       "đòi hỏi cấp có thẩm quyền cao"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "REFUND_COMPENSATION",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": {
+       "lifecycle": "A",
+       "risk_weight": 1
+      },
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-15",
+    "title": "Nghiệm thu kết quả đào tạo chi phí cao",
+    "related": [
+     "TRAINING_COURSE"
+    ],
+    "proposals": [
+     {
+      "code": "TRAINING_COURSE",
+      "current": {
+       "lifecycle": "B",
+       "risk_weight": 2
+      },
+      "proposed": {
+       "lifecycle": "C",
+       "risk_weight": 2
+      },
+      "reasons": [
+       "cần bàn giao / nghiệm thu"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "TRAINING_COURSE",
+      "expected": {
+       "lifecycle": "C"
+      },
+      "ok": true,
+      "got": {
+       "lifecycle": "C",
+       "risk_weight": 2
+      },
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-16",
+    "title": "Khách vào khu vực phòng máy chủ",
+    "related": [
+     "VISITOR_SECURITY_PASS"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "VISITOR_SECURITY_PASS",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-17",
+    "title": "Tiệc tất niên (không liên quan)",
+    "related": [
+     "TRAINING_COURSE",
+     "ACCESS_FACILITY",
+     "EMPLOYEE_ONBOARDING"
+    ],
+    "proposals": [],
+    "checks": [],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-18",
+    "title": "Chiết khấu thương mại vượt ngưỡng",
+    "related": [
+     "SPECIAL_DISCOUNT"
+    ],
+    "proposals": [
+     {
+      "code": "SPECIAL_DISCOUNT",
+      "current": {
+       "lifecycle": "A",
+       "risk_weight": 3
+      },
+      "proposed": {
+       "lifecycle": "A",
+       "risk_weight": 2
+      },
+      "reasons": [
+       "ràng buộc pháp lý",
+       "liên quan bên ngoài",
+       "đòi hỏi cấp có thẩm quyền cao"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "SPECIAL_DISCOUNT",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": {
+       "lifecycle": "A",
+       "risk_weight": 2
+      },
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-19",
+    "title": "Khen thưởng giá trị lớn",
+    "related": [
+     "REWARD_REQ"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "REWARD_REQ",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-20",
+    "title": "Hội đồng lương",
+    "related": [
+     "SALARY_ADJUSTMENT"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "giữ nguyên",
+      "code": "SALARY_ADJUSTMENT",
+      "ok": true,
+      "got": null
+     }
+    ],
+    "extra_proposals": [],
+    "pass": true
+   }
+  ]
+ },
+ "holdout_rules": {
+  "summary": {
+   "scenarios_pass": 5,
+   "scenarios": 10,
+   "required_changes_found": "3/7",
+   "kept_unchanged": "1/2",
+   "no_change_scenarios_ok": "1/1",
+   "proposals_total": 5,
+   "proposals_outside_answer_key": 1
+  },
+  "rows": [
+   {
+    "id": "QD-11",
+    "title": "Thẩm định an ninh khi cấp server/firewall production",
+    "related": [
+     "SERVER_FIREWALL"
+    ],
+    "proposals": [
+     {
+      "code": "SERVER_FIREWALL",
+      "current": {
+       "lifecycle": "C",
+       "risk_weight": 3
+      },
+      "proposed": {
+       "lifecycle": "C",
+       "risk_weight": 4
+      },
+      "reasons": [
+       "luật từ khóa"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "SERVER_FIREWALL",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": true,
+      "got": {
+       "lifecycle": "C",
+       "risk_weight": 4
+      },
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-12",
+    "title": "Điều xe công vụ đi ngoại tỉnh",
+    "related": [
+     "VEHICLE_BOOKING"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "VEHICLE_BOOKING",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-13",
+    "title": "Định mức văn phòng phẩm (nới lỏng)",
+    "related": [
+     "OFFICE_SUPPLIES",
+     "SUPPLIER_ONBOARDING"
+    ],
+    "proposals": [
+     {
+      "code": "SUPPLIER_ONBOARDING",
+      "current": {
+       "lifecycle": "B",
+       "risk_weight": 3
+      },
+      "proposed": {
+       "lifecycle": "B",
+       "risk_weight": 2
+      },
+      "reasons": [
+       "luật từ khóa"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "giữ nguyên",
+      "code": "OFFICE_SUPPLIES",
+      "ok": true,
+      "got": null
+     }
+    ],
+    "extra_proposals": [
+     "SUPPLIER_ONBOARDING"
+    ],
+    "pass": true
+   },
+   {
+    "id": "QD-14",
+    "title": "Hoàn tiền, đền bù khách hàng giá trị lớn",
+    "related": [
+     "REFUND_COMPENSATION"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "REFUND_COMPENSATION",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-15",
+    "title": "Nghiệm thu kết quả đào tạo chi phí cao",
+    "related": [
+     "TRAINING_COURSE"
+    ],
+    "proposals": [
+     {
+      "code": "TRAINING_COURSE",
+      "current": {
+       "lifecycle": "B",
+       "risk_weight": 2
+      },
+      "proposed": {
+       "lifecycle": "C",
+       "risk_weight": 2
+      },
+      "reasons": [
+       "luật từ khóa"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "TRAINING_COURSE",
+      "expected": {
+       "lifecycle": "C"
+      },
+      "ok": true,
+      "got": {
+       "lifecycle": "C",
+       "risk_weight": 2
+      },
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-16",
+    "title": "Khách vào khu vực phòng máy chủ",
+    "related": [
+     "VISITOR_SECURITY_PASS"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "VISITOR_SECURITY_PASS",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-17",
+    "title": "Tiệc tất niên (không liên quan)",
+    "related": [
+     "TRAINING_COURSE",
+     "ACCESS_FACILITY",
+     "EMPLOYEE_ONBOARDING"
+    ],
+    "proposals": [],
+    "checks": [],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-18",
+    "title": "Chiết khấu thương mại vượt ngưỡng",
+    "related": [
+     "SPECIAL_DISCOUNT"
+    ],
+    "proposals": [
+     {
+      "code": "SPECIAL_DISCOUNT",
+      "current": {
+       "lifecycle": "A",
+       "risk_weight": 3
+      },
+      "proposed": {
+       "lifecycle": "A",
+       "risk_weight": 4
+      },
+      "reasons": [
+       "luật từ khóa"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "SPECIAL_DISCOUNT",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": true,
+      "got": {
+       "lifecycle": "A",
+       "risk_weight": 4
+      },
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": true
+   },
+   {
+    "id": "QD-19",
+    "title": "Khen thưởng giá trị lớn",
+    "related": [
+     "REWARD_REQ"
+    ],
+    "proposals": [],
+    "checks": [
+     {
+      "kind": "phải đổi",
+      "code": "REWARD_REQ",
+      "expected": {
+       "weight": "up"
+      },
+      "ok": false,
+      "got": null,
+      "related": true
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   },
+   {
+    "id": "QD-20",
+    "title": "Hội đồng lương",
+    "related": [
+     "SALARY_ADJUSTMENT"
+    ],
+    "proposals": [
+     {
+      "code": "SALARY_ADJUSTMENT",
+      "current": {
+       "lifecycle": "B",
+       "risk_weight": 5
+      },
+      "proposed": {
+       "lifecycle": "C",
+       "risk_weight": 5
+      },
+      "reasons": [
+       "luật từ khóa"
+      ]
+     }
+    ],
+    "checks": [
+     {
+      "kind": "giữ nguyên",
+      "code": "SALARY_ADJUSTMENT",
+      "ok": false,
+      "got": {
+       "lifecycle": "C",
+       "risk_weight": 5
+      }
+     }
+    ],
+    "extra_proposals": [],
+    "pass": false
+   }
+  ]
+ }
+}

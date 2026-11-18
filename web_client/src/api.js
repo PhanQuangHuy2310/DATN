@@ -124,6 +124,7 @@ export async function api(path, { silent = false, timeoutMs, retriedAuth = false
         error.fields = body?.error?.fields;
         error.serverMessage = body?.error?.message || body?.message || "";
         error.correlationId = body?.correlation_id || response.headers.get("X-Correlation-ID") || "";
+        error.body = body;
         if (response.status === 401 && !isAuthPath(path)) {
           // The short session expired: renew it with the refresh token and
           // replay once. A 401 is returned before any handler runs, so even a

@@ -437,9 +437,11 @@ def internal_auto_approve_view(request: HttpRequest, request_id: str) -> JsonRes
     if not expected or not hmac.compare_digest(supplied, expected):
         return api_error(request, "UNAUTHORIZED", status=401)
     result = try_auto_approve(str(request_id), correlation_id(request))
+    escalated = bool(result and result.get("escalated_to"))
     return JsonResponse(
         {
-            "approved": result is not None,
+            "approved": result is not None and not escalated,
+            "escalated_to": result.get("escalated_to") if escalated else None,
             "result": result,
             "correlation_id": correlation_id(request),
         }
@@ -610,10 +612,12 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
 
         with connection.cursor() as cursor:
             ai_approval = ai_approval_info(cursor, row[0], row[3])
+    ai_escalation = _ai_escalation_info(row[0])
     return JsonResponse(
         {
             "request": {
                 "ai_auto_approval": ai_approval,
+                "ai_escalation": ai_escalation,
                 "id": row[0],
                 "code": row[1],
                 "type_code": row[2],
@@ -760,6 +764,107 @@ def delegation_revoke_view(request: HttpRequest, delegation_id) -> JsonResponse:
     except CommandError as exc:
         return api_error(request, exc.code, status=exc.status, fields=exc.fields)
     return JsonResponse({**result, "correlation_id": correlation_id(request)})
+
+
+def _ai_escalation_info(request_id: str) -> dict[str, Any] | None:
+    """Lần AI nâng luồng gần nhất (A -> B/C) và số đề xuất xử lý còn chờ quản lý quyết định."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT details, occurred_at FROM eas.audit_event
+                WHERE request_id = %s AND action = 'AI_ESCALATED'
+                ORDER BY seq DESC LIMIT 1
+                """,
+                [request_id],
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            details = row[0] or {}
+            cursor.execute("SELECT to_regclass('eas.ai_remediation') IS NOT NULL")
+            pending = 0
+            if cursor.fetchone()[0]:
+                cursor.execute(
+                    "SELECT count(*) FROM eas.ai_remediation WHERE request_id=%s AND state='PROPOSED'",
+                    [request_id],
+                )
+                pending = int(cursor.fetchone()[0])
+    except DatabaseError:
+        return None
+    return {
+        "from_lifecycle": details.get("from_lifecycle"),
+        "to_lifecycle": details.get("to_lifecycle"),
+        "causes": details.get("causes") or [],
+        "occurred_at": row[1].isoformat() if row[1] else None,
+        "pending_remediations": pending,
+    }
+
+
+@require_GET
+@require_actor()
+def ai_remediation_plan_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    """Đề xuất xử lý gốc rễ của AI cho hồ sơ dính tình huống xấu (quản lý duyệt hồ sơ hoặc OPS_ADMIN)."""
+    from api_core.workflow.remediation import build_plan
+
+    try:
+        plan = build_plan(actor=request.actor, request_id=str(request_id))
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse({"plan": plan, "correlation_id": correlation_id(request)})
+
+
+@require_POST
+@require_actor()
+def ai_remediation_confirm_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    """Quản lý xác nhận đề xuất: hệ thống chuyển việc / lùi hạn dưới quyền của quản lý."""
+    from api_core.workflow.remediation import confirm_plan
+
+    return _command_response(request, confirm_plan, request_id=str(request_id))
+
+
+@require_POST
+@require_actor()
+def ai_feedback_escalation_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    """Quản lý xác nhận AI chuyển luồng nhầm (bộ nhớ ca: lần sau cùng người, cùng loại thì không chuyển)."""
+    from api_core.workflow.remediation import mark_escalation_unnecessary
+
+    try:
+        body = parse_json_object(request)
+        result = mark_escalation_unnecessary(
+            actor=request.actor,
+            request_id=str(request_id),
+            reason=body.get("reason") or "",
+            correlation_id=correlation_id(request),
+        )
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse(result)
+
+
+@require_POST
+@require_actor()
+def ai_remediation_dismiss_view(
+    request: HttpRequest, request_id: str, proposal_id: str
+) -> JsonResponse:
+    from api_core.workflow.remediation import dismiss_plan
+
+    try:
+        body = parse_json_object(request)
+        result = dismiss_plan(
+            actor=request.actor,
+            request_id=str(request_id),
+            proposal_id=str(proposal_id),
+            reason=body.get("reason") or "",
+            correlation_id=correlation_id(request),
+        )
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse(result)
 
 
 @require_POST

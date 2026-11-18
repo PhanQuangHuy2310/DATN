@@ -641,6 +641,9 @@ def password_reset_requests(request: HttpRequest) -> JsonResponse:
 @require_POST
 @require_actor("OPS_ADMIN")
 def password_reset_approve(request: HttpRequest, request_id: str) -> JsonResponse:
+    # The <uuid:> route converter passes a UUID object; audit canonicalization
+    # only accepts JSON-native values.
+    request_id = str(request_id)
     if not _global_ops_admin(request):
         return api_error(request, "FORBIDDEN", status=403)
     try:
@@ -791,6 +794,7 @@ def password_reset_approve(request: HttpRequest, request_id: str) -> JsonRespons
 def password_reset_reject(request: HttpRequest, request_id: str) -> JsonResponse:
     """Close a reset request without changing the password (no new status:
     the request is marked EXPIRED with the reviewer and the reason)."""
+    request_id = str(request_id)
     if not _global_ops_admin(request):
         return api_error(request, "FORBIDDEN", status=403)
     try:

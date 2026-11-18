@@ -236,7 +236,11 @@ class AiDownLearningJobTests(SimpleTestCase):
             patch.object(ai_learning, "_finish_applied") as finish,
         ):
             outcome = ai_learning.process_job(job, "owner-1")
-        sql = " ".join(str(c.args[0]) for c in cursor.execute.call_args_list)
+        # SQL + tham số (sync_status / loại thông báo được truyền qua tham số).
+        sql = " ".join(
+            str(c.args[0]) + " " + " ".join(map(str, c.args[1] if len(c.args) > 1 else []))
+            for c in cursor.execute.call_args_list
+        )
         return outcome, finish, sql
 
     def test_first_failure_is_retried_not_applied(self):
@@ -251,7 +255,9 @@ class AiDownLearningJobTests(SimpleTestCase):
         self.assertEqual(outcome, "RETRY")  # process_job reports the retry path...
         finish.assert_not_called()
         self.assertIn("status = 'FAILED'", sql)  # ...but _fail marks the job FAILED
-        self.assertIn("sync_status = 'ERROR'", sql)
+        # Không có bản đã áp dụng để quay về (ảnh chụp trống): giữ bộ luật cũ, trạng thái ERROR, báo admin.
+        self.assertIn("SET sync_status = %s", sql)
+        self.assertIn(" ERROR ", sql)
         self.assertIn("REGULATION_UPDATE_FAILED", sql)
 
 

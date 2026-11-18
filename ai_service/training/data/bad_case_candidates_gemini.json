@@ -1,0 +1,1054 @@
+{
+ "per_type": [
+  {
+   "code": "BC_ATTENDANCE_DEADLINE_CONFLICT",
+   "request_types": [
+    "ATTENDANCE_ADJUSTMENT"
+   ],
+   "title": "Điều chỉnh chấm công vào ngày có khối lượng việc quá tải sắp đến hạn",
+   "harm": "AI tự duyệt cho phép nhân viên điều chỉnh chấm công (thường là để hợp thức hóa việc vắng mặt hoặc đi muộn) vào ngày họ đang gánh vác các nhiệm vụ quan trọng có hạn chót (due_at hoặc due_date) sắp tới, dẫn đến việc trễ hạn bàn giao dự án hoặc ách tắc quy trình chéo.",
+   "detection": "S1 (due_at/due_date của task/cross_dept_support trùng với work_date trong S11) kết hợp S3 (tần suất điều chỉnh chấm công trong 30 ngày qua >= 3 lần).",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần trưởng bộ phận và HR xem xét lại năng lực phân bổ công việc và sự sẵn sàng của nhân sự trong ngày đó trước khi đồng ý cho phép điều chỉnh chấm công.",
+   "remediation": [
+    {
+     "action": "REASSIGN_TASKS",
+     "description": "Chuyển các việc sắp đến hạn trong ngày work_date cho nhân sự khác đang rảnh trong phòng.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SENDER",
+      "ASSIGNEE"
+     ]
+    },
+    {
+     "action": "POSTPONE_DEADLINE",
+     "description": "Lùi thời hạn hoàn thành (due_date) của các nhiệm vụ bị ảnh hưởng sang ngày làm việc tiếp theo.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SENDER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Nhân viên làm việc ngoài giờ hiệu quả và có thể hoàn thành task sớm. Giảm thiểu bằng cách kiểm tra thêm lịch sử hoàn thành task đúng hạn (S3)."
+  },
+  {
+   "code": "BC_ATTENDANCE_GHOST_DEPARTMENT",
+   "request_types": [
+    "ATTENDANCE_ADJUSTMENT"
+   ],
+   "title": "Điều chỉnh chấm công vào ngày phòng ban thiếu hụt nhân sự trầm trọng",
+   "harm": "AI tự duyệt giúp nhân viên hợp thức hóa việc nghỉ/vắng mặt vào ngày mà tỷ lệ nhân sự vắng mặt (do phép đã duyệt ở S4 hoặc đơn nghỉ đang chờ ở S4) trong phòng (S5) vượt ngưỡng chịu đựng, gây tê liệt hoạt động vận hành của bộ phận.",
+   "detection": "S5 (tỷ lệ thành viên trong phòng vắng mặt tính trên tổng số S5 trong ngày work_date > 50%) kết hợp S4 (có nhiều đơn nghỉ được duyệt trùng ngày).",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần sự can thiệp của cấp quản lý cao hơn để điều phối nhân sự chéo phòng hoặc từ chối đơn điều chỉnh nếu không có lý do chính đáng.",
+   "remediation": [
+    {
+     "action": "REJECT_AND_RESCHEDULE",
+     "description": "Từ chối đơn hiện tại và yêu cầu nhân sự chọn ngày làm bù khác khi phòng đã đủ nhân sự.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SENDER"
+     ]
+    },
+    {
+     "action": "CROSS_DEPT_COVERAGE",
+     "description": "Điều động nhân sự tạm thời từ phòng ban lân cận hỗ trợ vận hành trong ngày work_date.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "DEPARTMENT_MEMBERS"
+     ]
+    }
+   ],
+   "false_positive_risk": "Công việc của phòng có tính chất độc lập cao, không bị ảnh hưởng bởi số lượng người vắng mặt. Giảm thiểu bằng cách phân loại tính chất phòng ban trước khi áp dụng."
+  },
+  {
+   "code": "BC_ATTENDANCE_REPEATED_ANOMALY",
+   "request_types": [
+    "ATTENDANCE_ADJUSTMENT"
+   ],
+   "title": "Lạm dụng điều chỉnh chấm công liên tục trong cửa sổ thời gian ngắn",
+   "harm": "AI tự duyệt làm bỏ sót hành vi vi phạm nội quy lao động có hệ thống (đi muộn, về sớm hoặc bỏ ca liên tục nhưng dùng tính năng điều chỉnh chấm công để xóa dấu vết), gây rủi ro tuân thủ pháp luật lao động và mất công bằng nội bộ.",
+   "detection": "S3 (số lượng đơn ATTENDANCE_ADJUSTMENT trong cửa sổ 30 ngày >= 4 lần hoặc số lần bị từ chối/thu hồi >= 1 lần).",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần bộ phận Nhân sự (HR) trực tiếp làm việc với nhân viên và quản lý trực tiếp để kiểm tra kỷ luật lao động.",
+   "remediation": [
+    {
+     "action": "HR_WARNING_NOTE",
+     "description": "Ghi nhận cảnh báo vi phạm kỷ luật chấm công vào hồ sơ nhân sự trên hệ thống HRM.",
+     "who_initiates": "EXECUTOR_HR",
+     "who_is_notified": [
+      "SENDER",
+      "DIRECT_MANAGER"
+     ]
+    },
+    {
+     "action": "REQUIRE_PROOF_DOCUMENTS",
+     "description": "Yêu cầu bổ sung chứng từ xác thực cứng (giấy khám bệnh, quyết định công tác) cho các lần điều chỉnh sau.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SENDER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Nhân viên làm việc ở dự án đặc thù thường xuyên di chuyển ngoài hiện trường. Giảm thiểu bằng cách kiểm tra mã dự án hoặc lịch công tác đã duyệt trong S4."
+  },
+  {
+   "code": "BC_EXPENSE_BUDGET_OVERRUN",
+   "request_types": [
+    "EXPENSE_CLAIM"
+   ],
+   "title": "Vượt ngân sách Cost Center do cộng dồn cam kết",
+   "harm": "AI tự duyệt khiến tổng chi phí thực tế vượt quá quỹ ngân sách được duyệt của phòng ban, gây áp lực thanh khoản và vi phạm hạn mức tài chính.",
+   "detection": "Dựa trên S7 (Tài chính giả lập: approved, committed, spent) và S11 (amount_vnd của đơn hiện tại). Điều kiện: (spent + committed + amount_vnd) > approved.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Cần bộ phận tài chính kiểm tra lại dòng tiền và khả năng phân bổ lại ngân sách trước khi cam kết chi.",
+   "remediation": [
+    {
+     "action": "REQUEST_ADDITIONAL_BUDGET",
+     "description": "Yêu cầu trưởng bộ phận làm đơn xin bổ sung ngân sách cost center từ cấp có thẩm quyền.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "FINANCE"
+     ]
+    },
+    {
+     "action": "SPLIT_OR_POSTPONE",
+     "description": "Đề xuất lùi thời hạn thanh toán sang kỳ ngân sách tiếp theo hoặc cắt giảm các khoản mục ít ưu tiên khác.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SENDER",
+      "FINANCE"
+     ]
+    }
+   ],
+   "false_positive_risk": "Nhầm lẫn khi ngân sách vừa được cấp bổ sung trên hệ thống nhưng chưa cập nhật kịp thời. Cách giảm: Đồng bộ dữ liệu real-time từ ERP trước khi AI đánh giá."
+  },
+  {
+   "code": "BC_EXPENSE_DUPLICATE_INVOICE",
+   "request_types": [
+    "EXPENSE_CLAIM"
+   ],
+   "title": "Trùng lặp hóa đơn thanh toán trong cửa sổ thời gian ngắn",
+   "harm": "Doanh nghiệp bị thanh toán hai lần cho cùng một hóa đơn/chứng từ, gây thất thoát tài chính.",
+   "detection": "Dựa trên S3 (lịch sử hồ sơ của người gửi trong 7/30 ngày) và S11 (invoice_number, amount_vnd). Điều kiện: Tồn tại đơn cũ trong 30 ngày có cùng invoice_number và amount_vnd ở trạng thái đã duyệt hoặc đang xử lý.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Cần bộ phận tài chính đối chiếu chứng từ gốc để xác định có phải lỗi gửi trùng hay gian lận.",
+   "remediation": [
+    {
+     "action": "REJECT_DUPLICATE",
+     "description": "Từ chối hồ sơ trùng lặp và yêu cầu người gửi hủy đơn trên hệ thống.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "SENDER",
+      "DIRECT_MANAGER"
+     ]
+    },
+    {
+     "action": "ATTACH_CORRECTION_NOTE",
+     "description": "Yêu cầu bổ sung giải trình lý do phát sinh giao dịch tương tự nếu đây là chi phí định kỳ.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "SENDER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Nhầm khi nhà cung cấp xuất lại hóa đơn thay thế có cùng số nhưng khác nội dung. Cách giảm: Kiểm tra thêm trường mô tả (reason) và mã tra cứu hóa đơn điện tử."
+  },
+  {
+   "code": "BC_EXPENSE_OVERDUE_TASKS_CONFLICT",
+   "request_types": [
+    "EXPENSE_CLAIM"
+   ],
+   "title": "Tạo đơn thanh toán khi đang ôm quá hạn công việc trọng yếu",
+   "harm": "Nhân sự tập trung xử lý hoàn chứng từ cá nhân trong khi các nhiệm vụ cốt lõi (task, project) đang quá hạn SLA nghiêm trọng, ảnh hưởng tiến độ chung.",
+   "detection": "Dựa trên S1 (việc đang giữ có due_at quá hạn hoặc sắp đến hạn trong vòng 24h đối với TASK_REQUEST/PROJECT_INITIATION) và S11 (EXPENSE_CLAIM). Điều kiện: Số lượng việc quá hạn >= 2.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Cần quản lý trực tiếp đánh giá lại ưu tiên công việc trước khi cho phép giải quyết thủ tục hành chính.",
+   "remediation": [
+    {
+     "action": "REASSIGN_TASKS",
+     "description": "Chuyển giao bớt các nhiệm vụ đang quá hạn cho nhân sự khác trong phòng để nhân viên tập trung hoàn tất công việc.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SENDER",
+      "EXECUTOR_FINANCE"
+     ]
+    },
+    {
+     "action": "POSTPONE_CLAIM_PROCESSING",
+     "description": "Tạm hoãn xử lý thanh toán cho đến khi các tác vụ quan trọng đạt trạng thái hoàn thành.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "SENDER",
+      "DIRECT_MANAGER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Nhầm khi công việc quá hạn là do chờ phòng ban khác phản hồi chứ lỗi không ở người gửi. Cách giảm: Lọc các task có trạng thái 'waiting_dependency'."
+  },
+  {
+   "code": "BC_LEAVE_01",
+   "request_types": [
+    "LEAVE"
+   ],
+   "title": "Nghỉ phép dài ngày trong khi tồn đọng việc sắp đến hạn",
+   "harm": "Nhân sự bỏ dở các nhiệm vụ quan trọng sắp đến hạn SLA hoặc trong khoảng thời gian nghỉ mà không kịp bàn giao, gây ùn tắc vận hành và ảnh hưởng chất lượng dịch vụ.",
+   "detection": "S1 và S11: Hồ sơ LEAVE có start_date và end_date, kết hợp S1 có các task loại TASK_REQUEST/CROSS_DEPT_SUPPORT/PROJECT_INITIATION đang giao cho người gửi với due_at hoặc due_date nằm trong khoảng thời gian nghỉ (start_date đến end_date) nhưng chưa được chuyển người khác.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần chuyển luồng B để trưởng bộ phận và bộ phận chuyên môn xem xét lại tiến độ công việc, yêu cầu hoàn thành hoặc bàn giao trước khi duyệt.",
+   "remediation": [
+    {
+     "action": "REASSIGN_TASKS",
+     "description": "Chuyển giao các việc đang kẹt SLA sang nhân sự thay thế trong phòng trước khi nghỉ.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "EXECUTOR_HR"
+     ]
+    },
+    {
+     "action": "POSTPONE_LEAVE",
+     "description": "Đề xuất lùi thời gian nghỉ phép sang tuần sau khi các việc gấp đã hoàn thành.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE"
+     ]
+    }
+   ],
+   "false_positive_risk": "Nhân sự đã âm thầm hoàn thành công việc trước hạn. Giảm bằng cách kiểm tra trạng thái thực tế của task trong S1 (nếu đã done thì bỏ qua)."
+  },
+  {
+   "code": "BC_LEAVE_02",
+   "request_types": [
+    "LEAVE"
+   ],
+   "title": "Nghỉ phép vượt quá quỹ phép năm còn lại",
+   "harm": "Vi phạm chính sách nhân sự nội bộ, dẫn đến rủi ro tài chính hoặc tranh chấp lao động liên quan đến việc trừ lương sai quy định hoặc nợ phép âm quá hạn mức.",
+   "detection": "S6 và S11: Số ngày nghỉ tính từ start_date đến end_date lớn hơn số lượng leave_balance (quỹ phép còn lại theo năm) của nhân sự đó.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần chuyển luồng B để nhân sự HR kiểm tra và xác nhận chuyển đổi sang hình thức nghỉ không lương hoặc từ chối tự động.",
+   "remediation": [
+    {
+     "action": "CONVERT_TO_UNPAID",
+     "description": "Chuyển đổi số ngày vượt định mức thành hình thức nghỉ không lương (unpaid leave).",
+     "who_initiates": "HR_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "DIRECT_MANAGER"
+     ]
+    },
+    {
+     "action": "REDUCE_LEAVE_DAYS",
+     "description": "Yêu cầu rút ngắn thời gian nghỉ để khớp với số quỹ phép năm còn lại.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE"
+     ]
+    }
+   ],
+   "false_positive_risk": "Nhân sự mới được ứng trước phép theo thỏa thuận đặc biệt với công ty. Giảm bằng cách kiểm tra flag ngoại lệ do HR cấu hình trên hệ thống HRM giả lập."
+  },
+  {
+   "code": "BC_LEAVE_03",
+   "request_types": [
+    "LEAVE"
+   ],
+   "title": "Nghỉ phép trùng thời điểm phòng vắng quá nửa nhân sự",
+   "harm": "Gây suy yếu năng lực vận hành của phòng ban, đình trệ các quy trình phối hợp liên bộ phận do thiếu hụt nhân sự trầm trọng cùng thời điểm.",
+   "detection": "S4 và S5 và S11: Tỉ lệ số nhân sự trong cùng phòng ban (tính từ danh sách S5) có lịch nghỉ phép/công tác đã duyệt hoặc đang chờ duyệt (S4) trùng với khoảng thời gian của đơn này vượt quá 50% tổng số nhân sự của phòng.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_ADMIN",
+   "why_lifecycle": "Cần chuyển luồng B để quản lý cấp cao hơn xem xét tổng thể tải công việc của phòng và điều phối lịch nghỉ tránh dồn ứ.",
+   "remediation": [
+    {
+     "action": "RESCHEDULE_LEAVE",
+     "description": "Yêu cầu đổi lịch nghỉ sang giai đoạn khác khi phòng đã ổn định nhân sự.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "DIRECTOR"
+     ]
+    },
+    {
+     "action": "TEMPORARY_COVERAGE",
+     "description": "Chỉ định nhân sự kiêm nhiệm từ phòng khác hỗ trợ trong thời gian cao điểm.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "CROSS_DEPT_MANAGER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Giai đoạn thấp điểm của bộ phận nên việc vắng nhiều người không ảnh hưởng lớn. Giảm bằng cách gắn nhãn chu kỳ mùa vụ thấp điểm (low_season_flag)."
+  },
+  {
+   "code": "BC_LEAVE_SPECIAL_01",
+   "request_types": [
+    "LEAVE_SPECIAL"
+   ],
+   "title": "Nghỉ phép đặc biệt đẩy người thay thế vào trạng thái quá tải nghiêm trọng do trùng lặp công việc",
+   "harm": "Nếu AI tự duyệt, nhân sự được chỉ định làm người nhận bàn giao (handover_user_id) sẽ phải ôm đồm khối lượng công việc khổng lồ từ người xin nghỉ, dẫn đến trễ hạn các nhiệm vụ có SLA gấp hoặc vi phạm thời hạn cam kết với khách hàng.",
+   "detection": "Sử dụng S1, S2, S4. Điều kiện phát hiện: Người được chọn nhận bàn giao (S2: handover_user_id) tại thời điểm nộp đơn đã có sẵn từ 3 việc trở lên có hạn SLA (S1: due_at) trùng với khoảng thời gian nghỉ phép của người nộp đơn, hoặc tổng số người vắng mặt trong cùng phòng ban (S5) đã vượt quá 40% nhân sự.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần luồng B để Trưởng bộ phận hoặc HR kiểm tra lại phương án phân phối công việc và chỉ định người thay thế khác phù hợp hơn.",
+   "remediation": [
+    {
+     "action": "REASSIGN_TASKS",
+     "description": "Chuyển giao một phần công việc trọng yếu của người xin nghỉ sang một nhân sự khác trong phòng chưa bị quá tải.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "APPLICANT",
+      "HANDOVER_USER"
+     ]
+    },
+    {
+     "action": "ADJUST_DUE_DATE",
+     "description": "Lùi thời hạn hoàn thành (due_date) của các nhiệm vụ không khẩn cấp trong giai đoạn người nhận bàn giao bị quá tải.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "APPLICANT",
+      "CLIENT_OR_PARTNER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Người nhận bàn giao có năng lực xử lý nhanh nhưng hệ thống chỉ tính theo số lượng đầu việc mà không xét đến độ phức tạp. Giảm thiểu bằng cách phân loại trọng số công việc trước khi đánh giá quá tải."
+  },
+  {
+   "code": "BC_LEAVE_SPECIAL_02",
+   "request_types": [
+    "LEAVE_SPECIAL"
+   ],
+   "title": "Lợi dụng nghỉ phép đặc biệt khi quỹ phép năm (leave_balance) đã cạn kiệt và vi phạm quy định thời hạn nộp hồ sơ",
+   "harm": "Gây thất thoát chi phí lao động, tạo tiền lệ xấu về kỷ luật lao động khi nhân viên lạm dụng các loại nghỉ đặc biệt (có lương) trong khi thực chất là nghỉ cá nhân do đã dùng hết phép thường.",
+   "detection": "Sử dụng S3, S6, S10, S11. Điều kiện phát hiện: Số ngày phép năm hiện tại của người gửi đã về mức 0 (S6: leave_balance <= 0) VÀ lịch sử 30 ngày gần nhất (S3) có từ 2 lần trở lên nộp đơn nghỉ sát ngày hoặc trong thời gian cao điểm, kết hợp với việc khoảng thời gian xin nghỉ kéo dài hơn số ngày quy định thực tế.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần luồng B có sự tham gia của HR Manager để xác thực chứng từ đặc biệt và trừ quỹ phép hoặc chuyển sang nghỉ không lương.",
+   "remediation": [
+    {
+     "action": "CONVERT_TO_UNPAID",
+     "description": "Chuyển đổi một phần hoặc toàn bộ thời gian nghỉ đặc biệt sang hình thức nghỉ không lương do đã hết phép.",
+     "who_initiates": "HR_MANAGER",
+     "who_is_notified": [
+      "APPLICANT",
+      "DIRECT_MANAGER"
+     ]
+    },
+    {
+     "action": "REQUIRE_ADDITIONAL_DOCS",
+     "description": "Yêu cầu bổ sung chứng từ y tế hoặc giấy tờ minh chứng hợp lệ cho loại nghỉ phép đặc biệt trong vòng 24 giờ.",
+     "who_initiates": "HR_MANAGER",
+     "who_is_notified": [
+      "APPLICANT"
+     ]
+    }
+   ],
+   "false_positive_risk": "Nhân viên mới vào làm chưa kịp tích lũy phép nhưng có sự cố bất khả kháng thực sự. Giảm thiểu bằng cách kiểm tra ngày vào làm (S6) nếu dưới 90 ngày thì xem xét miễn giảm."
+  },
+  {
+   "code": "BC_REFUND_GHOST_CUSTOMER",
+   "request_types": [
+    "REFUND_COMPENSATION"
+   ],
+   "title": "Hoàn tiền cho khách hàng không có trong CRM hoặc tài khoản không khớp hợp đồng",
+   "harm": "Tổn thất tài chính trực tiếp do chuyển khoản nhầm đối tượng hoặc tạo đơn hoàn tiền khống để rút quỹ.",
+   "detection": "Dựa vào S9 (CRM giả lập) và S11 (nội dung biểu mẫu): customer_reference hoặc beneficiary_account trong đơn REFUND_COMPENSATION không tồn tại trong S9 hoặc tên khách hàng không khớp với danh sách khách hàng đang quản lý.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Cần bộ phận Tài chính (FINANCE) xác thực lại thông tin khách hàng và đối chiếu chứng từ gốc trên hệ thống CRM trước khi giải ngân.",
+   "remediation": [
+    {
+     "action": "UPDATE_CUSTOMER_REF",
+     "description": "Yêu cầu người gửi đính kèm mã khách hàng chính xác từ CRM.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SENDER"
+     ]
+    },
+    {
+     "action": "REJECT_AND_FLAG",
+     "description": "Từ chối hồ sơ và gắn cờ cảnh báo rủi ro gian lận tài chính lên lịch sử của người gửi.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "INTERNAL_AUDIT"
+     ]
+    }
+   ],
+   "false_positive_risk": "Khách hàng mới phát sinh chưa kịp cập nhật vào CRM; giảm bằng cách yêu cầu đính kèm hợp đồng hoặc mã giao dịch gốc.",
+   "amount_threshold": null
+  },
+  {
+   "code": "BC_REFUND_FREQUENCY_ABUSE",
+   "request_types": [
+    "REFUND_COMPENSATION"
+   ],
+   "title": "Tần suất tạo đơn hoàn tiền bất thường của một nhân sự trong thời gian ngắn",
+   "harm": "Dấu hiệu nhân sự đang lạm dụng quyền tạo đơn để chia nhỏ hạn mức hoặc thông đồng với bên ngoài.",
+   "detection": "Dựa vào S3 (lịch sử hồ sơ): số lượng đơn REFUND_COMPENSATION do người gửi tạo trong cửa sổ 7 ngày vượt quá 5 đơn hoặc tổng tiền vượt ngưỡng cảnh báo định kỳ.",
+   "escalate_to": "C",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Cần cả trưởng bộ phận duyệt và bộ phận nghiệm thu độc lập (Internal Control/Finance) kiểm tra chéo toàn bộ chuỗi giao dịch của nhân sự này.",
+   "remediation": [
+    {
+     "action": "CONSOLIDATE_REQUESTS",
+     "description": "Gộp tất cả các đơn hoàn tiền nhỏ thành một hồ sơ tổng thể để thẩm định lại toàn bộ nguyên nhân.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SENDER"
+     ]
+    },
+    {
+     "action": "AUDIT_TRANSACTION_HISTORY",
+     "description": "Thực hiện kiểm tra độc lập các khiếu nại của khách hàng liên quan đến các đơn trước đó.",
+     "who_initiates": "INTERNAL_AUDIT",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "DIRECTOR"
+     ]
+    }
+   ],
+   "false_positive_risk": "Bộ phận chăm sóc khách hàng xử lý sự cố hàng loạt trong mùa cao điểm; giảm bằng cách xác thực số lượng ticket hỗ trợ tương ứng từ CRM.",
+   "amount_threshold": null
+  },
+  {
+   "code": "BC_ROOM_CAPACITY_OVERLOAD",
+   "request_types": [
+    "ROOM_BOOKING"
+   ],
+   "title": "Đặt phòng họp vượt quá sức chứa thực tế so với số lượng người tham dự",
+   "harm": "Gây quá tải không gian, thiếu chỗ ngồi nghiêm trọng, ảnh hưởng chất lượng cuộc họp quan trọng và làm gián đoạn các sự kiện khác của công ty.",
+   "detection": "Sử dụng tín hiệu S8 và S11. Điều kiện: attendees_count > room_capacity (lấy sức chứa từ dữ liệu cơ sở vật chất giả lập của room_code). Ngưỡng: attendees_count vượt quá 100% sức chứa định mức của phòng.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_ADMIN",
+   "why_lifecycle": "Cần bộ phận Quản trị cơ sở vật chất (Admin) xem xét nhu cầu thực tế và điều phối sang phòng lớn hơn hoặc yêu cầu chia nhỏ cuộc họp mà không cần nghiệm thu độc lập.",
+   "remediation": [
+    {
+     "action": "SWITCH_TO_LARGER_ROOM",
+     "description": "Điều chuyển lịch đặt sang phòng họp khác có sức chứa lớn hơn phù hợp với số lượng attendees_count.",
+     "who_initiates": "EXECUTOR_ADMIN",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SENDER"
+     ]
+    },
+    {
+     "action": "REDUCE_ATTENDEES",
+     "description": "Yêu cầu người gửi tinh gọn danh sách người tham dự hoặc tổ chức họp trực tuyến một phần để khớp với sức chứa phòng.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EXECUTOR_ADMIN",
+      "SENDER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Báo nhầm khi số lượng người tham dự chỉ tham gia trực tuyến một phần nhưng được khai báo toàn bộ vào biểu mẫu. Cách giảm: Bổ sung quy định phân biệt rõ số lượng tham gia trực tiếp và trực tuyến trong biểu mẫu.",
+   "risk_weight": 1
+  },
+  {
+   "code": "BC_ROOM_DOUBLE_BOOKING",
+   "request_types": [
+    "ROOM_BOOKING"
+   ],
+   "title": "Trùng lịch đặt phòng họp đã được phê duyệt trước đó",
+   "harm": "Dẫn đến xung đột không gian, hai nhóm cùng tranh chấp một phòng họp vào cùng khung giờ, gây mất thời gian và hủy hoãn cuộc họp.",
+   "detection": "Sử dụng tín hiệu S8. Điều kiện: Khoảng thời gian [start_time, end_time] trong ngày booking_date trùng lặp với một bản ghi reservation đã tồn tại và có trạng thái đã đặt/được duyệt cho cùng room_code. Ngưỡng: Sự trùng lặp thời gian lớn hơn 0 phút.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_ADMIN",
+   "why_lifecycle": "Bộ phận Quản trị cơ sở vật chất cần can thiệp thủ công để kiểm tra tính ưu tiên của các cuộc họp và sắp xếp phương án thay thế.",
+   "remediation": [
+    {
+     "action": "RESCHEDULE_TIME",
+     "description": "Yêu cầu người gửi dịch chuyển khung giờ họp sang khoảng thời gian trống khác trong ngày.",
+     "who_initiates": "EXECUTOR_ADMIN",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SENDER"
+     ]
+    },
+    {
+     "action": "RE_ASSIGN_ROOM",
+     "description": "Chỉ định một phòng họp dự phòng khác có cùng trang thiết bị trong cùng khung thời gian.",
+     "who_initiates": "EXECUTOR_ADMIN",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SENDER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Báo nhầm khi hệ thống cơ sở vật chất chưa cập nhật kịp thời các đơn vừa bị hủy ở phút chót. Cách giảm: Đồng bộ trạng thái hủy phòng tức thời vào cơ sở dữ liệu S8 trước khi AI đánh giá.",
+   "risk_weight": 1
+  },
+  {
+   "code": "BC_ROOM_ABSENTEE_ATTENDEES",
+   "request_types": [
+    "ROOM_BOOKING"
+   ],
+   "title": "Đặt phòng họp vào thời điểm đa số người tham gia dự kiến đang nghỉ phép hoặc công tác",
+   "harm": "Lãng phí tài nguyên phòng họp của công ty khi phần lớn nhân sự liên quan không có mặt tại văn phòng vào thời điểm đó.",
+   "detection": "Sử dụng tín hiệu S4, S5 và S8. Điều kiện: Tỉ lệ người trong phòng hoặc danh sách người tham gia có trạng thái vắng mặt (user_leave_and_trips) trong khung thời gian booking_date vượt quá 50%. Ngưỡng: > 50% tổng số người dự kiến tham gia vắng mặt.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_ADMIN",
+   "why_lifecycle": "Bộ phận quản trị cần xác thực lại lịch họp với quản lý trực tiếp xem cuộc họp có bắt buộc phải diễn ra hay không.",
+   "remediation": [
+    {
+     "action": "CANCEL_RESERVATION",
+     "description": "Hủy lịch đặt phòng họp do không đảm bảo đủ số lượng nhân sự tham gia tối thiểu.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EXECUTOR_ADMIN",
+      "SENDER"
+     ]
+    },
+    {
+     "action": "POSTPONE_MEETING",
+     "description": "Lùi lịch họp sang tuần kế tiếp khi các nhân sự chủ chốt quay trở lại làm việc.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EXECUTOR_ADMIN",
+      "SENDER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Báo nhầm khi cuộc họp có mời khách hàng bên ngoài hoặc nhân sự từ chi nhánh khác không thuộc bảng quản lý nghỉ phép nội bộ. Cách giảm: Cho phép người gửi chú thích thành phần tham gia ngoài công ty trong nội dung biểu mẫu.",
+   "risk_weight": 1
+  },
+  {
+   "code": "BC_SD_GHOST_CUSTOMER",
+   "request_types": [
+    "SPECIAL_DISCOUNT"
+   ],
+   "title": "Chiết khấu cho khách hàng CRM không hoạt động hoặc nợ quá hạn",
+   "harm": "AI tự duyệt chiết khấu đặc biệt cho khách hàng có trạng thái tài khoản bị khóa, tranh chấp hoặc nợ quá hạn dài ngày, dẫn đến rủi ro mất khả năng thu hồi công nợ và thất thoát doanh thu.",
+   "detection": "Sắp xếp dựa trên S9 (CRM giả lập): khách hàng trong `customer_name` có trạng thái tài khoản là INACTIVE, BLOCKED hoặc có số dư nợ quá hạn vượt quá 30 ngày tại thời điểm gửi đơn.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Cần bộ phận Tài chính kiểm tra thực tế tình trạng công nợ và dòng tiền của khách hàng trước khi áp dụng chiết khấu.",
+   "remediation": [
+    {
+     "action": "BLOCK_DISCOUNT_APPLY",
+     "description": "Tạm dừng áp dụng chính sách chiết khấu cho đến khi khách hàng thanh toán toàn bộ nợ quá hạn.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SALES_REPRESENTATIVE"
+     ]
+    },
+    {
+     "action": "REQUIRE_DEBT_COMMITMENT",
+     "description": "Yêu cầu lập biên bản cam kết trả nợ kèm lịch trình cụ thể được phê duyệt bởi Giám đốc tài chính.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "FINANCE_MANAGER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Khách hàng mới tạo tài khoản nhưng chưa kịp cập nhật trạng thái Active trong CRM. Cách giảm: Đồng bộ dữ liệu CRM thời gian thực hoặc cho phép người gửi đính kèm mã xác nhận từ bộ phận Quản trị Khách hàng."
+  },
+  {
+   "code": "BC_SD_MARGIN_BREACH",
+   "request_types": [
+    "SPECIAL_DISCOUNT"
+   ],
+   "title": "Chiết khấu vượt giá trị biên lợi nhuận cho phép so với giá trị giao dịch",
+   "harm": "Tỷ lệ chiết khấu (`discount_percent`) và giá trị giao dịch (`deal_value_vnd`) tạo ra biên lợi nhuận âm hoặc thấp hơn mức sàn tối thiểu của công ty, gây lỗ tài chính cho đơn hàng.",
+   "detection": "Sắp xếp dựa trên S11 (nội dung biểu mẫu): `discount_percent` nhân với `deal_value_vnd` vượt quá hạn mức chiết khấu thông thường hoặc tổng giá trị tiền chiết khấu (`amount_vnd`) vượt quá 15% tổng giá trị hợp đồng (`deal_value_vnd`).",
+   "escalate_to": "C",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Cần cả trưởng bộ phận duyệt và bộ phận Tài chính thẩm định độc lập cấu trúc giá, chi phí giá vốn để đảm bảo không bán phá giá.",
+   "remediation": [
+    {
+     "action": "ADJUST_DISCOUNT_RATE",
+     "description": "Yêu cầu điều chỉnh giảm tỷ lệ chiết khấu về mức an toàn phù hợp với biên lợi nhuận gộp.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SENDER"
+     ]
+    },
+    {
+     "action": "SPLIT_DEAL_REVIEW",
+     "description": "Yêu cầu tách các điều khoản dịch vụ kèm theo để đánh giá riêng biệt phần chiết khấu thương mại.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "FINANCE"
+     ]
+    }
+   ],
+   "false_positive_risk": "Các đơn hàng chiến lược thâm nhập thị trường mới được phép áp dụng biên lợi nhuận thấp trong ngắn hạn. Cách giảm: Bổ sung trường đánh dấu 'Đơn hàng chiến lược' và yêu cầu đính kèm phê duyệt chiến lược cấp tập đoàn."
+  },
+  {
+   "code": "BC_SD_DUPLICATE_DEAL",
+   "request_types": [
+    "SPECIAL_DISCOUNT"
+   ],
+   "title": "Gửi nhiều đơn chiết khấu trùng lặp cho cùng một khách hàng trong thời gian ngắn",
+   "harm": "Người gửi tạo lặp nhiều đơn chiết khấu khác nhau cho cùng một `customer_name` trong cửa sổ thời gian ngắn nhằm lách ngưỡng phê duyệt tự động của từng đơn lẻ.",
+   "detection": "Sắp xếp dựa trên S3 (lịch sử hồ sơ): Số lượng đơn `SPECIAL_DISCOUNT` cùng tên khách hàng trong cửa sổ 7 ngày >= 2 đơn, hoặc tổng số tiền chiết khấu cộng dồn vượt ngưỡng rủi ro cấp 3.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Cần gom nhóm các đơn hàng lại để người quản lý nhìn thấy toàn cảnh tổng mức chiết khấu cấp cho khách hàng đó trong tuần/tháng.",
+   "remediation": [
+    {
+     "action": "MERGE_REQUESTS",
+     "description": "Gộp các đơn chiết khấu trùng lặp thành một hồ sơ duy nhất để thẩm định tổng thể.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SENDER",
+      "FINANCE"
+     ]
+    },
+    {
+     "action": "REJECT_DUPLICATE",
+     "description": "Từ chối các đơn phát sinh sau và yêu cầu cập nhật bổ sung vào đơn gốc đầu tiên.",
+     "who_initiates": "EXECUTOR_FINANCE",
+     "who_is_notified": [
+      "SENDER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Khách hàng mua nhiều lô hàng hoàn toàn độc lập trong các dự án khác nhau. Cách giảm: Kiểm tra mã hợp đồng (`order_code` hoặc `customer_reference`) nếu khác nhau thì không tính là trùng lặp."
+  },
+  {
+   "code": "BC_VISITOR_OVER_CAPACITY",
+   "request_types": [
+    "VISITOR_SECURITY_PASS"
+   ],
+   "title": "Khách đến vượt quá sức chứa khu vực hoặc trùng lịch đặt phòng",
+   "harm": "Gây quá tải cơ sở vật chất, mất an ninh trật tự tại khu vực làm việc, ảnh hưởng đến bảo mật dữ liệu và an toàn chung.",
+   "detection": "Sử dụng S8 (Cơ sở vật chất giả lập) kết hợp S11 (nội dung biểu mẫu: facility_zone, visit_date, attendees_count hoặc lượng khách cùng đoàn). Điều kiện phát hiện: Tổng số lượng khách đăng ký vào cùng facility_zone trong visit_date vượt quá 80% sức chứa tối đa của khu vực đó theo dữ liệu reservation.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_FACILITY",
+   "why_lifecycle": "Cần bộ phận Quản trị Cơ sở vật chất (Facility) xem xét thực tế hạ tầng và phân bổ lại khu vực tiếp đón thay vì để AI tự duyệt.",
+   "remediation": [
+    {
+     "action": "RESCHEDULE_VISIT",
+     "description": "Đề xuất dời lịch hoặc chia nhỏ đoàn khách sang ngày/khung giờ khác có sức chứa trống.",
+     "who_initiates": "EXECUTOR_FACILITY",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SENDER"
+     ]
+    },
+    {
+     "action": "LIMIT_ZONE_ACCESS",
+     "description": "Giới hạn phạm vi di chuyển của khách chỉ ở khu vực sảnh chung, không cho vào khu vực nhạy cảm.",
+     "who_initiates": "EXECUTOR_FACILITY",
+     "who_is_notified": [
+      "SENDER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Báo nhầm khi số lượng khách đăng ký đến trong khung giờ khác nhau nhưng cùng ngày bị cộng dồn vào cùng một zone. Giảm thiểu bằng cách kiểm tra chi tiết theo khung giờ giờ đặt chỗ thay vì chỉ xét ngày.",
+   "risk_weight": 1
+  },
+  {
+   "code": "BC_VISITOR_SUSPICIOUS_ENTITY",
+   "request_types": [
+    "VISITOR_SECURITY_PASS"
+   ],
+   "title": "Tổ chức/đối tác của khách có dấu hiệu rủi ro hoặc không khớp dữ liệu CRM",
+   "harm": "Dẫn đến rò rỉ thông tin mật, tài sản trí tuệ hoặc đưa đối thủ cạnh tranh/đơn vị đang tranh chấp vào khu vực vận hành nội bộ.",
+   "detection": "Sử dụng S9 (CRM giả lập) kết hợp S11 (visitor_org, visitor_name). Điều kiện phát hiện: Tên tổ chức (visitor_org) không tồn tại trong danh sách khách hàng/đối tác hợp lệ của CRM, hoặc trạng thái tài khoản CRM của đối tác đó đang ở trạng thái 'BLOCKED', 'LITIGATION', hoặc 'COMPETITOR'.",
+   "escalate_to": "C",
+   "executor_role": "EXECUTOR_ADMIN",
+   "why_lifecycle": "Cần có bước kiểm tra từ bộ phận Hành chính/An ninh kết hợp nghiệm thu độc lập từ người quản lý tuân thủ/pháp chế trước khi cấp thẻ.",
+   "remediation": [
+    {
+     "action": "REQUEST_BACKGROUND_CHECK",
+     "description": "Yêu cầu người gửi bổ sung giấy giới thiệu công ty và căn cước công dân/hộ chiếu của khách để thẩm định lại.",
+     "who_initiates": "EXECUTOR_ADMIN",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SENDER"
+     ]
+    },
+    {
+     "action": "REQUIRE_ESCORT",
+     "description": "Bắt buộc nhân viên mời khách phải ký cam kết giám sát 1-1 trong suốt thời gian khách lưu trú tại công ty.",
+     "who_initiates": "EXECUTOR_ADMIN",
+     "who_is_notified": [
+      "SENDER",
+      "DIRECT_MANAGER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Báo nhầm khi tên tổ chức viết tắt hoặc khác biệt nhỏ về ký tự so với CRM. Giảm thiểu bằng việc chuẩn hóa từ khóa hoặc yêu cầu cập nhật tên pháp lý đầy đủ vào biểu mẫu.",
+   "risk_weight": 1
+  },
+  {
+   "code": "BC_VISITOR_SENDER_ON_LEAVE",
+   "request_types": [
+    "VISITOR_SECURITY_PASS"
+   ],
+   "title": "Nhân viên tạo đơn mời khách nhưng bản thân lại đang nghỉ phép hoặc vắng mặt",
+   "harm": "Không có người đón tiếp khách tại trụ sở, gây mất trật tự, lãng phí tài nguyên an ninh và vi phạm quy chế tiếp khách.",
+   "detection": "Sử dụng S4 (vắng mặt đã duyệt / đơn nghỉ đang chờ) và S11 (visit_date, người gửi đơn). Điều kiện phát hiện: visit_date trùng với khoảng thời gian nhân viên gửi đơn có lịch nghỉ phép đã được duyệt hoặc đang có đơn nghỉ chờ duyệt.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_ADMIN",
+   "why_lifecycle": "Cần bộ phận An ninh/Hành chính xác nhận lại xem ai sẽ là người chịu trách nhiệm đón tiếp thay thế.",
+   "remediation": [
+    {
+     "action": "REASSIGN_HOST",
+     "description": "Yêu cầu chỉ định một nhân sự khác trong phòng làm người phụ trách đón tiếp chính thay cho nhân viên đang nghỉ.",
+     "who_initiates": "EXECUTOR_ADMIN",
+     "who_is_notified": [
+      "SENDER",
+      "DIRECT_MANAGER"
+     ]
+    },
+    {
+     "action": "CANCEL_PASS",
+     "description": "Hủy thẻ an ninh nếu không có nhân sự nào khác chịu trách nhiệm tiếp đón khách vào ngày đó.",
+     "who_initiates": "EXECUTOR_ADMIN",
+     "who_is_notified": [
+      "SENDER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Báo nhầm khi nhân viên chỉ nghỉ nửa ngày chiều nhưng khách đến vào buổi sáng (hoặc ngược lại). Giảm thiểu bằng cách đối chiếu khung giờ chi tiết trên đơn nghỉ và giờ visit_date.",
+   "risk_weight": 1
+  },
+  {
+   "code": "BC_WFH_CRITICAL_DEADLINE_CONFLICT",
+   "request_types": [
+    "WFH_REQ"
+   ],
+   "title": "Xin WFH trùng thời điểm có nhiệm vụ quan trọng đến hạn hoặc ngày nghỉ lễ",
+   "harm": "Nhân viên làm việc từ xa vào đúng ngày có các đầu việc/dự án quan trọng cần xử lý trực tiếp hoặc ngay trước kỳ nghỉ, dẫn đến suy giảm năng suất, không thể phối hợp trực tiếp, trễ hạn bàn giao và ảnh hưởng đến vận hành chung của bộ phận.",
+   "detection": "Dựa vào tín hiệu S1 (việc đang giữ của người gửi có due_date trùng với ngày WFH hoặc trong khoảng nghỉ ngay sau đó) và S10 (ngày lễ business_holiday), kết hợp nội dung biểu mẫu S11 (trường date của WFH_REQ). Ngưỡng phát hiện: Có ít nhất 1 TASK_REQUEST/PROJECT_INITIATION có hạn chót (due_at/due_date) trùng hoặc trước 1 ngày làm việc so với ngày WFH.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_ADMIN",
+   "why_lifecycle": "Cần luồng B với sự xét duyệt thủ công của trưởng bộ phận để đánh giá năng lực hoàn thành nhiệm vụ từ xa hoặc yêu cầu dời lịch WFH.",
+   "remediation": [
+    {
+     "action": "RESCHEDULE_TASK",
+     "description": "Lùi hạn hoàn thành các công việc đang giữ hoặc điều chỉnh ngày WFH sang thời điểm khác ít áp lực hơn.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "EXECUTOR_ADMIN"
+     ]
+    },
+    {
+     "action": "REASSIGN_TASK",
+     "description": "Chuyển giao một phần công việc trọng yếu sang nhân sự khác đang làm việc tại văn phòng trong ngày đó.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "BACKUP_USER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Báo nhầm khi nhiệm vụ sắp đến hạn đã hoàn thành 90% hoặc có tính chất độc lập cao không cần tương tác trực tiếp. Cách giảm: Kết hợp kiểm tra trạng thái công việc (status = IN_PROGRESS nhưng tiến độ báo cáo cao) và cho phép quản lý ghi chú ngoại lệ."
+  },
+  {
+   "code": "BC_WFH_DEPARTMENT_ABSENTEEISM_SURGE",
+   "request_types": [
+    "WFH_REQ"
+   ],
+   "title": "Xin WFH khi phòng ban đã có tỷ lệ vắng mặt hoặc WFH quá cao",
+   "harm": "Làm tê liệt hoạt động tại văn phòng của bộ phận do quá nhiều nhân sự cùng vắng mặt hoặc làm việc từ xa trong cùng một ngày, không còn nhân sự trực chốt để xử lý công việc phát sinh trực tiếp.",
+   "detection": "Dựa vào tín hiệu S4 (dữ liệu user_leave_and_trips đã duyệt và đang chờ duyệt) kết hợp S5 (tổng số thành viên trong phòng ban). Ngưỡng phát hiện: Tổng số nhân sự trong cùng phòng ban xin nghỉ phép, đi công tác hoặc đăng ký WFH trong ngày đó vượt quá 50% tổng số nhân sự của phòng.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần luồng B để trưởng bộ phận cân đối lịch vắng mặt của toàn team, đảm bảo luôn duy trì tối thiểu nhân sự túc trực tại văn phòng.",
+   "remediation": [
+    {
+     "action": "REJECT_AND_REBOOK",
+     "description": "Từ chối đơn WFH hiện tại và yêu cầu nhân viên chọn ngày khác khi bộ phận đã đủ nhân sự trực văn phòng.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "HR_MANAGER"
+     ]
+    },
+    {
+     "action": "STAGGER_SCHEDULE",
+     "description": "Phân bổ lại lịch WFH luân phiên giữa các nhân sự trong phòng để không bị trùng lấp thời gian.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "DEPARTMENT_MEMBERS"
+     ]
+    }
+   ],
+   "false_positive_risk": "Báo nhầm vào các ngày thấp điểm (ví dụ ngày cuối tuần không có khách hàng giao dịch trực tiếp). Cách giảm: Phân loại nhóm công việc của phòng; nếu phòng có tính chất hoàn toàn online thì hạ ngưỡng cảnh báo xuống 70%."
+  },
+  {
+   "code": "BC_WFH_FREQUENT_PATTERN_ABUSE",
+   "request_types": [
+    "WFH_REQ"
+   ],
+   "title": "Lạm dụng WFH liên tục nhằm trốn tránh quy định chấm công",
+   "harm": "Nhân viên liên tục nộp đơn WFH rải rác hoặc dài ngày mà không có lý do chuyên môn rõ ràng, làm suy giảm kỷ luật lao động và tiềm ẩn rủi ro hiệu suất làm việc kém.",
+   "detection": "Dựa vào tín hiệu lịch sử hồ sơ S3 (số lượng đơn WFH của người gửi trong cửa sổ 30 ngày hoặc tháng gần nhất) kết hợp S11 (nội dung task_list sơ sài). Ngưỡng phát hiện: Số lượng đơn WFH trong 30 ngày vượt quá 8 đơn hoặc chiếm hơn 50% tổng số ngày làm việc trong tháng.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần luồng B có sự tham gia của Quản lý trực tiếp và HR để rà soát hiệu suất thực tế và ràng buộc KPI đối với nhân sự này.",
+   "remediation": [
+    {
+     "action": "REQUIRE_DETAILED_KPI",
+     "description": "Yêu cầu bổ sung danh sách công việc (task_list) chi tiết có sản phẩm đầu ra (deliverable) đo lường được trước khi phê duyệt.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "HR_MANAGER"
+     ]
+    },
+    {
+     "action": "REVOKE_AUTO_APPROVAL",
+     "description": "Thu hồi quyền AI tự duyệt cho tài khoản này trong vòng 3 tháng tiếp theo.",
+     "who_initiates": "HR_MANAGER",
+     "who_is_notified": [
+      "EMPLOYEE",
+      "SYSTEM_ADMIN"
+     ]
+    }
+   ],
+   "false_positive_risk": "Báo nhầm với nhân viên có thỏa thuận đặc biệt trong hợp đồng lao động (remote worker dài hạn). Cách giảm: Loại trừ các user có gắn cờ (flag) nhân sự làm việc từ xa toàn thời gian từ hệ thống HRM giả lập (S6)."
+  }
+ ],
+ "cross_type": [
+  {
+   "code": "BC_CROSS_LEAVE_HANDOVER_OVERLOAD",
+   "request_types": [
+    "LEAVE",
+    "LEAVE_SPECIAL",
+    "WFH_REQ"
+   ],
+   "title": "Nghỉ phép/WFH nhưng người nhận bàn giao đang quá tải công việc",
+   "harm": "AI tự duyệt đơn nghỉ/WFH khi người nhận bàn giao (S2) đang ôm quá nhiều task đến hạn (S1) sẽ dẫn đến đứt gãy chuỗi vận hành, bỏ lỡ SLA khách hàng do không có người thay thế thực tế.",
+   "detection": "Dựa trên S1, S2, S4: Đơn có handover_user_id (S2) mà tại thời điểm nộp đơn, số lượng công việc có due_at trong khoảng thời gian nghỉ của người được bàn giao > 3, hoặc tỉ lệ task quá hạn của họ trong 7 ngày qua > 20%.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần trưởng bộ phận hoặc nhân sự xem xét lại tải công việc của người nhận bàn giao để điều chuyển việc trước khi cho phép nghỉ.",
+   "remediation": [
+    {
+     "action": "REASSIGN_TASKS",
+     "description": "Chuyển giao bớt các task trọng yếu cho nhân sự thứ ba chưa quá tải trước khi duyệt nghỉ.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "handover_user_id",
+      "SUBMITTER"
+     ]
+    },
+    {
+     "action": "POSTPONE_LEAVE",
+     "description": "Đề nghị người gửi dời lịch nghỉ sang tuần khác ít việc hơn.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SUBMITTER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Người nhận bàn giao giỏi xử lý nhanh nhiều việc. Giảm bằng cách chỉ đếm các task có trọng số cao hoặc task sắp đến hạn trong vòng 24h tới."
+  },
+  {
+   "code": "BC_CROSS_DEPARTMENT_ABSENCE_CRITICAL_MASS",
+   "request_types": [
+    "LEAVE",
+    "LEAVE_SPECIAL",
+    "WFH_REQ",
+    "ATTENDANCE_ADJUSTMENT"
+   ],
+   "title": "Xin nghỉ/WFH khi phòng ban vượt ngưỡng vắng mặt cho phép",
+   "harm": "AI tự duyệt khiến phòng ban sụt giảm nhân sự đột ngột, tê liệt hoạt động chuyên môn do tỉ lệ vắng mặt vượt ngưỡng chịu đựng của bộ phận.",
+   "detection": "Dựa trên S4, S5, S10: Tính tỉ lệ số nhân sự trong phòng (S5) đã có lịch nghỉ/công tác được duyệt (S4) cộng với người gửi đơn trong cùng ngày nghỉ đạt >= 40 tổng số nhân sự của phòng.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_HR",
+   "why_lifecycle": "Cần quản lý cấp cao hơn hoặc HR đánh giá lại năng lực vận hành tối thiểu của phòng ban trong ngày đó.",
+   "remediation": [
+    {
+     "action": "REJECT_AND_RESCHEDULE",
+     "description": "Từ chối duyệt đợt nghỉ này và yêu cầu đổi lịch sang ngày khác.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SUBMITTER",
+      "HR_MANAGER"
+     ]
+    },
+    {
+     "action": "SPLIT_LEAVE_PERIOD",
+     "description": "Cắt ngắn thời gian nghỉ hoặc phân tán thời gian vắng mặt.",
+     "who_initiates": "DIRECT_MANAGER",
+     "who_is_notified": [
+      "SUBMITTER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Các ngày nghỉ lễ dài ngày mà toàn công ty vắng. Giảm bằng cách loại trừ các ngày nghỉ lễ chính thức (business_holiday)."
+  },
+  {
+   "code": "BC_CROSS_BUDGET_COMMITMENT_SURGE",
+   "request_types": [
+    "EXPENSE_CLAIM",
+    "REFUND_COMPENSATION",
+    "SPECIAL_DISCOUNT"
+   ],
+   "title": "Tạo đơn chi phí/chiết khấu dồn dập vượt hạn mức cost center",
+   "harm": "AI tự duyệt các đơn nhỏ lẻ dưới ngưỡng trong khi tổng giá trị cam kết (committed) và đã chi (spent) của cost center đã tiệm cận hoặc vượt ngân sách được duyệt.",
+   "detection": "Dựa trên S3, S7: Tổng số tiền các đơn đã tạo trong 30 ngày qua (S3) cộng với ngân sách committed/spent hiện tại của cost center (S7) vượt quá 95% ngân sách approved.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Bộ phận tài chính cần kiểm tra lại nguồn vốn và điều chuyển ngân sách nội bộ trước khi giải ngân.",
+   "remediation": [
+    {
+     "action": "HOLD_FOR_BUDGET_REVIEW",
+     "description": "Tạm dừng đơn cho đến khi bổ sung hoặc xin cấp thêm ngân sách cost center.",
+     "who_initiates": "FINANCE",
+     "who_is_notified": [
+      "SUBMITTER",
+      "DIRECT_MANAGER"
+     ]
+    },
+    {
+     "action": "REDUCE_CLAIM_AMOUNT",
+     "description": "Yêu cầu thu hồi hoặc cắt giảm giá trị khoản thanh toán không thiết yếu.",
+     "who_initiates": "FINANCE",
+     "who_is_notified": [
+      "SUBMITTER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Cost center mới được bổ sung ngân sách nhưng chưa cập nhật kịp trên hệ thống. Giảm bằng cách đồng bộ real-time với hệ thống kế toán."
+  },
+  {
+   "code": "BC_CROSS_AFTER_HOURS_BULK_SUBMISSION",
+   "request_types": [
+    "EXPENSE_CLAIM",
+    "ATTENDANCE_ADJUSTMENT",
+    "REFUND_COMPENSATION",
+    "SPECIAL_DISCOUNT"
+   ],
+   "title": "Giao dịch hàng loạt ngoài giờ hành chính nhằm lẩn tránh kiểm soát",
+   "harm": "AI tự duyệt các đơn gửi dồn dập ngoài giờ hành chính hoặc trong ngày nghỉ (S10) có nguy cơ là hành vi gian lận tài chính có chủ đích, né tránh sự giám sát của quản lý trực tiếp.",
+   "detection": "Dựa trên S3, S10: Số lượng đơn gửi trong khung giờ ngoài hành chính (ngoài 08:00-17:30 T2-T6) hoặc ngày lễ (business_holiday) trong vòng 7 ngày qua của người gửi >= 3 đơn.",
+   "escalate_to": "C",
+   "executor_role": "EXECUTOR_FINANCE",
+   "why_lifecycle": "Cần cả trưởng bộ phận xét duyệt và bộ phận tài chính/kiểm toán độc lập nghiệm thu lại tính hợp lệ của chứng từ.",
+   "remediation": [
+    {
+     "action": "REQUIRE_ADDITIONAL_DOCS",
+     "description": "Yêu cầu bổ sung hình ảnh, biên bản hoặc chứng từ gốc xác thực giao dịch ngoài giờ.",
+     "who_initiates": "FINANCE",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SUBMITTER"
+     ]
+    },
+    {
+     "action": "AUDIT_USER_TRANSACTIONS",
+     "description": "Đưa vào danh sách cần kiểm tra đột xuất đối với lịch sử giao dịch của tài khoản này.",
+     "who_initiates": "INTERNAL_AUDIT",
+     "who_is_notified": [
+      "DIRECT_MANAGER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Nhân viên làm việc ở múi giờ khác hoặc trực ca đêm hợp pháp. Giảm bằng cách kiểm tra lịch phân công ca trực trong hệ thống chấm công."
+  },
+  {
+   "code": "BC_CROSS_FREQUENT_AI_REVOCATION_ABUSE",
+   "request_types": [
+    "EXPENSE_CLAIM",
+    "LEAVE",
+    "REFUND_COMPENSATION",
+    "SPECIAL_DISCOUNT",
+    "WFH_REQ"
+   ],
+   "title": "Lạm dụng sơ hở AI tự duyệt rồi liên tục bị thu hồi/từ chối",
+   "harm": "Người dùng cố tình lách luật bằng cách tạo các đơn trông có vẻ hợp lệ để AI tự duyệt, nhưng lịch sử cho thấy các đơn này thường xuyên bị thu hồi hoặc phát hiện sai phạm sau đó.",
+   "detection": "Dựa trên S3: Chỉ số số lần AI tự duyệt bị thu hồi trong 30 ngày gần nhất >= 2 lần đối với cùng một người gửi.",
+   "escalate_to": "B",
+   "executor_role": "EXECUTOR_IT",
+   "why_lifecycle": "Tước quyền tự duyệt của AI đối với tài khoản này và chuyển mọi đơn từ sang quy trình duyệt thủ công tiêu chuẩn.",
+   "remediation": [
+    {
+     "action": "REVOKE_AI_AUTO_APPROVAL",
+     "description": "Tạm khóa quyền tự động duyệt (AI auto-approval) đối với tài khoản cá nhân này trong 90 ngày.",
+     "who_initiates": "IT_ADMIN",
+     "who_is_notified": [
+      "DIRECT_MANAGER",
+      "SUBMITTER"
+     ]
+    },
+    {
+     "action": "WARNING_NOTICE",
+     "description": "Gửi cảnh báo vi phạm quy trình tạo lập hồ sơ chính thống.",
+     "who_initiates": "HR_MANAGER",
+     "who_is_notified": [
+      "SUBMITTER",
+      "DIRECT_MANAGER"
+     ]
+    }
+   ],
+   "false_positive_risk": "Sai sót khách quan do quy định thay đổi liên tục. Giảm bằng cách chỉ tính các lỗi vi phạm rõ ràng về định dạng hoặc chính sách cốt lõi."
+  }
+ ],
+ "model": "gemini-3.5-flash-lite",
+ "calls": [
+  {
+   "scope": "ATTENDANCE_ADJUSTMENT",
+   "seconds": 9.6,
+   "tokens": 3515
+  },
+  {
+   "scope": "EXPENSE_CLAIM",
+   "seconds": 4.8,
+   "tokens": 3450
+  },
+  {
+   "scope": "LEAVE",
+   "seconds": 4.3,
+   "tokens": 3425
+  },
+  {
+   "scope": "LEAVE_SPECIAL",
+   "seconds": 4.2,
+   "tokens": 3190
+  },
+  {
+   "scope": "REFUND_COMPENSATION",
+   "seconds": 5.2,
+   "tokens": 3001
+  },
+  {
+   "scope": "ROOM_BOOKING",
+   "seconds": 4.9,
+   "tokens": 3563
+  },
+  {
+   "scope": "SPECIAL_DISCOUNT",
+   "seconds": 14.6,
+   "tokens": 3551
+  },
+  {
+   "scope": "VISITOR_SECURITY_PASS",
+   "seconds": 5.1,
+   "tokens": 3641
+  },
+  {
+   "scope": "WFH_REQ",
+   "seconds": 6.6,
+   "tokens": 3770
+  },
+  {
+   "scope": "CROSS",
+   "seconds": 6.9,
+   "tokens": 4386
+  }
+ ]
+}

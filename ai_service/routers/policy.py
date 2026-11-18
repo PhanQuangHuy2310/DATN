@@ -26,20 +26,61 @@ POLICY_FILE = os.path.join(DATA_DIR, "active_enterprise_policy.json")
 _cache: dict = {"mtime": None, "path": None, "policy": None}
 
 
+WINDOWS = ("CALENDAR_MONTH", "ROLLING_7D", "ROLLING_30D")
+
+
 class PolicyRule(BaseModel):
+    """Một luật kiểm soát; mọi điều kiện có mặt phải cùng thỏa (AND).
+
+    Ngoài ngưỡng tiền/ngày, luật có thể mang điều kiện NGỮ CẢNH do trình biên dịch v2 tách từ quy
+    định (api_core/workflow/regulation_compiler.py). Điều kiện ngữ cảnh được xét trên tín hiệu mà
+    API core tính từ CSDL (PolicySignals); thiếu tín hiệu thì điều kiện coi như KHÔNG thỏa.
+    """
+
     id: str = Field(..., min_length=1, max_length=50)
     description: str = Field("", max_length=500)
     request_type: str | None = Field(None, max_length=60)
     amount_gt: float | None = Field(None, ge=0)
     days_gt: int | None = Field(None, ge=0)
+    due_within_hours: int | None = Field(None, ge=1, le=24 * 31)
+    require_no_handover: bool | None = None
+    repeat_count_gte: int | None = Field(None, ge=1, le=1000)
+    repeat_window: str | None = None
+    split_suspect: bool | None = None
+    split_total_gt: float | None = Field(None, ge=0)
     min_risk: int | None = Field(None, ge=1, le=5)
     auto_approve: bool | None = None
+    escalate_to: str | None = None
+    approvers: list[str] | None = Field(None, max_length=6)
 
     @model_validator(mode="after")
     def has_effect(self):
         if self.min_risk is None and self.auto_approve is None:
             raise ValueError("rule needs min_risk or auto_approve")
+        if self.repeat_window is not None and self.repeat_window not in WINDOWS:
+            raise ValueError(
+                "repeat_window must be CALENDAR_MONTH, ROLLING_7D or ROLLING_30D"
+            )
+        if self.escalate_to is not None and self.escalate_to not in ("B", "C"):
+            raise ValueError("escalate_to must be B or C")
+        if self.auto_approve is True and (
+            self.due_within_hours or self.repeat_count_gte or self.split_suspect
+        ):
+            raise ValueError("contextual conditions can only restrict auto approval")
         return self
+
+
+class PolicySignals(BaseModel):
+    """Tín hiệu ngữ cảnh do API core tính từ CSDL (chỉ số đếm, tổng, khoảng giờ)."""
+
+    open_work_due_hours: list[float] = Field(default_factory=list, max_length=200)
+    work_due_in_absence: int = Field(0, ge=0)
+    handover_assigned: bool | None = None
+    same_type_count_7d: int = Field(0, ge=0)
+    same_type_count_30d: int = Field(0, ge=0)
+    same_type_count_month: int = Field(0, ge=0)
+    requester_amount_7d: float = Field(0.0, ge=0)
+    requester_finance_count_7d: int = Field(0, ge=0)
 
 
 class PolicyDocument(BaseModel):
@@ -113,8 +154,94 @@ def save_policy(document: PolicyDocument, path: str | None = None) -> PolicyStat
     return state
 
 
+_WINDOW_FIELD = {
+    "CALENDAR_MONTH": "same_type_count_month",
+    "ROLLING_7D": "same_type_count_7d",
+    "ROLLING_30D": "same_type_count_30d",
+}
+_WINDOW_TEXT = {
+    "CALENDAR_MONTH": "trong tháng",
+    "ROLLING_7D": "trong 7 ngày",
+    "ROLLING_30D": "trong 30 ngày",
+}
+
+
+def _checks(
+    rule: PolicyRule, amount: float, days: int, sig: PolicySignals
+) -> list[tuple[bool, str]]:
+    """(thỏa?, giải thích) cho từng điều kiện của luật."""
+    out: list[tuple[bool, str]] = []
+    if rule.amount_gt is not None:
+        out.append(_amount_check(amount, rule.amount_gt))
+    if rule.days_gt is not None:
+        out.append(_days_check(days, rule.days_gt))
+    if rule.due_within_hours:
+        n = rule.due_within_hours
+        due = [h for h in sig.open_work_due_hours if h <= n]
+        hit = bool(due) or sig.work_due_in_absence > 0
+        if hit:
+            text = f"Đang giữ {len(due)} việc đến hạn trong {n} giờ"
+            if sig.work_due_in_absence:
+                text += f", {sig.work_due_in_absence} việc đến hạn trong thời gian vắng"
+        else:
+            text = f"Không giữ việc nào đến hạn trong {n} giờ hay trong thời gian vắng"
+        out.append((hit, text))
+        if rule.require_no_handover:
+            free = not sig.handover_assigned
+            out.append(
+                (
+                    free,
+                    "Chưa chỉ định người nhận bàn giao"
+                    if free
+                    else "Đã có người nhận bàn giao",
+                )
+            )
+    if rule.repeat_count_gte:
+        window = rule.repeat_window or "ROLLING_30D"
+        count = getattr(sig, _WINDOW_FIELD[window])
+        hit = count >= rule.repeat_count_gte
+        sign = "≥" if hit else "<"
+        out.append(
+            (
+                hit,
+                f"Đây là lần thứ {count} {_WINDOW_TEXT[window]} ({sign} {rule.repeat_count_gte})",
+            )
+        )
+    if rule.split_suspect:
+        total_gt = rule.split_total_gt or 20_000_000
+        over = sig.requester_amount_7d > total_gt
+        hit = sig.requester_finance_count_7d >= 2 and over and amount <= total_gt
+        text = (
+            f"{sig.requester_finance_count_7d} hồ sơ tài chính trong 7 ngày, tổng "
+            f"{_vnd(sig.requester_amount_7d)} {'>' if over else '≤'} {_vnd(total_gt)}, "
+            f"hồ sơ này {_vnd(amount)}"
+        )
+        out.append((hit, text + (": dấu hiệu chia nhỏ" if hit else "")))
+    return out
+
+
+def rule_applies(
+    rule: PolicyRule,
+    request_type: str,
+    amount: float,
+    days: int,
+    sig: PolicySignals | None,
+) -> bool:
+    if rule.request_type and rule.request_type != request_type:
+        return False
+    return all(
+        hit for hit, _text in _checks(rule, amount, days, sig or PolicySignals())
+    )
+
+
 def apply_policy(
-    *, request_type: str, amount: float, days: int, risk: int, path: str | None = None
+    *,
+    request_type: str,
+    amount: float,
+    days: int,
+    risk: int,
+    path: str | None = None,
+    signals: PolicySignals | None = None,
 ) -> tuple[int, bool, list[str], str | None]:
     """Return (effective risk, manual review forced, matched rule ids, version)."""
     policy = load_policy(path)
@@ -123,11 +250,7 @@ def apply_policy(
     forced_manual = False
     matched = []
     for rule in policy.rules:
-        if rule.request_type and rule.request_type != request_type:
-            continue
-        if rule.amount_gt is not None and not amount > rule.amount_gt:
-            continue
-        if rule.days_gt is not None and not days > rule.days_gt:
+        if not rule_applies(rule, request_type, amount, days, signals):
             continue
         matched.append(rule.id)
         if rule.min_risk is not None:
@@ -135,6 +258,39 @@ def apply_policy(
         if rule.auto_approve is False:
             forced_manual = True
     return risk, forced_manual, matched, policy.version
+
+
+def matched_escalation(
+    *,
+    request_type: str,
+    amount: float,
+    days: int,
+    path: str | None = None,
+    signals: PolicySignals | None = None,
+) -> tuple[str | None, list[dict]]:
+    """Luồng nâng cấp cao nhất (B/C) theo các luật đang thỏa, kèm luật gây ra."""
+    policy = load_policy(path)
+    if policy is None:
+        return None, []
+    order = {"B": 1, "C": 2}
+    target, causes = None, []
+    for rule in policy.rules:
+        if not rule.escalate_to or not rule_applies(
+            rule, request_type, amount, days, signals
+        ):
+            continue
+        causes.append(
+            {
+                "rule_id": rule.id,
+                "escalate_to": rule.escalate_to,
+                "text": rule.description,
+                "approvers": rule.approvers or [],
+                "policy_version": policy.version,
+            }
+        )
+        if target is None or order[rule.escalate_to] > order[target]:
+            target = rule.escalate_to
+    return target, causes
 
 
 def _vnd(value: float) -> str:
@@ -158,6 +314,8 @@ def _days_check(days: int, threshold: int) -> tuple[bool, str]:
 
 
 def _effect(rule: PolicyRule) -> str:
+    if rule.auto_approve is False and rule.escalate_to:
+        return f"Không tự duyệt; chuyển hồ sơ sang quy trình {rule.escalate_to} có người kiểm duyệt"
     if rule.auto_approve is False:
         return "Bắt buộc người có thẩm quyền duyệt thủ công"
     if rule.auto_approve:
@@ -165,12 +323,14 @@ def _effect(rule: PolicyRule) -> str:
     return f"Nâng mức rủi ro tối thiểu lên {rule.min_risk}/5"
 
 
-def _citation(rule: PolicyRule, version: str, amount: float, days: int) -> dict:
-    results = []
-    if rule.amount_gt is not None:
-        results.append(_amount_check(amount, rule.amount_gt))
-    if rule.days_gt is not None:
-        results.append(_days_check(days, rule.days_gt))
+def _citation(
+    rule: PolicyRule,
+    version: str,
+    amount: float,
+    days: int,
+    signals: PolicySignals | None = None,
+) -> dict:
+    results = _checks(rule, amount, days, signals or PolicySignals())
     checks = [text for _hit, text in results]
     if rule.request_type:
         checks.append("Áp dụng riêng cho loại yêu cầu này")
@@ -185,7 +345,12 @@ def _citation(rule: PolicyRule, version: str, amount: float, days: int) -> dict:
 
 
 def policy_citations(
-    *, request_type: str, amount: float, days: int, path: str | None = None
+    *,
+    request_type: str,
+    amount: float,
+    days: int,
+    path: str | None = None,
+    signals: PolicySignals | None = None,
 ) -> list[dict]:
     """Every rule that concerns this request type, with the comparison made.
 
@@ -196,7 +361,7 @@ def policy_citations(
     if policy is None:
         return []
     citations = [
-        _citation(rule, policy.version, amount, days)
+        _citation(rule, policy.version, amount, days, signals)
         for rule in policy.rules
         if not rule.request_type or rule.request_type == request_type
     ]

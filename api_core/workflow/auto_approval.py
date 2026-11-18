@@ -43,7 +43,7 @@ SQL_AUTO_APPROVE_CONTEXT = """
              WHERE e.request_id = r.id AND e.action = 'AI_AUTO_APPROVE_REVOKED'
            ),
            u.email, v.payload->>'room_code',
-           v.payload->>'start_date', v.payload->>'end_date'
+           v.payload->>'start_date', v.payload->>'end_date', r.requester_id::text
     FROM eas.request r
     JOIN eas.request_type rt ON rt.id = r.type_id
     JOIN eas.request_revision v ON v.id = r.current_revision_id
@@ -94,6 +94,7 @@ def _load_context(request_id: str) -> dict[str, Any] | None:
         "room_code",
         "start_date",
         "end_date",
+        "requester_id",
     )
     return dict(zip(keys, row, strict=True))
 
@@ -109,21 +110,36 @@ def _requested_days(context: dict[str, Any]) -> int:
 
 
 def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | None:
-    """Approve the active step when the AI allows it; return the result or None."""
-    if not settings.EAS_AI_AUTO_APPROVE_ENABLED:
+    """Escalate a type-A request hit by a bad case, else approve the step when the AI allows it.
+
+    Escalation (A -> B/C, ``api_core.workflow.escalation``) is a control, not an automation: it
+    runs for every pending type-A request whatever its risk weight, and even when automatic
+    approval is switched off. Automatic approval still needs weight <= the configured maximum.
+    """
+    escalation_on = getattr(settings, "EAS_AI_ESCALATION_ENABLED", True)
+    if not (settings.EAS_AI_AUTO_APPROVE_ENABLED or escalation_on):
         return None
     context = _load_context(request_id)
     if (
         context is None
         or context["risk_weight"] is None
-        or context["risk_weight"] > settings.EAS_AI_AUTO_APPROVE_MAX_WEIGHT
         or context["assignee_id"] == settings.EAS_AI_SYSTEM_USER_ID
-        or not context["ai_allowed"]  # a human revoked an earlier AI approval
     ):
+        return None
+    may_auto = (
+        settings.EAS_AI_AUTO_APPROVE_ENABLED
+        and context["risk_weight"] <= settings.EAS_AI_AUTO_APPROVE_MAX_WEIGHT
+        and context["ai_allowed"]  # a human revoked an earlier AI approval
+    )
+    may_escalate = escalation_on and context["lifecycle"] == "A"
+    if not (may_auto or may_escalate):
         return None
 
     from api_core.integrations.ai_service import ai_client_sync
+    from api_core.workflow.bad_case_learning import safe_detector_config
+    from api_core.workflow.bad_case_signals import safe_load_signals
 
+    signals = safe_load_signals(request_id)
     verdict = ai_client_sync.evaluate_auto_approve(
         request_id=request_id,
         request_type=context["type_code"],
@@ -137,8 +153,29 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
         # Leave rules (balance, < 3 days) need the requested span.
         days_requested=_requested_days(context),
         correlation_id=correlation_id,
+        signals=signals,
+        bad_case_config=safe_detector_config(),
     )
-    if verdict.get("decision") != "auto_approve":
+    if verdict.get("bad_cases"):
+        _record_bad_cases(
+            request_id, context["step_id"], verdict, signals, correlation_id
+        )
+    verdict = _apply_feedback_memory(request_id, context, verdict, correlation_id)
+    if may_escalate and verdict.get("escalate_to") in ("B", "C"):
+        from api_core.workflow.escalation import escalate_request
+
+        escalated = escalate_request(
+            request_id=request_id,
+            step_id=context["step_id"],
+            target=verdict["escalate_to"],
+            verdict=verdict,
+            signals=signals,
+            correlation_id=correlation_id,
+        )
+        if escalated is not None:
+            return {**escalated, "approved": False}
+        return None
+    if not may_auto or verdict.get("decision") != "auto_approve":
         return None
 
     ai_user_id = settings.EAS_AI_SYSTEM_USER_ID
@@ -197,6 +234,89 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
     return result.body
 
 
+def _apply_feedback_memory(
+    request_id, context, verdict, correlation_id
+) -> dict[str, Any]:
+    """Bộ nhớ ca (migration 24): không lặp lại quyết định con người đã sửa cho cùng người, cùng loại."""
+    from api_core.workflow import ai_feedback
+
+    try:
+        with connection.cursor() as cursor:
+            adjusted = ai_feedback.apply_to_verdict(
+                cursor,
+                verdict=verdict,
+                type_code=context["type_code"],
+                requester_id=context.get("requester_id"),
+                lifecycle=context["lifecycle"],
+            )
+    except Exception:
+        logger.warning(
+            "AI feedback memory unavailable: request=%s", request_id, exc_info=True
+        )
+        return verdict
+    if not adjusted.get("learned"):
+        return adjusted
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            _append_request_audit(
+                cursor,
+                request_id=request_id,
+                actor_id=None,
+                actor_kind="SYSTEM",
+                action="AI_LEARNED_FROM_FEEDBACK",
+                target_type="approval_step",
+                target_id=context["step_id"],
+                details={"applied": adjusted["learned"][:5]},
+                correlation_id=correlation_id,
+            )
+    except Exception:
+        logger.warning(
+            "AI learned audit skipped: request=%s", request_id, exc_info=True
+        )
+    return adjusted
+
+
+def _record_bad_cases(request_id, step_id, verdict, signals, correlation_id) -> None:
+    """Ghi một sự kiện kiểm toán khi AI chặn tự duyệt vì tình huống xấu (một lần cho mỗi bước duyệt)."""
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT 1 FROM eas.audit_event WHERE request_id=%s AND action='AI_BAD_CASE_FLAGGED' "
+                "AND target_id=%s LIMIT 1",
+                [request_id, step_id],
+            )
+            if cursor.fetchone():
+                return
+            _append_request_audit(
+                cursor,
+                request_id=request_id,
+                actor_id=None,
+                actor_kind="SYSTEM",
+                action="AI_BAD_CASE_FLAGGED",
+                target_type="approval_step",
+                target_id=step_id,
+                details={
+                    "cases": [
+                        {
+                            "code": str(c.get("code")),
+                            "message": str(c.get("message"))[:400],
+                        }
+                        for c in verdict.get("bad_cases") or []
+                    ][:5],
+                    "effective_risk": verdict.get("effective_risk"),
+                    "signals": {
+                        k: (v if not isinstance(v, float) else round(v))
+                        for k, v in signals.items()
+                    },
+                },
+                correlation_id=correlation_id,
+            )
+    except Exception:
+        logger.warning(
+            "AI bad-case audit skipped: request=%s", request_id, exc_info=True
+        )
+
+
 REVOKE_WINDOW = timedelta(hours=24)
 
 
@@ -243,6 +363,55 @@ def _validate_revoke_input(body: dict[str, Any]) -> tuple[str, int]:
     if isinstance(version, bool) or not isinstance(version, int):
         raise CommandError("EXPECTED_VERSION_REQUIRED")
     return reason.strip(), version
+
+
+def _snapshot_for_learning(request_id: str) -> dict[str, Any]:
+    """Tín hiệu + đặc trưng của bản AI đã duyệt, lấy TRƯỚC khi thu hồi tạo bản mới (mốc = lúc gửi bản đó)."""
+    from api_core.workflow.bad_case_learning import request_features
+    from api_core.workflow.bad_case_signals import safe_load_signals
+
+    signals = safe_load_signals(request_id)
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            signals.update(request_features(cursor, request_id))
+    except Exception:
+        logger.warning("request features not captured: request=%s", request_id, exc_info=True)
+    return signals
+
+
+def _record_revoke_feedback(
+    cursor, request_id, type_id, requester_id, actor_id, decided_at, reason, signals=None
+) -> None:
+    """Bộ nhớ ca (migration 24) + học bad case từ lý do (migration 25, phân tích sau khi lưu). Lỗi bỏ qua."""
+    from api_core.workflow import ai_feedback
+    from api_core.workflow.bad_case_signals import safe_load_signals
+
+    try:
+        with transaction.atomic():
+            cursor.execute("SELECT code FROM eas.request_type WHERE id=%s", [type_id])
+            feedback_id = ai_feedback.record(
+                cursor,
+                kind="AUTO_APPROVE_REVOKED",
+                request_id=request_id,
+                type_code=cursor.fetchone()[0],
+                subject_id=requester_id,
+                actor_id=actor_id,
+                ai_decision={
+                    "decision": "auto_approve",
+                    "decided_at": decided_at.isoformat(),
+                },
+                human_decision={"decision": "manual_review"},
+                reason=reason,
+                signals=signals if signals is not None else safe_load_signals(request_id),
+            )
+        if feedback_id:
+            from api_core.workflow.bad_case_learning import analyze_in_background
+
+            transaction.on_commit(lambda: analyze_in_background(feedback_id))
+    except Exception:
+        logger.warning(
+            "revoke feedback not recorded: request=%s", request_id, exc_info=True
+        )
 
 
 def revoke_ai_auto_approval(
@@ -320,6 +489,7 @@ def revoke_ai_auto_approval(
         ):
             raise CommandError("FORBIDDEN", status=403)
 
+        learning_snapshot = _snapshot_for_learning(request_id)
         now = datetime.now(timezone.utc)
         cursor.execute(
             """
@@ -424,6 +594,16 @@ def revoke_ai_auto_approval(
                 Jsonb({"request_id": request_id, "step_id": first_step_id}),
                 f"request:{request_id}:ai-revoke:{new_revision_id}",
             ],
+        )
+        _record_revoke_feedback(
+            cursor,
+            request_id,
+            type_id,
+            requester_id,
+            actor.id,
+            decided_at,
+            reason,
+            signals=learning_snapshot,
         )
         return (
             {

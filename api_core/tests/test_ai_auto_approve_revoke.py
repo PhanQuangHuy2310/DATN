@@ -186,8 +186,10 @@ class AutoApproveAfterRevokeTests(SimpleTestCase):
                 "api_core.integrations.ai_service.ai_client_sync.evaluate_auto_approve"
             ) as ai,
         ):
+            ai.return_value = {"decision": "auto_approve", "reason": "ok"}
+            # Đã bị thu hồi: AI chỉ được hỏi để xét nâng luồng, không được duyệt lại.
             self.assertIsNone(try_auto_approve(str(uuid4()), "c"))
-        ai.assert_not_called()
+        ai.assert_called_once()
 
     def test_idempotency_key_is_a_stable_uuid_per_step(self):
         step = str(uuid4())

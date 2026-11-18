@@ -1,0 +1,79 @@
+{
+ "schema_version": 1,
+ "about": "Bộ kịch bản kiểm chứng tính năng đánh giá tác động của quy định mới lên cấu hình quy trình. ĐÁP ÁN được viết và lưu ngày 17/11/2026 TRƯỚC khi xây dựng mô hình process_profile, không chỉnh sau khi chạy. expected_changes: loại phải được đề xuất thay đổi; lifecycle = mẫu đích, weight = 'up' (tăng ít nhất 1 bậc) hoặc số tối thiểu. expected_unchanged: loại liên quan nhưng không được đề xuất thay đổi (đã ở mức phù hợp). Kịch bản no_change_expected kiểm tra mô hình không đề xuất bừa.",
+ "scenarios": [
+  {
+   "id": "QD-01",
+   "title": "Nghiệm thu bắt buộc khi mua sắm",
+   "text": "Mọi đề nghị mua sắm hàng hóa, thiết bị phải được người sử dụng nghiệm thu và ký biên bản bàn giao trước khi thanh toán cho nhà cung cấp.",
+   "expected_changes": {"PURCHASE_REQUEST": {"lifecycle": "C"}},
+   "expected_unchanged": ["EQUIPMENT", "LAPTOP_PROVISION"]
+  },
+  {
+   "id": "QD-02",
+   "title": "Bảo vệ dữ liệu cá nhân khách hàng",
+   "text": "Mọi yêu cầu truy cập, trích xuất hoặc chia sẻ dữ liệu cá nhân của khách hàng ra ngoài hệ thống được xếp mức rủi ro cao và phải được thẩm định bảo mật theo Nghị định 13/2023/NĐ-CP.",
+   "expected_changes": {"DATA_UAT_EXPORT": {"weight": "up"}, "NDA_PRIVACY_CLEARANCE": {"weight": "up"}},
+   "expected_unchanged": ["PROD_DATA_ACCESS"]
+  },
+  {
+   "id": "QD-03",
+   "title": "Đi muộn và quên chấm công (ví dụ của giảng viên)",
+   "text": "Nhân viên đi muộn từ 60 phút trở lên hoặc quên chấm công quá 3 lần trong tháng sẽ bị trừ nửa ngày phép và phải được trưởng bộ phận xác nhận; đi muộn dưới 15 phút vẫn được tự động chấp thuận.",
+   "expected_changes": {"ATTENDANCE_ADJUSTMENT": {"weight": "up"}},
+   "expected_unchanged": []
+  },
+  {
+   "id": "QD-04",
+   "title": "Giới hạn làm việc từ xa",
+   "text": "Làm việc từ xa quá 2 ngày mỗi tuần phải có kế hoạch công việc chi tiết và được trưởng bộ phận phê duyệt.",
+   "expected_changes": {"WFH_REQ": {"weight": "up"}},
+   "expected_unchanged": []
+  },
+  {
+   "id": "QD-05",
+   "title": "Hội đồng thanh lý tài sản",
+   "text": "Thanh lý tài sản cố định phải thành lập hội đồng, có biên bản định giá và biên bản bàn giao; tài sản có giá trị trên 100 triệu đồng phải báo cáo Ban Giám đốc.",
+   "expected_changes": {},
+   "expected_unchanged": ["ASSET_DISPOSAL"],
+   "note": "ASSET_DISPOSAL đã là mẫu C trọng số 4; chấp nhận không đổi hoặc tăng lên 5, không được giảm hay đổi mẫu."
+  },
+  {
+   "id": "QD-06",
+   "title": "Quy định trang phục (không liên quan)",
+   "text": "Nhân viên mặc đồng phục công ty vào thứ Hai hằng tuần và trong các buổi tiếp khách.",
+   "expected_changes": {},
+   "expected_unchanged": [],
+   "no_change_expected": true
+  },
+  {
+   "id": "QD-07",
+   "title": "Thẩm định hợp đồng giá trị lớn",
+   "text": "Hợp đồng có giá trị từ 500 triệu đồng phải được Pháp chế thẩm định và Ban Giám đốc phê duyệt trước khi ký.",
+   "expected_changes": {},
+   "expected_unchanged": ["CONTRACT_APPROVAL"],
+   "note": "CONTRACT_APPROVAL đã ở mẫu C trọng số 5 (mức cao nhất) nên không được đề xuất thêm."
+  },
+  {
+   "id": "QD-08",
+   "title": "Đánh giá hiệu quả chương trình khuyến mãi",
+   "text": "Mọi đợt khuyến mãi, phát hành voucher có tổng giá trị giảm giá trên 200 triệu đồng phải lập kế hoạch ngân sách và được nghiệm thu, đánh giá hiệu quả sau chiến dịch.",
+   "expected_changes": {"FLASH_SALE_VOUCHER": {"lifecycle": "C"}},
+   "expected_unchanged": []
+  },
+  {
+   "id": "QD-09",
+   "title": "Sự cố IT trên hệ thống production",
+   "text": "Yêu cầu hỗ trợ IT liên quan đến máy chủ production hoặc dữ liệu khách hàng được xếp mức khẩn cấp và rủi ro cao.",
+   "expected_changes": {"IT_SUPPORT": {"weight": "up"}},
+   "expected_unchanged": []
+  },
+  {
+   "id": "QD-10",
+   "title": "Đặt phòng họp có khách bên ngoài",
+   "text": "Đặt phòng họp cho trên 50 người hoặc có khách bên ngoài tham dự phải đăng ký trước 2 ngày và được bộ phận hành chính xác nhận.",
+   "expected_changes": {"ROOM_BOOKING": {"weight": "up"}},
+   "expected_unchanged": []
+  }
+ ]
+}

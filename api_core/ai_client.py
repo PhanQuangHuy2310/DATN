@@ -251,6 +251,8 @@ class AIServiceClient:
         correlation_id: str | None = None,
         requester_email: str | None = None,
         room_code: str | None = None,
+        signals: dict | None = None,
+        bad_case_config: dict | None = None,
     ) -> dict:
         """
         Gọi AI /auto-approve/evaluate và trả về:
@@ -288,6 +290,10 @@ class AIServiceClient:
             # Lets the AI look up leave balance / room status in the external systems.
             "requester_email": requester_email,
             "room_code": room_code,
+            # Tín hiệu ngữ cảnh (đếm/tổng) cho suy luận tình huống xấu; xem workflow/bad_case_signals.py.
+            **(signals or {}),
+            # Bảng eas.bad_case (migration 25): bad case học được + ngưng/mở rộng bad case có sẵn.
+            **(bad_case_config or {}),
         }
 
         try:

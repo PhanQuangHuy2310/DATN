@@ -3,6 +3,16 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **18/11 — AI đọc văn bản quy định, trả lỗi, trả lại bản lỗi** (theo trao đổi với trưởng nhóm):
+  - Văn bản lỗi ký tự hoặc mâu thuẫn (trong văn bản, hoặc với quy định đang hiệu lực) bị chặn khi ban hành, kèm lỗi từng câu.
+  - Lượt học phát hiện lỗi, hoặc học thất bại sau mọi lần thử: hiệu lực (văn bản + bộ luật AI) quay về bản đã áp dụng; bản lỗi vào `eas.regulation_rejection` (migration 26) để sửa và nạp lại; admin được báo.
+  - Sửa luôn lỗi có từ trước: không ban hành lại được mã quy định đã gỡ.
+  - Kiểm thử thật RV 5/5.
+- [x] **18/11 — AI học bad case mới từ lý do thu hồi tự duyệt** (yêu cầu trưởng nhóm; báo cáo `ai_service/training/data/bad_case_reason_report.md`):
+  - Migration 25: bảng `eas.bad_case` (12 bad case có sẵn + bad case học được, cột "vì sao là bad case") và `eas.bad_case_evidence`.
+  - AI phân loại lý do, đề xuất điều kiện đo được, gom lý do giống nhau. Đủ tiêu chí (≥ 3 lần, ≥ 2 người gửi, ≥ 2 người duyệt, đo được, bắt ≤ 30% hồ sơ cùng loại) thì tự thêm bad case; chưa đủ thì nêu lý do và hỏi admin (trang Quy định).
+  - Bộ phân loại v2 trên bộ test sạch: 70,8% (v1 61,1%, Gemini đoán thẳng 79,2%, không dùng vì quy định riêng tư).
+  - Kiểm thử thật BL 4/4, hai lần liên tiếp.
 - [x] **16/11 — Dọn dự án** (5 commit, trong PR #11): xóa mobile_app/ (Flutter) và job CI mobile; bỏ workspace/ khỏi git (file vẫn trên máy, đã thêm .gitignore); xóa 2 component dashboard chết; thư mục gốc 45 → 30 file (xóa 7 file lỗi thời/trùng, chuyển 7 công cụ chẩn đoán vào scripts/, test_logger vào api_core/tests, hướng dẫn kiểm thử vào docs/); gộp 7 changelog thành CHANGELOG.md, gộp 17 cặp plan/report bảo mật; xóa 13 file rỗng và cache. Repo 629 → 549 file. Test: Django 426, run_tests 186, web 85, ruff/docs/secret gate sạch.
 - [x] **16/11 — Duy trì đăng nhập + AI câu ngắn + sửa ô tiền** (mô tả trong PR_DESCRIPTION.md):
   - Refresh token xoay vòng trong Redis (cookie `eas_refresh` HttpOnly), ô "Ghi nhớ đăng nhập", email điền sẵn sau đăng xuất. Mật khẩu chỉ lưu ở trình quản lý mật khẩu của trình duyệt.
@@ -52,6 +62,28 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 Số migration trong các mục cũ là số trước khi gộp: 08, 09, 10, 14 → `08_ai_auto_approval`; 11, 12, 13 → `09_request_catalog_v2`; 15, 16 → `10_approval_delegation_and_employee_code`; mock 004, 005 → mock `004_hrm_attendance`.
 
 ## Đang làm
+**18/11 — AI suy luận tình huống xấu (bad case) theo đặc tả của Huy** (`D:\Download\file-cua-huy.docx`). Báo cáo Word sửa SAU, khi AI đã huấn luyện xong.
+Quyết định của bạn (18/11):
+- Chuyển thật từng hồ sơ A → B/C (cần migration mới; chạy thử trên Supabase local, bạn tự chạy lên DB chung).
+- Hướng xử lý (chuyển việc, lùi hạn): AI đề xuất, quản lý bấm xác nhận, hệ thống thực hiện dưới quyền của quản lý.
+- Huấn luyện đủ 4 phần.
+
+Các giai đoạn:
+- [x] G0. Chốt phần AI dở dang ngày 17/11: 5 commit (`2812554`..`e8330ba`), test xanh.
+- [x] G1. Danh mục 12 tình huống xấu (`ai_service/data/bad_case_catalog.json`, Gemini 3.5 Flash-Lite sinh 30 ứng viên, nhóm rà) + tín hiệu SQL mới (`47a7895`).
+- [x] G2. Trình biên dịch quy định v2 (`8866a60`). Tập test băm trước 30 điều: v1 13/30 (chặn tràn 13), **v2 29/30 (chặn tràn 0)**, Gemini 25/30 (chặn tràn 3). Báo cáo: `ai_service/training/data/regulation_compiler_report.md`.
+- [x] G3. Mô hình rủi ro + 5 đặc trưng ngữ cảnh. 24 kịch bản băm trước: trước 10/24 (ngữ cảnh 0/14), sau 18/24 (ngữ cảnh 8/14); Master 0,966 → 0,955 (giảm). Báo cáo `ai_service/training/data/risk_context_report.md`.
+- [x] G4. Migration 23 + rollback (`41c141e`), chạy thử trên Supabase local: áp / áp lại / rollback / áp lại đều đúng.
+- [x] G5. Chuyển hồ sơ A → B/C (`api_core/workflow/escalation.py`); live `tests/live/test_ai_escalation.py` 3/3 PASS.
+- [x] G6. Xếp hạng người nhận việc thay (XGBoost rank:pairwise; test băm trước: top-1 0,898 so với ít việc nhất 0,328) + API xem/xác nhận/bỏ qua (`f38c91f`).
+- [x] G7. Banner chuyển quy trình + bảng đề xuất xử lý (`865cfbe`); live `tests/live/test_ai_escalation.py` ESC-00..05: 6/6 PASS (ban hành Quy chế 05/2026 → AI học → nâng luồng → quản lý xác nhận chuyển việc / lùi hạn).
+
+**18/11 — AI học từ phản hồi ('sai tối đa 1 lần')**, theo yêu cầu của bạn:
+- [x] Migration 24 + rollback: `eas.ai_feedback`, `eas.regulation_clause_review` (chạy thử trên local: áp / áp lại / rollback / áp lại).
+- [x] Ghi nhận phản hồi + bộ nhớ ca (`api_core/workflow/ai_feedback.py`), nút "AI chuyển nhầm".
+- [x] Học dồn có cổng (`manage.py ai_learn_from_feedback`, worker chạy mỗi ngày, admin bấm được).
+- [x] Hàng chờ câu quy định chưa hiểu, Gemini gợi ý, admin duyệt (trang Quy định).
+- [x] Đo: `tests/live/test_ai_feedback_learning.py` 5/5, lặp lại lỗi 0, học tràn 0 (`ai_service/training/data/feedback_learning_report.md`).
 
 ## Chưa làm
 - [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→10 và mock 004 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)
@@ -67,6 +99,10 @@ Số migration trong các mục cũ là số trước khi gộp: 08, 09, 10, 14 
 - 1.5: chỉ hoàn tác được hồ sơ vòng đời A đã COMPLETED (AI chỉ tự duyệt vòng đời A). Bất kỳ APPROVER trong phạm vi phòng/loại (trừ người tạo) đều thu hồi được, không chỉ người duyệt gốc.
 
 ## Việc tôi phải làm thủ công
+- **18/11: chạy `database/migrations/26_regulation_rejection.sql` trên Supabase chung** (đã chạy thử trên local: chạy, chạy lại, rollback, chạy lại). Chưa chạy thì văn bản lỗi vẫn bị chặn khi ban hành; chỉ phần trả lại bản lỗi khi AI học thất bại chưa hoạt động (giữ cách cũ).
+- **18/11: chạy `database/migrations/25_bad_case_learning.sql` trên Supabase SQL Editor sau migration 24.** Chưa chạy thì AI dùng 12 bad case trong mã và không học bad case mới. Rollback: `database/migrations/rollback/25_bad_case_learning_rollback.sql`.
+- **18/11: chạy `database/migrations/24_ai_feedback_learning.sql` trên Supabase SQL Editor sau migration 23.** Chưa chạy thì AI vẫn chạy bình thường nhưng không ghi nhớ phản hồi. Rollback: `database/migrations/rollback/24_ai_feedback_learning_rollback.sql` (xóa bộ nhớ ca, sao lưu trước nếu cần).
+- **18/11: chạy `database/migrations/23_ai_bad_case_escalation.sql` trên Supabase SQL Editor** (đã chạy thử trên Supabase local). Chưa chạy thì hệ thống vẫn chạy như cũ: AI chỉ chặn tự duyệt, không chuyển luồng (audit `AI_ESCALATION_SKIPPED` lý do `ESCALATION_RELEASE_MISSING`). Rollback: `database/migrations/rollback/23_ai_bad_case_escalation_rollback.sql` (tự từ chối nếu còn hồ sơ đã nâng luồng đang mở).
 - Chạy trên Supabase SQL Editor theo thứ tự (07 đã chạy): `database/migrations/08_ai_auto_approval.sql`, `09_request_catalog_v2.sql`, `10_approval_delegation_and_employee_code.sql`, rồi `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`; sau đó `python manage.py sync_employee_codes --apply`
 - Sau migration 08, nếu container AI đang có file quy định cũ: `python manage.py import_ai_policy_file ai_service/data/active_enterprise_policy.json --operator <email POLICY_ADMIN>`
 - Rollback (ngược thứ tự: mock 004 → 10 → 09 → 08): `database/migrations/rollback/`, `database/mock_enterprise_sql/migrations/rollback/`

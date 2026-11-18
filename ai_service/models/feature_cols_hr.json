@@ -19,7 +19,12 @@
     "past_rejection_rate",
     "high_rejection_rate",
     "is_off_hours",
-    "is_template_matched"
+    "is_template_matched",
+    "pending_work_due_24h",
+    "work_due_in_absence",
+    "handover_uncovered",
+    "team_absence_ratio",
+    "same_type_count_30d"
   ],
   "label_remap": {
     "1": 0,

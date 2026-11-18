@@ -1,0 +1,4246 @@
+{
+ "about": "Sinh bởi gen_bad_case_reasons.py từ mô tả danh mục; không thấy bộ kiểm tra.",
+ "model": "gemini-3.5-flash-lite",
+ "items": [
+  {
+   "type": "LEAVE",
+   "reason": "Việc gấp đến hạn chiều nay mà chưa bàn giao cho ai, em ở lại xử lý xong rồi hẵng nghỉ nhé.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Deadline khách hàng là chiều nay mà em lại xin về sớm, ráng làm xong việc này rồi tính tiếp.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hồ sơ thanh toán đang bị nghẽn ở bước của em, chưa bàn giao thì chưa duyệt cho nghỉ đc đâu.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Sửa giờ làm gì thì sửa nhưng task nghiệm thu với bên khác chiều nay phải xong đã.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đang ôm cái task cam kết với phòng ban khác mà đòi nghỉ luôn là thế nào, xử lý xong đi rồi tính.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Bỏ dở việc đến hạn thế này khách hàng họ khiếu nại chết, hoàn thành xong xuôi rồi anh duyệt cho.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Về sớm nhưng việc tồn đọng chưa bàn giao cho Lan thì anh không chấp nhận đơn này nhé.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Task gấp trong ngày mà chưa thấy em bàn giao cho ai trong team, tạm thu hồi để em làm cho xong.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Ko thể cho nghỉ khi việc quan trọng đến hạn hôm nay vẫn nằm ở chỗ em.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Việc gấp mần chưa xong mà đòi nghỉ phép, ở lại hoàn thành nốt đi em.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Đổi giờ chấm công để về sớm à? Xem lại cái task đến hạn chiều nay đi đã rồi tính.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh thu hồi nha, việc gấp sát nút thế này ko bàn giao ai nhận thay là ko ổn đâu.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Chưa bàn giao task hệ thống chiều nay thì chưa được nghỉ đâu em ơi.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nghỉ gì mà bỏ bê công việc đến hạn hôm nay, làm xong đi rồi viết đơn lại.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Về sớm thì ai duyệt bước cuối cho khách kịp tiến độ, xử lý xong rồi hãy về.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Tui thu hồi đơn này nha, task gấp đang kẹt ở ô của bạn chưa thấy đưa ai làm thay.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Cam kết với bên khác là chiều nay có kết quả mà em lại đòi nghỉ, xử lý xong rồi muốn đi đâu thì đi.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Gấp lắm rồi mà còn xin nghỉ, ráng cày nốt cái task đến hạn đi em.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Chưa xong việc thì đừng hòng về sớm hay đổi giờ gì hết á.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Việc to đùng đến hạn trong ngày mà chưa bàn giao cho ai, anh phải kéo đơn lại thôi.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Báo cáo nghiệm thu chiều nay chưa xong mà em đòi nghỉ là thế nào, xong việc rồi anh cho phép.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Tạm hoãn đơn nghỉ nhé, task đang đến hạn mà chưa thấy bàn giao qua anh hay bạn khác.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Đòi về sớm trong khi việc gấp đang nằm nguyên ở máy, ko đc đâu.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nghỉ ngang xương thế này trễ mẹ nó tiến độ với khách hàng, làm cho xong rồi tính.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh thu hồi đơn nha, lo xử lý dứt điểm task đến hạn hôm nay đã.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Chưa thấy bàn giao việc cho ai hết mà dám bấm đơn nghỉ hả em?",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Task gấp đang chờ duyệt mà đòi chỉnh giờ về sớm, xử lý xong đi rồi anh duyệt lại cho.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Kẹt việc quan trọng đến hạn trong 24h tới mà chưa bàn giao, anh thu hồi để em làm nốt.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Để trễ cam kết với phòng ban khác là ko xong với sếp đâu, ở lại làm xong rồi nghỉ.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thôi hủy đơn này đi em, việc đến hạn chiều nay chưa bàn giao cho ai gánh giùm kìa.",
+   "label": "BC_DEADLINE_CONFLICT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thấy ông Huy nhận bàn giao mà lịch trùng ngày nghỉ luôn rồi, duyệt thế này việc đọng chết.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Bên bàn giao đang ôm 3 việc gấp đến hạn hôm đấy, ko kham nổi đâu, thu hồi để check lại.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Lắm việc quá, giao cho Lan lúc nó cũng đang ngập mặt deadline thì hỏng việc công ty.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Anh rút lại đơn này. Thằng bé nhận thay cũng đang xin nghỉ phép đợt đó cơ mà.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Check lại mới thấy nhân sự nhận bàn giao có lịch công tác trùng ngày, hủy quyết định tự duyệt gấp.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đông việc đến hạn quá, đưa cho người nhận thay mà họ cũng đang đầu bù tóc rối thì ko ổn.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thôi hủy đi, ô Nam nhận thay mà 3 việc đến hạn sát sườn kìa, làm sao gánh thay đc.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Bàn giao trên giấy thế thôi chứ ô nhận thay cũng đang xin nghỉ phép rồi, duyệt thế nào đc.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thu hồi nha. Cô Dung nhận bàn giao đang ôm đống task deadline tuần đấy, ko kham nổi đâu.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nhân sự nhận thay bị trùng lịch công tác mất rồi, để mình xem lại phương án khác.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Ông Tuấn nhận việc thay mà có tới 3 cái đến hạn trùng ngày nghỉ, hỏng bét.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "AI tự duyệt dễ dãi quá, người nhận thay đang quá tải thế kia cơ mà.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hủy đơn để sắp xếp lại, ô nhận bàn giao cũng đang xin nghỉ phép ngày đó.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Thôi chết, ng nhận thay cũng đang bận ngập mặt với 3 việc đến hạn, tạch.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thu hồi quyết định nhé, ng đc giao việc thay đang đi công tác trùng lịch kìa.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nhìn lịch ô nhận bàn giao xem, toàn task gấp đến hạn thì làm sao làm thay đc.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "AI duyệt nhanh quá bỏ sót đoạn ô nhận thay cũng đang nghỉ phép, rút lại nha.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Ko ổn rùi, ng nhận bàn giao đang quá tải, ôm thêm việc này chỉ có trễ.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hủy gấp. Ô đc chỉ định nhận thay đang có lịch đi ọp ẹp trùng ngày nghỉ.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Bàn giao kiểu này hình thức lắm, ng nhận thay cũng đang 3 việc đến hạn đè đầu kìa.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Rút lại đơn này nha, ng nhận thay đang nghỉ phép du lịch rầu.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "AI tự duyệt ko chuẩn rồi, ng nhận việc thay cũng đang bận ngập đầu kia kìa.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thôi thu hồi, ô nhận bàn giao trùng lịch công tác mất tiêu rồi.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Lắm việc quá, ng nhận thay có tận 3 task đến hạn trong thời gian này, ko gánh đc đâu.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hủy lệnh tự duyệt nhé, ng nhận thay cũng đang xin nghỉ đợt đó.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Bàn giao trên giấy thôi chứ ng nhận thay đang quá tải nặng rồi.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thu hồi để đổi ng nhận bàn giao, ng cũ đang ôm 3 việc gấp đến hạn rồi.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Ôi giời, ng nhận thay trùng lịch đi công tác với ng nghỉ luôn, duyệt sao đc.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thôi hủy đi, ng nhận việc thay cũng đang đầu bù tóc rối vì deadline kìa.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "AI vừa tự duyệt xong phải thu hồi gấp vì ng nhận thay đang bận ngập mặt.",
+   "label": "BC_HANDOVER_OVERLOADED",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Phòng mình đợt này vắng quá rồi, hơn nửa team nghỉ ngày đó nên anh bấm thu hồi nhé.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Trùng lịch với mấy bồ khác nhiều quá, team thiếu ng trầm trọng nên ko duyệt đc đâu em.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hôm đó phòng đi vắng gần hết rồi, ở nhà giùm anh cái ko là dịch vụ sập nguồn á.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Kẹt quá em ơi, hơn 40% nhân sự off ngày này rùi, em dời lịch sang hôm khác giúp anh nha.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Team đang quá tải vì đông người nghỉ trùng ngày, anh phải rút lại quyết định thui.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Ko ổn rùi, nhìn lịch thấy nửa phòng off hôm đó, ko ai trực để dịch vụ chạy cả.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh kéo lại đơn này nha, phòng vắng tanh à, em nghỉ nữa thì đói dịch vụ nội bộ.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đông người xin nghỉ sát ngày quá, phòng thủng lỗ chỗ rồi em ơi.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hic, check lại mới thấy hơn nửa team off ngày đó, anh phải thu hồi đơn gấp.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Bùn ghê nhưng phải hủy thui, phòng vắng ng quá rồi em.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Team mình hôm đó kẹt cứng vì trùng lịch nghỉ nhiều quá, em thông cảm nha.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Ko đc em ê, >40% nhân sự nghỉ rồi, ráng trụ lại cứu phòng bữa đó đi.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh thu hồi nha, nguyên phòng đi vắng hết lấy ai làm việc.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đụng lịch mấy bạn khác nhiều quá, dịch vụ gián đoạn chết.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thôi chết, phòng vắng như chùa bà đanh ngày đó, anh xin rút lại đơn này.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Lịch off dày đặc quá rồi, em dời lại dịp khác giúp anh nha.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hệ thống tự duyệt nhầm rồi, phòng đang thiếu người trầm trọng ngày đó.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Không ổn chút nào, team nghỉ quá nửa thế này thì tèo.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh thu hồi đơn của em nha, phòng kẹt nhân sự ngày đó lắm.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đông ng nghỉ quá rồi, ráng ở lại trực cùng anh em cho trôi việc.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hôm đấy team vắng quá nửa, anh phải bấm hủy duyệt thui.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Sợ thật, nhìn lại lịch thấy phòng trống hoác, ko duyệt đc nữa đâu.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Em thông cảm nha, phòng đang thiếu người trực ngày đó nên anh thu hồi.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Trùng lịch tùm lum hết rồi, phòng ko còn ai để gánh việc nữa.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh rút lại đơn nhé, dịch vụ nội bộ mà ngỏm là sếp la.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đụng đúng ngày phòng vắng hoe, em đổi lịch đi nha.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "AI tự duyệt lố rồi, phòng nghỉ đông thế này sao mà chạy.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Gấp quá em ơi, team off gần hết rồi, ko ai trực đâu.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh thu hồi để cân đối lại nhân sự, phòng vắng quá rồi.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nhiều ng nghỉ trùng ngày này quá, anh đành gác lại đơn của em nhé.",
+   "label": "BC_TEAM_ABSENCE_PEAK",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Tháng này sửa chấm công 4 lần rồi đấy nhé, lạm dụng quá mức quy định rồi đấy.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lại là xin giờ à? Đã lần thứ 4 trong tháng rồi, không duyệt nữa đâu, tập trung đi làm đúng giờ đi.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thu hồi nha. Cứ 3-4 ngày lại thấy đơn điều chỉnh chấm công thế này là không ổn rồi.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Anh kéo đơn này lại. Em dính 4 phát liền trong tháng rồi đấy, đừng có biến việc đi muộn thành thói quen.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hệ thống tự duyệt nhưng anh phải phanh lại. Quá đà rồi đấy, tháng này là lần thứ 4 sửa giờ rồi.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Ko đc nha. Lạm dụng cái này để né đi muộn là anh không thích đâu, lần thứ 4 rồi đấy.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Anh thu hồi quyết định. Tháng nào cũng thấy làm dăm cái đơn điều chỉnh thế này là thế nào?",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Chặn lại ngay. Em lạm dụng ngưỡng miễn trừ để hợp thức hóa việc hay trễ giờ quá nhiều lần rồi.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hủy đơn. Lần thứ 4 trong vòng chưa đầy tháng rồi, xem lại thái độ chấp hành giờ giấc đi em.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thu hồi đơn của Lan nhé. Cứ hay viện lý do để sửa chấm công liên tục thế này là anh không duyệt đâu.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Anh bắt buộc phải thu hồi đơn này. 4 lần sửa công trong tháng là vượt mức cho phép rồi.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Quá tam ba bận thôi em ơi, đây là lần thứ 4 rồi đấy nên anh phải kéo lại để nhắc nhở.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Ủa sao cứ đầu tháng là thấy xin điều chỉnh giờ thế? Lần thứ 4 rồi, anh thu hồi nha.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Không thể cứ thích là sửa giờ làm việc được. Lần này anh thu hồi vì em lạm dụng quá rồi.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Đóng đơn này lại. Cứ ỷ vào tính năng tự duyệt mà tuần nào cũng làm đơn thế này là hỏng.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Anh vừa check lại lịch sử thấy dính 4 nháy rồi, xin phép thu hồi đơn này để chấn chỉnh.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thu hồi gấp. Đừng có tưởng cứ làm đơn là hệ thống duyệt hoài nha, lạm dụng vừa thôi.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lại xin chỉnh giờ tiếp à? Thôi anh thu hồi, em đang tận dụng kẽ hở để đi muộn đấy nhé.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hủy nhé. Tháng này lập kỷ lục 4 lần xin sửa chấm công rồi, xem lại ý thức đi em.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Anh kéo đơn về. Việc lặp đi lặp lại lỗi muộn rồi làm đơn bù là không chấp nhận được.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thôi anh thu hồi nha, không thể cứ tháng nào cũng dăm ba cái đơn điều chỉnh thế này được.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Rút đơn này lại. Tự duyệt nhầm cho cái đơn thứ 4 trong tháng của em rồi, xem lại đi.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Bỏ đi em, lần thứ 4 rồi đấy. Anh phải thu hồi để chúng ta nói chuyện trực tiếp về giờ giấc.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hệ thống duyệt nhầm rồi, anh thu hồi đây. Lạm dụng sửa chấm công quá mức cho phép.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Không duyệt nữa đâu. Cứ đều đặn tuần nào cũng xin điều chỉnh là có vấn đề rồi đấy.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Anh thu hồi quyết định tự động nhé. Em đang cố tình lách luật đi làm muộn bằng mấy cái đơn này.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hủy đơn này ngay. Đã nhắc nhở chuyện giờ giấc mà vẫn chứng nào tật nấy, lần thứ 4 rồi đấy.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thu hồi nha. Dùng chiêu bài sửa chấm công để che lấp việc hay trễ giờ là không xong với anh đâu.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Anh phải kéo đơn này về. Lần thứ 4 trong tháng rồi, em coi quy định công ty là trò đùa à?",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thôi anh xin phép thu hồi đơn này. Lạm dụng tính năng miễn trừ quá đáng là anh không cho qua đâu.",
+   "label": "BC_REPEATED_EXEMPTION",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Tháng này ở nhà lắm thế em, lên cty họp hành trực tiếp đi chứ.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Đơn thứ 8 rồi đấy, ko ổn đâu em, cty cần mặt mũi để bàn việc chứ.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Anh thấy em lạm dụng WFH quá rồi, tuần tới đến văn phòng full nhé.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Nhiều WFH quá mức cho phép trong tháng rùi, thu hồi để nhắc nhở gấp.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Cứ ở nhà mãi thế này mất kết nối team lắm, mai lên cty gấp nha.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Tháng này gần như ko thấy mặt ở cty, ko duyệt kiểu này nữa đâu.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Làm từ xa dày đặc quá, né mặt ở cty là ko đc đâu bạn ơi.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hơn chục ngày WFH rồi đấy, thu hồi lại để trao đổi trực tiếp.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Sếp ko khoái việc cứ mặc định ở nhà làm việc thế này đâu em.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hạn chế WFH lại đi em êi, tháng này dày đặc quá thể đáng rồi.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Lên công ty đi em, cứ trốn ở nhà né họp trực tiếp thế là ko xong.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Anh thu hồi đơn này vì em WFH nhiều quá mức quy định rồi đấy.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Tháng này em ở nhà hơi nhiều rùi đấy, xách laptop lên cty thui.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Cái này ko duyệt đc nữa, WFH thành thói quen né mặt là tèo.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Dừng việc ở nhà lại đi bạn, lên cty tương tác với team cái nào.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Quá đà rồi em ơi, đơn WFH thứ 8 trong tháng là ko hợp lý đâu.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Anh thấy em đang lợi dụng chế độ WFH để trốn mặt đấy nhé.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hơi lạm dụng WFH rồi nha, từ mai chịu khó đến văn phòng làm việc.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Thu hồi gấp! Tháng này WFH thế là quá tải, cần có mặt ở cty.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Không thể duyệt đơn này đc nữa, ở nhà hoài mất tinh thần teamwork.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Lại WFH nữa à? Thôi cancel đi em, lên cty họp hành cho nhanh.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Văn hóa công ty ko khích lệ việc ở nhà liên tục thế này đâu.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Em WFH nhiều quá mức cho phép rồi, mai bắt buộc phải lên cty.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Thôi ko ở nhà nữa em ơi, tháng này kịch trần WFH rồi còn gì.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Tránh mặt ở cty là ko tốt đâu, anh thu hồi đơn này để chấn chỉnh.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Làm online kiểu này dễ lười lắm, lên công ty chiến đấu tiếp em.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Thu hồi nhé, tháng này em WFH quá nửa tháng rồi còn gì nữa.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Định biến WFH thành mặc định luôn à? Không có chuyện đó đâu nha.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Anh ko đồng ý cho ở nhà nữa, dịch vụ gì mà WFH suốt thế này.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Thôi lên cty đi em, cứ WFH miết thế này việc ko chạy đc đâu.",
+   "label": "BC_WFH_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tách mấy hóa đơn này ra để né sếp lớn chứ gì, gom lại thấy quá hạn mức rồi em.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Sao tuần này hoàn tiền lắm thế, cứ chia nhỏ mấy khoản ra để tự duyệt là anh không đồng ý nha.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chiêu chia nhỏ bill này xưa rồi em, tổng lại vượt mức phải trình Kế toán trưởng duyệt chứ.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh thấy có mùi né hạn mức ở đây nha, gom lại một cục đi rồi tính tiếp.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cố tình cắt nhỏ đề xuất thanh toán để qua mặt hệ thống tự động à, thu hồi gấp.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lách luật chia đơn thế này là không ổn rồi Lan ơi, đưa lên Giám đốc duyệt mới đúng.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tưởng chia nhỏ ra dưới hạn mức là anh không biết hả, gom chung lại đi em.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Mấy cái đơn hoàn tiền này dạo gần đây cứ thấy lắt nhắt, tổng tiền vượt bận rồi phải xin cấp cao thôi.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Làm ăn kiểu gì mà xé lẻ hóa đơn ra thế này, anh thu hồi để làm lại từ đầu.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cố tình né ngưỡng chứ gì, anh bắt bài rồi nhé.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Đơn này tuy nhỏ nhưng cộng dồn mấy ngày qua là lố rồi đấy, hủy tự duyệt để trình sếp lớn.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Xé nhỏ hồ sơ bù tiền để tự duyệt nhanh là không qua mắt được anh đâu.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Lách luật kiểu này hỏng việc, thu hồi gấp để xếp vào luồng duyệt của Kế toán trưởng.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Sao cứ chia hóa đơn ra làm nhiều phần thế, tổng lại là phải lên cấp Giám đốc đấy em.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Anh thu hồi nha, đơn này xé từ một khoản lớn ra chứ gì nữa.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tránh voi chẳng xấu mặt nào nhưng né ngưỡng kiểu này là anh không duyệt đâu, gom lại đi.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tách chi phí ra thế này là trốn quy trình phê duyệt cấp cao rồi.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Hết chia nhỏ hoàn tiền rồi lại bày vẽ, gom chung lại một bộ hồ sơ cho anh.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chiêu trò né hạn mức này cũ rồi, làm lại đơn đi em.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tự duyệt xong thấy cấn cấn, hóa ra em xé lẻ đơn để né Kế toán trưởng chứ gì.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Không có chuyện xé nhỏ bill để tự duyệt đâu nhé, thu hồi để chuyển lên trên.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lại thêm vụ chia nhỏ tiền hoàn nữa, anh kéo lại để trình sếp lớn xem xét.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tưởng dưới mức tự duyệt là êm ái hả, cộng dồn lại là lố rồi em ơi.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Xé lẻ hồ sơ bù tiền ra như này là sai quy chế tài chính rồi đấy.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Anh thu hồi đơn này vì thấy có dấu hiệu tách khoản né sếp lớn.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cứ tưởng tự động duyệt là xong, ai dè lách luật chia nhỏ khoản tiền.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Mấy cái hóa đơn thanh toán này phải gom làm một, tách ra là anh gạt đi hết.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Né ngưỡng tinh vi đấy nhưng anh nhìn ra rồi, thu hồi làm lại đơn lớn nha.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cắt khúc chi phí ra để tự duyệt nhanh à, không có cửa đâu em.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tổng tiền hoàn đã vượt trần rồi, đừng có xé nhỏ ra nữa mà hỏng việc.",
+   "label": "BC_SPLIT_AMOUNT_EVASION",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn này trùng với cái tháng trước vừa thanh toán rồi em ơi.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Số hóa đơn này đã được dùng ở một hồ sơ khác trước đó.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Ê Lan, hóa đơn này mang đi thanh toán 2 lần hả em?",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Phát hiện hóa đơn này đã được quyết toán ở đơn số khác rồi nhé.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trùng invoice number với hồ sơ cũ, anh thu hồi để check lại.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chứng từ này đã được sử dụng để thanh toán trước đó rồi.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn này bị trùng lặp số rồi anh Tùng ơi, không duyệt nữa.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hệ thống báo trùng hóa đơn với một yêu cầu khác chưa hủy.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Anh kéo lại thấy hóa đơn này nộp hai lần, thu hồi gấp.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Số hóa đơn đã tồn tại trong hệ thống thanh toán gần đây.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trùng số hóa đơn rồi em, để tránh thanh toán kép phải hủy thôi.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chứng từ thanh toán bị lặp, anh xin phép thu hồi quyết định.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn này dùng ké bên bộ phận khác hả, sao lại trùng thế?",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Phát hiện hóa đơn đã được thanh toán rồi, thu hồi đơn này nhé.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Số invoice này khớp với một đơn đã duyệt trước đó, hủy gấp.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Nhân viên nộp nhầm hóa đơn cũ đã thanh toán rồi nè.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trùng chứng từ rồi em ơi, anh thu hồi để em kiểm tra lại nha.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn này đã được quyết toán từ tuần trước, không hợp lệ.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Anh thu hồi vì số hóa đơn này đã dùng cho hồ sơ thanh toán khác.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Bị double hóa đơn rồi, anh phải thu hồi lại quyết định tự duyệt.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Số hóa đơn trùng khớp hoàn toàn với một claim đã xong trước đó.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cái hóa đơn này nộp 2 lần lấy tiền hả em, anh thu hồi nhé.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hệ thống vừa báo trùng số hóa đơn với một hồ sơ chưa hủy.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chứng từ này đã chạy thanh toán rồi, không dùng lại được đâu.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Anh thu hồi đơn vì phát hiện hóa đơn này đã được dùng rồi.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Trùng invoice rùi em, anh thu hồi để em làm lại đơn khác nha.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Số hóa đơn đã xuất hiện trong dữ liệu thanh toán 180 ngày qua.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hình như em nộp nhầm hóa đơn cũ, anh thu hồi đơn này nha.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Phát hiện trùng hóa đơn nên anh phải hủy lệnh duyệt này ngay.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn đã được thanh toán ở đơn khác rồi, không duyệt nữa.",
+   "label": "BC_DUPLICATE_INVOICE",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Mới tuần trước tới giờ mà đã xin refund mấy bận rồi, anh phải check lại cho chắc.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Sao tuần này lắm đơn hoàn tiền thế em? Dừng lại để anh kiểm tra tổng thể đã nhé.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Thấy đơn refund thứ 3 rồi đấy, dạo này bên đó phát sinh lắm khoản thế nhở.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh thu hồi để xem lại dòng tiền hoàn trả, mấy hôm nay dồn dập quá.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Bình tĩnh nào, sao cứ dăm bữa nửa tháng lại thấy làm đơn đền bù thế này.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Nhiều khoản nhỏ rải rác quá, anh cần gom lại đối soát chứ ko duyệt bừa đc.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lại refund nữa à? Để anh xem lại mấy cái đơn trước đã rồi tính tiếp.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Hơi bất thường nha, 7 ngày mà dính 3-4 đơn hoàn tiền liên tục là sao em?",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh tạm hold đơn này lại để check xem có bị hụt quỹ chỗ nào ko.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Dạo này lắm chi phí phát sinh thế, anh phải xem lại toàn bộ chứng từ đã.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cứ rải rác mỗi ngày một ít thế này rất dễ thất thoát, anh duyệt lại nhé.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFund_COMPENSATION",
+   "reason": "Thấy cứ dồn dập đòi tiền đền bù là ko ổn rồi, để anh check kĩ đã.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Từ từ đã em, sao tuần này xin refund dày đặc thế.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh kéo lại đơn này vì thấy tần suất hoàn tiền hơi bất thường.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Nhiều khoản nhỏ cộng lại thành to đấy, anh phải soi lại mấy đơn trước.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Ko thể để tình trạng cứ vài ngày lại có đơn refund thế này được.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh rút lại quyết định tự duyệt để kiểm tra xem có vấn đề gì ko.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Sao tuần này nhân viên cứ làm đơn đòi tiền liên tục vậy ta?",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cần xem lại hạn mức chi tiêu gấp, hoàn tiền gì mà lắm thế.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh vừa thấy mấy đơn giống vầy rồi, tạm hoãn để đối soát nha.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tránh đêm dài lắm mộng, cứ refund dồn dập thế này anh phải sờ gáy.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Check nhanh mấy đơn trước thì thấy hơi dày, anh thu hồi để xem lại.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lắm khoản lặt vặt quá, anh phải gom lại duyệt một thể cho dễ quản.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Sao cứ dồn dập nộp đơn đền bù thế này, dừng lại anh xem nào.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh phải kéo đơn này về xem xét lại vì thấy có mùi thất thoát.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Hơi nhiều đơn hoàn tiền trong tuần này nha, để anh kiểm tra đã.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Tự dưng dạo này lắm tiền đền bù thế, anh ko yên tâm chút nào.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Thôi để anh giữ lại check kĩ, dạo này refund nhiều quá mức.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cẩn tắc vô áy náy, sao tuần này cứ làm đơn đòi tiền mãi thế.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Anh thu hồi để hỏi lại bộ phận liên quan về đống đơn hoàn tiền này.",
+   "label": "BC_REFUND_FREQUENT",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách này vừa mới xin chiết khấu cách đây vài ngày rồi mà, cộng dồn kiểu này là âm vốn bên anh em ạ, thu hồi gấp.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Sao lại duyệt đơn này nhỉ? Hồi tuần trước vừa cấp một suất ưu đãi y chang cho khách này rồi, ko để ý là vỡ biên lợi nhuận ngay.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Hủy đơn gấp. Khách này mới nhận discount tuần trước xong, giờ lại xin tiếp, cộng lại là vượt mức cho phép rồi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Anh vừa check lại hệ thống thấy khách này trùng lịch giảm giá trong 7 ngày qua, không thể chồng chéo thêm được đâu em.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Thu hồi nha. Cùng một khách mà xin chiết khấu liên tục thế này là sập biên lợi nhuận công ty đấy.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Ko ổn rồi, khách này mới được duyệt mã giảm giá mấy hôm trước. Giờ thêm cái này nữa là lố hạn mức, anh phải bẻ lái thôi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Bỏ đơn này đi em ơi. Khách vừa gặm một mớ discount tuần trước, giờ lại dính thêm đơn nữa là âm tiền.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Anh rút lại quyết định. Trùng tên khách hàng với đợt xin ưu đãi tuần rồi, dồn lại là vượt trần biên lợi nhuận luôn.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Dừng lại nhé, khách này vừa có suất ưu đãi cách đây mấy hôm, cấp nữa là chết tiền hoa hồng.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Anh vừa phát hiện khách này ăn hai suất chiết khấu trong tuần. Phải hủy ngay lập tức kẻo bay sạch lãi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Thu hồi đơn này nha mọi người. Trùng khách cũ vừa xin giảm giá tuần rồi, cộng dồn vào là quá biên lợi nhuận quy định.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Ơ kìa, khách này mới duyệt tuần trước cơ mà. Sao AI lại cho qua đơn này nhỉ, thu hồi gấp không lỗ chết.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Hủy nhé. Khách này vừa xin discount cách đây vài ngày, lặp lại thế này là vượt biên lợi nhuận rồi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Anh kéo lại đơn này. Trùng khách với tuần trước, dồn dập thế này thì kinh doanh gì tầm này nữa.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Thu hồi nha. Khách này vừa húp xong một bận discount 7 ngày trước, giờ lại đòi thêm là hỏng việc.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Chưa ổn đâu Lan ơi. Khách này vừa có đơn giảm giá cách đây ít ngày, cộng dồn là âm biên lợi nhuận đấy.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Anh thu hồi lệnh tự duyệt này nha. Cùng một khách mà xin lắm thế, lố biên lợi nhuận của tháng rồi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Bỏ đơn này đi anh em. Khách cũ vừa xin giảm giá cách đây chưa lâu, cấp tiếp là hố to đấy.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Hủy gấp đơn này hộ anh. Trùng tên khách vừa nhận ưu đãi tuần rồi, cộng dồn kiểu này gãy xương.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Ko duyệt kiểu này được. Khách vừa nhận chiết khấu mấy hôm trước, giờ lại dính phát nữa là vượt trần.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Anh rút lại quyết định tự duyệt. Khách này húp discount hồi tuần trước rồi, giờ ko được chồng đơn nữa đâu.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Thu hồi ngay kẻo muộn. Khách quen vừa xin giảm giá 7 ngày trước, dồn hai phát là bay sạch lãi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Dừng đơn này lại nhé. Lại là cái tên đó vừa xin discount cách đây vài hôm, tính ra là vượt biên lợi nhuận rồi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Anh hủy nha. Khách này vừa có lịch sử giảm giá tuần rồi, cho thêm phát nữa là âm vốn.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Thu hồi gấp cho anh. Khách này ăn discount liên tòng tọc trong tuần, quá biên lợi nhuận cho phép rồi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Nhìn nhầm rồi, khách này vừa xin chiết khấu cách đây ít ngày mà. Anh phải thu hồi lại thôi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Hủy đơn này đi em. Khách vừa nhận ưu đãi tuần trước xong, cộng dồn thế này thì hỏng.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Anh thu hồi nhé. Trùng khách với đợt xin discount tuần rồi, lố biên lợi nhuận là anh em mình đói.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Dừng khẩn cấp. Khách này vừa có đơn giảm giá cách đây vài ngày, không thể cấp chồng được đâu.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Anh rút lại nha. Cùng một khách mà xin chiết khấu liên tục trong tuần, vượt biên lợi nhuận mất rồi.",
+   "label": "BC_DISCOUNT_REPEAT_CUSTOMER",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Lan xin nghỉ ngày này mất rồi, ai ra đón khách mà duyệt thẻ chi rứa.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Chủ trì họp bận đi công tác mất tiêu, đặt phòng phí phạm ra.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách đến mà người phụ trách lại đang nghỉ phép, hủy đơn gấp.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hôm đó anh Tú đi field trip rồi, ai họp đâu mà giữ phòng.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Hủy nhé, ngày đó đứa chủ nhà đi vắng thì khách vào ngơ ngác à.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng họp này bỏ đi em ơi, sếp chủ trì lịch off nguyên ngày mà.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Đứa tiếp khách xin nghỉ rồi, duyệt pass làm gì nữa.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Người tổ chức họp dính lịch công tác trùng ngày, hủy phòng nha.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách vào tòa nhà ko có ai tiếp đón vì nhân sự bận nghỉ off.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Đặt xong mới nhớ ngày đó ô chủ trì đi c-tác, hủy phòng thui.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thôi thu hồi, nhân sự đón khách ngày đó đang nghỉ phép ở nhà.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Không có người chủ trì thì book phòng làm gì cho chật lịch công ty.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Bị trùng lịch nghỉ của bạn đón khách, hủy đơn pass khách nhé.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Sếp đi công tác ngày đó rồi, phòng này thành phòng thừa.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách đến mà người hẹn lại nghỉ, thế thì hủy thẻ ra vào gấp.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hủy phòng gấp, người họp chính nghỉ phép mất tiêu rồi.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "AI tự duyệt ẩu quá, người tiếp khách đang nghỉ phép cơ mà.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Chủ trì cuộc họp đi công tác rồi, book phòng chi phí vô ích.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thu hồi nha, ngày khách tới thì đứa đón khách lại đi vắng.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Lịch họp này hoãn vì nhân sự chính đi công tác, hủy phòng đi.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Ko có ng tiếp khách thì làm pass làm gì, hủy nha.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng họp giữ vô ích vì ô chủ trì bận đi công tác rồi.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Nhân sự phụ trách tiếp khách nghỉ đúng hôm đó, hủy đơn thẻ.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Đứa book phòng ko để ý người chủ trì đang nghỉ phép, hủy thui.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách vào sảnh ko bóng người đón, thu hồi đơn pass.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hủy phòng gấp nhé, người họp chính đang nghỉ phép.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "AI duyệt nhầm rồi, ngày đó người tiếp khách đi công tác.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Chủ trì vắng mặt ngày đó, hủy phòng họp để ng khác dùng.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Hủy thẻ khách đi, nhân viên đón khách bận đi công tác mất rồi.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng book thừa rồi vì sếp chủ trì lịch off trùng ngày.",
+   "label": "BC_REQUESTER_ABSENT_ON_EVENT",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Bé Lan lại xin nghỉ kiểu này à, trước đã thu hồi 2 lần rồi mà vẫn chứng nào tật nấy, để anh xem lại.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Mấy ngày nghỉ đặc biệt này không gian dối được đâu. Cậu này từng bị hủy đơn mấy lần vì gian lận rồi đấy.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Sửa công kiểu này là không ổn. Lần trước đã cảnh cáo vụ gian lận giờ giấc rồi mà giờ AI lại tự duyệt cho nó.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Lại WFH để trốn việc hả? Tiền lệ xấu rồi, tôi phải thu hồi ngay chứ để AI tự duyệt thì hỏng.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn này lại có vấn đề giống mấy lần trước bị gạt đi rồi. Cấm để AI tự duyệt mấy trường hợp tái phạm.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Hoàn tiền kiểu này là không chấp nhận được, thanh niên này từng bị tui bóc mẽ mấy bận rồi còn gì.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Chiết khấu gì mà ảo thế, tuần trước vừa mới thu hồi đơn tương tự xong, lại định lừa hệ thống à.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Đặt phòng họp kiểu này để né việc chứ làm gì. Đã bị thu hồi 2 lần gần đây rồi mà AI vẫn ngu ngơ duyệt.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Cấp thẻ khách cho ai mà lập lờ thế. Cậu này có lịch sử khai man khách ra vào mấy lần rồi đấy.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thôi xin, đợt trước vừa mới bị mình tẩn cho vì tội lạm dụng tự duyệt nghỉ phép, giờ lại dở chứng.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đơn nghỉ này không chuẩn. Nó bị gạt 2 cú rồi mà AI cứ cho qua, đành phải túm lại thôi.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lại chấm công gian dối rồi, mặt dày thật. Đã bị tui nhắc nhở và thu hồi đơn mấy bận trong quý này.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Không có chuyện ở nhà làm việc kiểu này nữa đâu, lần trước lùm xùm vụ WFH ảo tưởng chưa chừa à.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chi phí thanh toán này lập lờ lắm, trc đã bị thu hồi vài lần do kê khai bậy bạ rồi còn gì.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Hoàn tiền kiểu này là dính phốt ngay. Nó chuyên gia lợi dụng sơ hở để xin tiền bồi dưỡng, duyệt thế quái nào được.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Giảm giá sâu thế này dễ hỏng việc lắm. Đứa này từng bị thu hồi 2 đơn chiết khấu vì làm liều rồi.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng ốc gì mà tuần nào cũng book xong để trống. Đã cảnh cáo vụ này mấy lần mà vẫn chứng nào tật nấy.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Đưa người ngoài vào công ty bừa bãi là không xong đâu. Đã từng bị thu hồi thẻ vì lỗi này rồi cơ mà.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Lại bài cũ soạn lại, định qua mặt AI hả cưng? Anh thu hồi luôn cho nhớ đời.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Mấy cái đơn đặc thù này phải soi kỹ. Tiền lệ xấu rồi, cứ tự duyệt là ăn đòn.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lại sửa giờ để qua mặt chấm công à? Quá tam ba bận, không có lần thứ ba đâu em ơi.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Làm từ xa kiểu này là chết với tôi. Đã nhắc khéo mấy lần mà cứ thích dây dưa.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Bill này nhìn ảo quá, không tin được đâu, lại định moi tiền công ty đây mà.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lại đòi hoàn tiền, tưởng công ty dễ trục lợi lắm đấy à.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Chiết khấu cao thế này là có mùi, gác lại để tui check trực tiếp cho chắc ăn.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Đặt phòng làm gì mà lắt nhắt thế, có mục đích đen tối gì đây.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thẻ khách dạo này cấp lỏng lẻo quá, phải siết lại ngay không thì nguy to.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Nghỉ ngơi gì tầm này, việc thì ngập đầu mà toàn thấy xin phép đi chơi.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Lại văn mẫu xin nghỉ đặc biệt, dẹp ngay lập tức.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Sửa chấm công liên tục thế này là không hề bình thường chút nào.",
+   "label": "BC_AI_REVOKED_HISTORY",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Gửi lắm thế, toàn thấy nộp lúc nửa đêm với cuối tuần để né mắt mọi người à.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Thấy cứ canh giờ nghỉ trưa với tối muộn để bấm duyệt tự động là không ổn rồi.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lại dồn đơn làm ngoài giờ hành chính để đánh lừa hệ thống tự duyệt à, thu hồi gấp.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Mấy cái đơn chiết khấu này toàn tống đi lúc nửa đêm, tưởng anh ko để ý chắc.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tầm này mà vẫn cặm cụi nộp đơn thanh toán chi phí, tranh thủ lúc vắng vẻ để AI duyệt chứ gì.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Cứ nhằm ngày nghỉ lễ với ngoài giờ để gửi loạt đơn hoàn tiền, khôn thế.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Nộp lắm đơn chấm công ngoài giờ thế, tính lừa con bot tự duyệt à.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Thu hồi nha, không thể cứ thích nộp lúc nửa đêm rồi dắt mũi hệ thống được.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chiêu bài lợi dụng lúc không ai để ý để gửi đơn hàng loạt nhằm qua mặt AI chứ gì, hủy.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Sao cứ tầm tối muộn với cuối tuần là em này bắn hàng loạt đơn thế nhỉ, check lại ngay.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lại tranh thủ lúc nửa đêm để nộp mấy cái đơn điều chỉnh chấm công, toát mùi gian lận.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Gửi lắm đơn chiết khấu ngoài giờ hành chính thế, tưởng bot nó không biết tính tổng chắc.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hủy đơn. Toàn chọn giờ linh để nộp hàng loạt cho AI tự duyệt, chiêu này cũ rồi.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Thấy bất thường nha, cứ ngoài giờ làm việc là thấy tống mấy đơn hoàn tiền vào.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Nộp đơn kiểu này là cố tình né quản lý rồi, để anh duyệt tay cho chắc.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Lại lén lút nộp đơn lúc nửa đêm để hòng qua mặt hệ thống, dẹp.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Cứ tưởng nộp tầm tối mịt là không ai kiểm tra hả, thu hồi để xem lại toàn bộ.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Chiêu trò lợi dụng lúc vắng người để bot tự duyệt đơn hoàn tiền không qua mắt được đâu.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Tự dưng mấy cái đơn chấm công cứ bay vào lúc nửa đêm, phải giữ lại xem xét kỹ.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Gửi dồn dập ngoài giờ hành chính thế này là có vấn đề rồi, thu hồi ngay lập tức.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Lại tranh thủ lúc sếp nghỉ ngơi để nộp loạt hóa đơn thanh toán à, hủy nhé.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Nộp đơn hoàn tiền vào giờ hiểm thế, tưởng AI tự duyệt là xong à.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Canh đúng lúc ngoài giờ làm việc để đẩy mấy cái đơn này đi, tinh vi thật.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Thu hồi đơn chiết khấu này nha, cứ nhằm lúc vắng vẻ để hòng trục lợi hệ thống.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Sao cứ thích nộp chi phí vào ngày nghỉ thế, để anh thu hồi duyệt lại từ đầu.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Mấy cái đơn hoàn tiền toàn gửi lúc nửa đêm, né quản lý giỏi thật đấy.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lại giở chiêu gửi hàng loạt ngoài giờ để bẫy con bot tự duyệt, anh giữ lại nhé.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Không có chuyện cứ nộp đêm hôm là được duyệt tự động đâu, hủy nha.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tranh thủ lúc nửa đêm để tống loạt đơn thanh toán vào hệ thống, khôn thế quê anh đầy.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lại dồn đơn hoàn tiền gửi ngoài giờ hành chính để lợi dụng AI tự duyệt à, dẹp đi.",
+   "label": "BC_OFF_HOURS_BULK",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_CRITICAL_DEADLINE",
+   "reason": "Sát nút ngày ra báo cáo tài chính quý mà em xin nghỉ liền 3 ngày thế này thì team chịu sao nổi.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_FREQUENT_PROJECT",
+   "reason": "Dự án đang giai đoạn nước rút go-live, không đồng ý WFH liên tục thế này được đâu.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_NIGHT_SHIFT",
+   "reason": "Mấy nay toàn thấy check-in lệch giờ khuya, cần xem lại lịch trực nghiêm túc hơn.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_HIGH_RISK",
+   "reason": "Hóa đơn ăn uống tiếp khách gì mà cao chót vót thế này, phải giải trình rõ với sếp lớn đã.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_CUSTOMER_TIER",
+   "reason": "Khách này mới mua gói cơ bản, ko áp dụng chính sách hoàn tiền linh động này được.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_MARGIN",
+   "reason": "Mức chiết khấu này làm mỏng biên lợi nhuận quá, anh thu hồi để tính lại.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_ROOM_VIP",
+   "reason": "Phòng lớn này ưu tiên cho họp ban điều hành, em đổi lịch sang phòng nhỏ nhé.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_PASS_RESTRICTED",
+   "reason": "Đối tác này thuộc danh sách nhạy cảm, vào khu R&D phải có giấy phép riêng.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_MONTH_START",
+   "reason": "Đầu tháng ngày 1 ngày 2 việc bù đầu mà em lại nghỉ thì ai làm.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_MONDAY",
+   "reason": "Hay chọn WFH vào ngày thứ Hai đầu tuần là không ổn rồi, tập trung lên cty họp plan đi.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_FREQUENT_REJECT",
+   "reason": "Tháng này bị từ chối mấy đơn rồi mà vẫn ko rút kinh nghiệm chuyện hóa đơn đỏ nhỉ.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_DUPLICATE_ITEM",
+   "reason": "Món này hình như đợt trước hoàn tiền rồi, anh check lại kho thấy cấn cấn.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_POLICY",
+   "reason": "Chưa có phê duyệt của Giám đốc Kinh doanh thì ko tự ý giảm giá sâu vậy đc.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_ROOM_DURATION",
+   "reason": "Đặt phòng gì mà kéo dài từ sáng tới tối mịt, chiếm hết slot của người khác.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_PASS_CAPACITY",
+   "reason": "Đăng ký một lúc mấy chục thẻ khách cho đoàn này là quá tải sảnh lễ tân rồi.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_WEEKEND_ADJ",
+   "reason": "Nghỉ dính liền thứ Sáu với thứ Hai là thành kì nghỉ dài rồi, không duyệt kiểu này nha.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_MIDNIGHT_SUBMIT",
+   "reason": "Gửi đơn WFH lúc nửa đêm thế này là ko hợp lệ rồi, sáng mai hẵng tính.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_SMALL_AMOUNT",
+   "reason": "Mấy khoản lặt vặt này tự bỏ tiền túi đi em ơi, đừng làm phiền kế toán nữa.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_TIME_GAP",
+   "reason": "Khoảng cách chấm công bất thường quá, thu hồi để HR kiểm tra lại vân tay.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_EXPIRED_TIME",
+   "reason": "Giao dịch này quá hạn đổi trả mấy tháng rồi mới đòi hoàn tiền là sao.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_NEW_CLIENT",
+   "reason": "Khách mới tinh chưa mua gì mà đòi chiết khấu khủng thế, ko chuẩn bài.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_ROOM_PEAK",
+   "reason": "Giờ này khung giờ vàng toàn cty cần họp, em dời lịch qua chiều đi.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_PASS_NO_ID",
+   "reason": "Không thấy khai rõ số CCCD của khách, bảo vệ không cho vô đâu em.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_LONG_DURATION",
+   "reason": "Nghỉ gì mà gần trọn tháng thế này, bộ tính bỏ việc luôn hả em.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_QUARTER_END",
+   "reason": "Cuối quý tổng kết số liệu mà đòi WFH ở nhà thì ai duyệt cho nổi.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_POLICY_MISMATCH",
+   "reason": "Khoản này không nằm trong ngân sách marketing đã duyệt năm nay nha.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_FRIDAY",
+   "reason": "Cứ thứ Sáu là hay điều chỉnh giờ về sớm, anh thu hồi để làm gắt vụ này.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_POLICY_VIP",
+   "reason": "Quy định hoàn tiền này chỉ áp dụng cho kênh đại lý lớn thôi em.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_COMPETITOR",
+   "reason": "Khách này nghe nói đang làm ăn bên đối thủ, không ưu đãi giá này.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_ROOM_SENSITIVE",
+   "reason": "Nội dung họp nhạy cảm mà đặt phòng kính kiểu này không an toàn.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_PASS_NIGHT",
+   "reason": "Dẫn khách vào nhà máy giờ này là phạm quy định an ninh ca đêm rồi.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SHORT_NOTICE",
+   "reason": "Báo trước có vài tiếng thế này thì anh trở tay không kịp, xin rút đơn nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_SYSTEM_ALERT",
+   "reason": "Hệ thống tự duyệt nhầm đơn WFH của em khi đang có thanh tra nội bộ.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_HIGH_FREQ",
+   "reason": "Mới tuần trước vừa thanh toán khoản y hệt, phải kiểm tra lại tính trùng lặp.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_LATE_SUBMIT",
+   "reason": "Quá hạn 24h giải trình chấm công rồi hệ thống mới duyệt, anh phải hủy.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_SUSPICIOUS",
+   "reason": "Vụ hoàn tiền này có vẻ có mùi gian lận, tạm hoãn để điều tra.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_BULK_CHECK",
+   "reason": "Chiết khấu số lượng lớn thế này phải qua ban giám đốc chứ AI ko đc duyệt.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_ROOM_EMPTY",
+   "reason": "Lần trước đặt phòng xong bỏ trống không họp, lần này anh hủy luôn.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_PASS_BLACKLIST",
+   "reason": "Khách này nằm trong danh sách đen năm ngoái, không cấp thẻ vào cổng.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_PEAK_SEASON",
+   "reason": "Đang mùa cao điểm sản xuất mà em cứ xin nghỉ thế này là kỷ luật đấy.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Chỗ này Lan xin nghỉ sát ngày chốt KPI quá, để anh check lại tiến độ team rồi tính tiếp.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hôm đó lịch cty có sự thay đổi đột xuất, hình như đúng ngày có đoàn khách lớn về nên cần Lan ở lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thấy đơn ghi nghỉ phép nhưng tuần này dự án gấp lắm, để anh alo bàn lại với Lan vụ này.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Vừa nhìn lại lịch thấy trùng với ngày anh em trong phòng đi thị sát miền Trung, không ổn rồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đơn hiếu hỉ này để anh hỏi rõ lại bên nhân sự xem công ty có chế độ riêng không đã nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Khoản nghỉ chăm con ốm này để anh xem lại lịch trực của ca bên dưới đã rồi duyệt lại sau.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Chưa nắm rõ quy định mới về loại nghỉ này nên anh thu hồi để hỏi lại phòng C&B cho chắc.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hôm đó anh nhớ Lan về sớm mà, sao đơn lại báo chấm công cả ngày thế này nhỉ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cái đoạn chấm công bù này để anh kiểm tra lại với bên bảo vệ xem hệ thống quét có nhầm ko.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hôm đó họp hành lộn xộn quá để anh xem lại log camera rồi mới duyệt khoản này nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Thấy chấm công ca này có vẻ ko khớp với thực tế anh em làm việc ở xưởng hôm đó.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Tuần này nhiều việc cần teamwork trực tiếp nên anh muốn Lan lên cty làm thay vì ở nhà.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hôm đó có buổi workshop quan trọng bắt buộc mọi người phải có mặt ở văn phòng.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Khối lượng việc nhà khâu này cần họp hành trực tiếp, WFH sợ không xử lý kịp tiến độ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Mấy nay mạng bên khu Lan hay chập chờn, lên cty làm cho ổn định đường truyền nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn tiếp khách này có vẻ vượt mức ngân sách phân bổ cho dự án tháng này rồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Khoản chi đi lại này để anh check lại xem có gộp chung vào chuyến công tác tuần trước được ko.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Món này hình như thuộc về quỹ khác chứ ko phải chi phí dự án, để anh coi lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chi phí mua sắm thiết bị này cần phải qua ý kiến của bên IT trước đã chứ duyệt liền ko ổn.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Thấy khoản này hơi cao so với mặt bằng chung các buổi tiệc trước, để anh xem lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Vụ đền bù cho khách hàng này cần họp với ban giám đốc cái đã, chưa duyệt vội được.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khoản refund này có liên quan đến lỗi kỹ thuật bên mình hay bên vận chuyển để anh check lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khách đòi bồi thường mức này hơi quá tay, để anh trực tiếp đàm phán lại xem sao.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Mức chiết khấu cho đơn hàng lớn này phải xin ý kiến sếp tổng đã, quyền hạn anh ko tới.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Biên độ lợi nhuận deal này quá mỏng rồi, giảm thêm phần trăm này nữa là âm vốn luôn.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách này thuộc phân khúc phổ thông mà đòi chiết khấu VIP thế này là chưa hợp lý.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng họp lớn giờ đó bị sếp bự book đột xuất để tiếp khách VIP rồi, để anh đổi phòng khác cho.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Lịch họp này kéo dài quá khung giờ cho phép, dễ ảnh hưởng đến nhóm tiếp theo lắm.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hôm đó phòng họp trung tâm có bảo trì hệ thống loa máy nên ko dùng được nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Đông người thế này mà book phòng nhỏ là ko đủ chỗ ngồi đâu, để anh đổi sang phòng to.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Đoàn khách này đối tác chiến lược quan trọng, để anh báo an ninh làm thẻ loại khác.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thẻ ra vào khu vực bảo mật cao này cần sự phê duyệt từ bên quản lý tòa nhà nữa.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách này vào khu vực R&D nên quy trình cấp thẻ phải chặt chẽ hơn bình thường.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Hôm đoàn khách sang đúng dịp cty kiểm tra an ninh nội bộ nên tạm hoãn cấp thẻ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Đang mùa cao điểm chạy sales mà xin nghỉ tận mấy ngày liền là anh chưa duyệt được đâu.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cái vụ quên quẹt thẻ này tháng này dính mấy lần rồi đấy, để anh nhắc nhở nhân sự.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Nhà có việc riêng thì nên xin nghỉ hẳn chứ WFH kiểu này hiệu quả công việc kém lắm.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn ăn uống này dùng cho nội bộ team chứ có phải tiếp khách đâu mà đòi thanh toán.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Chính sách giá này chỉ áp dụng cho quý trước thôi, giờ sang quý mới rồi không giảm nữa.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Họp nội bộ team mà book phòng hội thảo lớn thế này là lãng phí tài nguyên công ty.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_CRITICAL_DEADLINE",
+   "reason": "Sát nút quá mới xin nghỉ, đợt này chốt số liệu gấp nên anh phải thu hồi để chú ở lại hoàn thành đã nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_MONTH_LIMIT",
+   "reason": "Mới đầu tháng mà em đã xin WFH liền tù tì mấy hôm, quy định phòng mình không cho phép đâu nha.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_ROOM_PEAK",
+   "reason": "Thứ Hai đầu tuần phòng họp lúc nào cũng kín chỗ cho sếp lớn làm việc, đơn đặt phòng này anh ké không duyệt được.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_LATE_NIGHT",
+   "reason": "Gì mà nửa đêm nửa hôm khuya khoắt mới ngồi nộp đơn thanh toán thế này, để sáng mai kiểm lại chứng từ đã.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_LONG_DURATION",
+   "reason": "Nghỉ gì mà liền mạch một mạch hơn tuần lễ liền, team đang thiếu người không thể xoay xở kịp đâu em ơi.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_HIGH_VALUE",
+   "reason": "Khoản hoàn tiền này giá trị khá lớn vượt mức thường ngày, anh cần xem lại hợp đồng gốc đã ký mới dám duyệt.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "REJECTED_HISTORY",
+   "reason": "Tháng này hồ sơ của bạn này bị từ chối mấy lần rồi mà vẫn tiếp tục nộp sai quy trình, tạm hoãn nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "GUEST_CARD_RIVAL",
+   "reason": "Khách này hình như bên đối tác cạnh tranh trực tiếp bên mình, không tiện cấp thẻ vào khu vực R&D.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_POLICY",
+   "reason": "Mức chiết khấu này chạm trần biên độ lợi nhuận rồi, phải xin ý kiến ban giám đốc trước chứ AI tự duyệt là hỏng.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "TIMEKEEPING_WEEKEND",
+   "reason": "Chấm công điều chỉnh rơi đúng ngày cuối tuần mà không có mail xác nhận làm thêm giờ là anh hông duyệt nha.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_MONDAY_BLOCK",
+   "reason": "Mấy chú hay xin WFH ngày thứ Hai để nghỉ bù cuối tuần, anh phải thu hồi để mọi người lên văn phòng họp.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_END_MONTH",
+   "reason": "Cận ngày chốt sổ cuối tháng rồi mà em đòi nghỉ phép dài ngày thế này thì bộ phận kế toán sao chịu nổi.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_WEEKEND_SUBMIT",
+   "reason": "Tầm này cuối tuần ai còn ngồi duyệt hóa đơn thanh toán cho chú được, để sang tuần tính sau nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_ROOM_TEAM_SIZE",
+   "reason": "Đăng ký phòng họp lớn mà có ba mươi phút thì lãng phí quá, nhường chỗ cho team khác họp chiến lược đi em.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "GUEST_CARD_VIP_ONLY",
+   "reason": "Khu vực này chỉ dành riêng cho khách VIP cấp cao, thẻ khách thường không được cấp vào đây đâu.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_AUDIT_REQUIRED",
+   "reason": "Món hoàn tiền này nằm trong diện cần kiểm toán nội bộ nên anh phải thu hồi lại quyết định của máy.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_DEBT_CUSTOMER",
+   "reason": "Khách hàng này đang nợ đọng cước cũ chưa thanh toán, giảm giá thế nào đi nữa cũng không được duyệt nha.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "TIMEKEEPING_NIGHT",
+   "reason": "Giờ gửi đơn điều chỉnh chấm công lúc gần sáng thế này nhìn ảo quá, anh kéo lại để kiểm tra với chấm công.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SHORT_NOTICE",
+   "reason": "Báo trước có mấy tiếng đồng hồ ai mà xoay kịp việc cho chú, hủy đơn này để rút kinh nghiệm nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_FREQUENT_USER",
+   "reason": "Em đã xin WFH kha khá buổi trong tháng này rồi, cố gắng sắp xếp lên cty làm việc trực tiếp đi em.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_THRESHOLD",
+   "reason": "Khoản chi phí tiếp khách này hơi cao so với định mức chung, chờ anh xin sếp lớn rồi tính tiếp.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_ROOM_DURATION",
+   "reason": "Họp gì mà book liền một mạch nửa ngày trời, anh thu hồi để nhường phòng cho các ban khác nữa chứ.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "GUEST_CARD_BLACK_LIST",
+   "reason": "Khách này từng có tiền lệ vi phạm nội quy bảo mật công ty, anh thu hồi thẻ ngay không cho vào.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "TIMEKEEPING_SYSTEM_ERROR",
+   "reason": "Hôm đó hệ thống chấm công toàn công ty bị lỗi chung, em sửa lẻ thế này không đúng quy trình rồi.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_NEW_CLIENT",
+   "reason": "Khách mới tinh chưa mua hàng lần nào mà đòi chiết khấu sâu thế này là không hợp lệ đâu bạn ơi.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_MID_WEEK",
+   "reason": "Giữa tuần đang bao nhiêu việc dồn dập mà em lại xin nghỉ ngang xương thế này, anh giữ lại xử lý công việc nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_SMALL_AMOUNT",
+   "reason": "Mấy chi phí lặt vặt này gom lại cuối tháng thanh toán một cục luôn cho gọn, đừng xé lẻ ra mệt lắm.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_EARLY_SUBMIT",
+   "reason": "Mới sáng tinh mơ chưa rõ lịch họp hành ra sao mà đã nộp đơn WFH rồi, lên cty trực đi em.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_MISSING_INFO",
+   "reason": "Hóa đơn này thiếu mất mã số thuế của công ty rồi, anh thu hồi để em bổ sung rồi nộp lại nha.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_ROOM_TRAINING",
+   "reason": "Phòng họp này đang được ưu tiên cho các lớp đào tạo nội bộ bắt buộc, hẹn em dịp khác nhé.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "GUEST_CARD_EXPIRED_PREV",
+   "reason": "Lần trước khách này vào quên không trả thẻ cũ, phải thu hồi đơn cấp thẻ mới để nhắc nhở bên lễ tân.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "TIMEKEEPING_LONG_GAP",
+   "reason": "Từ tận đầu tháng mà bây giờ mới nhớ ra đòi điều chỉnh chấm công thì muộn quá rồi em ơi.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_PEAK_SEASON",
+   "reason": "Đang mùa cao điểm kinh doanh của công ty mà ai cũng xin nghỉ thế này thì sếp mắng chết.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_FRIDAY_RULE",
+   "reason": "Quy định phòng mình là không ai được WFH vào ngày thứ Sáu để tổng kết tuần, em thông cảm nha.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_APPROVAL_LIMIT",
+   "reason": "Mức giảm giá này vượt quá quyền hạn của cấp quản lý trực tiếp rồi, phải đưa lên hội đồng.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_DUPLICATE_ITEM",
+   "reason": "Khoản chi này hình như trùng với mục thanh toán tuần trước rồi, anh giữ lại để kiểm tra kỹ.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_POLICY_CHANGE",
+   "reason": "Chính sách hoàn tiền sản phẩm vừa mới thay đổi chiều nay, đơn này áp dụng theo luật cũ là không được.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "TIMEKEEPING_BATCH_REJECT",
+   "reason": "Mấy người gửi đơn điều chỉnh cùng một lúc thế này có vấn đề rồi, anh thu hồi để xem lại toàn bộ.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "GUEST_CARD_WEEKEND",
+   "reason": "Cuối tuần tòa nhà đóng cửa không cấp thẻ cho khách vãng lai đâu, em hủy đơn đặt lịch này đi nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_NOTICE_SHORT",
+   "reason": "Mới báo trước có vài tiếng mà đòi nghỉ liền mấy ngày, anh không thể duyệt kiểu bất ngờ này được.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Lan ơi, tháng này em hết sạch phép năm rồi nên chị phải kéo đơn này về để đổi sang nghỉ không lương nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Sếp lớn vừa chốt lịch chèn ngang buổi chiều em xin nghỉ, để anh thu hồi rồi bàn lại sau nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Đợt này team đang chuẩn bị go-live kẹt cứng, em dời lịch nghỉ sang tuần sau giúp anh với.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Tính ra ngày em xin nghỉ trùng bố nó lịch họp tổng kết quý của phòng mình rồi, cancel đơn này nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Hồ sơ kết hôn này em nộp nhầm giấy đăng ký kết hôn cũ của lần trước rồi, để anh thu hồi cho em nộp lại bản chuẩn.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Chế độ này công ty mình yêu cầu phải gửi bản cứng về HR trước, em bổ sung rồi hẵng tạo đơn mới nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Ngày nghỉ tang gia này em tính chưa chuẩn với quy chế phúc lợi, để anh kéo về chỉnh lại ngày cho đúng.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hôm đó hệ thống vân tay nhận diện thiếu lúc chiều về, nhưng em lại chấm bù thiếu cả ca sáng nên anh phải gỡ ra làm lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cái ngày em giải trình quên chấm công hóa ra anh nhớ là hôm đó em đi công tác cơ mà, để anh xem lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Em khai thiếu giờ đi gặp khách hàng ở ngoài nên đơn giải trình này chưa đủ căn cứ, anh thu hồi nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Nhà em mất mạng phải ko? Hôm đó phòng có lịch workshop bắt buộc mọi người phải có mặt ở cty đấy.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Đăng ký WFH kiểu này liên tục ba ngày liền là ko hợp lệ với quy định mới đâu em ơi, để anh thu hồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Khách hàng chiều nay đòi qua văn phòng demo sản phẩm gấp, em gác lại lịch làm việc ở nhà lên công ty nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Khoản chiêu đãi khách này vượt quá hạn mức tiếp khách của team trong tháng rồi, anh phải thu hồi để cân đối lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Mấy món này em kê khai nhầm vào quỹ hoạt động nội bộ thay vì quỹ dự án rồi, sửa lại giúp anh nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn taxi này ghi sai mã số thuế công ty mình nên kế toán thể nào cũng bắt bẻ, anh thu hồi cho em đổi hóa đơn.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chi phí mua tài nguyên cloud này đáng lẽ phải xin duyệt từ ngân sách của ban công nghệ chứ ko tính vào đây được.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khoản tiền hoàn khách hàng này cần phải đính kèm thêm biên bản thỏa thuận bồi thường đã ký, để anh thu hồi bổ sung.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Mức hoàn tiền cho bên đối tác này đang cao hơn biên độ anh cho phép, để anh kéo về xem xét lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Vụ khiếu nại này bên pháp chế bảo chưa xong mà em đã làm thủ tục hoàn tiền rồi, tạm dừng đã nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Mức chiết khấu 25% cho hợp đồng này chỉ áp dụng kèm điều kiện mua kèm gói dịch vụ phụ mà em chưa liệt kê vào.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách hàng này đang nợ đọng cước phí cũ chưa thanh toán nên anh chưa thể duyệt mức ưu đãi đặc biệt này được.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Biên độ lợi nhuận của hợp đồng này sau khi trừ chiết khấu bị âm rồi em ơi, thu hồi gấp để tính lại giá.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng họp lớn này ban giám đốc đã book cố định để họp chiến lược cả tuần, em chọn phòng khác nhỏ hơn nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Khung giờ em đặt phòng bị trùng với lịch phỏng vấn tuyển dụng vị trí trưởng phòng của anh rồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Tụi em book phòng training mà lại chọn nhầm phòng không có máy chiếu tương tác, để anh thu hồi đổi phòng khác.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Khách này thuộc diện bảo mật cấp độ cao, danh sách xin cấp thẻ phải được bên an ninh thẩm định trước một ngày cơ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Số lượng khách lên tham quan văn phòng đợt này vượt quá quy định an toàn tầng lầu rồi, em cắt giảm bớt đi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Căn cước của khách này mờ quá hệ thống an ninh không quét nổi, em liên hệ xin lại số passport rồi tạo đơn mới nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh Tú vừa nhắn là tuần tới em nghỉ thì không ai trực hệ thống thay ca tối đâu, để anh kéo đơn này về bàn lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Giải trình đi muộn vì lý do thời tiết kiểu này chỉ áp dụng chung khi có thông báo của công ty thôi em ơi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hôm em xin WFH lại đúng vào ngày có buổi đánh giá KPI trực tiếp với sếp tổng, em sắp xếp lên văn phòng nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tiền vé máy bay đi công tác này đã được bộ phận logistics đặt và thanh toán qua thẻ công ty rồi, em không kê khai nữa.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khách hàng đổi ý không nhận tiền mặt mà muốn trừ trực tiếp vào kỳ hóa đơn cước tiếp theo rồi em ơi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Chương trình giảm giá này đã hết hạn từ hôm qua, hệ thống tự duyệt nhầm nên anh phải thu hồi ngay.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng họp đó chiều nay bảo trì hệ thống điều hòa, em dời lịch sang phòng tầng trên giúp anh.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Đoàn khách này đổi giờ ghé thăm sang buổi sáng rồi nên thẻ ra vào buổi chiều không còn giá trị sử dụng.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nghỉ chế độ ốm đau này em phải nộp giấy ra viện bản gốc thay vì giấy hẹn khám, để anh thu hồi bổ sung.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Em chấm công thiếu ca làm việc ngày chủ nhật mà không có giấy xác nhận tăng ca của quản lý trực tiếp.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Mấy cái hóa đơn tiếp khách này từ tháng trước mà giờ em mới nộp thanh toán là vi phạm quy chế tài chính rồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_CRITICAL_DEADLINE",
+   "reason": "Hạn chót nộp báo cáo kiểm toán là ngày mai mà chú em lại xin nghỉ đúng lúc này thì chết team, anh thu hồi nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_FREQUENT_MONDAY",
+   "reason": "Thấy cứ hay WFH đầu tuần thế này là không ổn, lên văn phòng họp trực tiếp với team đi em ơi.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_LATE_NIGHT_SUBMIT",
+   "reason": "Mấy giờ rồi mà còn gõ cửa hệ thống sửa giờ chấm công, để mai gặp nhau rồi tính lại vụ này.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_HIGH_AMOUNT",
+   "reason": "Hóa đơn tiếp khách gì mà căng thế, vượt mức trung bình rồi, tạm thu hồi chờ anh check lại với sếp lớn.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_MULTIPLE_DAYS",
+   "reason": "Đòi hoàn tiền đợt này kéo dài mấy ngày liền, cần kê khai chi tiết hơn chứ AI duyệt ẩu quá.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_FREQUENT_REJECT",
+   "reason": "Mới bị từ chối mấy đơn gần đây mà giờ lại đòi giảm giá sâu cho khách, anh phải xem lại đã.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_SHORT_NOTICE",
+   "reason": "Báo trước có mấy tiếng mà đòi book phòng họp lớn đón đối tác chiến lược, gấp quá anh không kịp chuẩn bị.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_COMPETITOR_GUEST",
+   "reason": "Khách ghé thăm lần này là bên đối thủ cạnh tranh trực tiếp, chưa rõ mục đích nên anh phải thu hồi quyền duyệt của AI.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_PEAK_SEASON",
+   "reason": "Đang mùa quyết toán cuối quý mà xin nghỉ dài là anh không duyệt đâu, ráng cày xong rồi tính.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_FRIDAY_PATTERN",
+   "reason": "Lại bài ca WFH chiều thứ Sáu để né kẹt xe à, ở công ty làm việc đi em.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_MIDNIGHT_REQUEST",
+   "reason": "12h đêm còn mò vào hệ thống chỉnh chấm công ngày hôm trước, thói quen này không tốt đâu nha.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CEILING_LIMIT",
+   "reason": "Khoản chi này sát rạt trần ngân sách phòng rồi, anh phải giữ lại để đối chiếu với hóa đơn gốc.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_LONG_DURATION",
+   "reason": "Làm cái đơn hoàn tiền gì mà ôm chân cả tuần, bộ tính bỏ bê công việc chính hả em.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_RISKY_HISTORY",
+   "reason": "Thanh niên này tháng trước vừa bị gạt đơn discount, giờ lại làm quả tương tự nên anh bấm nút rút lại.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_RUSH_BOOKING",
+   "reason": "Gấp gáp kiểu này thì phòng ốc đâu mà xoay sở, anh thu hồi để sắp xếp lại lịch.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_BAD_DEBT_CLIENT",
+   "reason": "Khách hàng này đang nằm trong danh sách nợ xấu chưa thanh toán, dẫn vào công ty lúc này là không ổn.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_MONTH_END",
+   "reason": "Ngày chốt sổ sách mà em nộp đơn nghỉ thì ai gánh phần data cho kịp, anh kéo lại đơn này nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_MID_WEEK",
+   "reason": "Giữa tuần rồi còn đòi ở nhà làm việc từ xa, đội ngũ đang cần em support trực tiếp đây.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_EARLY_MORNING",
+   "reason": "Mới 5h sáng đã thấy bắn đơn điều chỉnh giờ vào, có gì khuất mắt thì lên công ty nói chuyện.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_LARGE_SUM",
+   "reason": "Số tiền thanh toán đợt này khá lớn, để anh tự tay ký duyệt chứ tin AI có ngày hố to.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_EXTENDED_PERIOD",
+   "reason": "Nghỉ hoàn tiền chi phí kéo dài mấy ngày liền thế này là vượt quy định lỏng lẻo của AI rồi.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_PREV_FAILS",
+   "reason": "Mấy lần trước xin giảm giá cho khách đã bị hỏng việc, anh rút lại quyết định tự duyệt ngay.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_IMMEDIATE_NOTICE",
+   "reason": "Báo trước có tí tẹo thế này ai mà chuẩn bị kịp tài liệu cho buổi họp quan trọng, huỷ quyền tự động nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_COMPLIANCE_ISSUE",
+   "reason": "Khách mời có vấn đề về tuân thủ pháp lý đợt trước, tạm thời không đón tiếp để tránh rủi ro.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_PAYROLL_DAY",
+   "reason": "Đúng ngày tính lương tháng mà em vắng mặt để giải quyết việc cá nhân là không hợp lý rồi.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_WEEKEND_APPROACH",
+   "reason": "Cứ gần cuối tuần là lại xin WFH, anh thấy không yên tâm chút nào nên thu hồi.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_LATE_SUBMIT",
+   "reason": "Gửi đơn lúc nửa đêm thế này, hệ thống tự duyệt nhầm rồi, anh phải giữ lại xem xét.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_HIGH_VALUE",
+   "reason": "Chi phí sự kiện này cao ngất ngưởng, anh phải soi lại từng mục chứ không để AI duyệt bừa được.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_MANY_DAYS",
+   "reason": "Yêu cầu hoàn tiền gì mà kéo dài cả tuần lễ, em phải giải trình rõ ràng mới được.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_REJECT_TRACK",
+   "reason": "Hồ sơ hay bị từ chối gần đây mà vẫn cố đấm ăn xôi xin chiết khấu, anh thu hồi đơn này nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_TIGHT_NOTICE",
+   "reason": "Thời gian báo trước quá ngắn so với quy định đặt phòng VIP, anh kéo lại để điều chỉnh.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_MEDIA_SENSITIVE",
+   "reason": "Đoàn khách này liên quan đến báo chí nhạy cảm, cần ban giám đốc duyệt chứ AI tự động không ổn.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_TAX_PERIOD",
+   "reason": "Đang mùa kê khai thuế mà em xin nghỉ ngày này là anh không duyệt đâu, hoãn lại đi.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_CUSTOM_DAY",
+   "reason": "Thứ này rất hay có lịch thanh tra, ở nhà làm gì để anh gọi lên văn phòng.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_OFF_HOURS",
+   "reason": "Tầm giờ này mà còn chỉnh chọt giờ giấc, anh phải thu hồi để check lại camera.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_COSTLY",
+   "reason": "Mức chi trả này chạm ngưỡng phải xin ý kiến phó tổng rồi, để anh thu hồi đơn của AI.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_BLOCK_DAYS",
+   "reason": "Ôm cục tiền hoàn trả nhiều ngày thế này rủi ro lắm, để anh kiểm tra lại chứng từ.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "DISCOUNT_WARNING_RECORD",
+   "reason": "Em vừa bị từ chối vài đơn liền trong tháng, đơn giảm giá này anh cứ thu hồi cho chắc ăn.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "MEETING_URGENT_NOTICE",
+   "reason": "Báo trước có vài tiếng đồng hồ đòi book phòng họp chiến lược, gấp quá anh phải giữ lại.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_BLACKLIST_SUSPECT",
+   "reason": "Khách này có dấu hiệu nằm trong danh sách đen từ các chi nhánh khác, tạm dừng tiếp đón.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Thấy Lan định nghỉ ba ngày liền dịp này nhưng team đang dồn lịch chạy pitch, để anh gọi trao đổi lại xem dời sang tuần sau được không.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Đợt này kho hàng đang thiếu người kiểm kê tháng, anh thu hồi đơn xin nghỉ phép này để em ấy hỗ trợ xong việc rồi đi bù.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Vừa nhìn lại lịch thấy trùng với ngày đón đoàn khách VIP bên đối tác Nhật sang thăm văn phòng, cần sự có mặt của nhân sự này.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Sếp tổng vừa đổi lịch họp chiến lược quý lên sát ngày em này xin nghỉ, phải giữ ở lại để chuẩn bị số liệu gấp.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Đám cưới anh họ thì tranh thủ cuối tuần chứ sao lại nghỉ tận hai ngày làm việc chính thế này, anh bắt buộc phải gác lại đơn để hỏi kỹ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Chế độ này chỉ áp dụng cho việc hệ trọng nhưng lý do đi làm thủ tục hành chính này có thể tranh thủ ngoài giờ được mà.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Vừa hay tin người thân đã ổn định rồi nên anh kéo lại đơn nghỉ chăm sóc bệnh nhân này, để em ấy tập trung làm nốt task dang dở.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hôm đó tôi trực tiếp nhìn thấy cậu này tới văn phòng muộn hẳn hai tiếng cơ mà, sao lại chấm công cả ngày được, thu hồi gấp.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Quên chấm vân tay nhưng hệ thống camera ghi nhận đi ra ngoài từ đầu giờ chiều đến tối mới về, không thể duyệt kiểu này được.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lý do đi gặp khách hàng ngoài thị trường nhưng không thấy báo cáo check-in qua app với team sales, phải giữ lại check.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hôm nay có buổi workshop trực tiếp bắt buộc toàn bộ nhân sự phải có mặt ở phòng lab để test máy, không thể ở nhà làm việc được.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Mấy nay mạng bên khu nhà em này hay chập chờn do cá quang bị đứt, tốt nhất là cứ lên công ty ngồi cho chắc việc.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Dự án mới đang cần brainstorming liên tục nên chiều nay cả team phải ngồi chung một phòng họp, ở nhà là lỡ nhịp ngay.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Khoản chiêu đãi đối tác này vượt quá định mức bữa trưa quy định của phòng rồi, anh thu hồi để bảo nhân viên cắt bớt phần phát sinh.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn taxi đi gặp khách từ hồi tuần trước mà giờ mới mang ra thanh toán là sát nút hạn quyết toán tháng quá, phải xem lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tiền mua văn phòng phẩm này đã được duyệt mua chung theo lô của cả tầng rồi, sao lại tự đi mua lẻ rồi kê khai thế này.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khoản đền bù dịch vụ cho khách hàng này cần phải quy trách nhiệm cụ thể lỗi thuộc về bên bộ phận nào đã rồi mới tính tiếp.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Số tiền hoàn lại cho khách qua quá lớn so với giá trị đơn hàng thực tế, tôi phải gọi bên CSKH xác minh lại biên bản thỏa thuận.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Mức chiết khấu 30% này chỉ dành riêng cho khách hàng chiến lược ký hợp đồng năm, đơn lẻ này không đủ điều kiện để áp dụng.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Biên độ lợi nhuận của gói dịch vụ này đang rất mỏng, giảm sâu thế này là âm vốn, phải thu hồi để bàn lại với ban giám đốc.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng lớn này đã được ban tổng giám đốc giữ lịch để họp kín từ tuần trước rồi, hệ thống tự duyệt nhầm slot nên tôi phải hủy.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Họp có ba người mà đặt hẳn phòng hội thảo lớn thế này là lãng phí tài nguyên chung, bắt buộc phải đổi sang phòng nhỏ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Đối tác này thuộc diện cần kiểm tra an ninh đặc biệt do liên quan đến công nghệ lõi, phải để tôi xem lại danh tính đoàn.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Số lượng khách lên thăm quan xưởng sản xuất quá đông so với giới hạn an toàn của khu vực kỹ thuật, cần tinh gọn lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Mới nghỉ tuần trước xong giờ lại xin phép nghỉ tiếp nữa, ảnh hưởng tiến độ chung quá nên anh kéo lại đơn để nhắc nhở.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Nghỉ việc riêng kiểu này mà không báo trước với team một tiếng thì chịu rồi, anh thu hồi để phạt lỗi tác phong.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cái lỗi quên chấm công này tháng nào em này cũng bị, phải giữ lại đơn để cảnh cáo chứ không thể cứ tự duyệt hoài.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Dạo này hiệu suất làm việc ở nhà giảm rõ rệt nên anh không duyệt WFH nữa, bắt buộc phải lên văn phòng ngồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Mấy cái hóa đơn ăn uống liên hoan này không nằm trong ngân sách quĩ phúc lợi được duyệt từ đầu năm, phải thu hồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khách khiếu nại nhưng lỗi chính là do họ dùng sai hướng dẫn sử dụng, không thể đồng ý hoàn tiền vô điều kiện thế này.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách hàng này có lịch sử nợ phí dịch vụ kỳ trước chưa thanh toán xong, tuyệt đối không được cấp thêm mã ưu đãi nào nữa.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Khung giờ này thiết bị máy chiếu đang bảo trì toàn diện, đặt phòng cũng không dùng được nên tôi bấm thu hồi luôn.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thời gian khách hẹn đến làm việc lại trùng vào giờ nghỉ trưa của tòa nhà, bảo vệ sẽ không cho vào cửa.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Nhân sự này vừa nhận trọng trách chủ trì dự án mới nên không thể giải quyết cho nghỉ dài ngày lúc này được.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Khai báo thời gian đến công ty lệch hẳn so với log kết nối wifi nội bộ, tôi phải giữ lại để đối chiếu.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Cả phòng đang trong giai đoạn nước rút chuẩn bị kiểm toán, yêu cầu tất cả nghiêm túc có mặt đầy đủ tại chỗ ngồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Khoản chi phí công tác này đi lại bằng phương tiện cá nhân nhưng lại khai báo mức vé máy bay là không hợp lý.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Chương trình ưu đãi này đã hết hạn từ hôm qua rồi, hệ thống quét sót nên tôi phải tự tay thu hồi lại ngay.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng họp này đang bị sự cố điều hoà tổng cả tầng, ngồi trong đó ngột ngạt lắm nên anh hủy đơn để chuyển chỗ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Chưa có danh sách biển số xe và căn cước của đoàn khách gửi trước cho bảo vệ, cấp thẻ lúc này sẽ bị kẹt ở cổng.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "leave_busy_period",
+   "reason": "Mấy ngày đầu tháng này team mình đang đóng sổ chốt doanh thu, em nghỉ mấy hôm nay thì ai lo việc xuất hóa đơn với đối chiếu. Anh thu hồi đơn này để em dời lịch nghỉ sang tuần sau nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "wfh_consecutive_limit",
+   "reason": "AI duyệt nhanh quá nên em cứ đăng ký WFH suốt, tính ra tuần này em ở nhà mất 4 buổi rồi còn gì. Thôi lên cty đi em, mặt đối mặt họp hành mới hiệu quả chứ.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "expense_policy_gap",
+   "reason": "Khoản này mua sắm thiết bị cá nhân nhưng chưa qua bộ phận IT thẩm định cấu hình, AI thấy dưới hạn nên tự duyệt. Anh phải kéo lại để hỏi xem team có quỹ chung không đã.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "discount_margin_risk",
+   "reason": "Mức chiết khấu này chạm sát đáy biên độ lợi nhuận cho phép rồi, giao dịch với khách mới mà thả cửa thế này rủi ro lắm. Anh giữ lại để bàn thêm với sếp lớn.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "meeting_room_misuse",
+   "reason": "Phòng họp lớn thế này chỉ có 3 người mà giữ cả buổi chiều thì lãng phí quá, bên khác họ đang cần làm workshop gấp kìa. Anh hủy lịch tự động này để nhường chỗ.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "guest_pass_security",
+   "reason": "Khách này hình như thuộc bên đơn vị đang tranh chấp hợp đồng với mình, tự dưng cấp thẻ ra vào khu kỹ thuật thì không ổn đâu. Anh thu hồi gấp để check an ninh.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "time_adjustment_pattern",
+   "reason": "Dạo này hay thấy em quên chấm công chiều quá nhỉ, tháng này đây là lần thứ ba rồi đấy. Anh kéo đơn này lại để nhắc nhở em ý thức giờ giấc hơn.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "refund_policy_check",
+   "reason": "Đơn hoàn tiền này thiếu biên bản xác nhận lỗi từ nhà cung cấp, hệ thống cứ thấy hóa đơn là duyệt bừa rồi. Anh phải giữ lại đợi đủ giấy tờ mới chuẩn.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "leave_short_notice",
+   "reason": "Mới chiều nay xin nghỉ sáng mai mà không báo trước câu nào trong group, hệ thống cứ thấy dưới 1 ngày là tự duyệt. Anh hủy để em còn sắp xếp bàn giao gấp với team.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "wfh_performance_check",
+   "reason": "Đợt WFH tuần trước tiến độ dự án của em chậm hẳn, anh thấy chưa yên tâm để duyệt tiếp đợt mới này đâu. Thôi ra văn phòng làm việc cùng anh mấy hôm đi.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "expense_duplicate_check",
+   "reason": "Hóa đơn taxi này trùng khớp cả về thời gian lẫn số tiền với chuyến hôm qua em vừa thanh toán rồi, AI không quét ra được lỗi này. Anh phải thu hồi ngay.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "discount_tier_error",
+   "reason": "Khách này mới mua lần đầu mà áp mức giá sỉ số lượng lớn thế này là sai policy công ty rồi. Anh thu hồi đơn này để điều chỉnh lại biểu phí nhé.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "meeting_room_capacity",
+   "reason": "Đặt phòng họp hướng dẫn nội bộ mà chơi hẳn phòng VIP 50 chỗ, trong khi team mình có vỏn vẹn chục người. Anh bấm thu hồi cho nhường phòng người ta.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "guest_pass_duration",
+   "reason": "Cấp thẻ khách gì mà kéo dài cả tuần lễ liền thế này, quy định chỉ cho phép tối đa 2 ngày thôi em ơi. Anh giữ lại để sửa lại thời hạn.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "time_adjustment_night",
+   "reason": "Toàn thấy chấm công bù vào khung giờ nửa đêm lúc hệ thống ít kiểm soát, AI cứ thấy hợp lệ là cho qua. Anh thu hồi để kiểm tra lại log hoạt động của em.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "refund_amount_limit",
+   "reason": "Tiền đền bù khách hàng này vượt quá hạn mức tự quyết của cấp quản lý trực tiếp rồi, phải đưa lên hội đồng xét duyệt. Anh thu hồi đơn AI vừa duyệt đi.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "leave_long_duration",
+   "reason": "Nghỉ liền một mạch gần hết tuần thế này mà không xin phép miệng trước với anh một tiếng, AI cứ thấy đủ phép là tự duyệt. Anh kéo lại để bàn kỹ hơn.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "wfh_core_hour",
+   "reason": "Đăng ký WFH đúng vào ngày có buổi training trực tiếp bắt buộc cho toàn bộ nhân sự mới. Anh thu hồi để em tham gia đầy đủ ở công ty nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "expense_invalid_vendor",
+   "reason": "Nhà hàng này không có trong danh sách đối tác thanh toán qua thẻ công ty, em nộp bill kiểu này kế toán không duyệt đâu. Anh hủy đi để đổi hóa đơn khác.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "discount_approval_limit",
+   "reason": "Chiết khấu cho hợp đồng này lớn quá, phải có chữ ký của giám đốc tài chính chứ AI tự duyệt sao được. Anh thu hồi để trình sếp lớn ký cứng.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "meeting_room_frequency",
+   "reason": "Tuần nào team mình cũng chiếm dụng phòng họp lớn vào giờ vàng để làm việc riêng thế này không ổn. Anh thu hồi lịch này để công bằng cho các team khác.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "guest_pass_blacklisted",
+   "reason": "Khách này từng có tiền lệ quay phim chụp ảnh tài liệu nội bộ trong chuyến thăm trước, cấp thẻ vào cửa lúc này là rủi ro lớn. Anh thu hồi ngay.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "time_adjustment_weekday",
+   "reason": "Sao tuần nào cũng phải điều chỉnh giờ vào làm đúng vào ngày thứ Hai thế em, hình như em hay bị kẹt xe giờ đó à. Anh giữ lại để trao đổi thêm.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "refund_reason_unclear",
+   "reason": "Lý do hoàn tiền khách hàng chung chung quá, không thấy nêu rõ lỗi sản phẩm do đâu mà đã đòi đền bù. Anh thu hồi đơn này bắt làm lại báo cáo.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "leave_end_of_month",
+   "reason": "Đúng ngày cuối tháng chốt lương mà em xin nghỉ thì bộ phận C&B làm sao kịp tính toán dữ liệu cho kịp tiến độ. Anh thu hồi đơn để em dời ngày.",
+   "label": "NEW_PATTERN",
+   "feature": "start_day_of_month",
+   "source": "gemini"
+  },
+  {
+   "type": "wfh_weekend_spill",
+   "reason": "Lại đăng ký WFH dính sát vào ngày nghỉ lễ dài ngày thế này, anh sợ tâm lý các bạn nghỉ sớm nên không thông qua được. Anh thu hồi nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "expense_tax_code",
+   "reason": "Mã số thuế trên hóa đơn đỏ này viết sai tên công ty mình rồi, AI cứ nhìn thấy số tiền nhỏ là cho qua. Anh thu hồi để em đi xin đổi lại hóa đơn mới.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "discount_expired_promo",
+   "reason": "Chương trình khuyến mãi này đã hết hạn từ tuần trước rồi mà hệ thống vẫn tự động duyệt chiết khấu cho khách. Anh phải thu hồi gấp để tránh thất thoát.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "meeting_room_equipment",
+   "reason": "Phòng họp em đặt không có máy chiếu tương tác mà nội dung buổi họp lại cần dùng thiết bị đó rất nhiều. Anh hủy lịch để đặt lại phòng khác phù hợp hơn.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "guest_pass_quantity",
+   "reason": "Đăng ký thẻ cho một đoàn khách đông thế này mà không báo trước với lễ tân tòa nhà là họ không cho vào đâu. Anh thu hồi để làm thủ tục tiếp đón chu đáo hơn.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "time_adjustment_freq",
+   "reason": "Tháng này em sửa giờ chấm công nhiều quá mức quy định rồi đấy, cứ đà này hệ thống thanh tra nội bộ sẽ tuýt còi đấy. Anh thu hồi đơn này để nhắc nhở.",
+   "label": "NEW_PATTERN",
+   "feature": "requester_rejected_30d",
+   "source": "gemini"
+  },
+  {
+   "type": "refund_missing_item",
+   "reason": "Thiếu phần hàng trả lại kho mà đã làm thủ tục hoàn tiền thế này là quy trình ngược rồi em ơi. Anh thu hồi đơn chờ kho xác nhận đã nhận hàng nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "leave_busy_season",
+   "reason": "Đang mùa cao điểm triển khai dự án cho khách hàng lớn mà em xin nghỉ liền mấy ngày, anh không thể đồng ý lúc này được. Anh thu hồi đơn của em nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "days_requested",
+   "source": "gemini"
+  },
+  {
+   "type": "wfh_midnight_submit",
+   "reason": "Tự dưng nửa đêm hôm qua ngồi submit đơn WFH cho tuần tới, AI thấy nhanh gọn nên duyệt luôn. Anh thấy cần xem lại kế hoạch công việc nên thu hồi.",
+   "label": "NEW_PATTERN",
+   "feature": "submit_hour",
+   "source": "gemini"
+  },
+  {
+   "type": "expense_over_budget",
+   "reason": "Khoản chi phí tiếp khách này đã vượt quá ngân sách quý của phòng mình rồi, AI cứ thấy dưới mức trạm là duyệt bừa. Anh kéo lại để cân đối lại quỹ.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "discount_debt_risk",
+   "reason": "Khách hàng này đang nợ đọng tiền hàng từ đơn trước khá nhiều, chưa thanh toán thì không được áp dụng thêm chiết khấu mới đâu. Anh thu hồi đơn này lại.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "meeting_room_conflict",
+   "reason": "Giờ này ban giám đốc đang có lịch họp kín dùng toàn bộ khu vực tầng trên, em đặt lịch giờ này là trùng và gây ồn ào. Anh hủy đơn đặt phòng nhé.",
+   "label": "NEW_PATTERN",
+   "feature": "start_weekday",
+   "source": "gemini"
+  },
+  {
+   "type": "guest_pass_unverified",
+   "reason": "Thông tin cá nhân của khách mời tham dự workshop chưa được khai báo đầy đủ trên hệ thống bảo mật. Anh thu hồi thẻ này để hoàn thiện hồ sơ đã.",
+   "label": "NEW_PATTERN",
+   "feature": null,
+   "source": "gemini"
+  },
+  {
+   "type": "time_adjustment_notice",
+   "reason": "Đơn điều chỉnh chấm công từ tận tháng trước mà giờ mới nộp, quy định chỉ cho phép xử lý trong vòng 7 ngày thôi em ơi. Anh thu hồi vì quá hạn rồi.",
+   "label": "NEW_PATTERN",
+   "feature": "notice_hours",
+   "source": "gemini"
+  },
+  {
+   "type": "refund_duplicate_claim",
+   "reason": "Khoản chi phí này đã được duyệt thanh toán trong đợt công tác phí tuần trước rồi, giờ làm thêm đơn hoàn tiền nữa là thành thanh toán hai lần. Anh thu hồi ngay.",
+   "label": "NEW_PATTERN",
+   "feature": "amount",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Hôm nay toàn team dồn việc chốt deal với khách lớn, em thu hồi đơn xin nghỉ phép này để Lan ở lại hỗ trợ gấp nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Sếp tổng vừa chỉ đạo dời lịch họp chiến lược sang sáng mai, chú Nam ko thể nghỉ ngày này được đâu.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Anh thấy em vừa nghỉ tuần trước xong, giờ lại xin nghỉ tiếp 3 ngày nữa thì dự án chạy kiểu gì kịp deadline hả em.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Nhân sự vừa báo tháng này ca trực của Mai bị thiếu người trầm trọng, anh phải kéo em ấy lại ngày này rồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Đột xuất phát sinh đoàn khách VIP xuống thăm nhà máy vào đúng ngày em đăng ký nghỉ, ráng gác lại nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Hôm trước nghe em bảo cưới xin gì đó mà sao lịch trong đơn lại lệch tận 3 ngày so với thiệp mời thế này, anh thu hồi để em làm lại.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Sự cố bên kho đang căng, anh cần tụi em có mặt đầy đủ để xử lý, việc hiếu hỉ này đành dời lại hoặc rút ngắn thời gian nha Long.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Chế độ này chỉ áp dụng cho chính chủ mà sao tên người thân trong đơn lại là bạn bè thế kia, anh phải gạt ra gấp.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE_SPECIAL",
+   "reason": "Thời gian nghỉ dưỡng bệnh gì mà kéo dài cả tháng thế này, phòng nhân sự bắt buộc phải có giấy bác sĩ tuyến trung ương cơ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hôm đó anh thấy em check-in tận 10h trưa ở quán cafe gần công ty chứ có đi gặp khách hàng ngoài đường đâu mà đòi chấm công đầy đủ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cái ca trực đêm hôm kia camera ghi nhận em ngủ gục suốt mấy tiếng, không thể duyệt cái đơn bù giờ này được đâu.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Hệ thống vân tay ghi nhận em đi trễ về sớm liên tục 3 ngày liền, anh thu hồi đơn này để nhắc nhở trực tiếp.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Lý do quên chấm công vì điện thoại hết pin nghe ko ổn lắm vì hôm đó em vẫn lướt mạng xã hội ầm ầm cơ mà.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Chiều nay có buổi workshop bắt buộc toàn công ty phải lên văn phòng tương tác trực tiếp, ai WFH là mất quyền lợi đó nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Dạo này tiến độ sprint của team đang bị chậm, anh yêu cầu tất cả mọi người phải có mặt ở desk để sếp đốc thúc.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Mạng ở nhà đợt này cáp quang đang bị đứt ngầm chập chờn lắm, em cứ lên công ty ngồi cho lành việc.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Khách hàng chiều nay đòi demo trực tiếp tại bàn làm việc của team, em mà ở nhà là hỏng việc lớn.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hóa đơn tiếp khách này vượt quá định mức bữa trưa quy định của công ty rồi, anh không thể bấm duyệt khoản chênh lệch này được.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Khoản chi mua thiết bị văn phòng này chưa được sự đồng ý trước của bên bộ phận IT mua sắm chung.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Hôm đó đi ăn với team sao lại gộp cả tiền mua đồ cá nhân vào hóa đơn chung thế này hả Hùng, tách ra anh mới duyệt.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Chi phí đi lại Grab này tính ra đắt gấp đôi so với đi xe công nghệ tuyến cố định, em phải giải trình lại khoản này.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Khách hàng này vừa gọi lên tổng đài khiếu nại dịch vụ chưa xong mà em đã làm thủ tục hoàn tiền nhanh thế này là ko đúng quy trình.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Mức bồi thường 50% là quá cao so với lỗi trễ hẹn giao hàng chỉ có 15 phút, anh thu hồi để hạ xuống mức hợp lý hơn.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Sản phẩm khách đòi hoàn tiền đã bị bóc seal và qua sử dụng rồi, không thể áp dụng chính sách đổi trả 1 đổi 1 được đâu.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Mức chiết khấu 35% cho đơn hàng này làm mất biên độ lợi nhuận tối thiểu của công ty rồi, anh phải bẻ lái gấp.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Khách này có lịch sử thanh toán nợ đọng rất xấu, tuyệt đối không được cấp thêm bất kỳ ưu đãi đặc biệt nào nữa.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Sếp vừa tuýt còi mấy vụ giảm giá sâu cho đại lý cấp 2, em hủy đơn này để làm lại theo biểu phí chuẩn nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Phòng họp lớn đấy ban giám đốc đã giữ lịch để tiếp đoàn thanh tra thuế từ sáng đến chiều, team mình né ra chỗ khác nha.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Đội dự án bên Marketing xin dùng phòng đó từ tuần trước mà chưa kịp lên hệ thống, anh ưu tiên bên đó trước.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Họp nội bộ team mình mà chiếm cái phòng hội nghị to đùng 50 chỗ là lãng phí tài nguyên công ty lắm đó.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Bảo vệ vừa báo danh sách khách của em có người nằm trong diện cảnh báo an ninh nội bộ, anh phải thu hồi thẻ gấp.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Đăng ký tận 15 người vào khu vực kho dữ liệu cơ mật mà không có quản lý cấp cao đi kèm là vi phạm quy chế bảo mật rồi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "VISITOR_SECURITY_PASS",
+   "reason": "Thời gian khách ở lại công ty gì mà từ sáng sớm đến tận nửa đêm thế kia, anh phải check lại với bộ phận an ninh.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "LEAVE",
+   "reason": "Mấy nay chuyển mùa cúm ho hoài mà cứ đòi đi du lịch xa làm gì, ở nhà nghỉ ngơi giữ sức khỏe đi em.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ATTENDANCE_ADJUSTMENT",
+   "reason": "Cái lỗi máy chấm công nhận diện khuôn mặt trượt là do em đến muộn chứ có phải máy hỏng đâu mà bắt anh duyệt bù giờ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "WFH_REQ",
+   "reason": "Hôm nay có lịch kiểm kê kho định kỳ, tất cả nhân sự khối vận hành phải có mặt đầy đủ không ngoại lệ.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "EXPENSE_CLAIM",
+   "reason": "Tiền khách sạn đợt công tác vừa rồi vượt khung tiêu chuẩn công vụ cấp bậc của em rồi, tự chịu khoản chênh nhé.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "REFUND_COMPENSATION",
+   "reason": "Lỗi hư hỏng này do bên vận chuyển bên thứ ba làm chứ không phải do lỗi nhà sản xuất, mình không chịu trách nhiệm hoàn tiền.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "SPECIAL_DISCOUNT",
+   "reason": "Đơn hàng giá trị nhỏ thế này mà đòi xin chiết khấu khủng thì anh chịu, sếp lớn thấy là mắng chết.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  },
+  {
+   "type": "ROOM_BOOKING",
+   "reason": "Hôm nay hệ thống máy chiếu ở phòng họp đó đang bị cháy bóng chưa thay kịp, em đổi sang phòng nhỏ góc bên kia đi.",
+   "label": "ONE_OFF",
+   "source": "gemini"
+  }
+ ]
+}

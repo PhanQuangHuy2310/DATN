@@ -1,0 +1,42 @@
+[
+ {
+  "code": "FB-01",
+  "pass": true,
+  "seconds": 64.0,
+  "repeat_mistake": false,
+  "over_generalization": false,
+  "evidence": "(1) EAS-2026-000234 AI tự duyệt, son.mai@eas.com thu hồi; (2) EAS-2026-000235 AI tự duyệt lại: False, nâng luồng: B (LEARNED_REVOKE), học: True; (3) EAS-2026-000236 của dung.vo@eas.com vẫn tự duyệt: True"
+ },
+ {
+  "code": "FB-02",
+  "pass": true,
+  "seconds": 50.5,
+  "repeat_mistake": false,
+  "over_generalization": false,
+  "evidence": "(1) EAS-2026-000244 của thao.le@eas.com bị chuyển B, yen.phan@eas.com đánh dấu nhầm; (2) EAS-2026-000245 bị chuyển lại: False, luồng A; (3) EAS-2026-000253 của sang.bui@eas.com vẫn chuyển B: True"
+ },
+ {
+  "code": "FB-03",
+  "pass": true,
+  "seconds": 28.9,
+  "repeat_mistake": false,
+  "over_generalization": false,
+  "evidence": "(1) AI xếp Bùi Hữu Bình đầu, quản lý chọn Nguyễn Thị Thùy Dung; (2) lần sau đứng đầu: Nguyễn Thị Thùy Dung (learned=True); (3) anh.vu@eas.com: có ứng viên gắn 'learned': False"
+ },
+ {
+  "code": "FB-04",
+  "pass": true,
+  "seconds": 32.5,
+  "repeat_mistake": false,
+  "over_generalization": false,
+  "evidence": "(1) câu % vào hàng chờ, Gemini gợi ý 1 luật; admin duyệt 1 luật; (2) luật REV-QC-FB-EFF40 có trong bộ luật đang áp dụng: True; (3) câu ngưỡng tiền tự biên dịch: True, vào hàng chờ: False"
+ },
+ {
+  "code": "FB-05",
+  "pass": true,
+  "seconds": 13.3,
+  "repeat_mistake": false,
+  "over_generalization": false,
+  "evidence": "(2) học dồn: ACCEPTED, trước {'test_top1': 0.897, 'real_top1': 0.5}, sau {'test_top1': 0.902, 'real_top1': 0.5}, lý do [], phiên bản remediation-ranker-1+fb4; (3) không có phản hồi: NOT_ENOUGH_FEEDBACK"
+ }
+]

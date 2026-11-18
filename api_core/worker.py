@@ -34,6 +34,10 @@ def retry_delay(attempts: int) -> timedelta:
 
 SQL_LOCK_SECURITY = "SELECT eas.lock_security(false)"
 RESOURCE_LABELS = {
+    "REQUEST_ESCALATED": (
+        "AI phát hiện tình huống cần kiểm soát: yêu cầu của bạn được chuyển sang quy trình có người "
+        "kiểm duyệt và bộ phận chuyên môn xử lý"
+    ),
     "RESOURCE_PREEMPTED": (
         "Yêu cầu mượn của bạn đã bị thu hồi vì Ban Giám đốc cần sử dụng trong cùng thời gian"
     ),
@@ -128,6 +132,15 @@ def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
             else "Công việc được phân công đang đến hạn xử lý"
         )
         return [(row[0], label)] if row and row[0] else []
+    if item.event_type in {"WORK_REASSIGNED", "DEADLINE_POSTPONED"}:
+        # Hướng xử lý AI đề xuất, quản lý xác nhận: báo đúng người nhận việc / người gửi việc.
+        label = (
+            "Quản lý đã chuyển cho bạn một việc (theo đề xuất của AI) vì người phụ trách vắng mặt"
+            if item.event_type == "WORK_REASSIGNED"
+            else "Hạn xử lý yêu cầu của bạn được lùi lại vì người phụ trách vắng mặt"
+        )
+        recipient = item.payload.get("recipient_id")
+        return [(str(recipient), label)] if recipient else []
     if item.event_type == "APPROVAL_REQUESTED":
         cursor.execute(
             "SELECT assignee_id::text FROM eas.approval_step WHERE id=%s",

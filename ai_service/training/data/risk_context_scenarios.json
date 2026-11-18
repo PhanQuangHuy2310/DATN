@@ -1,0 +1,30 @@
+{
+  "about": "Kịch bản ngữ cảnh cho mô hình rủi ro (đúng ví dụ của thầy 16/11: 'xin nghỉ chiều nay bình thường là mức 2, nhưng đang giữ hồ sơ sắp hết hạn thì không còn là 2'). Viết và băm SHA-256 ngày 18/11/2026 TRƯỚC khi huấn luyện lại; đáp án tính tay theo luật gán nhãn mới (label_policy trong train.py). Mọi đặc trưng khác ở mức trung tính: không có tiền, có chứng từ, đúng biểu mẫu, thâm niên 24 tháng, vai trò senior, không ngoài giờ, tỷ lệ bị từ chối 5%.",
+  "policy": "Chỉ nhóm ABSENCE: giữ việc đến hạn <=24h VÀ bàn giao không làm thay được -> max(điểm+2, 4); ngược lại có việc đến hạn trong thời gian vắng VÀ bàn giao không làm thay được -> +1; tỉ lệ đồng nghiệp vắng trùng ngày >=0.4 -> +1; lần thứ >=4 cùng loại trong 30 ngày -> +1. Kẹp 1..5.",
+  "scenarios": [
+    {"id": "RC01", "request_type": "LEAVE", "risk_weight": 2, "context": {}, "expected": 2, "note": "nghỉ bình thường"},
+    {"id": "RC02", "request_type": "LEAVE", "risk_weight": 2, "context": {"pending_work_due_24h": 3, "handover_uncovered": 1}, "expected": 4, "note": "ví dụ của thầy"},
+    {"id": "RC03", "request_type": "LEAVE", "risk_weight": 2, "context": {"pending_work_due_24h": 3, "handover_uncovered": 0}, "expected": 2, "note": "đã bàn giao hợp lệ"},
+    {"id": "RC04", "request_type": "LEAVE", "risk_weight": 2, "context": {"work_due_in_absence": 2, "handover_uncovered": 1}, "expected": 3},
+    {"id": "RC05", "request_type": "LEAVE", "risk_weight": 2, "context": {"team_absence_ratio": 0.5}, "expected": 3},
+    {"id": "RC06", "request_type": "LEAVE", "risk_weight": 2, "context": {"pending_work_due_24h": 1, "handover_uncovered": 1, "team_absence_ratio": 0.45}, "expected": 5},
+    {"id": "RC07", "request_type": "LEAVE", "risk_weight": 2, "context": {"team_absence_ratio": 0.2}, "expected": 2},
+    {"id": "RC08", "request_type": "LEAVE_SPECIAL", "risk_weight": 2, "context": {}, "expected": 2},
+    {"id": "RC09", "request_type": "LEAVE_SPECIAL", "risk_weight": 2, "context": {"pending_work_due_24h": 2, "handover_uncovered": 1}, "expected": 4},
+    {"id": "RC10", "request_type": "LEAVE_SPECIAL", "risk_weight": 2, "context": {"work_due_in_absence": 1, "handover_uncovered": 1, "team_absence_ratio": 0.4}, "expected": 4},
+    {"id": "RC11", "request_type": "ATTENDANCE_ADJUSTMENT", "risk_weight": 1, "context": {}, "expected": 1},
+    {"id": "RC12", "request_type": "ATTENDANCE_ADJUSTMENT", "risk_weight": 1, "context": {"same_type_count_30d": 5}, "expected": 2},
+    {"id": "RC13", "request_type": "ATTENDANCE_ADJUSTMENT", "risk_weight": 1, "context": {"same_type_count_30d": 3}, "expected": 1},
+    {"id": "RC14", "request_type": "ATTENDANCE_ADJUSTMENT", "risk_weight": 1, "context": {"pending_work_due_24h": 2, "handover_uncovered": 1}, "expected": 4},
+    {"id": "RC15", "request_type": "WFH_REQ", "risk_weight": 1, "context": {}, "expected": 1},
+    {"id": "RC16", "request_type": "WFH_REQ", "risk_weight": 1, "context": {"same_type_count_30d": 9}, "expected": 2},
+    {"id": "RC17", "request_type": "WFH_REQ", "risk_weight": 1, "context": {"team_absence_ratio": 0.6, "same_type_count_30d": 6}, "expected": 3},
+    {"id": "RC18", "request_type": "BUSINESS_TRIP", "risk_weight": 3, "context": {}, "expected": 3},
+    {"id": "RC19", "request_type": "BUSINESS_TRIP", "risk_weight": 3, "context": {"pending_work_due_24h": 4, "handover_uncovered": 1}, "expected": 5},
+    {"id": "RC20", "request_type": "BUSINESS_TRIP", "risk_weight": 3, "context": {"work_due_in_absence": 3, "handover_uncovered": 1}, "expected": 4},
+    {"id": "RC21", "request_type": "OVERTIME_REQ", "risk_weight": 2, "context": {"pending_work_due_24h": 3, "handover_uncovered": 1}, "expected": 2, "note": "không thuộc nhóm ABSENCE: ngữ cảnh vắng không áp dụng"},
+    {"id": "RC22", "request_type": "IT_SUPPORT", "risk_weight": 1, "context": {"team_absence_ratio": 0.7}, "expected": 1, "note": "không thuộc nhóm ABSENCE"},
+    {"id": "RC23", "request_type": "LEAVE", "risk_weight": 1, "context": {"pending_work_due_24h": 1, "handover_uncovered": 1}, "expected": 4, "note": "trọng số gốc 1 vẫn lên tối thiểu 4"},
+    {"id": "RC24", "request_type": "LEAVE", "risk_weight": 1, "context": {"same_type_count_30d": 4, "team_absence_ratio": 0.5}, "expected": 3}
+  ]
+}

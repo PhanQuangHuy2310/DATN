@@ -741,6 +741,7 @@ def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]
         num_attachments=int(attachment_count or 0),
         description_length=len(description),
         correlation_id=cid,
+        **_risk_context(_bad_case_signals(request_id)),
     )
     risk_score = risk.get("risk_score")
     stages.append(
@@ -793,6 +794,7 @@ def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]
             amount=float(amount or 0),
             days_requested=_requested_days(payload),
             correlation_id=cid,
+            signals=_bad_case_signals(request_id),
         )
     fallback = bool(advice.get("fallback_used")) or advice.get("decision") is None
     reasons = [advice["reason"]] if advice.get("reason") else []
@@ -811,6 +813,11 @@ def run_ai_assessment(actor: Actor, request_id: str, cid: str) -> dict[str, Any]
                 "reasons": [str(item)[:300] for item in reasons][:8],
                 "policy_version": advice.get("policy_version"),
                 "citations": _cite_regulations(advice.get("citations") or []),
+                "bad_cases": [
+                    {"code": str(c.get("code")), "message": str(c.get("message"))[:300]}
+                    for c in (advice.get("bad_cases") or [])
+                ][:5],
+                "effective_risk": advice.get("effective_risk"),
             },
             {
                 "key": "HUMAN_REVIEW",
@@ -883,3 +890,23 @@ def list_ai_assessments(actor: Actor, request_id: str) -> dict[str, Any]:
             for r in cursor.fetchall()
         ]
     return {"items": items}
+
+
+def _risk_context(sig: dict) -> dict:
+    """Đặc trưng ngữ cảnh cho mô hình rủi ro (cùng nghĩa với train.py / routers/risk.py)."""
+    due_24h = sum(1 for h in sig.get("open_work_due_hours") or [] if h <= 24)
+    in_absence = int(sig.get("work_due_in_absence") or 0)
+    return {
+        "pending_work_due_24h": due_24h,
+        "work_due_in_absence": in_absence,
+        "handover_uncovered": int(bool(due_24h or in_absence) and not sig.get("handover_assigned")),
+        "team_absence_ratio": float(sig.get("team_absence_ratio") or 0.0),
+        "same_type_count_30d": int(sig.get("same_type_count_30d") or 0),
+    }
+
+
+def _bad_case_signals(request_id: str) -> dict:
+    """Tín hiệu tình huống xấu cho khuyến nghị gửi người duyệt; lỗi truy vấn thì bỏ qua tín hiệu."""
+    from api_core.workflow.bad_case_signals import safe_load_signals
+
+    return safe_load_signals(request_id)

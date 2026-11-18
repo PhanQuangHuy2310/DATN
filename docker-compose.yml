@@ -110,6 +110,9 @@ services:
       EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
       EAS_WORKER_INTERNAL_SECRET: ${EAS_WORKER_INTERNAL_SECRET:-}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5}
+      # AI tự duyệt (luồng A, trọng số <= 2) và nâng luồng A -> B/C khi có tình huống xấu.
+      EAS_AI_AUTO_APPROVE_ENABLED: ${EAS_AI_AUTO_APPROVE_ENABLED:-true}
+      EAS_AI_ESCALATION_ENABLED: ${EAS_AI_ESCALATION_ENABLED:-true}
       EAS_MOCK_API_URL: http://mock-systems:8000/mock-api/v1
       EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}
       EAS_IN_DOCKER: "1"
@@ -207,6 +210,9 @@ services:
       EAS_AI_SERVICE_URL: http://ai-service:8001
       EAS_AI_INTERNAL_SECRET: ${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
       EAS_AI_TIMEOUT_SECONDS: ${EAS_AI_TIMEOUT_SECONDS:-5.0}
+      # AI tự duyệt (luồng A, trọng số <= 2) và nâng luồng A -> B/C khi có tình huống xấu.
+      EAS_AI_AUTO_APPROVE_ENABLED: ${EAS_AI_AUTO_APPROVE_ENABLED:-true}
+      EAS_AI_ESCALATION_ENABLED: ${EAS_AI_ESCALATION_ENABLED:-true}
       REDIS_URL: redis://redis:6379/0
       EAS_MOCK_API_URL: http://mock-systems:8000/mock-api/v1
       EAS_MOCK_API_SECRET: ${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}

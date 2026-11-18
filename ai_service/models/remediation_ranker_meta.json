@@ -1,0 +1,96 @@
+{
+ "model_version": "remediation-ranker-1",
+ "status": "READY_FOR_INFERENCE",
+ "trained_at": "2026-11-17T19:48:44+00:00",
+ "training_seconds": 2.8,
+ "best_iteration": 116,
+ "params": {
+  "objective": "rank:pairwise",
+  "eta": 0.1,
+  "max_depth": 4,
+  "min_child_weight": 2,
+  "subsample": 0.9,
+  "colsample_bytree": 1.0,
+  "eval_metric": "ndcg@3",
+  "seed": 42
+ },
+ "features": [
+  "same_department",
+  "same_team",
+  "open_items",
+  "due_in_window",
+  "type_experience",
+  "is_superior"
+ ],
+ "label_policy": "expert_utility (ai_service/remediation_ranker.py) + nhiễu Gauss sd=0.35; relevance 3/2/1/0 theo thứ hạng",
+ "data": {
+  "train_groups": 4000,
+  "dev_groups": 800,
+  "test_groups": 1000,
+  "test_sha256": "202f57c14e3f38a9d359fb3917f11b537f475dcdc9d6835a6f8f4c1634f03b57"
+ },
+ "metrics": {
+  "dev": {
+   "xgboost_ranker": {
+    "top1": 0.88,
+    "ndcg@3": 0.9639,
+    "groups": 800
+   },
+   "baseline_random": {
+    "top1": 0.2025,
+    "ndcg@3": 0.4922,
+    "groups": 800
+   },
+   "baseline_least_loaded": {
+    "top1": 0.4238,
+    "ndcg@3": 0.6982,
+    "groups": 800
+   },
+   "baseline_most_experienced": {
+    "top1": 0.4225,
+    "ndcg@3": 0.6905,
+    "groups": 800
+   },
+   "expert_rule_noise_free": {
+    "top1": 0.885,
+    "ndcg@3": 0.9655,
+    "groups": 800
+   }
+  },
+  "test": {
+   "xgboost_ranker": {
+    "top1": 0.898,
+    "ndcg@3": 0.9561,
+    "groups": 1000
+   },
+   "baseline_random": {
+    "top1": 0.117,
+    "ndcg@3": 0.256,
+    "groups": 1000
+   },
+   "baseline_least_loaded": {
+    "top1": 0.328,
+    "ndcg@3": 0.5896,
+    "groups": 1000
+   },
+   "baseline_most_experienced": {
+    "top1": 0.269,
+    "ndcg@3": 0.4869,
+    "groups": 1000
+   },
+   "expert_rule_noise_free": {
+    "top1": 0.907,
+    "ndcg@3": 0.9585,
+    "groups": 1000
+   }
+  }
+ },
+ "feature_gain": {
+  "same_department": 72.704,
+  "same_team": 64.434,
+  "open_items": 22.054,
+  "due_in_window": 30.856,
+  "type_experience": 27.226,
+  "is_superior": 14.904
+ }
+}

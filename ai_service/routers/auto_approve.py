@@ -21,10 +21,16 @@ except (ImportError, AttributeError):
 
 from fastapi import APIRouter
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+try:
+    import bad_case_reason
+    import bad_cases
+except ImportError:
+    from ai_service import bad_case_reason, bad_cases
 
 from .mock_context import lookup_facility_available, lookup_leave_balance
-from .policy import apply_policy, policy_citations
+from .policy import PolicySignals, apply_policy, matched_escalation, policy_citations
 
 settings = get_settings()
 router = APIRouter()
@@ -33,6 +39,27 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
+
+
+class LearnedBadCase(BaseModel):
+    code: str = Field(..., pattern=r"^BC_[A-Z0-9_]{2,57}$")
+    title: str = Field(..., max_length=200)
+    rationale: str = Field("", max_length=2000)
+    request_types: list[str] = Field(..., min_length=1, max_length=60)
+    condition: dict
+    condition_text: str | None = Field(None, max_length=1000)
+    risk: int = Field(3, ge=1, le=5)
+    escalate_to: str = Field("B", pattern=r"^[BC]$")
+
+    @field_validator("condition")
+    @classmethod
+    def _valid_condition(cls, value: dict) -> dict:
+        return bad_case_reason.validate_condition(value)
+
+
+class BadCaseOverride(BaseModel):
+    disabled: bool = False
+    extra_types: list[str] = Field(default_factory=list, max_length=60)
 
 
 class AutoApproveInput(BaseModel):
@@ -52,6 +79,51 @@ class AutoApproveInput(BaseModel):
         None, description="Email để tra quỹ phép trong hệ thống HRM"
     )
     room_code: str | None = Field(None, description="Mã phòng họp (ROOM_BOOKING)")
+    # Tín hiệu ngữ cảnh do API core tính từ lịch sử trong CSDL (suy luận tình huống xấu).
+    active_tasks_due_24h: int = Field(0, ge=0, le=10_000)
+    handover_assigned: bool | None = None
+    requester_amount_7d: float = Field(0.0, ge=0)
+    requester_finance_count_7d: int = Field(0, ge=0, le=10_000)
+    attendance_count_30d: int = Field(0, ge=0, le=10_000)
+    # Tín hiệu cho luật quy định có điều kiện ngữ cảnh (regulation_compiler v2).
+    open_work_due_hours: list[float] = Field(default_factory=list, max_length=200)
+    work_due_in_absence: int = Field(0, ge=0, le=10_000)
+    same_type_count_7d: int = Field(0, ge=0, le=10_000)
+    same_type_count_30d: int = Field(0, ge=0, le=10_000)
+    same_type_count_month: int = Field(0, ge=0, le=10_000)
+    team_absence_ratio: float = Field(0.0, ge=0, le=1)
+    requester_rejected_30d: int = Field(0, ge=0, le=10_000)
+    ai_revoked_90d: int = Field(0, ge=0, le=10_000)
+    # Tín hiệu cho danh mục tình huống xấu (data/bad_case_catalog.json).
+    team_size: int = Field(0, ge=0, le=10_000)
+    handover_open_work_in_absence: int = Field(0, ge=0, le=10_000)
+    handover_absent: bool = False
+    duplicate_invoice_count: int = Field(0, ge=0, le=10_000)
+    same_customer_count_7d: int = Field(0, ge=0, le=10_000)
+    requester_absent_on_event: bool = False
+    off_hours_count_7d: int = Field(0, ge=0, le=10_000)
+    uncovered_work: int = Field(0, ge=0, le=10_000)
+    handover_named: bool = False
+    # Đặc trưng của chính hồ sơ (bad case học từ lý do thu hồi, bad_case_reason.FEATURES).
+    notice_hours: float | None = Field(None, ge=-100_000, le=100_000)
+    start_day_of_month: int | None = Field(None, ge=1, le=31)
+    start_weekday: int | None = Field(None, ge=1, le=7)
+    submit_hour: int | None = Field(None, ge=0, le=23)
+    # Bảng eas.bad_case (migration 25): bad case học được đang ACTIVE và điều chỉnh danh mục có sẵn.
+    learned_bad_cases: list[LearnedBadCase] = Field(default_factory=list, max_length=200)
+    bad_case_overrides: dict[str, BadCaseOverride] = Field(default_factory=dict)
+
+    def policy_signals(self) -> PolicySignals:
+        return PolicySignals(
+            open_work_due_hours=self.open_work_due_hours,
+            work_due_in_absence=self.work_due_in_absence,
+            handover_assigned=self.handover_assigned,
+            same_type_count_7d=self.same_type_count_7d,
+            same_type_count_30d=self.same_type_count_30d,
+            same_type_count_month=self.same_type_count_month,
+            requester_amount_7d=self.requester_amount_7d,
+            requester_finance_count_7d=self.requester_finance_count_7d,
+        )
 
 
 class AutoApproveDecision(BaseModel):
@@ -66,6 +138,21 @@ class AutoApproveDecision(BaseModel):
     citations: list[dict] = Field(
         default_factory=list,
         description="Điều khoản quy chế đã đối chiếu (áp dụng hoặc không) và phép so sánh",
+    )
+    bad_cases: list[dict] = Field(
+        default_factory=list,
+        description="Tình huống xấu suy luận được từ ngữ cảnh; có thì không tự duyệt",
+    )
+    effective_risk: int | None = Field(
+        None, description="Mức rủi ro sau khi xét tình huống xấu"
+    )
+    escalate_to: str | None = Field(
+        None,
+        description="Luồng nâng cấp cho CHÍNH hồ sơ này (B/C) khi dính tình huống xấu hoặc quy định",
+    )
+    escalation_causes: list[dict] = Field(
+        default_factory=list,
+        description="Tình huống xấu / luật quy định dẫn tới nâng luồng",
     )
 
 
@@ -144,11 +231,13 @@ class AutoApproveChecker:
         return ok, reasons
 
     def check_late_checkin(self, inp: AutoApproveInput) -> tuple[bool, list[str]]:
-        """Đăng ký đi muộn/về sớm"""
-        reasons = ["✅ Loại yêu cầu này tự động xét duyệt nếu rủi ro thấp"]
-        # Rule: Trong tháng, nếu đây là lần ≥ 4, cần duyệt thủ công
-        # (Thông tin này cần được truyền vào thông qua data, hiện dùng reject_count làm proxy)
-        return True, reasons
+        """Đăng ký đi muộn/về sớm. Lần thứ 4 trong 30 ngày bị chặn ở Gate -1 (BC_REPEATED_EXEMPTION)."""
+        return True, [
+            (
+                f"✅ Điều chỉnh chấm công lần {max(1, inp.attendance_count_30d)} trong 30 ngày, "
+                "rủi ro thấp: tự động xét duyệt"
+            )
+        ]
 
     def check_refund(self, inp: AutoApproveInput) -> tuple[bool, list[str]]:
         """Hoàn tiền/Đền bù"""
@@ -212,6 +301,18 @@ async def evaluate_auto_approve(body: AutoApproveInput):
     """
     detail_reasons = []
     can_auto_approve = True
+    signals = body.policy_signals()
+
+    # --- Gate -1: Suy luận tình huống xấu từ ngữ cảnh vận hành ---
+    bad = bad_cases.evaluate(
+        bad_cases.Signals.from_input(body),
+        learned=[c.model_dump() for c in body.learned_bad_cases],
+        overrides={k: v.model_dump() for k, v in body.bad_case_overrides.items()},
+    )
+    for case in bad.cases:
+        detail_reasons.append(f"⛔ [{case['code']}] {case['message']}")
+    if bad.blocked:
+        can_auto_approve = False
 
     # --- Gate 0: Quy định đã nạp (đọc lại theo mtime, hiệu lực ngay) ---
     risk_score, forced_manual, matched_rules, policy_version = apply_policy(
@@ -219,6 +320,13 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         amount=body.amount,
         days=body.days_requested,
         risk=body.risk_score,
+        signals=signals,
+    )
+    _policy_target, policy_causes = matched_escalation(
+        request_type=body.request_type,
+        amount=body.amount,
+        days=body.days_requested,
+        signals=signals,
     )
     if matched_rules:
         detail_reasons.append(
@@ -248,12 +356,46 @@ async def evaluate_auto_approve(body: AutoApproveInput):
             f"✅ Risk score {risk_score}/5 ≤ {settings.auto_approve_max_risk}"
         )
 
+    if bad.effective_risk:
+        risk_score = max(risk_score, bad.effective_risk)
+
     # --- Gate 3: Business rules theo loại ---
     if can_auto_approve:
         business_ok, business_reasons = checker.evaluate(body)
         detail_reasons.extend(business_reasons)
         if not business_ok:
             can_auto_approve = False
+
+    # --- Nâng luồng cho chính hồ sơ (A -> B/C) khi dính tình huống xấu hoặc luật quy định ---
+    order = {"A": 0, "B": 1, "C": 2}
+    current = order.get(body.lifecycle_template, 0)
+    causes = [
+        {
+            "source": "BAD_CASE",
+            "code": c["code"],
+            "escalate_to": c.get("escalate_to"),
+            "text": c["message"],
+            "why": c.get("rationale"),
+            "origin": c.get("source"),
+        }
+        for c in bad.cases
+        if c.get("escalate_to")
+    ] + [{"source": "REGULATION", "code": c["rule_id"], **c} for c in policy_causes]
+    escalate_to = None
+    for cause in causes:
+        target = cause.get("escalate_to")
+        if (
+            target in order
+            and order[target] > current
+            and (escalate_to is None or order[target] > order[escalate_to])
+        ):
+            escalate_to = target
+    if escalate_to:
+        can_auto_approve = False
+        detail_reasons.append(
+            f"⤴️ Chuyển hồ sơ từ quy trình {body.lifecycle_template} sang quy trình {escalate_to} "
+            f"({', '.join(c['code'] for c in causes if c.get('escalate_to') == escalate_to)})"
+        )
 
     # --- Kết luận ---
     if can_auto_approve:
@@ -268,7 +410,11 @@ async def evaluate_auto_approve(body: AutoApproveInput):
         )
     else:
         decision = "escalate_to_human"
-        reason = "Yêu cầu cần người phê duyệt thủ công do không đáp ứng đủ điều kiện"
+        reason = (
+            ("Phát hiện tình huống xấu: " + "; ".join(c["code"] for c in bad.cases))
+            if bad.blocked
+            else "Yêu cầu cần người phê duyệt thủ công do không đáp ứng đủ điều kiện"
+        )
         note = None
         logger.info(
             f"ESCALATE | request_id={body.request_id} | type={body.request_type} | reasons: {len([r for r in detail_reasons if '❌' in r])}"
@@ -285,5 +431,10 @@ async def evaluate_auto_approve(body: AutoApproveInput):
             request_type=body.request_type,
             amount=body.amount,
             days=body.days_requested,
+            signals=signals,
         ),
+        bad_cases=bad.cases,
+        effective_risk=risk_score,
+        escalate_to=escalate_to,
+        escalation_causes=causes if escalate_to else [],
     )

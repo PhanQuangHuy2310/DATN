@@ -43,6 +43,8 @@ Thumbs.db
 
 # Local Supabase state
 supabase/.temp/
+# Supabase local copy + data dumps (docs/HUONG_DAN_SUPABASE_LOCAL.md)
+.supabase-local/
 
 # Generated validation/render output
 .mermaid-validation/

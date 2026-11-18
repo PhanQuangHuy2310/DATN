@@ -1,6 +1,7 @@
 import FullHistory from "./FullHistory.jsx";
 import WorkflowDiagrams from "./WorkflowDiagrams.jsx";
 import { AiSummary } from "./AiAssist.jsx";
+import { EscalationBanner, RemediationPanel } from "./AiEscalation.jsx";
 import { AiAdviceCard, AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
 import { DetailSkeleton, EmptyState, PageTabs, WorkflowTimeline } from "./design.jsx";
 import { requestActionPayload } from "../actionPayload.js";
@@ -75,7 +76,7 @@ const DANGER_WARNINGS = {
   rework:
     "Lưu ý: Yêu cầu làm lại sẽ trả công việc về cho người thực hiện để xử lý bổ sung.",
   revokeAi:
-    "Lưu ý: Thu hồi duyệt tự động của AI sẽ đưa hồ sơ quay lại trạng thái chờ người có thẩm quyền xét duyệt thủ công.",
+    "Lưu ý: Thu hồi duyệt tự động của AI sẽ đưa hồ sơ quay lại trạng thái chờ người có thẩm quyền xét duyệt thủ công. Ghi rõ lý do: AI sẽ đọc lý do này để học bad case mới (nếu nhiều người duyệt nêu cùng kiểu lý do, AI tự thêm vào danh mục; chưa đủ thì hỏi admin).",
 };
 
 function fieldLabel(typeCode, name) {
@@ -631,6 +632,10 @@ export default function RequestDetail({
               <Badge value={r.status} />
             </div>
             <ProgressSummary progress={r.progress} />
+            <EscalationBanner escalation={r.ai_escalation} requestId={id} onChanged={resource.reload} />
+            {r.ai_escalation?.pending_remediations > 0 && (
+              <RemediationPanel requestId={id} onDone={resource.reload} />
+            )}
             <PageTabs
               label="Nội dung hồ sơ"
               value={tab}

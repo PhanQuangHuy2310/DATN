@@ -18,7 +18,19 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
-from routers import auto_approve, classify, mock_context, ocr, policy, risk, summarize
+from routers import (
+    auto_approve,
+    bad_case_learning,
+    classify,
+    mock_context,
+    ocr,
+    policy,
+    process_profile,
+    regulation_analysis,
+    remediation,
+    risk,
+    summarize,
+)
 
 settings = get_settings()
 IS_PRODUCTION = (
@@ -150,6 +162,20 @@ app.include_router(ocr.router, prefix="/ai/ocr", tags=["OCR"])
 app.include_router(summarize.router, prefix="/ai/summarize", tags=["Summarize"])
 app.include_router(mock_context.router, prefix="/ai/mock", tags=["Mock Data Context"])
 app.include_router(policy.router, prefix="/ai/policy", tags=["Policy Rules"])
+app.include_router(
+    process_profile.router, prefix="/ai/process-profile", tags=["Process Profile"]
+)
+app.include_router(
+    regulation_analysis.router,
+    prefix="/ai/regulation-llm",
+    tags=["Regulation Analysis (LLM)"],
+)
+app.include_router(
+    remediation.router, prefix="/ai/remediation", tags=["Remediation (bad cases)"]
+)
+app.include_router(
+    bad_case_learning.router, prefix="/ai/bad-case", tags=["Bad case learning"]
+)
 
 
 # ---------------------------------------------------------------------------
