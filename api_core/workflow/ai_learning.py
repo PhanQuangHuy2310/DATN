@@ -819,8 +819,9 @@ def _fail(job: dict[str, Any], owner: str, error: str, *, retry: bool) -> None:
                     Jsonb(steps_detail(max(step, 1), failed=True)),
                 ],
             )
+            changes, guidance = [], []
             if rejected:
-                title, summary = rejection.announcement_text(rejected, "TECHNICAL", error)
+                title, summary, changes, guidance = rejection.announcement_text(rejected, "TECHNICAL", error)
             else:
                 title = f"AI chưa áp dụng được quy định v{job['target_version']}"
                 summary = (
@@ -831,7 +832,7 @@ def _fail(job: dict[str, Any], owner: str, error: str, *, retry: bool) -> None:
             cursor.execute(
                 """
                 INSERT INTO eas.system_announcement (job_id, audience, kind, version, title, summary, changes, guidance)
-                VALUES (%s, 'ADMIN', %s, %s, %s, %s, %s, '[]'::jsonb)
+                VALUES (%s, 'ADMIN', %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (job_id) DO NOTHING
                 """,
                 [
@@ -840,7 +841,8 @@ def _fail(job: dict[str, Any], owner: str, error: str, *, retry: bool) -> None:
                     job["target_version"],
                     title,
                     summary,
-                    Jsonb(rejected),
+                    Jsonb(changes),
+                    Jsonb(guidance),
                 ],
             )
     invalidate_lock_cache()
@@ -905,14 +907,14 @@ def _reject(job: dict[str, Any], owner: str, checks: dict[str, dict[str, Any]]) 
                 ],
             )
             announce_job = job["id"]
-        title, summary = rejection.announcement_text(rejected, "VALIDATION", message)
+        title, summary, changes, guidance = rejection.announcement_text(rejected, "VALIDATION", message)
         cursor.execute(
             """
             INSERT INTO eas.system_announcement (job_id, audience, kind, version, title, summary, changes, guidance)
-            VALUES (%s, 'ADMIN', 'REGULATION_REJECTED', %s, %s, %s, %s, '[]'::jsonb)
+            VALUES (%s, 'ADMIN', 'REGULATION_REJECTED', %s, %s, %s, %s, %s)
             ON CONFLICT (job_id) DO NOTHING
             """,
-            [announce_job, job["target_version"], title, summary, Jsonb(rejected)],
+            [announce_job, job["target_version"], title, summary, Jsonb(changes), Jsonb(guidance)],
         )
     invalidate_lock_cache()
     return "REJECTED"

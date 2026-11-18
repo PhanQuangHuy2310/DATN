@@ -4848,7 +4848,8 @@ dialog, [role="dialog"] { box-shadow: var(--ds-shadow-pop); }
    (the bar's backdrop-filter makes it the containing block). */
 .topbar .ds-info-pop { position: fixed; top: calc(100% - 6px); left: var(--ds-space-5, 24px); max-width: min(440px, calc(100% - 32px)); }
 @media (max-width: 860px) {
-  .topbar .ds-info .ds-info-pop, .topbar .ds-info.is-flip .ds-info-pop { left: 12px; right: 12px; width: auto; max-width: none; }
+  /* Gọn theo nội dung (tối đa 440px), không kéo hết chiều ngang che hàng nút bên dưới. */
+  .topbar .ds-info .ds-info-pop, .topbar .ds-info.is-flip .ds-info-pop { left: 12px; right: auto; width: max-content; max-width: min(440px, calc(100vw - 24px)); }
   /* Keep the page title readable (wraps by word) next to its (i). */
   .app-shell .topbar-title-row .topbar-page-title { min-width: min-content; white-space: normal; text-overflow: clip; }
 }
@@ -5113,3 +5114,23 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .reg-rejected-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
 .reg-rejected-card { border: 1px solid var(--ds-line); border-radius: var(--ds-radius); padding: 12px; }
 .reg-rejected-content { white-space: pre-wrap; font-size: 13px; max-height: 240px; overflow: auto; }
+
+/* Menu dạng ngăn kéo trên màn hình hẹp (video 18/11):
+   - nút thu gọn "‹" bị button.sidebar-edge-toggle {display:flex} bật lại -> ẩn hẳn, chỉ còn nút ×;
+   - lớp phủ là <button> nên ăn kiểu hover/active xanh đặc của nút chung -> giữ màu tối trong suốt cố định;
+   - lớp phủ nằm dưới thanh trên cùng -> phủ cả thanh trên cùng, ngăn kéo nằm trên lớp phủ. */
+@media (max-width: 800px) {
+  .app-shell .sidebar button.sidebar-edge-toggle,
+  .app-shell .sidebar button.sidebar-collapse { display: none; }
+  .app-shell .sidebar.open { z-index: 50; }
+  .app-shell .sidebar.open .brand { padding-right: 56px; } /* chừa chỗ cho nút × */
+  .app-shell button.nav-backdrop,
+  .app-shell button.nav-backdrop:hover,
+  .app-shell button.nav-backdrop:active,
+  .app-shell button.nav-backdrop:focus,
+  .app-shell button.nav-backdrop:focus-visible {
+    display: block; position: fixed; inset: 0; z-index: 45; width: auto; height: auto; min-height: 0;
+    margin: 0; padding: 0; border: 0; border-radius: 0; background: rgba(7, 21, 42, .48);
+    box-shadow: none; transform: none; outline: none; cursor: default;
+  }
+}

@@ -99,7 +99,7 @@ Các giai đoạn:
 - 1.5: chỉ hoàn tác được hồ sơ vòng đời A đã COMPLETED (AI chỉ tự duyệt vòng đời A). Bất kỳ APPROVER trong phạm vi phòng/loại (trừ người tạo) đều thu hồi được, không chỉ người duyệt gốc.
 
 ## Việc tôi phải làm thủ công
-- **18/11: chạy `database/migrations/26_regulation_rejection.sql` trên Supabase chung** (đã chạy thử trên local: chạy, chạy lại, rollback, chạy lại). Chưa chạy thì văn bản lỗi vẫn bị chặn khi ban hành; chỉ phần trả lại bản lỗi khi AI học thất bại chưa hoạt động (giữ cách cũ).
+- [x] 18/11: migration 26 đã chạy trên Supabase chung (chạy thử + chạy thật, lược đồ khớp local).
 - **18/11: chạy `database/migrations/25_bad_case_learning.sql` trên Supabase SQL Editor sau migration 24.** Chưa chạy thì AI dùng 12 bad case trong mã và không học bad case mới. Rollback: `database/migrations/rollback/25_bad_case_learning_rollback.sql`.
 - **18/11: chạy `database/migrations/24_ai_feedback_learning.sql` trên Supabase SQL Editor sau migration 23.** Chưa chạy thì AI vẫn chạy bình thường nhưng không ghi nhớ phản hồi. Rollback: `database/migrations/rollback/24_ai_feedback_learning_rollback.sql` (xóa bộ nhớ ca, sao lưu trước nếu cần).
 - **18/11: chạy `database/migrations/23_ai_bad_case_escalation.sql` trên Supabase SQL Editor** (đã chạy thử trên Supabase local). Chưa chạy thì hệ thống vẫn chạy như cũ: AI chỉ chặn tự duyệt, không chuyển luồng (audit `AI_ESCALATION_SKIPPED` lý do `ESCALATION_RELEASE_MISSING`). Rollback: `database/migrations/rollback/23_ai_bad_case_escalation_rollback.sql` (tự từ chối nếu còn hồ sơ đã nâng luồng đang mở).

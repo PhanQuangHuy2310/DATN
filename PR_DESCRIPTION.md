@@ -2,16 +2,13 @@
 
 Nhánh `dat` → `main`: 29 commit, chứa toàn bộ `main` hiện tại, gộp thử không xung đột.
 
-**Migration 23, 24, 25 đã chạy trên Supabase chung ngày 18/11.** Trước khi chạy:
+**Migration 23, 24, 25, 26 đã chạy trên Supabase chung ngày 18/11.** Trước khi chạy:
 - đã so lược đồ: không lệch so với bản đã kiểm thử local;
 - đã chạy thử cả 3 file trong một giao dịch rồi hoàn tác.
 
 Sau khi chạy, lược đồ `eas` khớp hoàn toàn với bản local. Merge PR này **không cần chạy thêm SQL nào**.
 
-**Migration 26 (quy định bị trả lại) CHƯA chạy trên Supabase chung**, cần chạy sau khi merge:
-- File: `database/migrations/26_regulation_rejection.sql`.
-- Chỉ thêm một bảng. Đã chạy thử trên local: chạy, chạy lại, rollback, chạy lại.
-- Chưa chạy thì văn bản lỗi vẫn bị chặn khi ban hành. Chỉ phần trả lại bản lỗi khi AI học thất bại chưa hoạt động, hệ thống giữ cách cũ.
+**Migration 26 (quy định bị trả lại) cũng đã chạy trên Supabase chung ngày 18/11**, cùng quy trình: chạy thử trong giao dịch rồi hoàn tác, chạy thật, sau đó so lược đồ thấy 0 khác biệt với local. Merge PR này **không cần chạy thêm SQL nào**.
 
 Phần lớn số dòng thêm (~74 nghìn) là dữ liệu huấn luyện, bộ test và mô hình. Mã nguồn thay đổi ít hơn nhiều.
 
