@@ -132,6 +132,15 @@ def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
             else "Công việc được phân công đang đến hạn xử lý"
         )
         return [(row[0], label)] if row and row[0] else []
+    if item.event_type in {"WORK_REASSIGNED", "DEADLINE_POSTPONED"}:
+        # Hướng xử lý AI đề xuất, quản lý xác nhận: báo đúng người nhận việc / người gửi việc.
+        label = (
+            "Quản lý đã chuyển cho bạn một việc (theo đề xuất của AI) vì người phụ trách vắng mặt"
+            if item.event_type == "WORK_REASSIGNED"
+            else "Hạn xử lý yêu cầu của bạn được lùi lại vì người phụ trách vắng mặt"
+        )
+        recipient = item.payload.get("recipient_id")
+        return [(str(recipient), label)] if recipient else []
     if item.event_type == "APPROVAL_REQUESTED":
         cursor.execute(
             "SELECT assignee_id::text FROM eas.approval_step WHERE id=%s",

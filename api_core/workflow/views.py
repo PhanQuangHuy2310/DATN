@@ -764,6 +764,51 @@ def delegation_revoke_view(request: HttpRequest, delegation_id) -> JsonResponse:
     return JsonResponse({**result, "correlation_id": correlation_id(request)})
 
 
+@require_GET
+@require_actor()
+def ai_remediation_plan_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    """Đề xuất xử lý gốc rễ của AI cho hồ sơ dính tình huống xấu (quản lý duyệt hồ sơ hoặc OPS_ADMIN)."""
+    from api_core.workflow.remediation import build_plan
+
+    try:
+        plan = build_plan(actor=request.actor, request_id=str(request_id))
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse({"plan": plan, "correlation_id": correlation_id(request)})
+
+
+@require_POST
+@require_actor()
+def ai_remediation_confirm_view(request: HttpRequest, request_id: str) -> JsonResponse:
+    """Quản lý xác nhận đề xuất: hệ thống chuyển việc / lùi hạn dưới quyền của quản lý."""
+    from api_core.workflow.remediation import confirm_plan
+
+    return _command_response(request, confirm_plan, request_id=str(request_id))
+
+
+@require_POST
+@require_actor()
+def ai_remediation_dismiss_view(
+    request: HttpRequest, request_id: str, proposal_id: str
+) -> JsonResponse:
+    from api_core.workflow.remediation import dismiss_plan
+
+    try:
+        body = parse_json_object(request)
+        result = dismiss_plan(
+            actor=request.actor,
+            request_id=str(request_id),
+            proposal_id=str(proposal_id),
+            reason=body.get("reason") or "",
+            correlation_id=correlation_id(request),
+        )
+    except JsonBodyError as exc:
+        return api_error(request, str(exc), status=400)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse(result)
+
+
 @require_POST
 @require_actor("APPROVER")
 def revoke_ai_approval_view(request: HttpRequest, request_id: str) -> JsonResponse:

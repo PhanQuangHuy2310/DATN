@@ -52,6 +52,21 @@ Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit
 Số migration trong các mục cũ là số trước khi gộp: 08, 09, 10, 14 → `08_ai_auto_approval`; 11, 12, 13 → `09_request_catalog_v2`; 15, 16 → `10_approval_delegation_and_employee_code`; mock 004, 005 → mock `004_hrm_attendance`.
 
 ## Đang làm
+**18/11 — AI suy luận tình huống xấu (bad case) theo đặc tả của Huy** (`D:\Download\file-cua-huy.docx`). Báo cáo Word sửa SAU, khi AI đã huấn luyện xong.
+Quyết định của bạn (18/11):
+- Chuyển thật từng hồ sơ A → B/C (cần migration mới; chạy thử trên Supabase local, bạn tự chạy lên DB chung).
+- Hướng xử lý (chuyển việc, lùi hạn): AI đề xuất, quản lý bấm xác nhận, hệ thống thực hiện dưới quyền của quản lý.
+- Huấn luyện đủ 4 phần.
+
+Các giai đoạn:
+- [x] G0. Chốt phần AI dở dang ngày 17/11: 5 commit (`2812554`..`e8330ba`), test xanh.
+- [x] G1. Danh mục 12 tình huống xấu (`ai_service/data/bad_case_catalog.json`, Gemini 3.5 Flash-Lite sinh 30 ứng viên, nhóm rà) + tín hiệu SQL mới (`47a7895`).
+- [x] G2. Trình biên dịch quy định v2 (`8866a60`). Tập test băm trước 30 điều: v1 13/30 (chặn tràn 13), **v2 29/30 (chặn tràn 0)**, Gemini 25/30 (chặn tràn 3). Báo cáo: `ai_service/training/data/regulation_compiler_report.md`.
+- [ ] G3. Phát hiện bad case từ dữ liệu thật + huấn luyện lại XGBoost với đặc trưng bad case (so trước/sau trên tập holdout).
+- [x] G4. Migration 23 + rollback (`41c141e`), chạy thử trên Supabase local: áp / áp lại / rollback / áp lại đều đúng.
+- [x] G5. Chuyển hồ sơ A → B/C (`api_core/workflow/escalation.py`); live `tests/live/test_ai_escalation.py` 3/3 PASS.
+- [ ] G6. Mô hình đề xuất xử lý (xếp hạng người nhận bàn giao, chọn chuyển việc hay lùi hạn) + API quản lý xác nhận.
+- [ ] G7. Giao diện + kiểm thử live theo kịch bản demo của Huy.
 
 ## Chưa làm
 - [ ] B. Kiểm tra sau migration: chờ bạn báo đã chạy migration 08→10 và mock 004 (kiểm tra chỉ đọc ngày 02/11: chưa có thành phần nào)
@@ -67,6 +82,7 @@ Số migration trong các mục cũ là số trước khi gộp: 08, 09, 10, 14 
 - 1.5: chỉ hoàn tác được hồ sơ vòng đời A đã COMPLETED (AI chỉ tự duyệt vòng đời A). Bất kỳ APPROVER trong phạm vi phòng/loại (trừ người tạo) đều thu hồi được, không chỉ người duyệt gốc.
 
 ## Việc tôi phải làm thủ công
+- **18/11: chạy `database/migrations/23_ai_bad_case_escalation.sql` trên Supabase SQL Editor** (đã chạy thử trên Supabase local). Chưa chạy thì hệ thống vẫn chạy như cũ: AI chỉ chặn tự duyệt, không chuyển luồng (audit `AI_ESCALATION_SKIPPED` lý do `ESCALATION_RELEASE_MISSING`). Rollback: `database/migrations/rollback/23_ai_bad_case_escalation_rollback.sql` (tự từ chối nếu còn hồ sơ đã nâng luồng đang mở).
 - Chạy trên Supabase SQL Editor theo thứ tự (07 đã chạy): `database/migrations/08_ai_auto_approval.sql`, `09_request_catalog_v2.sql`, `10_approval_delegation_and_employee_code.sql`, rồi `database/mock_enterprise_sql/migrations/004_hrm_attendance.sql`; sau đó `python manage.py sync_employee_codes --apply`
 - Sau migration 08, nếu container AI đang có file quy định cũ: `python manage.py import_ai_policy_file ai_service/data/active_enterprise_policy.json --operator <email POLICY_ADMIN>`
 - Rollback (ngược thứ tự: mock 004 → 10 → 09 → 08): `database/migrations/rollback/`, `database/mock_enterprise_sql/migrations/rollback/`

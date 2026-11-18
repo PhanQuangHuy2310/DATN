@@ -11,6 +11,10 @@ ESC-01  Quản lý đang giữ bước duyệt hết hạn trong 24h xin nghỉ 
 ESC-02  Ba đề nghị thanh toán 9,5 triệu trong 7 ngày -> hồ sơ thứ ba BC_SPLIT_AMOUNT_EVASION -> luồng C
         (có người nghiệm thu).
 ESC-03  Đối chứng: đơn nghỉ khi không giữ việc đến hạn -> giữ luồng A.
+ESC-04  Sau khi cấp trên duyệt: AI xếp hạng người nhận việc thay; quản lý xác nhận -> bước duyệt được chuyển,
+        đề xuất CONFIRMED, audit "AI đề xuất - quản lý xác nhận" trên hồ sơ được chuyển.
+ESC-05  Hướng lùi hạn: quản lý xác nhận -> hạn SLA lùi tới sau ngày đi làm lại, người gửi việc được báo;
+        sửa hạn không qua cờ vẫn bị trigger chặn.
 """
 
 from __future__ import annotations
@@ -232,7 +236,77 @@ def esc_03(o: t.Oracle) -> str:
     return f"{o.req(rid)['code']}: không giữ việc đến hạn -> giữ luồng A, trạng thái {o.req(rid)['status']}"
 
 
-CASES = {"ESC-01": esc_01, "ESC-02": esc_02, "ESC-03": esc_03}
+def _deadline_case(o: t.Oracle):
+    """Dựng tình huống ESC-01 rồi để cấp trên duyệt: trả (rid, x_id, m_email, held_rid)."""
+    x_id, x_email, y_id, y_email, _m_id, m_email = manager_with_team(o)
+    held, _, _ = t.submit(o, "EXPENSE_CLAIM", y_email, expense(1_300_000))
+    o.wait("""SELECT 1 FROM eas.approval_step s JOIN eas.workflow_instance i ON i.id=s.instance_id
+              WHERE s.request_id=%s AND s.state='ACTIVE' AND i.state='ACTIVE'""", held)
+    rid, _, _ = t.submit(o, "LEAVE", x_email, leave(datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+                                                     + timedelta(days=1), y_id))
+    check(wait_escalated(o, rid) is not None, "hồ sơ nghỉ không được nâng luồng")
+    st, body = t.decide(o, rid, "APPROVE")
+    check(st == 200, f"cấp trên duyệt thất bại: HTTP {st} {body}")
+    return rid, x_id, m_email, held
+
+
+def esc_04(o: t.Oracle) -> str:
+    rid, _x_id, m_email, held = _deadline_case(o)
+    m = t.login(m_email)
+    st, body = m.call("GET", f"/api/v1/requests/{rid}/ai-remediation")
+    check(st == 200, f"lấy đề xuất xử lý thất bại: HTTP {st} {body}")
+    plan = body["plan"]
+    item = next((i for i in plan["items"] if i["item_request_id"] == held), None)
+    check(item is not None, f"kế hoạch không có việc đang giữ của X: {[i['item_code'] for i in plan['items']]}")
+    check(item["candidates"], "không có ứng viên nhận việc thay")
+    best = item["candidates"][0]
+    prop = next(p for p in plan["proposals"] if p["case_code"] == "BC_DEADLINE_CONFLICT")
+    st, body = m.call("POST", f"/api/v1/requests/{rid}/ai-remediation/confirm",
+                      {"proposal_id": prop["id"], "actions": [
+                          {"action": "DELEGATE_APPROVALS", "stage_id": item["stage_id"],
+                           "candidate_id": best["user_id"]}]}, idem=str(uuid.uuid4()))
+    check(st == 200, f"xác nhận chuyển việc thất bại: HTTP {st} {body}")
+    step = o.active_step(held)
+    check(step and step[2] == best["user_id"], f"bước duyệt chưa chuyển cho ứng viên: {step}")
+    state = o.one("SELECT state FROM eas.ai_remediation WHERE id=%s", prop["id"])[0]
+    check(state == "CONFIRMED", f"đề xuất không ở CONFIRMED: {state}")
+    audit = o.one("SELECT details FROM eas.audit_event WHERE request_id=%s AND action='AI_REMEDIATION_REASSIGNED'",
+                  held)
+    check(audit and audit[0]["proposed_by"] == "AI", "thiếu audit AI_REMEDIATION_REASSIGNED trên hồ sơ được chuyển")
+    return (f"{o.req(rid)['code']}: quản lý {m_email} xem đề xuất ({item['engine']}, gợi ý "
+            f"{item['suggestion']['action']}), xác nhận giao bước duyệt {item['item_code']} cho "
+            f"{best.get('display_name')} (điểm {best['score']}: {'; '.join(best['why'][:3])}) -> đã chuyển, audit đủ")
+
+
+def esc_05(o: t.Oracle) -> str:
+    rid, _x_id, m_email, held = _deadline_case(o)
+    m = t.login(m_email)
+    st, body = m.call("GET", f"/api/v1/requests/{rid}/ai-remediation")
+    check(st == 200, f"lấy đề xuất xử lý thất bại: HTTP {st} {body}")
+    plan = body["plan"]
+    item = next(i for i in plan["items"] if i["item_request_id"] == held)
+    check(item["postpone_to"], "không có hạn mới để lùi")
+    before = o.one("SELECT due_at FROM eas.sla_stage WHERE id=%s", item["stage_id"])[0]
+    prop = next(p for p in plan["proposals"] if p["case_code"] == "BC_DEADLINE_CONFLICT")
+    st, body = m.call("POST", f"/api/v1/requests/{rid}/ai-remediation/confirm",
+                      {"proposal_id": prop["id"], "actions": [
+                          {"action": "POSTPONE_DEADLINE", "stage_id": item["stage_id"]}]}, idem=str(uuid.uuid4()))
+    check(st == 200, f"xác nhận lùi hạn thất bại: HTTP {st} {body}")
+    after = o.one("SELECT due_at FROM eas.sla_stage WHERE id=%s", item["stage_id"])[0]
+    check(after > before, f"hạn SLA không được lùi: {before} -> {after}")
+    note = o.wait("SELECT count(*) FROM eas.notification n JOIN eas.request r ON r.id=n.request_id "
+                  "WHERE n.request_id=%s AND n.recipient_id=r.requester_id AND n.label LIKE 'Hạn xử lý%%'",
+                  held, want=lambda v: v and v[0] > 0)
+    check(note and note[0] > 0, "người gửi việc không nhận được thông báo lùi hạn")
+    # Không có cờ thì không ai sửa được hạn (trigger CSDL).
+    blocked = o.try_tamper_as("eas_api", f"UPDATE eas.sla_stage SET due_at=due_at+interval '1 day' "
+                                         f"WHERE id='{item['stage_id']}'")
+    check(blocked == "23514", f"sửa hạn không cờ lẽ ra bị chặn, nhận {blocked}")
+    return (f"{o.req(rid)['code']}: lùi hạn bước duyệt {item['item_code']} {before:%d/%m %H:%M} -> "
+            f"{after:%d/%m %H:%M} (sau ngày đi làm lại), người gửi được báo; sửa hạn không cờ bị chặn (23514)")
+
+
+CASES = {"ESC-01": esc_01, "ESC-02": esc_02, "ESC-03": esc_03, "ESC-04": esc_04, "ESC-05": esc_05}
 
 
 def main() -> int:

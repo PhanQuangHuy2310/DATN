@@ -113,6 +113,7 @@ class TrainingDataTests(unittest.TestCase):
                 "run_regulation_rules_llm.py",
                 "train.py",
                 "train_process_profile.py",
+                "train_remediation.py",
             ],
         )
 
