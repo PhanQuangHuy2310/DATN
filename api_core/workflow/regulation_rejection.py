@@ -17,7 +17,7 @@ from typing import Any
 from psycopg.types.json import Jsonb
 
 from api_core.workflow.regulation_compiler import RequestTypeName
-from api_core.workflow.regulation_validation import summary_text, validate
+from api_core.workflow.regulation_validation import validate
 
 logger = logging.getLogger(__name__)
 RESTORED_BY = "AI (trả lại, khôi phục bản đã áp dụng)"
@@ -179,20 +179,39 @@ def rollback_to_applied(
     return rejected
 
 
-def announcement_text(rejected: list[dict[str, Any]], cause: str, message: str) -> tuple[str, str]:
+ACTION_TEXT = {"CREATE": "thêm mới", "UPDATE": "sửa", "DELETE": "bãi bỏ"}
+
+
+def announcement_text(
+    rejected: list[dict[str, Any]], cause: str, message: str
+) -> tuple[str, str, list[dict[str, str]], list[dict[str, Any]]]:
+    """Tiêu đề, tóm tắt, danh sách lỗi (mục "Thay đổi" của hộp thông báo) và hướng dẫn xử lý cho admin."""
     codes = ", ".join(r["code"] for r in rejected)
+    changes: list[dict[str, str]] = []
+    for r in rejected:
+        head = f"{r['code']} ({ACTION_TEXT.get(r['action'], r['action'])}, bản {r.get('rejected_version') or '?'})"
+        for e in (r.get("errors") or [])[:3]:
+            where = f"{e['article']}: " if e.get("article") else ""
+            changes.append({"kind": "REGULATION_REJECTED", "title": f"{head}: {where}{e['message'].rstrip('. ')}"})
+    guidance = [{
+        "title": "Cách xử lý",
+        "steps": [
+            "Vào Quy định, mục \u201cQuy định bị trả lại\u201d ở đầu trang.",
+            "Đọc từng lỗi AI chỉ ra (câu, điều khoản bị chồng), bấm \u201cSửa và nạp lại\u201d.",
+            "Sửa đúng các chỗ đó, bấm \u201cAI kiểm tra trước\u201d tới khi không còn lỗi, rồi ban hành lại.",
+        ],
+    }]
     if cause == "VALIDATION":
         title = f"Quy định {codes} bị trả lại: văn bản có lỗi"
-        details = "; ".join(f"{r['code']}: {summary_text({'errors': r['errors']}, 2)}" for r in rejected)
-        summary = (f"AI kiểm tra văn bản và phát hiện lỗi nên KHÔNG áp dụng. Hiệu lực đã quay về bản đã áp dụng "
-                   f"trước đó (văn bản và bộ luật). Lỗi: {details}. Vào Quy định → Bị trả lại để sửa từng chỗ rồi "
-                   "nạp lại.")
+        summary = ("AI kiểm tra văn bản và phát hiện lỗi nên KHÔNG áp dụng. Hiệu lực đã quay về bản đã áp dụng "
+                   "trước đó (văn bản và bộ luật AI). Các lỗi được liệt kê bên dưới.")
     else:
         title = f"Quy định {codes} bị trả lại: AI chưa học được"
-        summary = (f"Sau mọi lần thử, AI chưa áp dụng được quy định mới (lỗi kỹ thuật: {message[:300]}). Hiệu lực đã "
-                   "quay về bản đã áp dụng trước đó. Nội dung bản bị trả lại vẫn được giữ ở Quy định → Bị trả lại; "
-                   "kiểm tra AI service rồi nạp lại.")
-    return title[:300], summary[:4000]
+        summary = (f"Sau mọi lần thử, AI chưa áp dụng được quy định mới (lỗi kỹ thuật: {message[:300].rstrip('. ')}). "
+                   "Hiệu lực đã quay về bản đã áp dụng trước đó. Nội dung bản bị trả lại vẫn được giữ để nạp lại "
+                   "khi AI service hoạt động.")
+        guidance[0]["steps"][1] = "Kiểm tra AI service đã chạy, rồi bấm \u201cSửa và nạp lại\u201d (nội dung giữ nguyên)."
+    return title[:300], summary[:4000], changes, guidance
 
 
 def resolve_open(cursor, *, code: str, actor_id: str, note: str) -> int:

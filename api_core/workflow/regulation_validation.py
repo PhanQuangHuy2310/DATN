@@ -195,6 +195,6 @@ def validate(
 def summary_text(result: dict[str, Any], limit: int = 3) -> str:
     """Một đoạn ngắn cho thông báo: các lỗi đầu tiên."""
     items = result.get("errors") or []
-    parts = [f"{e.get('article') + ': ' if e.get('article') else ''}{e['message']}" for e in items[:limit]]
+    parts = [f"{e.get('article') + ': ' if e.get('article') else ''}{e['message'].rstrip('. ')}" for e in items[:limit]]
     more = len(items) - limit
     return "; ".join(parts) + (f" (và {more} lỗi khác)" if more > 0 else "")
