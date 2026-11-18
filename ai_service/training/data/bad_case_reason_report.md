@@ -110,6 +110,33 @@ Kiểm định chéo đã chọn: thêm mã loại đơn vào đầu câu (CV 0,
      - Gom với độ giống câu chữ ≥ 0,15 khi điều kiện của ứng viên bắt được hồ sơ và lý do mới không có điều kiện riêng.
   5. Sau lần chạy thật thứ ba: tiêu chí độ chắc dùng xác suất "không thuộc danh mục có sẵn", thay cho xác suất của một nhãn đơn lẻ.
 
+## 3b. Phiên bản 3 (19/11/2026): ca oái oăm và phủ định đúng loại
+
+**Thứ tự (để chấm trung thực):**
+
+1. **Bộ test 3** (72 câu oái oăm viết tay: không dấu, viết tắt, trộn tiếng Anh, phủ định "không phải vì X mà vì Y", nhắc tên loại đơn nhưng không phải bad case của loại đó) được băm (`58a946a7…`, commit `c61b10f`) trước khi sinh dữ liệu và huấn luyện v3.
+2. v2 được chấm trên bộ test 3, và **tôi đã xem danh sách lỗi của v2** trước khi làm v3. Lỗi chủ yếu là thiên lệch theo loại đơn (đơn WFH → BC_WFH_FREQUENT). Vì vậy bộ test 3 không hoàn toàn "mù" với hướng cải tiến; nó vẫn sạch về **câu chữ** (không câu nào trong dữ liệu sinh trùng hoặc gần giống ≥ 0,9 với cả 3 bộ test).
+3. Dữ liệu lượt 3 (`bad_case_reasons_train3.json`, 659 câu, Gemini chỉ thấy mô tả danh mục), gồm hai phần:
+   - 359 câu "đúng loại nhưng không phải bad case có sẵn" (kiểu mới / lý do riêng), viết theo văn phong oái oăm;
+   - 300 câu oái oăm cho 12 bad case có sẵn.
+4. Chọn cấu hình chỉ bằng kiểm định chéo trên tập train: C = 16, có mã loại đơn, không đặc trưng soạn tay; CV 0,912. Đầu đoán đặc trưng vẫn học từ lượt 1 như v2. Không chỉnh gì sau khi chấm.
+
+**Kết quả** (đúng nhãn · macro-F1 3 nhóm):
+
+| Bộ máy | Test 3 (oái oăm) | Test 2 | Test 1 (đã dùng) |
+|---|---|---|---|
+| **v3 (đang dùng)** | **76,4% · 0,730** | **75,0% · 0,700** | 76,4% · 0,781 |
+| v2 | 70,8% · 0,665 | 70,8% · 0,654 | 73,6% · 0,742 |
+| Baseline từ khóa | 48,6% · 0,489 | 45,8% · 0,463 | 81,9% · 0,802 |
+
+- Trên test 3, so với v2: v3 sửa được 4 câu và không làm hỏng câu nào v2 đã đúng.
+- Lỗi còn lại trên test 3 (17 câu):
+  - 9 câu "kiểu mới" bị xếp sai: 3 câu thành BC_WFH_FREQUENT (vẫn thiên lệch theo chữ "WFH"), 3 câu thành "lý do riêng";
+  - 6 câu "lý do riêng" bị xếp thành bad case có sẵn;
+  - 1 câu nhầm giữa hai bad case có sẵn.
+- Nhóm "kiểu mới" vẫn là điểm yếu nhất. Như mục 3: hệ thống không để một câu đơn lẻ quyết định, mà cần lặp lại ở nhiều người gửi và nhiều người duyệt.
+- Đầu đoán đặc trưng không đổi so với v2 (cùng dữ liệu lượt 1).
+
 ## 4. Kiểm thử thật trên bản sao CSDL local (`tests/live/test_bad_case_learning.py`)
 
 Kết quả: **4/4 PASS, hai lần chạy liên tiếp**, sau 5 lần chạy có lỗi đã sửa như mục 3. Chi tiết: `bad_case_learning_live_results.json`.
@@ -131,5 +158,6 @@ Kiểm thử thật cũ, chạy lại:
 ```
 ai_service\.venv-ai\Scripts\python -I ai_service\training\gen_bad_case_reasons.py            # lượt 1 (cần GEMINI_API_KEY)
 ai_service\.venv-ai\Scripts\python -I ai_service\training\gen_bad_case_reasons.py --v2       # lượt 2
-ai_service\.venv-ai\Scripts\python -I ai_service\training\train_bad_case_reason.py --version v2 --final --tests 1,2 [--gemini]
+ai_service\.venv-ai\Scripts\python -I ai_service\training\gen_bad_case_reasons.py --v3 --per-case 25   # lượt 3 (lưu từng lô, chạy lại để bù lô lỗi)
+ai_service\.venv-ai\Scripts\python -I ai_service\training\train_bad_case_reason.py --version v3 --final --tests 1,2,3 [--compare <mô hình v2>]
 ```

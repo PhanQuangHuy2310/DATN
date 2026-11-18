@@ -33,7 +33,10 @@ from nlp_text import strip_diacritics
 TEST_SHA256 = "eb01b749c90bfaf6acdabffb6a5cc336bdc99ed93dfffe7fd8fc6aa1bceddc52"
 # Bộ thứ hai: viết sau khi bộ thứ nhất đã chấm phiên bản 1 (và đã xem lỗi), băm TRƯỚC khi làm phiên bản 2 (c9984d7).
 TEST2_SHA256 = "16cd8f18210b5f0fbaabe039218dd6af63b05f2944f23c218d6c24bb91e7e433"
-TESTS = {"1": ("bad_case_reasons_test.json", TEST_SHA256), "2": ("bad_case_reasons_test2.json", TEST2_SHA256)}
+# Bộ thứ ba (ca oái oăm): viết và băm TRƯỚC phiên bản 3 (commit c61b10f).
+TEST3_SHA256 = "58a946a7fdabb0e97f16507cd0e39a613e253b92b7a98f1275088ce88091c043"
+TESTS = {"1": ("bad_case_reasons_test.json", TEST_SHA256), "2": ("bad_case_reasons_test2.json", TEST2_SHA256),
+         "3": ("bad_case_reasons_test3.json", TEST3_SHA256)}
 SEED = 20261118
 
 
@@ -51,7 +54,12 @@ def load_test(which: str = "1") -> list[dict]:
 
 
 def load_train(version: str = "v2") -> list[dict]:
-    files = ["bad_case_reasons_train.json"] + (["bad_case_reasons_train2.json"] if version == "v2" else [])
+    files = ["bad_case_reasons_train.json"]
+    if version in ("v2", "v3"):
+        files.append("bad_case_reasons_train2.json")
+    if version == "v3":
+        # Lượt 3: phủ định đúng loại (nhắc tên loại đơn nhưng KHÔNG phải bad case của loại đó) + văn phong oái oăm.
+        files.append("bad_case_reasons_train3.json")
     items = [i for f in files for i in json.loads((DATA / f).read_text(encoding="utf-8"))["items"]]
     rng = random.Random(SEED)
     out = list(items)
@@ -223,12 +231,29 @@ def main() -> None:
     import joblib
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--version", choices=["v1", "v2"], default="v2")
+    ap.add_argument("--version", choices=["v1", "v2", "v3"], default="v3")
     ap.add_argument("--final", action="store_true", help="chấm các bộ test đã băm")
     ap.add_argument("--tests", default="1,2", help="bộ test để chấm, vd. 1,2")
     ap.add_argument("--compare", help="tệp mô hình phiên bản trước để chấm cùng bộ test")
     ap.add_argument("--gemini", action="store_true", help="chấm thêm Gemini zero-shot")
+    ap.add_argument("--json", default="")
+    ap.add_argument("--score-only", help="chỉ chấm một tệp mô hình có sẵn trên --tests, không huấn luyện")
     args = ap.parse_args()
+
+    if args.score_only:
+        model = joblib.load(args.score_only)
+        out = {}
+        for which in args.tests.split(","):
+            test = load_test(which)
+            preds, feats = predict(model, test)
+            sc = score(test, preds, feats)
+            sc["feature_head"] = feature_head_accuracy(model, test)
+            out[which] = sc
+            print(f"test{which} {model.get('meta', {}).get('version')}: exact={sc['accuracy_exact']} "
+                  f"group={sc['accuracy_group']} macroF1={sc['macro_f1_group']} feat_head={sc['feature_head']}")
+        if args.json:
+            Path(args.json).write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+        return
 
     train = load_train(args.version)
     print("train:", len(train), Counter(group(i["label"]) for i in train))
@@ -247,7 +272,7 @@ def main() -> None:
     # Đầu đoán đặc trưng học từ dữ liệu lượt 1: nhãn đặc trưng của lượt 2 (cặp tương phản) nhiễu hơn. Kiểm định
     # chéo trên các fold của lượt 1 (thêm/không thêm toàn bộ lượt 2 vào phần học): 0.738 / 0.688 (type_token),
     # 0.688 / 0.662 (không). Quyết định này đưa ra SAU khi đã thấy kết quả bộ test 2 (ghi trong báo cáo).
-    feature_train = load_train("v1") if args.version == "v2" else train
+    feature_train = load_train("v1") if args.version in ("v2", "v3") else train
     feature_cv = []
     for fcfg in [{"C": c, "type_token": t} for t in (False, True) for c in (4.0, 16.0)]:
         acc = round(cross_validate_feature(feature_train, fcfg), 3)
@@ -255,14 +280,14 @@ def main() -> None:
         print(f"  CV đặc trưng {fcfg}: {acc}", flush=True)
     fbest = max(feature_cv, key=lambda r: r["cv_accuracy"])
     feature_cfg = {"C": fbest["C"], "type_token": fbest["type_token"]}
-    meta = {"version": "bad-case-reason-1" if args.version == "v1" else "bad-case-reason-2",
+    meta = {"version": {"v1": "bad-case-reason-1", "v2": "bad-case-reason-2", "v3": "bad-case-reason-3"}[args.version],
             "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "n_train": len(train), **cfg, "cv_accuracy": best["cv_accuracy"],
             "feature_C": feature_cfg["C"], "feature_type_token": feature_cfg["type_token"],
             "feature_cv_accuracy": fbest["cv_accuracy"],
             "test_sha256": {k: v[1] for k, v in TESTS.items()}}
     model = fit(train, cfg, feature_cfg)
-    if args.version == "v2":
+    if args.version in ("v2", "v3"):
         model["feature"] = fit(feature_train, cfg, feature_cfg)["feature"]
         meta["feature_data"] = "train1 (lượt 1)"
     model = {**model, "meta": meta}
