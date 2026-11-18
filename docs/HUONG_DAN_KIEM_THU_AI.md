@@ -51,6 +51,7 @@ Thanh toán chi phí và Chiết khấu đặc biệt cũng thuộc loại A nh�
 | 5 | AI học bad case mới từ lý do thu hồi | Lần 1–2: AI hỏi admin; lần 3: AI tự thêm bad case và áp cho người khác |
 | 6 | Lý do riêng → AI hỏi admin | AI nói chưa đủ, giải thích, hỏi; admin bấm "Không tạo" |
 | 7 | Quy định có câu AI chưa hiểu (Quy định 06/2026) | Câu hiểu được áp dụng ngay; câu khó vào hàng chờ kèm gợi ý của Gemini; admin duyệt thì AI học lại |
+| 8 | AI đọc văn bản quy định, trả lỗi, trả lại bản lỗi | Văn bản mâu thuẫn hoặc lỗi ký tự bị chặn kèm lỗi từng câu; học thất bại thì hiệu lực quay về bản cũ, bản lỗi vào "Bị trả lại" để sửa và nạp lại |
 
 ---
 
@@ -185,6 +186,50 @@ Các điều đã được chạy thử qua trình biên dịch quy định củ
 Điều 3 và 4 cần mạng để gọi Gemini. Không có mạng thì câu vẫn vào hàng chờ, chỉ thiếu gợi ý; admin tự soạn luật JSON.
 
 ---
+
+## Kịch bản 8: AI đọc văn bản quy định, trả lỗi và trả lại bản lỗi
+
+Nguyên tắc: quy định có lỗi thì **không** được áp dụng. Hiệu lực (văn bản hiển thị và bộ luật AI) giữ ở bản đã áp dụng gần nhất. Bản lỗi được giữ lại kèm **danh sách lỗi chỉ rõ từng câu** để admin sửa rồi nạp lại.
+
+**8.1 Văn bản tự mâu thuẫn bị chặn ngay khi ban hành.** Ở cổng quản trị, vào **Quy định → Thêm quy định mới**, mã `QD07-2026`, nội dung:
+
+```
+Điều 1: Yêu cầu Hoàn tiền / Đền bù có giá trị trên 5 triệu đồng được phép tự động duyệt. Điều 2: Yêu cầu Hoàn tiền / Đền bù có giá trị trên 3 triệu đồng không được tự động duyệt.
+```
+
+- Bấm **AI kiểm tra trước**.
+  - **Mong đợi:** khung đỏ "AI phát hiện 1 lỗi", loại **Mâu thuẫn**: "Điều 1 cho AI tự duyệt (số tiền > 5.000.000), nhưng Điều 2 bắt duyệt thủ công (số tiền > 3.000.000)…", kèm trích nguyên văn hai câu.
+- Bấm **Ban hành** vẫn bị từ chối với cùng danh sách lỗi.
+  - **Mong đợi:** không lưu, không khoá cổng nhân viên.
+- Sửa Điều 1 thành `… trên 2 triệu đồng được phép tự động duyệt nếu …`, hoặc xóa Điều 1, rồi kiểm tra lại.
+  - **Mong đợi:** "AI không thấy lỗi chặn".
+
+**8.2 Lỗi ký tự.** Dán một đoạn bị hỏng mã hóa, ví dụ `YÃªu cáº§u Nghá»‰ phÃ©p…`, hoặc bị mất dấu, ví dụ `Ngh? ph?p`.
+- **Mong đợi:** lỗi **Lỗi ký tự**, kèm hướng dẫn lưu lại file dạng UTF-8.
+
+**8.3 Mâu thuẫn với quy định đang hiệu lực.** Sau khi ban hành QC05-2026 (kịch bản 4), thử ban hành `Điều 1: Yêu cầu Làm việc từ xa (WFH) được tự động duyệt.`
+- **Mong đợi:** lỗi mâu thuẫn, chỉ ra **Điều 5 của QC05-2026**.
+
+**8.4 Cảnh báo không chặn.**
+- Câu AI chưa hiểu (phần trăm, khu vực) và câu trùng luật với văn bản khác chỉ hiện **lưu ý** màu vàng.
+- Vẫn ban hành được.
+- Câu chưa hiểu vào hàng chờ duyệt của admin, như kịch bản 7.
+
+**8.5 Trả lại khi AI học thất bại.** Chỉ thử trên local.
+1. Ban hành một quy định hợp lệ, chờ áp dụng xong.
+2. Chạy `docker compose stop ai-service`, rồi **sửa** quy định đó.
+3. Chờ khoảng 2 phút. AI thử lại 3 lần rồi bỏ cuộc.
+4. Chạy `docker compose start ai-service`.
+
+**Mong đợi:**
+- Nội dung quy định trên trang **quay về bản đã áp dụng**. Lịch sử phiên bản ghi "Trả lại bản … khôi phục nội dung bản …".
+- Cổng nhân viên được mở khoá.
+- Admin nhận thông báo **"Quy định … bị trả lại: AI chưa học được"**.
+- Đầu trang Quy định có mục **Quy định bị trả lại**, gồm nội dung bản sửa, nguyên nhân và hai nút:
+  - **Sửa và nạp lại:** mở form điền sẵn nội dung bị trả lại kèm danh sách lỗi. Nạp lại thành công thì mục này tự đóng.
+  - **Bỏ qua:** đóng mục này, phải ghi lý do.
+
+Kiểm thử tự động tương ứng: `tests/live/test_regulation_rejection.py` (RV-01…RV-05).
 
 ## Xem AI đã làm gì
 

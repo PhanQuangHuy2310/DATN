@@ -1,4 +1,4 @@
-# AI chặn và chuyển hồ sơ A sang B/C khi dính bad case, đề xuất xử lý, học từ phản hồi và học bad case mới (migration 23–25)
+# AI chặn và chuyển hồ sơ A sang B/C khi dính bad case, đề xuất xử lý, học từ phản hồi, học bad case mới, trả lại quy định lỗi (migration 23–26)
 
 Nhánh `dat` → `main`: 29 commit, chứa toàn bộ `main` hiện tại, gộp thử không xung đột.
 
@@ -7,6 +7,11 @@ Nhánh `dat` → `main`: 29 commit, chứa toàn bộ `main` hiện tại, gộp
 - đã chạy thử cả 3 file trong một giao dịch rồi hoàn tác.
 
 Sau khi chạy, lược đồ `eas` khớp hoàn toàn với bản local. Merge PR này **không cần chạy thêm SQL nào**.
+
+**Migration 26 (quy định bị trả lại) CHƯA chạy trên Supabase chung**, cần chạy sau khi merge:
+- File: `database/migrations/26_regulation_rejection.sql`.
+- Chỉ thêm một bảng. Đã chạy thử trên local: chạy, chạy lại, rollback, chạy lại.
+- Chưa chạy thì văn bản lỗi vẫn bị chặn khi ban hành. Chỉ phần trả lại bản lỗi khi AI học thất bại chưa hoạt động, hệ thống giữ cách cũ.
 
 Phần lớn số dòng thêm (~74 nghìn) là dữ liệu huấn luyện, bộ test và mô hình. Mã nguồn thay đổi ít hơn nhiều.
 
@@ -21,6 +26,22 @@ Phần lớn số dòng thêm (~74 nghìn) là dữ liệu huấn luyện, bộ 
 | Mô hình rủi ro | Học thêm 5 đặc trưng ngữ cảnh. Kịch bản ngữ cảnh 10/24 → **18/24**; độ chính xác tổng giảm nhẹ 0,966 → 0,955 (báo cáo trung thực). |
 | Học từ phản hồi (migration 24) | AI "sai tối đa 1 lần": nhớ các lần quản lý thu hồi tự duyệt, bấm "AI chuyển nhầm" hoặc chọn người khác người AI xếp đầu. Câu quy định AI chưa hiểu được đưa vào hàng chờ admin, kèm gợi ý của Gemini. Học dồn chỉ thay mô hình khi không kém mô hình cũ. Kiểm thử thật 5/5: 0 lần lặp lỗi, 0 lần học tràn. |
 | Học bad case mới (migration 25, yêu cầu trưởng nhóm) | Bảng `eas.bad_case` và `eas.bad_case_evidence`. AI phân loại lý do thu hồi. Đủ tiêu chí (≥ 3 lần, ≥ 2 người gửi, ≥ 2 người duyệt, đo được, bắt ≤ 30% hồ sơ cùng loại) thì **tự thêm bad case**. Chưa đủ thì **nêu lý do và hỏi admin** (trang Quy định → Danh mục bad case). |
+
+### AI đọc văn bản quy định, trả lỗi, trả lại bản lỗi (migration 26, theo trao đổi với trưởng nhóm)
+
+- **Khi ban hành hoặc sửa** (và nút "AI kiểm tra trước"), AI đọc văn bản và chặn hai loại lỗi, chỉ rõ từng câu:
+  - **Lỗi ký tự:** hỏng mã hóa, mất dấu, ký tự lạ.
+  - **Mâu thuẫn:** một điều cho tự duyệt, một điều bắt duyệt thủ công, trong cùng văn bản hoặc với quy định đang hiệu lực. Ví dụ: "Điều 1 … nhưng Điều 5 của QC05 …".
+
+  Văn bản lỗi không được lưu và không khoá hệ thống. Câu AI chưa hiểu và câu trùng lặp chỉ là lưu ý, không chặn.
+- **Trong lượt học**, AI đọc lại các văn bản đã đổi. Có lỗi lọt vào (ví dụ nhập thẳng CSDL), hoặc học thất bại sau mọi lần thử, thì:
+  - **hiệu lực quay về bản đã áp dụng**: văn bản hiển thị và bộ luật AI, lịch sử phiên bản ghi rõ "trả lại";
+  - bản lỗi vào mục **Quy định bị trả lại**, kèm danh sách lỗi, nút **Sửa và nạp lại** và nút **Bỏ qua**;
+  - admin nhận thông báo.
+
+  Văn bản không lỗi trong cùng đợt vẫn được học tiếp.
+- **Sửa lỗi có từ trước:** ban hành lại một mã quy định đã gỡ từng trả lỗi 500 vì cột mã là UNIQUE kể cả khi đã xóa mềm. Giờ hệ thống dùng lại dòng cũ.
+- **Kiểm thử thật** `tests/live/test_regulation_rejection.py`: **5/5**, gồm cả ca tắt ai-service để AI học thất bại.
 
 ## Số đo trung thực của bộ phân loại lý do thu hồi
 
@@ -41,10 +62,10 @@ Có 2 bộ test, mỗi bộ được băm trước khi huấn luyện. Bộ 2 l�
 | Bộ | Kết quả |
 |---|---|
 | Django (`manage.py test api_core`) | 465 OK |
-| `tests/run_tests.py` | 251 OK |
+| `tests/run_tests.py` | 260 OK |
 | Test AI (venv AI) | 43 OK |
 | Web (`npm test`) | 85/85 OK, build OK |
-| Kiểm thử thật (bản sao CSDL local) | Học bad case 4/4 (hai lần liên tiếp); học từ phản hồi 4/5; chuyển quy trình 4/6 |
+| Kiểm thử thật (bản sao CSDL local) | Trả lại quy định lỗi 5/5; học bad case 4/4 (hai lần liên tiếp); học từ phản hồi 4/5; chuyển quy trình 4/6 |
 
 3 ca kiểm thử thật trượt (ESC-04, ESC-05, FB-03) do **dữ liệu test tích lũy trên bản local**, không phải lỗi code: một tài khoản đang giữ 46 việc chưa đóng, mà kế hoạch xử lý chỉ lấy 30 việc có hạn sớm nhất. Phần code đề xuất xử lý không đổi trong đợt sau cùng.
 

@@ -3,6 +3,11 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **18/11 — AI đọc văn bản quy định, trả lỗi, trả lại bản lỗi** (theo trao đổi với trưởng nhóm):
+  - Văn bản lỗi ký tự hoặc mâu thuẫn (trong văn bản, hoặc với quy định đang hiệu lực) bị chặn khi ban hành, kèm lỗi từng câu.
+  - Lượt học phát hiện lỗi, hoặc học thất bại sau mọi lần thử: hiệu lực (văn bản + bộ luật AI) quay về bản đã áp dụng; bản lỗi vào `eas.regulation_rejection` (migration 26) để sửa và nạp lại; admin được báo.
+  - Sửa luôn lỗi có từ trước: không ban hành lại được mã quy định đã gỡ.
+  - Kiểm thử thật RV 5/5.
 - [x] **18/11 — AI học bad case mới từ lý do thu hồi tự duyệt** (yêu cầu trưởng nhóm; báo cáo `ai_service/training/data/bad_case_reason_report.md`):
   - Migration 25: bảng `eas.bad_case` (12 bad case có sẵn + bad case học được, cột "vì sao là bad case") và `eas.bad_case_evidence`.
   - AI phân loại lý do, đề xuất điều kiện đo được, gom lý do giống nhau. Đủ tiêu chí (≥ 3 lần, ≥ 2 người gửi, ≥ 2 người duyệt, đo được, bắt ≤ 30% hồ sơ cùng loại) thì tự thêm bad case; chưa đủ thì nêu lý do và hỏi admin (trang Quy định).
@@ -94,6 +99,7 @@ Các giai đoạn:
 - 1.5: chỉ hoàn tác được hồ sơ vòng đời A đã COMPLETED (AI chỉ tự duyệt vòng đời A). Bất kỳ APPROVER trong phạm vi phòng/loại (trừ người tạo) đều thu hồi được, không chỉ người duyệt gốc.
 
 ## Việc tôi phải làm thủ công
+- **18/11: chạy `database/migrations/26_regulation_rejection.sql` trên Supabase chung** (đã chạy thử trên local: chạy, chạy lại, rollback, chạy lại). Chưa chạy thì văn bản lỗi vẫn bị chặn khi ban hành; chỉ phần trả lại bản lỗi khi AI học thất bại chưa hoạt động (giữ cách cũ).
 - **18/11: chạy `database/migrations/25_bad_case_learning.sql` trên Supabase SQL Editor sau migration 24.** Chưa chạy thì AI dùng 12 bad case trong mã và không học bad case mới. Rollback: `database/migrations/rollback/25_bad_case_learning_rollback.sql`.
 - **18/11: chạy `database/migrations/24_ai_feedback_learning.sql` trên Supabase SQL Editor sau migration 23.** Chưa chạy thì AI vẫn chạy bình thường nhưng không ghi nhớ phản hồi. Rollback: `database/migrations/rollback/24_ai_feedback_learning_rollback.sql` (xóa bộ nhớ ca, sao lưu trước nếu cần).
 - **18/11: chạy `database/migrations/23_ai_bad_case_escalation.sql` trên Supabase SQL Editor** (đã chạy thử trên Supabase local). Chưa chạy thì hệ thống vẫn chạy như cũ: AI chỉ chặn tự duyệt, không chuyển luồng (audit `AI_ESCALATION_SKIPPED` lý do `ESCALATION_RELEASE_MISSING`). Rollback: `database/migrations/rollback/23_ai_bad_case_escalation_rollback.sql` (tự từ chối nếu còn hồ sơ đã nâng luồng đang mở).
