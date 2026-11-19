@@ -15,14 +15,14 @@ import argparse
 import json
 import sys
 import time
-import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import test_report_scenarios as t  # noqa: E402
+import test_report_scenarios as t
 
-TODAY = date.today()
+TODAY = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
 
 
 def flags(o: t.Oracle, rid: str, timeout: float = 25.0) -> list[str]:
@@ -126,7 +126,7 @@ def bc_01(o: t.Oracle) -> str:
 
 
 def bc_04(o: t.Oracle) -> str:
-    rid, h, email = t.submit(o, "WFH_REQ")
+    rid, _h, _email = t.submit(o, "WFH_REQ")
     step = o.active_step(rid)
     approver = o.email(step[2])
     sqlstate = o.try_tamper_as("eas_api", f"""UPDATE eas.approval_step SET assignee_id=

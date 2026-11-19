@@ -166,7 +166,7 @@ def analyze(regulation: str, types: list[dict], old_regulations: list[dict] | No
                 try:
                     out = call_gemini(prompt, api_key, model_name, timeout)
                     break
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     if attempt == retries or "TooManyRequests" not in type(exc).__name__ + str(exc)[:200]:
                         raise
                     time.sleep(retry_wait * (2 ** attempt))

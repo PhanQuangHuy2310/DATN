@@ -28,8 +28,9 @@ import traceback
 import urllib.error
 import urllib.request
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 from urllib.parse import urlsplit
 
 import psycopg
@@ -492,7 +493,7 @@ def sec_01(o: Oracle) -> str:
 def sec_02(o: Oracle) -> str:
     h = login(o.requester("SEC-02"))
     before = o.one("SELECT count(*) FROM eas.request")[0]
-    st, body = h.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Không có CSRF"},
+    st, _body = h.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Không có CSRF"},
                       idem=str(uuid.uuid4()), csrf=False)
     after = o.one("SELECT count(*) FROM eas.request")[0]
     check(st == 403 and after == before, f"HTTP {st}, số hồ sơ {before}→{after}")
@@ -501,10 +502,10 @@ def sec_02(o: Oracle) -> str:
 
 @case("SEC-03")
 def sec_03(o: Oracle) -> str:
-    rid, h, email = submit(o, "WFH_REQ")
+    _rid, _h, email = submit(o, "WFH_REQ")
     owner = login(email)
     raw, ct = multipart("file", "rieng_tu.pdf", PDF, "application/pdf")
-    draft_st, draft = owner.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Hồ sơ có tệp riêng tư"},
+    _draft_st, draft = owner.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Hồ sơ có tệp riêng tư"},
                                  idem=str(uuid.uuid4()))
     did = rid_of(draft)
     st, att = owner.call("POST", f"/api/v1/request-drafts/{did}/attachments", raw=raw, content_type=ct)
@@ -526,7 +527,7 @@ def sec_03(o: Oracle) -> str:
 @case("SEC-04")
 def sec_04(o: Oracle) -> str:
     h = login(o.requester("SEC-04"))
-    st, d = h.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Bản nháp hai tab"}, idem=str(uuid.uuid4()))
+    _st, d = h.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Bản nháp hai tab"}, idem=str(uuid.uuid4()))
     did = rid_of(d)
     v = o.req(did)["version"]
     st1, _ = h.call("PATCH", f"/api/v1/request-drafts/{did}", {"expected_version": v, "payload": {"title": "Tab một lưu trước"}})
@@ -554,7 +555,7 @@ def sec_05(o: Oracle) -> str:
     [t.join() for t in threads]
     n_dec = o.one("SELECT count(*) FROM eas.approval_decision WHERE step_id=%s", step[0])[0]
     n_active = o.one("SELECT count(*) FROM eas.approval_step WHERE request_id=%s AND state='ACTIVE'", rid)[0]
-    check(sorted(results)[0] in (200, 201) and sorted(results)[1] >= 400 and n_dec == 1 and n_active <= 1,
+    check(min(results) in (200, 201) and sorted(results)[1] >= 400 and n_dec == 1 and n_active <= 1,
           f"HTTP {results}, quyết định {n_dec}, bước ACTIVE {n_active}")
     return f"{o.req(rid)['code']}: hai lệnh duyệt đồng thời → HTTP {sorted(results)}; 1 quyết định, {n_active} bước ACTIVE"
 
@@ -585,7 +586,7 @@ def sec_07(o: Oracle) -> str:
 def sec_08(o: Oracle) -> str:
     h = login(o.requester("SEC-08"))
     key = str(uuid.uuid4())
-    st1, b1 = h.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Khóa idempotency lần một"}, idem=key)
+    st1, _b1 = h.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Khóa idempotency lần một"}, idem=key)
     before = o.one("SELECT count(*) FROM eas.request")[0]
     st2, b2 = h.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Cùng khóa nhưng dữ liệu khác"}, idem=key)
     after = o.one("SELECT count(*) FROM eas.request")[0]
@@ -598,7 +599,7 @@ def sec_06(o: Oracle) -> str:
     import subprocess
     rid = o.one("SELECT id::text FROM eas.request WHERE status='COMPLETED' ORDER BY completed_at DESC LIMIT 1")[0]
     out = subprocess.run(["docker", "exec", "eas-api-1", "python", "manage.py", "audit_verify", "--scope", f"REQ:{rid}"],
-                         capture_output=True, text=True, timeout=120)
+                         capture_output=True, text=True, timeout=120, check=False)
     status = (json.loads(out.stdout or "{}") or {}).get("status")
     upd = o.try_tamper_as("eas_api", f"UPDATE eas.audit_event SET action=action WHERE request_id='{rid}'")
     dele = o.try_tamper_as("eas_api", f"DELETE FROM eas.audit_event WHERE request_id='{rid}'")
@@ -615,7 +616,8 @@ def int_06(o: Oracle) -> str:
             "    r=urllib.request.Request('http://mock-systems:8000/mock-api/v1/hr/employees',headers=h)\n"
             "    try: print(urllib.request.urlopen(r,timeout=10).status)\n"
             "    except urllib.error.HTTPError as e: print(e.code)\n")
-    out = subprocess.run(["docker", "exec", "eas-api-1", "python", "-c", code], capture_output=True, text=True, timeout=60)
+    out = subprocess.run(["docker", "exec", "eas-api-1", "python", "-c", code], capture_output=True, text=True, timeout=60,
+                         check=False)
     codes = [int(x) for x in out.stdout.split() if x.isdigit()]
     check(len(codes) == 2 and all(c in (401, 403) for c in codes), f"mã trả về {codes} {out.stderr[-200:]}")
     return f"gọi Mock Systems API không có khóa → {codes[0]}, khóa sai → {codes[1]}"
@@ -690,7 +692,7 @@ def dlg_01(o: Oracle) -> str:
     check(st == 200 and items, f"không có người nhận ủy quyền hợp lệ: HTTP {st} {cands}")
     delegate = items[0].get("id") or items[0].get("user_id")
     now = time.time()
-    iso = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(t))  # noqa: E731
+    iso = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(t))
     st, d = h.call("POST", "/api/v1/delegations", {"delegate_id": delegate, "starts_at": iso(now - 60),
                                                    "ends_at": iso(now + 86400), "reason": "Nghỉ phép, ủy quyền kiểm thử"})
     did = (d.get("delegation") or d).get("id")
@@ -718,10 +720,10 @@ def dlg_02(o: Oracle) -> str:
                             (SELECT 1 FROM eas.role_membership m WHERE m.user_id=u.id AND m.role IN ('APPROVER','MANAGER','TEAM_LEAD',
                              'DIRECTOR','VICE_DIRECTOR','OPS_ADMIN','POLICY_ADMIN') AND m.revoked_at IS NULL) LIMIT 1""")[0]
     now = time.time()
-    iso = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(t))  # noqa: E731
+    iso = lambda t: time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(t))
     st_bad, b_bad = h.call("POST", "/api/v1/delegations", {"delegate_id": non_approver, "starts_at": iso(now),
                                                            "ends_at": iso(now + 86400), "reason": "Ủy quyền cho người thiếu vai trò"})
-    st, cands = h.call("GET", "/api/v1/delegations/candidates")
+    _st, cands = h.call("GET", "/api/v1/delegations/candidates")
     delegate = ((cands.get("items") or cands.get("candidates") or [{}])[0]).get("id")
     st_ok, d = h.call("POST", "/api/v1/delegations", {"delegate_id": delegate, "starts_at": iso(now + 3600),
                                                       "ends_at": iso(now + 7200), "reason": "Ủy quyền sẽ được làm hết hạn"})
