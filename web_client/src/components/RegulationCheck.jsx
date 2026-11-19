@@ -10,6 +10,8 @@ const KIND_TEXT = {
   DUPLICATE: "Trùng lặp",
   NO_CONTROL: "Không đổi cách duyệt",
   SUPERSEDES: "Sẽ thay thế",
+  RELAXES: "Nới lỏng kiểm soát",
+  AUTO_NO_EFFECT: "AI duyệt không có tác dụng",
   VALIDATION: "Văn bản lỗi",
   TECHNICAL: "Lỗi kỹ thuật",
 };
@@ -23,7 +25,7 @@ function Issue({ item }) {
       {item.sentence && <blockquote className="ai-citation-quote">{item.sentence}</blockquote>}
       {item.related?.sentence && (
         <p className="muted">
-          {item.kind === "SUPERSEDES" ? "Điều cũ bị thay" : "Chồng với"} {item.related.article || "một điều"}
+          {item.kind === "SUPERSEDES" ? "Điều cũ bị thay" : item.kind === "RELAXES" ? "Điều cũ bắt người duyệt" : "Chồng với"} {item.related.article || "một điều"}
           {item.related.code ? ` của ${item.related.code}` : ""}: “{item.related.sentence}”
         </p>
       )}

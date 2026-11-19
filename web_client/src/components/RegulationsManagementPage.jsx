@@ -112,6 +112,11 @@ export function RegulationsManagementPage() {
         body: JSON.stringify({ code: formCode.trim(), title: formTitle.trim(), category: formCategory, content: formContent.trim() }),
       });
       setCheck(res.validation);
+      if (res.validation?.errors?.length) {
+        requestAnimationFrame(() =>
+          document.querySelector(".reg-check-item.error")?.scrollIntoView({ block: "center", behavior: "smooth" }),
+        );
+      }
     } catch (err) {
       showToast("AI chưa kiểm tra được văn bản: " + errorText(err), "error");
     } finally {
@@ -124,6 +129,10 @@ export function RegulationsManagementPage() {
     if (err?.body?.validation) {
       setCheck(err.body.validation);
       showToast(err.serverMessage || "AI phát hiện lỗi trong văn bản; xem danh sách bên dưới", "error");
+      // The list can be long (supersede notes): bring the first blocking error into view.
+      requestAnimationFrame(() =>
+        document.querySelector(".reg-check-item.error")?.scrollIntoView({ block: "center", behavior: "smooth" }),
+      );
       return true;
     }
     return false;
@@ -149,8 +158,11 @@ export function RegulationsManagementPage() {
     }
     setSubmitting(true);
     try {
+      // silent: this page reports the exact result itself (the generic "Không thể thực hiện thao tác" hid the
+      // validation errors that block publishing).
       const res = await api(`${apiBase}/regulations`, {
         method: "POST",
+        silent: true,
         body: JSON.stringify({
           code: formCode.trim(),
           title: formTitle.trim(),
@@ -184,6 +196,7 @@ export function RegulationsManagementPage() {
     try {
       const res = await api(`${apiBase}/regulations/${editingRegulation.id}`, {
         method: "PATCH",
+        silent: true,
         body: JSON.stringify({
           title: formTitle.trim(),
           category: formCategory,
@@ -213,6 +226,7 @@ export function RegulationsManagementPage() {
     try {
       const res = await api(`${apiBase}/regulations/${deletingRegulation.id}`, {
         method: "DELETE",
+        silent: true,
       });
       showToast(res.message || "Đã gỡ bỏ quy định và nâng phiên bản lớn!", "success");
       setDeletingRegulation(null);

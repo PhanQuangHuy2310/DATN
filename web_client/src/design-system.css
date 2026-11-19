@@ -5258,3 +5258,25 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 /* AI gợi ý phân loại / trọng số trong form tạo mẫu yêu cầu (admin). */
 .ai-profile-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 4px 0 12px; padding: 10px 12px; border: 1px solid var(--ds-primary-soft); border-left: 3px solid var(--ds-primary); border-radius: 8px; background: var(--ds-surface); font-size: 14px; }
 .ai-profile-hint button { min-height: 32px; padding: 4px 12px; margin-left: auto; }
+
+/* Page-level toasts of the admin pages (Quy định, Quản trị AI, Quản lý API) had no style at all, so their messages
+   ("Đã ban hành…", the exact validation error) rendered as plain text at the bottom of the page, under the modal. */
+.eas-toast-notification {
+  position: fixed;
+  top: 22px;
+  right: 20px;
+  z-index: 2100;
+  width: min(440px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border: 1px solid var(--ds-line);
+  border-left: 4px solid var(--ds-success, #11a574);
+  border-radius: 12px;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  box-shadow: 0 15px 42px rgba(16, 40, 70, 0.18);
+  line-height: 1.5;
+  animation: toast-in 0.26s cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+.eas-toast-notification.error { border-left-color: var(--ds-danger, #d7494f); }
+.eas-toast-notification.warning { border-left-color: var(--ds-warning, #d98a00); }
+.eas-toast-notification.info { border-left-color: var(--ds-primary); }
