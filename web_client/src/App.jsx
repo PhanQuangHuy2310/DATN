@@ -1414,7 +1414,7 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
               </div>
             </div>
           </div>
-          {canSearch && <GlobalSearch portal={portal} onOpen={(id, item) => {
+          {canSearch && <GlobalSearch key={`${page}|${activeTitle}`} portal={portal} onOpen={(id, item) => {
             if (adminSearch) {
               // Metadata-only scope: open the operations row instead of the restricted detail.
               if (user.roles.includes("AUDITOR")) openRequest(id); else navigate("ops", item?.code || "");

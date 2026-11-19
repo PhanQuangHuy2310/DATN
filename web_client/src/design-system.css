@@ -5144,3 +5144,49 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .reg-superseded { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--ds-line); border-radius: var(--ds-radius); }
 .reg-superseded h4 { margin: 0 0 6px; }
 .reg-superseded ul { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
+
+/* Tìm kiếm trên điện thoại (≤640px): chỉ còn nút kính lúp; bấm vào thì thanh tìm kiếm phủ kín thanh đầu trang,
+   Esc / bấm ra ngoài / nút × / chuyển trang thì về lại kính lúp (AppHeader.jsx GlobalSearch). */
+@media (max-width: 640px) {
+  .app-shell .topbar .ds-global-search.is-compact { order: 0; flex: 0 0 auto; min-width: 0; }
+  .app-shell .topbar .ds-global-search.is-expanded {
+    position: absolute; inset: 0; z-index: 40; order: 0; flex: none; min-width: 0;
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: var(--ds-surface); border-bottom: 1px solid var(--ds-line);
+  }
+  .app-shell .topbar .ds-global-search.is-expanded input { flex: 1 1 auto; width: auto; min-width: 0; }
+  .app-shell .topbar .ds-global-search.is-expanded > span { left: 26px; }
+  .app-shell .topbar .ds-global-search.is-expanded .ds-search-results { left: 12px; right: 12px; top: calc(100% - 2px); }
+  .app-shell .topbar .ds-search-close { flex: 0 0 auto; min-height: 42px; padding: 0 14px; white-space: nowrap; }
+  /* Ô tìm kiếm chỉ còn kính lúp nên cả thanh đầu trang gói vào một hàng (luật ≤480px cũ cho xuống dòng để ô
+     tìm kiếm chiếm hàng 2); tên trang tự cắt "…" khi hẹp. */
+  .app-shell .workspace > .topbar { flex-wrap: nowrap; }
+  .app-shell .topbar-right { flex: 0 0 auto; gap: 4px; }
+  .app-shell .topbar-title-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .app-shell .topbar-title-row .topbar-page-title { font-size: 17px; line-height: 1.2; }
+  .app-shell .topbar-page-info { flex: 0 0 auto; }
+}
+@media (max-width: 400px) {
+  .app-shell .topbar .ds-icon-button { width: 32px; height: 32px; min-height: 32px; }
+  .app-shell .workspace > .topbar { padding-left: 8px; padding-right: 8px; gap: 6px; }
+  .app-shell .topbar .menu-toggle { width: 38px; height: 38px; min-height: 38px; padding: 0; }
+}
+
+/* Thanh lọc mẫu yêu cầu: label có margin-bottom 17px từ luật chung nên với align-items:end, nút "Đặt lại bộ lọc"
+   (không có margin) nằm thấp hơn ô chọn 17px. Bỏ margin trong thanh lọc và cho nút cao bằng ô chọn. */
+.request-menu-tools > label, .plan-filter-toolbar > label { margin-bottom: 0; }
+.request-menu-tools > .request-menu-clear { height: 42px; min-height: 42px; padding-top: 0; padding-bottom: 0; }
+
+/* Hộp thoại trong trang Người dùng: tiêu đề và nút ✕ cùng một hàng (trước đây ✕ rơi xuống dưới tiêu đề vì
+   .modal-head không có luật bố cục nào). */
+.modal-card > .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.modal-card > .modal-head h2 { margin: 0; flex: 1 1 auto; min-width: 0; font-size: 20px; line-height: 1.3; }
+.modal-card > .modal-head .ds-icon-button { flex: 0 0 auto; }
+.work-status-note { margin: 0 0 1rem; padding: 8px 12px; border-left: 3px solid var(--ds-primary); background: var(--ds-primary-soft); border-radius: 6px; font-size: 13.5px; color: var(--ds-ink); }
+.work-status-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 1.5rem; }
+.work-status-actions-main { display: flex; gap: 8px; margin-left: auto; }
+@media (max-width: 520px) {
+  .work-status-actions { flex-direction: column-reverse; align-items: stretch; }
+  .work-status-actions > button, .work-status-actions-main { width: 100%; }
+  .work-status-actions-main > button { flex: 1 1 0; }
+}

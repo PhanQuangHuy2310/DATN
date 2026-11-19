@@ -46,10 +46,35 @@ const QUICK_FEATURES = [
   { key: "notifications", label: "Trung tâm thông báo", hint: "Chức năng", portal: "both" },
 ];
 
+// Cỡ điện thoại: ô tìm kiếm thu về một nút kính lúp; bấm vào thì thanh tìm kiếm phủ cả thanh đầu trang.
+const COMPACT_SEARCH_QUERY = "(max-width: 640px)";
+
+function useCompactSearch() {
+  const [compact, setCompact] = useState(() => Boolean(window.matchMedia?.(COMPACT_SEARCH_QUERY).matches));
+  useEffect(() => {
+    const mq = window.matchMedia?.(COMPACT_SEARCH_QUERY);
+    if (!mq) return undefined;
+    const onChange = () => setCompact(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+  return compact;
+}
+
+const SearchIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </svg>
+);
+
 /** Searches by request code, title, requester name or quick feature title. */
 export function GlobalSearch({ portal, onOpen, onNavigate }) {
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const compact = useCompactSearch();
+  const inputRef = useRef(null);
   const query = useDebounced(text.trim(), 280);
   const base = portal === "admin" ? "/api/v1/ops/requests" : "/api/v1/requests";
   const results = useResource(
@@ -57,8 +82,40 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
       ? `${base}?limit=8&offset=0&q=${encodeURIComponent(query)}`
       : "",
   );
-  const ref = useDismiss(open, setOpen);
+  // Trên điện thoại, "đóng" nghĩa là về hẳn trạng thái ban đầu: chỉ còn kính lúp, chữ đã gõ bị xóa.
+  const collapse = () => {
+    setOpen(false);
+    setExpanded(false);
+    setText("");
+  };
+  const dismiss = (value) => {
+    if (value) return setOpen(true);
+    if (compact && expanded) collapse();
+    else setOpen(false);
+  };
+  const ref = useDismiss(open || expanded, dismiss);
   const items = query.length >= 2 ? results.data?.items || [] : [];
+
+  useEffect(() => {
+    if (expanded) inputRef.current?.focus();
+  }, [expanded]);
+  // Chuyển trang: App.jsx gắn key theo trang nên ô tìm kiếm được tạo lại, về trạng thái ban đầu.
+
+  if (compact && !expanded) {
+    return (
+      <div className="ds-global-search is-compact" role="search">
+        <button
+          type="button"
+          className="secondary ds-icon-button ds-search-toggle"
+          aria-label="Tìm hồ sơ, chức năng"
+          title="Tìm hồ sơ, chức năng"
+          onClick={() => setExpanded(true)}
+        >
+          <SearchIcon />
+        </button>
+      </div>
+    );
+  }
 
   const matchedFeatures =
     query.length >= 2
@@ -70,13 +127,14 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
       : [];
 
   return (
-    <div className="ds-global-search" ref={ref} role="search">
+    <div className={`ds-global-search${compact ? " is-expanded" : ""}`} ref={ref} role="search">
       <label htmlFor="ds-global-search" className="sr-only">
         Tìm nhanh chức năng, tiêu đề đơn, người gửi hoặc mã hồ sơ
       </label>
       <span aria-hidden="true">⌕</span>
       <input
         id="ds-global-search"
+        ref={inputRef}
         type="search"
         role="combobox"
         aria-autocomplete="list"
@@ -92,6 +150,16 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
         }}
         onFocus={() => setOpen(true)}
       />
+      {compact && (
+        <button
+          type="button"
+          className="secondary ds-search-close"
+          aria-label="Đóng tìm kiếm"
+          onClick={collapse}
+        >
+          Đóng
+        </button>
+      )}
       {open && query.length >= 2 && (
         <ul id="ds-global-search-results" className="ds-search-results">
           {matchedFeatures.length > 0 && (
@@ -102,8 +170,7 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
               <button
                 type="button"
                 onClick={() => {
-                  setOpen(false);
-                  setText("");
+                  collapse();
                   if (onNavigate) onNavigate(feat.key);
                 }}
               >
@@ -128,8 +195,7 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
               <button
                 type="button"
                 onClick={() => {
-                  setOpen(false);
-                  setText("");
+                  collapse();
                   onOpen(item.id, item);
                 }}
               >
