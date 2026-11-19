@@ -145,10 +145,18 @@ for (const width of [1440, 1024, 768, 375]) {
       await page.keyboard.press("Escape");
       await expect(page.locator(".sidebar.open")).toHaveCount(0);
     }
+    // ≤ 640px: ô tìm kiếm thu thành kính lúp, bấm vào mới mở; chọn kết quả xong thì thu lại.
+    const compact = width <= 640;
+    if (compact) await page.getByRole("button", { name: "Tìm hồ sơ, chức năng" }).click();
     const search = page.getByRole("combobox", { name: /Tìm nhanh/ });
     await search.fill("REQ");
     await page.locator("#ds-global-search-results").getByRole("button", { name: /REQ-2026-0012/ }).click();
-    await expect(search).toHaveValue("");
+    if (compact) {
+      await expect(search).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Tìm hồ sơ, chức năng" })).toBeVisible();
+    } else {
+      await expect(search).toHaveValue("");
+    }
     await expect(page.getByRole("tab", { name: "Người phê duyệt" })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
