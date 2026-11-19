@@ -12,3 +12,5 @@ ai_service/training/data/feedback_learning_episodes*.json -text
 ai_service/training/data/feedback_learning_episodes*.sha256 -text
 ai_service/training/data/request_eval_everyday.json -text
 ai_service/training/data/request_eval_everyday.sha256 -text
+ai_service/training/data/request_eval_everyday2.json -text
+ai_service/training/data/request_eval_everyday2.sha256 -text
