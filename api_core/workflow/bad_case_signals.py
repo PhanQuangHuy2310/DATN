@@ -112,12 +112,19 @@ SQL_SIGNALS = f"""
              AND (w.due_at AT TIME ZONE %(tz)s)::date BETWEEN me.d_start AND me.d_end)
     ),
     hist AS (
-      SELECT r2.id, t2.code, r2.status, v2.amount_vnd, v2.submitted_at
+      SELECT r2.id, t2.code, r2.status, v2.amount_vnd,
+             coalesce(v0.first_submitted_at, v2.submitted_at) AS submitted_at
       FROM eas.request r2
       JOIN eas.request_type t2 ON t2.id = r2.type_id
       JOIN eas.request_revision v2 ON v2.id = r2.current_revision_id
+      JOIN LATERAL (
+        SELECT min(vr.submitted_at) AS first_submitted_at
+        FROM eas.request_revision vr
+        WHERE vr.request_id = r2.id
+      ) v0 ON true
       JOIN me ON r2.requester_id = me.requester_id
-      WHERE v2.submitted_at <= me.t0 AND v2.submitted_at > me.t0 - interval '90 days'
+      WHERE coalesce(v0.first_submitted_at, v2.submitted_at) <= me.t0
+        AND coalesce(v0.first_submitted_at, v2.submitted_at) > me.t0 - interval '90 days'
     ),
     absences AS (
       -- vắng mặt: lịch nghỉ/công tác đã duyệt + đơn nghỉ/công tác trong EAS chưa bị từ chối/hủy
@@ -257,9 +264,25 @@ EMPTY: dict[str, Any] = {
     "location_text": "",
     "same_type_dates": [],
 }
-REQUEST_FEATURES = ("notice_hours", "start_day_of_month", "start_weekday", "submit_hour")
-LOCATION_FIELDS = ("location", "destination", "room_code", "room_name", "facility_zone", "source_warehouse",
-                   "destination_warehouse", "site", "branch", "area", "address")
+REQUEST_FEATURES = (
+    "notice_hours",
+    "start_day_of_month",
+    "start_weekday",
+    "submit_hour",
+)
+LOCATION_FIELDS = (
+    "location",
+    "destination",
+    "room_code",
+    "room_name",
+    "facility_zone",
+    "source_warehouse",
+    "destination_warehouse",
+    "site",
+    "branch",
+    "area",
+    "address",
+)
 SQL_POLICY_FEATURES = """
     SELECT v.payload->>'discount_percent',
            concat_ws(' | ', VARIADIC ARRAY(SELECT v.payload->>k FROM unnest(%(fields)s::text[]) k
@@ -279,11 +302,19 @@ def _policy_features(request_id: str) -> dict:
     """Phần trăm chiết khấu, địa điểm (gộp các trường địa điểm của biểu mẫu), ngày các hồ sơ cùng loại trước đây."""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(SQL_POLICY_FEATURES, {"request_id": request_id, "fields": list(LOCATION_FIELDS),
-                                                 "tz": LOCAL_TZ})
+            cursor.execute(
+                SQL_POLICY_FEATURES,
+                {
+                    "request_id": request_id,
+                    "fields": list(LOCATION_FIELDS),
+                    "tz": LOCAL_TZ,
+                },
+            )
             row = cursor.fetchone()
     except Exception:
-        logger.warning("policy features unavailable: request=%s", request_id, exc_info=True)
+        logger.warning(
+            "policy features unavailable: request=%s", request_id, exc_info=True
+        )
         return {"percent": None, "location_text": "", "same_type_dates": []}
     if not row:
         return {"percent": None, "location_text": "", "same_type_dates": []}
@@ -293,7 +324,11 @@ def _policy_features(request_id: str) -> dict:
         percent = None
     if percent is not None and not 0 <= percent <= 100:
         percent = None
-    return {"percent": percent, "location_text": (row[1] or "")[:600], "same_type_dates": list(row[2] or [])[:400]}
+    return {
+        "percent": percent,
+        "location_text": (row[1] or "")[:600],
+        "same_type_dates": list(row[2] or [])[:400],
+    }
 
 
 def load_signals(request_id: str) -> dict[str, Any]:
@@ -346,7 +381,9 @@ def _request_features(request_id: str) -> dict:
         with connection.cursor() as cursor:
             feats = request_features(cursor, request_id)
     except Exception:
-        logger.warning("request features unavailable: request=%s", request_id, exc_info=True)
+        logger.warning(
+            "request features unavailable: request=%s", request_id, exc_info=True
+        )
         return dict.fromkeys(REQUEST_FEATURES)
     return {k: feats.get(k) for k in REQUEST_FEATURES}
 

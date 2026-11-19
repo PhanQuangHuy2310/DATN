@@ -64,7 +64,10 @@ class AutoApproveTakeoverConflictTests(SimpleTestCase):
 
         from api_core.workflow.bad_case_signals import EMPTY
 
-        stub = _patch("api_core.workflow.bad_case_signals.safe_load_signals", return_value=dict(EMPTY))
+        stub = _patch(
+            "api_core.workflow.bad_case_signals.safe_load_signals",
+            return_value=dict(EMPTY),
+        )
         stub.start()
         self.addCleanup(stub.stop)
 
@@ -239,7 +242,10 @@ class AutoApproveLeaveDaysTests(SimpleTestCase):
 
         from api_core.workflow.bad_case_signals import EMPTY
 
-        stub = _patch("api_core.workflow.bad_case_signals.safe_load_signals", return_value=dict(EMPTY))
+        stub = _patch(
+            "api_core.workflow.bad_case_signals.safe_load_signals",
+            return_value=dict(EMPTY),
+        )
         stub.start()
         self.addCleanup(stub.stop)
 

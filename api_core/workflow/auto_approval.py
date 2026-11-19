@@ -248,6 +248,7 @@ def _apply_feedback_memory(
                 type_code=context["type_code"],
                 requester_id=context.get("requester_id"),
                 lifecycle=context["lifecycle"],
+                exclude_request_id=request_id,
             )
     except Exception:
         logger.warning(
@@ -375,12 +376,21 @@ def _snapshot_for_learning(request_id: str) -> dict[str, Any]:
         with transaction.atomic(), connection.cursor() as cursor:
             signals.update(request_features(cursor, request_id))
     except Exception:
-        logger.warning("request features not captured: request=%s", request_id, exc_info=True)
+        logger.warning(
+            "request features not captured: request=%s", request_id, exc_info=True
+        )
     return signals
 
 
 def _record_revoke_feedback(
-    cursor, request_id, type_id, requester_id, actor_id, decided_at, reason, signals=None
+    cursor,
+    request_id,
+    type_id,
+    requester_id,
+    actor_id,
+    decided_at,
+    reason,
+    signals=None,
 ) -> None:
     """Bộ nhớ ca (migration 24) + học bad case từ lý do (migration 25, phân tích sau khi lưu). Lỗi bỏ qua."""
     from api_core.workflow import ai_feedback
@@ -402,7 +412,9 @@ def _record_revoke_feedback(
                 },
                 human_decision={"decision": "manual_review"},
                 reason=reason,
-                signals=signals if signals is not None else safe_load_signals(request_id),
+                signals=signals
+                if signals is not None
+                else safe_load_signals(request_id),
             )
         if feedback_id:
             from api_core.workflow.bad_case_learning import analyze_in_background

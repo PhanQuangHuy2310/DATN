@@ -28,7 +28,9 @@ def available(cursor) -> bool:
     return bool(cursor.fetchone()[0])
 
 
-def changes(regulations: list[dict[str, Any]], snapshot: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def changes(
+    regulations: list[dict[str, Any]], snapshot: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Quy định đã đổi so với bản AI đã áp dụng: [{code, action, current, applied}]."""
     applied = {s["code"]: s for s in snapshot or []}
     current = {r["code"]: r for r in regulations}
@@ -36,17 +38,28 @@ def changes(regulations: list[dict[str, Any]], snapshot: list[dict[str, Any]]) -
     for code, reg in current.items():
         old = applied.get(code)
         if old is None:
-            out.append({"code": code, "action": "CREATE", "current": reg, "applied": None})
-        elif (reg.get("title"), reg.get("content")) != (old.get("title"), old.get("content")):
-            out.append({"code": code, "action": "UPDATE", "current": reg, "applied": old})
+            out.append(
+                {"code": code, "action": "CREATE", "current": reg, "applied": None}
+            )
+        elif (reg.get("title"), reg.get("content")) != (
+            old.get("title"),
+            old.get("content"),
+        ):
+            out.append(
+                {"code": code, "action": "UPDATE", "current": reg, "applied": old}
+            )
     for code, old in applied.items():
         if code not in current:
-            out.append({"code": code, "action": "DELETE", "current": None, "applied": old})
+            out.append(
+                {"code": code, "action": "DELETE", "current": None, "applied": old}
+            )
     return sorted(out, key=lambda c: c["code"])
 
 
 def validate_changes(
-    regulations: list[dict[str, Any]], changed: list[dict[str, Any]], types: list[RequestTypeName]
+    regulations: list[dict[str, Any]],
+    changed: list[dict[str, Any]],
+    types: list[RequestTypeName],
 ) -> dict[str, dict[str, Any]]:
     """Kiểm tra từng văn bản thêm/sửa so với các quy định khác đang có; {code: kết quả validate}."""
     out = {}
@@ -55,8 +68,13 @@ def validate_changes(
         if reg is None:
             continue
         others = [r for r in regulations if r["code"] != reg["code"]]
-        out[reg["code"]] = validate(code=reg["code"], title=reg.get("title") or "", content=reg.get("content") or "",
-                                    types=types, others=others)
+        out[reg["code"]] = validate(
+            code=reg["code"],
+            title=reg.get("title") or "",
+            content=reg.get("content") or "",
+            types=types,
+            others=others,
+        )
     return out
 
 
@@ -64,7 +82,10 @@ def _snapshot(cursor) -> list[dict[str, Any]]:
     cursor.execute(
         "SELECT code, title, content, version_string FROM eas.company_regulations WHERE NOT is_deleted ORDER BY code"
     )
-    return [{"code": r[0], "title": r[1], "content": r[2] or "", "version": r[3]} for r in cursor.fetchall()]
+    return [
+        {"code": r[0], "title": r[1], "content": r[2] or "", "version": r[3]}
+        for r in cursor.fetchall()
+    ]
 
 
 def _label_history(cursor, regulation_id: str, summary: str) -> None:
@@ -97,19 +118,38 @@ def rollback_to_applied(
     cursor.execute(
         "SELECT code, title, category, content, version_string FROM eas.company_regulations WHERE NOT is_deleted"
     )
-    regulations = [{"code": r[0], "title": r[1], "category": r[2], "content": r[3] or "", "version": r[4]}
-                   for r in cursor.fetchall()]
-    changed = [c for c in changes(regulations, snapshot) if only_codes is None or c["code"] in only_codes]
+    regulations = [
+        {
+            "code": r[0],
+            "title": r[1],
+            "category": r[2],
+            "content": r[3] or "",
+            "version": r[4],
+        }
+        for r in cursor.fetchall()
+    ]
+    changed = [
+        c
+        for c in changes(regulations, snapshot)
+        if only_codes is None or c["code"] in only_codes
+    ]
     if not changed:
         return []
     validation = validation or {}
     rejected = []
     for change in changed:
-        code, action, cur, old = change["code"], change["action"], change["current"], change["applied"]
+        code, action, cur, old = (
+            change["code"],
+            change["action"],
+            change["current"],
+            change["applied"],
+        )
         result = validation.get(code) or {}
         errors = list(result.get("errors") or [])
         if cause == "TECHNICAL" or not errors:
-            errors = errors or [{"severity": "ERROR", "kind": cause, "message": message[:1000]}]
+            errors = errors or [
+                {"severity": "ERROR", "kind": cause, "message": message[:1000]}
+            ]
         restored_version = None
         if action == "CREATE":
             cursor.execute(
@@ -118,7 +158,11 @@ def rollback_to_applied(
                 [RESTORED_BY, code],
             )
             rid, restored_version = cursor.fetchone()
-            _label_history(cursor, rid, f"Trả lại quy định mới {code} (bản {cur['version']} có lỗi), gỡ khỏi hiệu lực")
+            _label_history(
+                cursor,
+                rid,
+                f"Trả lại quy định mới {code} (bản {cur['version']} có lỗi), gỡ khỏi hiệu lực",
+            )
         elif action == "UPDATE":
             cursor.execute(
                 "UPDATE eas.company_regulations SET title = %s, content = %s, updated_by = %s "
@@ -126,8 +170,12 @@ def rollback_to_applied(
                 [old["title"], old["content"], RESTORED_BY, code],
             )
             rid, restored_version = cursor.fetchone()
-            _label_history(cursor, rid, f"Trả lại bản {cur['version']} của {code} (có lỗi), khôi phục nội dung "
-                                        f"bản {old.get('version')}")
+            _label_history(
+                cursor,
+                rid,
+                f"Trả lại bản {cur['version']} của {code} (có lỗi), khôi phục nội dung "
+                f"bản {old.get('version')}",
+            )
         else:  # bãi bỏ bị trả lại: khôi phục bản cũ đã bị gỡ
             cursor.execute(
                 """
@@ -148,17 +196,38 @@ def rollback_to_applied(
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id::text
             """,
-            [job_id, code, action, cause, (cur or old or {}).get("title"), (cur or {}).get("content"),
-             (cur or {}).get("version"), restored_version, Jsonb(errors),
-             Jsonb(list(result.get("warnings") or [])), message[:4000]],
+            [
+                job_id,
+                code,
+                action,
+                cause,
+                (cur or old or {}).get("title"),
+                (cur or {}).get("content"),
+                (cur or {}).get("version"),
+                restored_version,
+                Jsonb(errors),
+                Jsonb(list(result.get("warnings") or [])),
+                message[:4000],
+            ],
         )
-        rejected.append({"id": cursor.fetchone()[0], "code": code, "action": action,
-                         "rejected_version": (cur or {}).get("version"), "restored_version": restored_version,
-                         "errors": errors[:10]})
+        rejected.append(
+            {
+                "id": cursor.fetchone()[0],
+                "code": code,
+                "action": action,
+                "rejected_version": (cur or {}).get("version"),
+                "restored_version": restored_version,
+                "errors": errors[:10],
+            }
+        )
     # Các mã đã khôi phục giờ trùng nội dung với bộ luật đang áp dụng, chỉ khác số phiên bản: cập nhật ảnh chụp để lượt
     # sau so đúng. Nếu không còn thay đổi nào khác đang chờ học, phiên bản hiệu lực = phiên bản mới nhất.
-    restored = {r["code"]: r["restored_version"] for r in rejected if r["restored_version"]}
-    new_snapshot = [{**s, "version": restored.get(s["code"], s.get("version"))} for s in snapshot]
+    restored = {
+        r["code"]: r["restored_version"] for r in rejected if r["restored_version"]
+    }
+    new_snapshot = [
+        {**s, "version": restored.get(s["code"], s.get("version"))} for s in snapshot
+    ]
     pending = changes(_snapshot(cursor), new_snapshot)
     cursor.execute(
         """
@@ -192,25 +261,38 @@ def announcement_text(
         head = f"{r['code']} ({ACTION_TEXT.get(r['action'], r['action'])}, bản {r.get('rejected_version') or '?'})"
         for e in (r.get("errors") or [])[:3]:
             where = f"{e['article']}: " if e.get("article") else ""
-            changes.append({"kind": "REGULATION_REJECTED", "title": f"{head}: {where}{e['message'].rstrip('. ')}"})
-    guidance = [{
-        "title": "Cách xử lý",
-        "steps": [
-            "Vào Quy định, mục \u201cQuy định bị trả lại\u201d ở đầu trang.",
-            "Đọc từng lỗi AI chỉ ra (câu, điều khoản bị chồng), bấm \u201cSửa và nạp lại\u201d.",
-            "Sửa đúng các chỗ đó, bấm \u201cAI kiểm tra trước\u201d tới khi không còn lỗi, rồi ban hành lại.",
-        ],
-    }]
+            changes.append(
+                {
+                    "kind": "REGULATION_REJECTED",
+                    "title": f"{head}: {where}{e['message'].rstrip('. ')}",
+                }
+            )
+    guidance = [
+        {
+            "title": "Cách xử lý",
+            "steps": [
+                "Vào Quy định, mục \u201cQuy định bị trả lại\u201d ở đầu trang.",
+                "Đọc từng lỗi AI chỉ ra (câu, điều khoản bị chồng), bấm \u201cSửa và nạp lại\u201d.",
+                "Sửa đúng các chỗ đó, bấm \u201cAI kiểm tra trước\u201d tới khi không còn lỗi, rồi ban hành lại.",
+            ],
+        }
+    ]
     if cause == "VALIDATION":
         title = f"Quy định {codes} bị trả lại: văn bản có lỗi"
-        summary = ("AI kiểm tra văn bản và phát hiện lỗi nên KHÔNG áp dụng. Hiệu lực đã quay về bản đã áp dụng "
-                   "trước đó (văn bản và bộ luật AI). Các lỗi được liệt kê bên dưới.")
+        summary = (
+            "AI kiểm tra văn bản và phát hiện lỗi nên KHÔNG áp dụng. Hiệu lực đã quay về bản đã áp dụng "
+            "trước đó (văn bản và bộ luật AI). Các lỗi được liệt kê bên dưới."
+        )
     else:
         title = f"Quy định {codes} bị trả lại: AI chưa học được"
-        summary = (f"Sau mọi lần thử, AI chưa áp dụng được quy định mới (lỗi kỹ thuật: {message[:300].rstrip('. ')}). "
-                   "Hiệu lực đã quay về bản đã áp dụng trước đó. Nội dung bản bị trả lại vẫn được giữ để nạp lại "
-                   "khi AI service hoạt động.")
-        guidance[0]["steps"][1] = "Kiểm tra AI service đã chạy, rồi bấm \u201cSửa và nạp lại\u201d (nội dung giữ nguyên)."
+        summary = (
+            f"Sau mọi lần thử, AI chưa áp dụng được quy định mới (lỗi kỹ thuật: {message[:300].rstrip('. ')}). "
+            "Hiệu lực đã quay về bản đã áp dụng trước đó. Nội dung bản bị trả lại vẫn được giữ để nạp lại "
+            "khi AI service hoạt động."
+        )
+        guidance[0]["steps"][1] = (
+            "Kiểm tra AI service đã chạy, rồi bấm \u201cSửa và nạp lại\u201d (nội dung giữ nguyên)."
+        )
     return title[:300], summary[:4000], changes, guidance
 
 

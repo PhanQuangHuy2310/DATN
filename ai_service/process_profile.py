@@ -42,7 +42,7 @@ WEIGHT_STEP = 0.5          # phần chênh trọng số (mô hình hồi quy) t�
 LIFECYCLE_ORDER = {"A": 0, "B": 1, "C": 2}
 # Mô tả giữ chỗ và tóm tắt tuyến duyệt ("QL trực tiếp → HR ⇒ thực hiện: HR") nói thẳng người thực hiện/nghiệm thu,
 # tức là lộ nhãn -> bỏ khỏi đầu vào.
-PLACEHOLDER_RE = re.compile(r"Loại yêu cầu [^;]*; yêu cầu công bố quy chế hợp lệ trước khi sử dụng\.?", re.I)
+PLACEHOLDER_RE = re.compile(r"Loại yêu cầu [^;]*; yêu cầu công bố quy chế hợp lệ trước khi sử dụng\.?", re.IGNORECASE)
 ROUTE_MARKS = ("→", "⇒", "thực hiện:", "nghiệm thu:")
 
 # Nhóm tín hiệu nghiệp vụ (so khớp trên văn bản không dấu, chữ thường). Tên nhóm dùng làm lý do hiển thị.
@@ -102,7 +102,7 @@ def struct_features(item: dict[str, Any]) -> dict[str, float]:
         "n_fields": float(len(fields)),
         "field:amount": float(any(k in joined for k in ("amount", "price", "value", "budget", "total"))),
         "field:date_range": float("start_date" in fields and "end_date" in fields),
-        "field:person": float(any(f.endswith("user_id") or f.endswith("employee_id") for f in fields)),
+        "field:person": float(any(f.endswith(("user_id", "employee_id")) for f in fields)),
         f"category:{item.get('category', '')}": 1.0,
     }
 
@@ -156,7 +156,7 @@ class ProcessProfiler:
         names = list(self.dict_vec.get_feature_names_out())
         return names + ([f"word:{w}" for w in self.tfidf.get_feature_names_out()] if self.use_words else [])
 
-    def fit(self, items: list[dict[str, Any]]) -> "ProcessProfiler":
+    def fit(self, items: list[dict[str, Any]]) -> ProcessProfiler:
         X = self._matrix([item_features(i) for i in items], fit=True)
         self.lifecycle_model.fit(X, [i["lifecycle"] for i in items])
         self.weight_model.fit(X, [float(i["risk_weight"]) for i in items])

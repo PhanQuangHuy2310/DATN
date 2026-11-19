@@ -12,10 +12,9 @@ AI_DIR = os.path.join(REPO_ROOT, "ai_service")
 sys.path.insert(0, AI_DIR)
 
 try:
-    import sklearn  # noqa: F401
-
     import bad_cases as bc
     import regulation_llm as rl
+    import sklearn  # noqa: F401
 
     HAS_DEPS = True
 except ImportError:

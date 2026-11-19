@@ -75,7 +75,8 @@ def main() -> None:
            "direct_ai": ({"p50": pct(d, .5), "p95": pct(d, .95)} if d else None)}
     print(json.dumps(res, indent=1))
     if a.json:
-        json.dump(res, open(a.json, "w", encoding="utf-8"), indent=1)
+        with open(a.json, "w", encoding="utf-8") as handle:
+            json.dump(res, handle, indent=1)
 
 
 if __name__ == "__main__":

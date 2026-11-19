@@ -167,15 +167,23 @@ def _forbidden_unless_writer(request: HttpRequest):
 
 def _superseded(cur) -> list[dict[str, Any]]:
     """Điều nào của văn bản nào đang bị văn bản mới hơn thay thế (bộ luật AI đã áp dụng)."""
-    cur.execute("SELECT coalesce(applied_policy->'superseded', '[]'::jsonb) FROM eas.ai_system_state WHERE id = 1")
+    cur.execute(
+        "SELECT coalesce(applied_policy->'superseded', '[]'::jsonb) FROM eas.ai_system_state WHERE id = 1"
+    )
     row = cur.fetchone()
     return list(row[0] or []) if row else []
 
 
-def _attach_superseded(items: list[dict], superseded: list[dict[str, Any]]) -> list[dict]:
+def _attach_superseded(
+    items: list[dict], superseded: list[dict[str, Any]]
+) -> list[dict]:
     for item in items:
-        item["superseded_by"] = [e for e in superseded if e.get("old_code") == item["code"]]
-        item["supersedes"] = [e for e in superseded if e.get("new_code") == item["code"]]
+        item["superseded_by"] = [
+            e for e in superseded if e.get("old_code") == item["code"]
+        ]
+        item["supersedes"] = [
+            e for e in superseded if e.get("new_code") == item["code"]
+        ]
     return items
 
 
@@ -195,15 +203,26 @@ def _content_check(cur, *, code: str, fields: dict) -> dict[str, Any]:
     from api_core.workflow.regulation_validation import validate
 
     cur.execute("SELECT code, name, lifecycle FROM eas.request_type WHERE is_active")
-    types = [RequestTypeName(code=r[0], name=r[1] or "", lifecycle=(r[2] or "").strip() or None)
-             for r in cur.fetchall()]
+    types = [
+        RequestTypeName(
+            code=r[0], name=r[1] or "", lifecycle=(r[2] or "").strip() or None
+        )
+        for r in cur.fetchall()
+    ]
     cur.execute(
         "SELECT code, title, content FROM eas.company_regulations WHERE NOT is_deleted AND code <> %s",
         [code],
     )
-    others = [{"code": r[0], "title": r[1], "content": r[2] or ""} for r in cur.fetchall()]
-    return validate(code=code or "MỚI", title=fields["title"], content=fields["content"], types=types,
-                    others=others)
+    others = [
+        {"code": r[0], "title": r[1], "content": r[2] or ""} for r in cur.fetchall()
+    ]
+    return validate(
+        code=code or "MỚI",
+        title=fields["title"],
+        content=fields["content"],
+        types=types,
+        others=others,
+    )
 
 
 def _invalid_regulation(request: HttpRequest, check: dict[str, Any]) -> JsonResponse:
@@ -236,12 +255,29 @@ def regulation_validate_view(request: HttpRequest) -> JsonResponse:
         return api_error(request, "VALIDATION_FAILED", status=422, fields=errors)
     code = str(body.get("code", "")).strip().upper()[:30]
     with connection.cursor() as cur:
-        return JsonResponse({"validation": _content_check(cur, code=code, fields=fields)})
+        return JsonResponse(
+            {"validation": _content_check(cur, code=code, fields=fields)}
+        )
 
 
 def _rejection_row(r) -> dict[str, Any]:
-    keys = ("id", "regulation_code", "action", "cause", "rejected_title", "rejected_content", "rejected_version",
-            "restored_version", "errors", "warnings", "message", "state", "note", "created_at", "resolved_at")
+    keys = (
+        "id",
+        "regulation_code",
+        "action",
+        "cause",
+        "rejected_title",
+        "rejected_content",
+        "rejected_version",
+        "restored_version",
+        "errors",
+        "warnings",
+        "message",
+        "state",
+        "note",
+        "created_at",
+        "resolved_at",
+    )
     item = dict(zip(keys, r, strict=True))
     item["created_at"] = _iso(item["created_at"])
     item["resolved_at"] = _iso(item["resolved_at"])
@@ -270,7 +306,9 @@ def regulation_rejections_list(request: HttpRequest) -> JsonResponse:
             """,
             [state, state],
         )
-        return JsonResponse({"items": [_rejection_row(r) for r in cur.fetchall()], "installed": True})
+        return JsonResponse(
+            {"items": [_rejection_row(r) for r in cur.fetchall()], "installed": True}
+        )
 
 
 @require_actor("OPS_ADMIN", "POLICY_ADMIN")
@@ -285,7 +323,12 @@ def regulation_rejection_dismiss(request: HttpRequest, rejection_id) -> JsonResp
         return error
     note = str(body.get("note") or "").strip()
     if len(note) < 5:
-        return api_error(request, "VALIDATION_FAILED", status=422, fields={"note": ["Cần lý do (≥ 5 ký tự)"]})
+        return api_error(
+            request,
+            "VALIDATION_FAILED",
+            status=422,
+            fields={"note": ["Cần lý do (≥ 5 ký tự)"]},
+        )
     with transaction.atomic(), connection.cursor() as cur:
         cur.execute(
             """
@@ -305,7 +348,9 @@ def regulation_rejection_dismiss(request: HttpRequest, rejection_id) -> JsonResp
             target_type="regulation_rejection",
             target_id=str(rejection_id),
             details={"code": row[0]},
-            reason=note if len(note) >= 10 else f"Bỏ qua bản bị trả lại {row[0]}: {note}",
+            reason=note
+            if len(note) >= 10
+            else f"Bỏ qua bản bị trả lại {row[0]}: {note}",
             correlation_id=correlation_id(request),
         )
     return JsonResponse({"id": str(rejection_id), "state": "DISMISSED"})
@@ -314,7 +359,9 @@ def regulation_rejection_dismiss(request: HttpRequest, rejection_id) -> JsonResp
 def _resolve_rejections(cur, request: HttpRequest, code: str) -> None:
     from api_core.workflow.regulation_rejection import resolve_open
 
-    resolve_open(cur, code=code, actor_id=request.actor.id, note="Admin đã sửa và nạp lại")
+    resolve_open(
+        cur, code=code, actor_id=request.actor.id, note="Admin đã sửa và nạp lại"
+    )
 
 
 @require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
@@ -371,7 +418,13 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
                 SET is_deleted = false, title = %s, category = %s, content = %s, updated_by = %s
                 WHERE id = %s RETURNING {REGULATION_COLUMNS}
                 """,
-                [fields["title"], fields["category"], fields["content"], request.actor.display_name, retired[0]],
+                [
+                    fields["title"],
+                    fields["category"],
+                    fields["content"],
+                    request.actor.display_name,
+                    retired[0],
+                ],
             )
         else:
             cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
@@ -1234,10 +1287,32 @@ def bad_cases_list(request: HttpRequest) -> JsonResponse:
             """,
             [state, state],
         )
-        keys = ("id", "code", "title", "rationale", "condition_text", "request_types", "detector", "base_code",
-                "condition", "verdict", "feature", "risk", "escalate_to", "source", "state", "evaluation",
-                "activated_by", "activated_at", "note", "decided_at", "created_at", "updated_at",
-                "evidence_count", "evidence")
+        keys = (
+            "id",
+            "code",
+            "title",
+            "rationale",
+            "condition_text",
+            "request_types",
+            "detector",
+            "base_code",
+            "condition",
+            "verdict",
+            "feature",
+            "risk",
+            "escalate_to",
+            "source",
+            "state",
+            "evaluation",
+            "activated_by",
+            "activated_at",
+            "note",
+            "decided_at",
+            "created_at",
+            "updated_at",
+            "evidence_count",
+            "evidence",
+        )
         items = []
         for r in cur.fetchall():
             item = dict(zip(keys, r, strict=True))
@@ -1251,12 +1326,20 @@ def bad_cases_list(request: HttpRequest) -> JsonResponse:
             """
         )
         verdicts = dict(cur.fetchall())
-    return JsonResponse({"items": items, "installed": True, "verdicts_90d": verdicts,
-                         "thresholds": {"window_days": bad_case_learning.WINDOW_DAYS,
-                                        "min_evidence": bad_case_learning.MIN_EVIDENCE,
-                                        "min_requesters": bad_case_learning.MIN_REQUESTERS,
-                                        "min_approvers": bad_case_learning.MIN_APPROVERS,
-                                        "max_coverage": bad_case_learning.MAX_COVERAGE}})
+    return JsonResponse(
+        {
+            "items": items,
+            "installed": True,
+            "verdicts_90d": verdicts,
+            "thresholds": {
+                "window_days": bad_case_learning.WINDOW_DAYS,
+                "min_evidence": bad_case_learning.MIN_EVIDENCE,
+                "min_requesters": bad_case_learning.MIN_REQUESTERS,
+                "min_approvers": bad_case_learning.MIN_APPROVERS,
+                "max_coverage": bad_case_learning.MAX_COVERAGE,
+            },
+        }
+    )
 
 
 @require_actor("OPS_ADMIN", "POLICY_ADMIN")
@@ -1277,7 +1360,11 @@ def bad_case_decide_view(request: HttpRequest, case_id, decision: str) -> JsonRe
     try:
         with transaction.atomic(), connection.cursor() as cur:
             result = bad_case_learning.admin_decide(
-                cur, case_id=str(case_id), actor_id=request.actor.id, decision=decision, body=body
+                cur,
+                case_id=str(case_id),
+                actor_id=request.actor.id,
+                decision=decision,
+                body=body,
             )
             note = str(body.get("note") or "").strip()
             _append_admin_audit(
@@ -1287,7 +1374,9 @@ def bad_case_decide_view(request: HttpRequest, case_id, decision: str) -> JsonRe
                 target_type="bad_case",
                 target_id=str(case_id),
                 details={"code": result["code"], "state": result["state"]},
-                reason=note if len(note) >= 10 else f"Admin {decision} bad case {result['code']}",
+                reason=note
+                if len(note) >= 10
+                else f"Admin {decision} bad case {result['code']}",
                 correlation_id=correlation_id(request),
             )
     except LookupError:
@@ -1296,5 +1385,10 @@ def bad_case_decide_view(request: HttpRequest, case_id, decision: str) -> JsonRe
         return api_error(request, "ALREADY_DECIDED", status=409)
     except ValueError as exc:
         field, _, message = str(exc).partition(": ")
-        return api_error(request, "VALIDATION_FAILED", status=422, fields={field or "body": [message or str(exc)]})
+        return api_error(
+            request,
+            "VALIDATION_FAILED",
+            status=422,
+            fields={field or "body": [message or str(exc)]},
+        )
     return JsonResponse(result)

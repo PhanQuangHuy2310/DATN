@@ -1,0 +1,181 @@
+================================================================================
+KỊCH BẢN THUYẾT TRÌNH DEMO LUỒNG XỬ LÝ TÌNH HUỐNG XẤU (BAD CASE) — HỆ THỐNG EAS
+================================================================================
+Thời lượng tiêu chuẩn: 3 phút 08 giây (khớp chính xác video demo_badcase_full.mp4)
+Video minh họa đi kèm : demo_badcase_full.mp4 (kèm phụ đề rời demo_badcase_full.srt)
+Môi trường vận hành   :
+  - Cổng Nhân viên & Phê duyệt : http://127.0.0.1:8082
+  - Cổng Quản trị (Admin)      : http://127.0.0.1:8081
+
+--------------------------------------------------------------------------------
+1. MỤC TIÊU & ĐỘ PHỦ TOÀN BỘ BIỂU ĐỒ NGHIỆP VỤ BPMN (6 LÀN & TẤT CẢ CÁC NHÁNH)
+--------------------------------------------------------------------------------
+Kịch bản gồm 8 chặng nối tiếp nhau (~3 phút), phủ 100% các làn và rẽ nhánh trên
+sơ đồ "Quy trình xử lý tình huống xấu khi phê duyệt tự động":
+
+  [1] Làn 1 - Người yêu cầu:
+      Gửi đơn Loại A (WFH, Nghỉ phép, Thanh toán chi phí) -> theo dõi trạng thái,
+      cùng kịch bản đối chứng và tiếp nhận phản hồi từ hệ thống.
+  [2] Làn 2 - Khối Điều phối (Workflow Engine):
+      Tiếp nhận PENDING_APPROVAL, đóng/mở cửa sổ thu hồi 24h sau tự duyệt, quay về
+      luồng thủ công không xung đột phiên bản, nâng cấu trúc A->B (Cấp 5) và A->C
+      (3 cấp + SoD), thực thi bàn giao thay thế khi quản lý xác nhận, ghi nhật ký.
+  [3] Làn 3 - Khối AI (AI Policy & Risk Engine):
+      - Nhánh KHÔNG dính Bad Case -> Tự duyệt (Auto-Approve) mở cửa sổ 24h.
+      - Nhánh Học từ phản hồi -> Ghi nhớ theo đúng (Nhân viên + Loại đơn), nâng B
+        khi lặp lại nhưng không học tràn sang nhân viên đối chứng.
+      - Nhánh CÓ Bad Case Loại B (BC_DEADLINE_CONFLICT) -> Chặn tự duyệt, nâng A->B,
+        xếp hạng ứng viên thay thế & tính phương án lùi hạn.
+      - Nhánh CÓ Bad Case Loại C (BC_SPLIT_AMOUNT_EVASION) -> Cộng dồn lũy kế chia
+        nhỏ chứng từ > 20 triệu -> nâng A->C qua 3 cấp duyệt & nghiệm thu độc lập.
+  [4] Làn 4 - Người kiểm duyệt:
+      Thu hồi quyết định AI trong 24h, Từ chối (hoặc Yêu cầu bổ sung) trực tiếp,
+      Phê duyệt kèm Xác nhận gói đề xuất AI, và duyệt đa cấp Loại C.
+  [5] Làn 5 - Người thực thi:
+      Nhận việc & nộp chứng từ đối soát ở Quy trình B (kết thúc thẳng COMPLETED)
+      và Quy trình C (xử lý vòng Yêu cầu làm lại REWORK -> nộp lại hóa đơn VAT).
+  [6] Làn 6 - Người nghiệm thu (SoD) & Cổng Quản trị Admin:
+      Nghiệm thu độc lập tách biệt người thực hiện (SoD), thử nhánh REWORK rồi
+      ACCEPT để đóng COMPLETED; kết thúc bằng theo dõi Danh mục Bad Case & AI học
+      từ phản hồi trên Cổng Quản trị Admin.
+
+--------------------------------------------------------------------------------
+2. CHUẨN BỊ NHANH TRƯỚC KHI TRÌNH BÀY (NẾU THAO TÁC TRỰC TIẾP HOẶC BẬT VIDEO)
+--------------------------------------------------------------------------------
+- Nếu phát video demo_badcase_full.mp4: toàn bộ 8 cảnh đã đồng bộ sẵn giọng đọc
+  và phụ đề tiếng Việt, thời lượng 03:07.84, chỉ cần bấm Play và bình luận thêm
+  khi hội đồng đặt câu hỏi.
+- Nếu trình diễn click tay trực tiếp trên UI: mở sẵn 2 cửa sổ trình duyệt sạch
+  (Cổng Nhân viên :8082 và Cổng Admin :8081), dùng chung mật khẩu nội bộ của
+  bộ dữ liệu kiểm thử; chuẩn bị sẵn 2 tệp minh chứng tại thư mục tests/ocr_smoke/
+  (receipt_service.png cho Quy trình B và invoice_vat.png cho Quy trình C).
+
+Danh sách mã hồ sơ thực tế đã kiểm chứng khớp với video (demo_badcase_full.mp4):
+  - EAS-2026-000138 : WFH lần 1 của Phan Bảo Nhung -> AI tự duyệt -> Tâm thu hồi & Từ chối
+  - EAS-2026-000139 : WFH lần 2 của Phan Bảo Nhung -> AI nhớ phản hồi -> nâng A -> B
+  - EAS-2026-000140 : WFH đối chứng của Đặng Khánh Tâm -> AI vẫn tự duyệt bình thường
+  - EAS-2026-000141 : Đề nghị thanh toán của Lâm Hoài Hòa -> bước duyệt đến hạn trên Bình
+  - EAS-2026-000142 : Đơn nghỉ phép của Lê Phương Bình -> BC_DEADLINE_CONFLICT -> A -> B
+  - EAS-2026-000143..000145 : 3 đơn 9,5 triệu của Lương Ngọc Tiến -> đơn 3 nâng A -> C
+
+--------------------------------------------------------------------------------
+3. KỊCH BẢN LỜI THOẠI TUẦN TỰ THEO MỐC THỜI GIAN (00:00 -> 03:07)
+--------------------------------------------------------------------------------
+
+[00:00 - 00:23] PHẦN 1: LUỒNG CHUẨN LOẠI A & CƠ CHẾ AI TỰ ĐỘNG DUYỆT
+  - Tài khoản: nhung.phan@eas.com (Phan Bảo Nhung - Marketing) | Hồ sơ: EAS-2026-000138
+  - Thao tác UI: Chọn "+ Tạo yêu cầu mới" -> "Làm việc từ xa (WFH)" -> nhập nội
+    dung hợp lệ -> "Gửi phê duyệt" -> mở tab "Đánh giá AI".
+  - Lời thuyết trình:
+    "Kính thưa Quý thầy cô, đây là luồng xử lý tình huống xấu trong hệ thống
+    phê duyệt doanh nghiệp EAS. Bắt đầu ở quy trình chuẩn Loại A, nhân viên
+    Phan Bảo Nhung tạo một yêu cầu WFH hợp lệ. Khối Điều phối khởi tạo trạng thái
+    chờ duyệt và chuyển sang Khối AI kiểm tra theo thời gian thực. Do không vi
+    phạm Bad Case, hệ thống AI tự động phê duyệt chỉ sau vài giây về trạng thái
+    Đã hoàn thành, đồng thời mở cửa sổ hậu kiểm 24 giờ cho quản lý trực tiếp."
+
+[00:23 - 00:54] PHẦN 2: THU HỒI 24H, TỪ CHỐI TRỰC TIẾP & AI HỌC ĐÚNG PHẠM VI
+  - Tài khoản: tam.tran@eas.com (Trần Quốc Tâm), nhung.phan@eas.com, tam.dang@eas.com
+  - Hồ sơ: EAS-2026-000138 -> EAS-2026-000139 -> EAS-2026-000140
+  - Thao tác UI:
+    1) Quản lý Trần Quốc Tâm mở EAS-2026-000138 -> bấm "Thu hồi duyệt tự động
+       của AI" -> nhập lý do họp trực tiếp -> hồ sơ trở về Chờ phê duyệt và
+       không tự nâng cấp lặp lại -> bấm ngay "Từ chối" (thành công mượt, không
+       lỗi xung đột phiên bản).
+    2) Nhung gửi đơn WFH thứ 2 (EAS-2026-000139) -> banner hiện "từ quy trình A
+       sang quy trình B" kèm nhãn "Đã học từ phản hồi".
+    3) Nhân viên đối chứng Đặng Khánh Tâm gửi đơn WFH tương tự (EAS-2026-000140)
+       -> vẫn được AI tự duyệt bình thường.
+  - Lời thuyết trình:
+    "Trong vòng 24 giờ, quản lý Trần Quốc Tâm thu hồi quyết định tự duyệt của AI
+    và từ chối ngay trên luồng thủ công mà không gặp lỗi xung đột phiên bản.
+    AI học đúng theo cặp Nhân viên - Loại đơn nên ở lần gửi thứ hai của Nhung,
+    đơn tự động nâng lên quy trình B với nhãn Đã học từ phản hồi; trong khi
+    nhân viên đối chứng Đặng Khánh Tâm vẫn được AI tự duyệt bình thường, chứng
+    minh AI không học tràn lan."
+    (Ghi chú nếu hội đồng hỏi nhánh Bổ sung: tại bước Từ chối của quản lý, nút
+    "Yêu cầu bổ sung" kế bên hoạt động theo đúng nhánh NEEDS_INFO quay về Làn 1).
+
+[00:54 - 01:22] PHẦN 3: BAD CASE VƯỚNG HẠN CHÓT & BẤT KIÊM NHIỆM (BC_DEADLINE_CONFLICT)
+  - Tài khoản: hoa.lam@eas.com -> binh.le@eas.com | Hồ sơ: EAS-2026-000141 & 000142
+  - Thao tác UI: Lâm Hoài Hòa gửi Thanh toán chi phí 1.300.000 VNĐ (tạo bước duyệt
+    hạn 24h nằm ở trưởng nhóm Lê Phương Bình). Ngay sau đó Bình gửi Nghỉ phép ngày
+    mai và chọn chính Hòa làm người nhận bàn giao -> đợi 2 giây hiện banner vàng.
+  - Lời thuyết trình:
+    "Tiếp theo là tình huống xấu vướng hạn chót công việc. Nhân viên Lâm Hoài Hòa
+    gửi đề xuất thanh toán tạo bước duyệt đến hạn trên trưởng nhóm Lê Phương Bình.
+    Khi Bình nộp đơn nghỉ phép vào ngày mai và chọn chính Hòa làm người bàn giao,
+    Khối AI truy vấn chéo ngữ cảnh, phát hiện trưởng nhóm đang giữ việc sắp hết
+    hạn và người nhận bàn giao không đủ thẩm quyền làm thay chính đơn của mình,
+    nên lập tức gắn nhãn BC_DEADLINE_CONFLICT, nâng rủi ro lên cấp 5 và chuyển
+    hồ sơ từ quy trình A sang quy trình B."
+
+[01:22 - 01:48] PHẦN 4: DUYỆT ĐƠN NGHỈ & AI ĐỀ XUẤT ĐIỀU PHỐI CÔNG VIỆC TỒN ĐỌNG
+  - Tài khoản: tuan.phan@eas.com (Quản lý) -> hoa.lam@eas.com (Kiểm tra nhật ký)
+  - Thao tác UI: Phan Anh Tuấn mở "Yêu cầu & Quy trình" -> "Việc được giao" -> tab
+    "Phê duyệt" -> mở EAS-2026-000142 -> bấm "Phê duyệt" -> xem bảng AI xếp hạng
+    ứng viên (#1 Đặng Quốc Châu, điểm 1.3658) + tùy chọn lùi hạn -> bấm "Xác nhận
+    1 thao tác". Mở lại EAS-2026-000141 dưới tài khoản Hòa -> tab "Người phê duyệt"
+    và "Lịch sử hoạt động".
+  - Lời thuyết trình:
+    "Quản lý cấp trên Phan Anh Tuấn mở đơn của Bình, xem lý do Bad Case và bấm
+    Phê duyệt. Hệ thống tự động hiển thị Gói đề xuất xử lý của AI với lựa chọn
+    lùi hạn SLA và danh sách ứng viên thay thế được chấm điểm theo tải công việc,
+    đứng đầu là Đặng Quốc Châu với 1,3658 điểm. Khi quản lý bấm Xác nhận, bước
+    duyệt đơn thanh toán của Hòa lập tức được chuyển cho người thay thế và ghi
+    nhận minh bạch trên Lịch sử hoạt động: AI đề xuất – quản lý xác nhận giao
+    việc cho người thay thế."
+
+[01:48 - 02:02] PHẦN 5: THỰC THI VÀ HOÀN TẤT QUY TRÌNH B (KHÔNG QUA NGHIỆM THU)
+  - Tài khoản: trang.vu@eas.com (Chuyên viên HR) | Hồ sơ: EAS-2026-000142
+  - Thao tác UI: Vào "Việc được giao" -> tab "Thực hiện" -> mở EAS-2026-000142 ->
+    "Nhận công việc" -> "Nộp kết quả thực hiện" (tải lên receipt_service.png).
+  - Lời thuyết trình:
+    "Ở bước thực thi quy trình B, chuyên viên nhân sự Vũ Thùy Trang tiếp nhận
+    công việc, đính kèm chứng từ đối soát lịch nghỉ và nộp kết quả. Theo thiết kế
+    quy trình B, hồ sơ chuyển thẳng sang trạng thái Đã hoàn thành mà không cần
+    thêm bước nghiệm thu độc lập."
+
+[02:02 - 02:30] PHẦN 6: BAD CASE CHIA NHỎ CHỨNG TỪ (BC_SPLIT_AMOUNT_EVASION) NÂNG CẤP A -> C
+  - Tài khoản: tien.luong@eas.com -> phong.huynh@eas.com -> ha.bui@eas.com -> hung.nguyen@eas.com
+  - Hồ sơ: EAS-2026-000143, EAS-2026-000144, EAS-2026-000145 (mỗi đơn 9.500.000 VNĐ)
+  - Thao tác UI: Lương Ngọc Tiến gửi liên tiếp 3 đơn thanh toán 9,5 triệu -> trên
+    đơn thứ 3 hiện banner nâng A -> C (và không còn khung nghỉ phép thừa sai ngữ
+    cảnh) -> mở tab "Người phê duyệt" thấy đủ 3 cấp -> lần lượt 3 cấp bấm "Phê duyệt".
+  - Lời thuyết trình:
+    "Sang nhóm Bad Case tài chính trọng yếu: nhân viên Lương Ngọc Tiến gửi liên tiếp
+    ba đơn thanh toán 9,5 triệu đồng nhằm lách ngưỡng 20 triệu. Đến đơn thứ ba,
+    tổng lũy kế 28,5 triệu đồng vượt ngưỡng bị Khối AI phát hiện, nâng lên Rủi ro
+    cấp 5 và chuyển từ quy trình A sang quy trình C. Giao diện chỉ hiển thị phần
+    thông tin phù hợp ngữ cảnh tài chính, sau đó hồ sơ lần lượt đi qua đủ ba cấp
+    duyệt gồm Quản lý trực tiếp Huỳnh Đức Phong, Kế toán trưởng Bùi Thị Thanh Hà
+    và Tổng Giám đốc Nguyễn Thế Hùng."
+
+[02:30 - 02:53] PHẦN 7: THỰC THI LOẠI C & NGHIỆM THU ĐỘC LẬP THEO NGUYÊN TẮC SoD
+  - Tài khoản: ngoc.trinh@eas.com (Thực thi Tài chính) <-> phong.huynh@eas.com (Nghiệm thu)
+  - Hồ sơ: EAS-2026-000145
+  - Thao tác UI:
+    1) Trịnh Thị Ngọc vào tab "Thực hiện" -> Nhận công việc -> Nộp lần 1 kèm hóa đơn
+       invoice_vat.png -> Chờ nghiệm thu (Ngọc không có nút tự nghiệm thu theo SoD).
+    2) Huỳnh Đức Phong vào tab "Nghiệm thu" -> thử nhánh "Yêu cầu làm lại" (REWORK)
+       để đẩy hồ sơ quay về Làn Thực thi.
+    3) Ngọc nộp lại chứng từ bổ sung -> Phong bấm "Chấp nhận nghiệm thu" -> COMPLETED.
+  - Lời thuyết trình:
+    "Bước sang chặng Thực thi của quy trình C, kế toán Trịnh Thị Ngọc nhận việc
+    và nộp hóa đơn VAT lần thứ nhất, đưa hồ sơ sang trạng thái Chờ nghiệm thu.
+    Đúng theo chuẩn bất kiêm nhiệm SoD, người thực hiện không thấy quyền tự nghiệm
+    thu. Người nghiệm thu độc lập Huỳnh Đức Phong kiểm tra, thử kích hoạt nhánh
+    Yêu cầu làm lại để trả về bổ sung chứng từ gốc; sau khi Ngọc nộp lại hoàn
+    chỉnh, Phong bấm Chấp nhận nghiệm thu để khép kín hoàn toàn quy trình C."
+
+[02:53 - 03:08] PHẦN 8: GIÁM SÁT TẬP TRUNG TRÊN CỔNG QUẢN TRỊ AI (ADMIN PORTAL)
+  - Tài khoản: admin@eas.com tại http://127.0.0.1:8081 | Mục: "Quy định"
+  - Thao tác UI: Đăng nhập Admin -> mở mục "Quy định" -> cuộn xuống phần "AI học từ
+    phản hồi" và "Danh mục bad case" (bấm lọc "Đang dùng" và "Chờ admin").
+  - Lời thuyết trình:
+    "Cuối cùng, trên Cổng Quản trị hệ thống, quản trị viên vào mục Quy định để
+    theo dõi danh mục Bad Case đang áp dụng, dữ liệu phản hồi thực tế từ các cấp
+    duyệt và các mẫu Bad Case ứng viên do AI tự đề xuất, hoàn thiện chu trình
+    kiểm soát rủi ro và điều phối phê duyệt khép kín trong hệ thống EAS. Xin cảm
+    ơn Quý thầy cô đã lắng nghe."
+================================================================================

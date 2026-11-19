@@ -14,11 +14,17 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import test_report_scenarios as t  # noqa: E402
+import test_report_scenarios as t
 
 
 def docker(*args: str) -> str:
-    return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=180).stdout.strip()
+    return subprocess.run(
+        ["docker", *args],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    ).stdout.strip()
 
 
 def wait_healthy(name: str, timeout: int = 120) -> None:

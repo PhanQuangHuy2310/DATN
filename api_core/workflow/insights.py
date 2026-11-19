@@ -899,7 +899,9 @@ def _risk_context(sig: dict) -> dict:
     return {
         "pending_work_due_24h": due_24h,
         "work_due_in_absence": in_absence,
-        "handover_uncovered": int(bool(due_24h or in_absence) and not sig.get("handover_assigned")),
+        "handover_uncovered": int(
+            bool(due_24h or in_absence) and not sig.get("handover_assigned")
+        ),
         "team_absence_ratio": float(sig.get("team_absence_ratio") or 0.0),
         "same_type_count_30d": int(sig.get("same_type_count_30d") or 0),
     }

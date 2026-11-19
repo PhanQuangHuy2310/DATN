@@ -15,14 +15,14 @@ import argparse
 import json
 import sys
 import time
-import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import test_report_scenarios as t  # noqa: E402
+import test_report_scenarios as t
 
-TODAY = date.today()
+TODAY = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
 
 
 def flags(o: t.Oracle, rid: str, timeout: float = 25.0) -> list[str]:
@@ -52,6 +52,18 @@ def fresh_requester(o: t.Oracle, seed: str) -> str:
                           WHERE r.requester_id=u.id AND r.created_at > now() - interval '30 days'
                             AND rt.code IN ('ADVANCE_SMALL','ADVANCE_MEDIUM','ADVANCE_LARGE','EXPENSE_CLAIM',
                                             'REIMBURSEMENT','SALARY_ADVANCE','REFUND_COMPENSATION','ATTENDANCE_ADJUSTMENT'))
+          AND (SELECT count(*) FROM eas.audit_event e
+               JOIN eas.request r2 ON r2.id = e.request_id
+               JOIN eas.request_revision v2 ON v2.id = r2.current_revision_id
+               WHERE r2.requester_id = u.id
+                 AND e.action = 'AI_AUTO_APPROVE_REVOKED'
+                 AND v2.submitted_at > now() - interval '90 days') < 2
+          AND (SELECT count(*) FROM eas.request r3
+               JOIN eas.request_revision v3 ON v3.id = r3.current_revision_id
+               WHERE r3.requester_id = u.id
+                 AND v3.submitted_at > now() - interval '7 days'
+                 AND (extract(isodow FROM v3.submitted_at AT TIME ZONE 'Asia/Ho_Chi_Minh') IN (6, 7)
+                      OR (v3.submitted_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::time NOT BETWEEN '08:00' AND '17:30')) < 2
         ORDER BY md5(u.email || %s) LIMIT 1""", seed)
     if not row:
         raise AssertionError("không còn nhân viên sạch lịch sử để kiểm thử")
@@ -106,7 +118,8 @@ def bc_03(o: t.Oracle) -> str:
 
 def bc_01(o: t.Oracle) -> str:
     # Dựng tình huống: người quản lý M đang giữ một bước duyệt có hạn SLA trong 3 giờ tới.
-    holder_rid, _, _ = t.submit(o, "WFH_REQ")
+    # Luồng B (ACCESS) không bao giờ bị AI tự duyệt đóng mất bước trong lúc đang dựng fixture.
+    holder_rid, _, _ = t.submit(o, "ACCESS")
     step = o.active_step(holder_rid)
     t.check(step is not None, "không có bước duyệt để làm việc đang giữ")
     manager_email = o.email(step[2])
@@ -126,7 +139,7 @@ def bc_01(o: t.Oracle) -> str:
 
 
 def bc_04(o: t.Oracle) -> str:
-    rid, h, email = t.submit(o, "WFH_REQ")
+    rid, _h, _email = t.submit(o, "WFH_REQ")
     step = o.active_step(rid)
     approver = o.email(step[2])
     sqlstate = o.try_tamper_as("eas_api", f"""UPDATE eas.approval_step SET assignee_id=
