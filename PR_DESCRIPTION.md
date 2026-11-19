@@ -141,6 +141,23 @@ Kiểm chứng:
   - 29/29 câu của các quy định đang có không đổi cách hiểu.
 - `tests/test_regulation_shorthand.py` có 9 test, viết **sau** khi thấy lỗi.
 
+### Nạp quy định, đợt 2: mã mặc định trùng, quy định lỗi đã lọt vào trước đây (19/11, theo ảnh của nhóm)
+
+- **Nguyên nhân chính "không nạp được" trên CSDL mới.** Form "Thêm quy định mới" lấy mã mặc định theo số phiên bản: ở v1.0 gợi ý REG-002, ở v2.0 gợi ý REG-003, mà CSDL mẫu đã có REG-001..003. Kết quả là mọi lần Ban hành đều trả 409 "mã đã tồn tại", và màn hình chỉ hiện thông báo chung chung. Đã sửa:
+  - Máy chủ tính **mã REG còn trống** (`next_code`, tính cả mã đã gỡ).
+  - "AI kiểm tra trước" báo **Trùng mã**, kèm nút "Dùng mã còn trống REG-…".
+  - Ban hành với mã trùng thì báo rõ mã còn trống.
+- **Quy định lỗi đã lọt vào từ trước** (ảnh nhóm gửi: REG-007 mâu thuẫn, REG-013 và REG-014 lỗi ký tự, đều đã được áp dụng) vẫn có hiệu lực, vì lượt học chỉ kiểm tra phần thay đổi. Đã sửa:
+  - Trang Quy định chạy lại bước kiểm tra cho mọi văn bản đang hiệu lực.
+  - Văn bản có lỗi hiện banner đỏ và thẻ tô đỏ kèm lỗi đầu tiên; bấm Sửa thì form mở sẵn danh sách lỗi.
+  - Mức nguy hiểm khi chưa sửa: văn bản lỗi ký tự không sinh luật nào; văn bản mâu thuẫn thì hồ sơ khớp cả hai điều luôn do người duyệt.
+- **"Ban hành luôn, không bấm kiểm tra trước"** đã thử thật trên code hiện tại với đúng 3 văn bản trong ảnh:
+  - cả 3 bị chặn (HTTP 422: CONTRADICTION, GARBLED, GARBLED), không lưu gì, không xếp lượt học;
+  - sửa một quy định có sẵn thành nội dung mâu thuẫn cũng bị chặn;
+  - lượt học kiểm tra lại lần nữa; thiếu migration 26 thì lượt học thất bại và giữ nguyên bộ luật cũ.
+
+  Vậy các bản lỗi trong ảnh được áp dụng là do **container api/worker build trước ngày 18/11**. Cần `git pull` rồi `docker compose up -d --build api worker web web-admin`.
+
 ## Số đo trung thực của bộ phân loại lý do thu hồi
 
 Có 3 bộ test, mỗi bộ được băm trước khi huấn luyện phiên bản tương ứng. Bộ 3 gồm câu oái oăm: không dấu, viết tắt, phủ định, nhắc tên loại đơn nhưng không phải bad case của loại đó.
@@ -162,11 +179,11 @@ Lỗi của v2 trên bộ 3 đã được xem trước khi làm v3 (ghi trong b�
 
 | Bộ | Kết quả |
 |---|---|
-| Django (`manage.py test`, cả `api_core` và `tests/`) | 812 OK (92 bỏ qua) |
-| `tests/` (unittest, venv gốc) | 327 OK (phần cần fastapi/scikit-learn bỏ qua, chạy ở venv AI) |
+| Django (`manage.py test`, cả `api_core` và `tests/`) | 825 OK (92 bỏ qua) |
+| `tests/` (unittest, venv gốc) | 336 OK (phần cần fastapi/scikit-learn bỏ qua, chạy ở venv AI) |
 | `tests/` (venv AI) | 293 OK, trừ `test_regulation_validation` (venv AI không có psycopg; chạy OK ở venv gốc) |
 | Chấm lại các bộ test đã băm | Quy định v3 40/40, thay thế 12/12, bộ cũ 28/30; rủi ro bộ 2 29/30; người làm thay test top-1 0,898; lý do thu hồi bộ 3 76,4% |
-| Web (`npm test`) | 87/87 OK, eslint 0 lỗi |
+| Web (`npm test`) | 88/88 OK, eslint 0 lỗi |
 | `tests/` mới cho loại mới (venv AI) | `test_type_memory` 15/15 (cả mô hình thật), `test_edge_cases` 39/39 |
 | Thử trên trình duyệt (Playwright, local) | Hộp AI tự động, gợi ý chuyển không tự chuyển, "Có phải ý bạn là" ở 2 ô tìm kiếm, hộp thoại tạo loại mới, người 2 thấy loại người 1 tạo, ô gợi ý AI của admin |
 | Kiểm thử thật (bản sao CSDL local, sau khi build lại Docker với mô hình mới) | Thay thế quy định 6/6; trả lại quy định lỗi 5/5; học bad case 4/4; học từ phản hồi 4/5; chuyển quy trình 4/6 (chạy trước đợt này) |

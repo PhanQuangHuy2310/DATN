@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **19/11 — Nạp quy định, đợt 2 (theo ảnh nhóm):** mã mặc định là mã REG còn trống do máy chủ tính (CSDL mới v1.0 từng gợi ý REG-002 trùng → 409 mọi lần); "AI kiểm tra trước" báo trùng mã + nút dùng mã trống; quy định đang hiệu lực có lỗi (nạp trước 18/11) được tô đỏ + banner. Thử thật: ban hành luôn 3 văn bản lỗi trong ảnh → 422, không lưu. Nhóm cần pull + rebuild api/worker/web/web-admin.
 - [x] **19/11 — Kiểm thử nạp quy định** (nhóm báo "không nạp được", ">3tr người duyệt <5tr AI duyệt" xung đột và AI tự xử lý):
   - Sửa biên dịch viết tắt (`>`/`<`/`≥`/`≤`, "người duyệt", "AI duyệt", câu hai vế); câu "duyệt" + số chưa hiểu thì báo, không bỏ qua.
   - Báo mâu thuẫn ghi vùng chồng + cách sửa; bấm Ban hành bản lỗi báo đúng lỗi và cuộn tới lỗi; CSS cho thông báo 3 trang quản trị.
