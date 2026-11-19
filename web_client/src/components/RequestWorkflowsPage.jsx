@@ -861,7 +861,15 @@ function AiProfileHint({ name, description, fields, onApply }) {
     };
   }, [name, description, fieldKey]);
 
-  if (name.trim().length < 4) return null;
+  // Luôn hiện (cả khi form còn trống) để người tạo mẫu biết có AI gợi ý, giống hộp "AI tự động" ở form yêu cầu.
+  if (name.trim().length < 4) {
+    return (
+      <div className="ai-profile-hint" role="status">
+        <strong>AI gợi ý</strong>
+        <span className="muted"> · Nhập tên mẫu, AI sẽ tự gợi ý phân loại A/B/C và trọng số rủi ro.</span>
+      </div>
+    );
+  }
   const data = state.data;
   const reasons = (data?.reasons_lifecycle || []).filter((r) => !r.startsWith("có cụm từ")).slice(0, 2);
   return (
