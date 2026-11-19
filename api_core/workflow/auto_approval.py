@@ -231,7 +231,100 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
             request_id,
         )
         return None
+    _notify_supervisors(request_id, context, correlation_id)
     return result.body
+
+
+SUPERVISOR_LEVELS = 2
+
+
+def _supervisors(
+    cursor, requester_id: str, levels: int = SUPERVISOR_LEVELS
+) -> list[str]:
+    """Quản lý trực tiếp và quản lý của quản lý (theo app_user.manager_id), bỏ người không còn hoạt động."""
+    found: list[str] = []
+    current = requester_id
+    for _ in range(levels):
+        cursor.execute(
+            """
+            SELECT m.id::text, m.is_active
+            FROM eas.app_user u JOIN eas.app_user m ON m.id = u.manager_id
+            WHERE u.id = %s
+            """,
+            [current],
+        )
+        row = cursor.fetchone()
+        if (
+            not row
+            or row[0] in found
+            or row[0] in (requester_id, settings.EAS_AI_SYSTEM_USER_ID)
+        ):
+            break
+        if row[1]:
+            found.append(row[0])
+        current = row[0]
+    return found
+
+
+def _notify_supervisors(
+    request_id: str, context: dict[str, Any], correlation_id: str
+) -> None:
+    """AI tự duyệt xong thì báo cho 2 cấp quản lý phía trên người gửi để họ kiểm tra (và thu hồi nếu không hợp lệ).
+
+    Không chặn việc duyệt: lỗi ở đây chỉ ghi log. Người nhận được thêm quyền xem hồ sơ (participant), vì worker chỉ
+    gửi thông báo cho người đọc được hồ sơ.
+    """
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            recipients = _supervisors(cursor, context["requester_id"]) or [
+                context["assignee_id"]
+            ]
+            recipients = [
+                r for r in recipients if r and r != settings.EAS_AI_SYSTEM_USER_ID
+            ]
+            if not recipients:
+                return
+            cursor.execute(
+                """
+                SELECT r.code, COALESCE(rt.name, rt.code)
+                FROM eas.request r JOIN eas.request_type rt ON rt.id = r.type_id WHERE r.id = %s
+                """,
+                [request_id],
+            )
+            code, type_name = cursor.fetchone()
+            for user_id in recipients:
+                cursor.execute(
+                    """
+                    INSERT INTO eas.request_participant(request_id,user_id,joined_as)
+                    VALUES (%s,%s,'APPROVER') ON CONFLICT (request_id, user_id) DO NOTHING
+                    """,
+                    [request_id, user_id],
+                )
+            label = (
+                f"AI đã tự duyệt {code} ({type_name}) của {context['requester_name']}. "
+                "Vui lòng kiểm tra; trong 24 giờ có thể thu hồi nếu không hợp lệ"
+            )
+            cursor.execute(
+                SQL_INSERT_OUTBOX_EVENT,
+                [
+                    request_id,
+                    "AI_AUTO_APPROVED",
+                    Jsonb(
+                        {
+                            "request_id": request_id,
+                            "recipient_ids": recipients,
+                            "label": label[:300],
+                        }
+                    ),
+                    f"request:{request_id}:step:{context['step_id']}:ai-approved",
+                ],
+            )
+    except Exception:  # thông báo là phụ, không được làm hỏng quyết định đã ghi
+        logger.warning(
+            "AI auto-approve supervisor notice failed: request=%s",
+            request_id,
+            exc_info=True,
+        )
 
 
 def _apply_feedback_memory(
