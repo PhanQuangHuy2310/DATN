@@ -111,6 +111,36 @@ Lỗi do chính đợt này gây ra, đã sửa:
   - sửa bản ghi lỗi trên CSDL local;
   - thêm test.
 
+### Nạp quy định: viết tắt, chồng ngưỡng, thông báo lỗi (19/11, nhóm báo "không nạp được")
+
+Kiểm thử phần nạp quy định với câu nhóm gặp: "**>3tr người duyệt, <5tr AI duyệt**". Tìm ra 4 lỗi:
+
+| Lỗi | Hậu quả | Đã sửa |
+|---|---|---|
+| Bộ biên dịch không hiểu `>`, `<`, `≥`, `≤`, "người duyệt", "AI duyệt", và **không báo gì** | Quy định nạp được nhưng không có tác dụng: AI vẫn tự duyệt mọi hồ sơ như chưa có quy định | Hiểu ký hiệu và cách nói ngắn ("người/quản lý/giám đốc duyệt", "AI (tự) duyệt", "không để AI duyệt"…); tách câu có cả hai vế; câu có "duyệt" + con số mà vẫn không hiểu thì vào mục "AI chưa hiểu", không bỏ qua im lặng |
+| Bấm "Ban hành" bản bị chặn chỉ hiện "Không thể thực hiện thao tác. Kiểm tra thông tin và thử lại." | Người dùng không biết lỗi gì; lỗi thật nằm khuất ở đầu danh sách dài | Báo đúng "AI phát hiện N lỗi…" và tự cuộn tới lỗi đầu tiên |
+| Thông báo riêng của 3 trang quản trị (Quy định, Quản trị AI, Quản lý API) **không có CSS** | "Đã ban hành…" và lỗi cụ thể hiện thành chữ trơn cuối trang, sau modal | Thêm kiểu hiển thị nổi |
+| Báo mâu thuẫn ghi "(mọi hồ sơ)" với điều kiện cận trên | Đọc không hiểu chồng ở đâu | Ghi rõ vùng chồng ("số tiền trên 3.000.000 đến 4.999.999") và cách sửa cụ thể ("sửa thành 'không quá 3.000.000'") |
+
+Cách xử lý ">3tr người duyệt, <5tr AI duyệt" trong **cùng một văn bản** vẫn theo quy ước của trưởng nhóm (18/11): đây là mâu thuẫn và bị chặn. Khác với trước, thông báo giờ chỉ rõ vùng 3–5 triệu và cách sửa. Bộ máy luật lúc chạy vẫn an toàn: hồ sơ khớp cả hai điều luôn do người duyệt.
+
+Thêm 2 cảnh báo (không chặn):
+- **Nới lỏng kiểm soát:** quy định mới cho AI tự duyệt ở vùng mà quy định cũ bắt người duyệt. Ví dụ "<5tr AI duyệt" sẽ gỡ điều "nghi chia nhỏ hồ sơ" của QC05 trong vùng dưới 5 triệu. Đây là quy ước "văn bản mới thắng" đã thống nhất ngày 18/11 và nằm trong bộ test băm, nên giữ nguyên, chỉ báo rõ. Bad case `BC_SPLIT_AMOUNT_EVASION` vẫn bắt chia nhỏ độc lập với quy định.
+- **AI duyệt không có tác dụng:** loại có trọng số rủi ro vượt `EAS_AI_AUTO_APPROVE_MAX_WEIGHT`. Ví dụ "Thanh toán chi phí" có trọng số 3, trong khi ngưỡng mặc định là 2, nên AI không tự duyệt loại này dù quy định ghi "AI duyệt".
+
+Kiểm chứng:
+- **Mô phỏng** đúng các bước của lượt học, chấm bằng bộ máy luật của AI, không ghi CSDL. Bản viết tắt trước khi sửa: 4 tr và 6 tr đều để AI duyệt. Sau khi sửa: 2 tr AI duyệt, 4 tr và 6 tr bắt người duyệt.
+- **Chạy thật trên local:**
+  - nạp quy định viết tắt cho chiết khấu ("> 15% người duyệt, ≤ 15% AI duyệt") qua giao diện → HTTP 201;
+  - AI học xong trong khoảng 11 giây;
+  - bộ máy luật đang chạy (v80.0): 20% bắt người duyệt; 15% và 10% khớp luật "AI duyệt";
+  - đã gỡ quy định thử.
+- **Bộ test băm trước giữ nguyên:**
+  - quy định v3: 40/40, thay thế 12/12;
+  - bộ cũ: dev 16/18, demo 5/5;
+  - 29/29 câu của các quy định đang có không đổi cách hiểu.
+- `tests/test_regulation_shorthand.py` có 9 test, viết **sau** khi thấy lỗi.
+
 ## Số đo trung thực của bộ phân loại lý do thu hồi
 
 Có 3 bộ test, mỗi bộ được băm trước khi huấn luyện phiên bản tương ứng. Bộ 3 gồm câu oái oăm: không dấu, viết tắt, phủ định, nhắc tên loại đơn nhưng không phải bad case của loại đó.

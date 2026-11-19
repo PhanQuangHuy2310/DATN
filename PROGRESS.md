@@ -3,6 +3,12 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **19/11 — Kiểm thử nạp quy định** (nhóm báo "không nạp được", ">3tr người duyệt <5tr AI duyệt" xung đột và AI tự xử lý):
+  - Sửa biên dịch viết tắt (`>`/`<`/`≥`/`≤`, "người duyệt", "AI duyệt", câu hai vế); câu "duyệt" + số chưa hiểu thì báo, không bỏ qua.
+  - Báo mâu thuẫn ghi vùng chồng + cách sửa; bấm Ban hành bản lỗi báo đúng lỗi và cuộn tới lỗi; CSS cho thông báo 3 trang quản trị.
+  - Cảnh báo mới: NỚI LỎNG kiểm soát (văn bản mới gỡ điều bắt duyệt cũ) và AI DUYỆT KHÔNG CÓ TÁC DỤNG (trọng số loại > ngưỡng).
+  - Giữ quy ước 18/11: mâu thuẫn trong cùng văn bản bị chặn; văn bản mới thắng văn bản cũ (bộ test băm 12/12).
+  - Local: thử ban hành QD-THU-CK rồi gỡ; nó đã loại trừ vĩnh viễn REG-002 Điều 3 cho chiết khấu ≤ 15% (chỉ local). Còn 2 đơn thử EAS-2026-000502/503 đang chờ duyệt.
 - [x] **19/11 — Một AI tự động khi tạo yêu cầu; "Có phải ý bạn là…"; AI tạo loại yêu cầu mới; loại mới được học ngay** (người dùng yêu cầu: gộp 2 khối AI, không tự chuyển trang, xử lý hết mục "!" / "chưa học"):
   - Hộp "AI tự động" dưới ô tiêu đề (loại, bộ phận, tuyến, rủi ro); chỉ gợi ý chuyển, không tự chuyển (thay cho tự chuyển ngày 16/11).
   - Ô tìm kiếm header + "Tìm nhanh biểu mẫu": "Có phải ý bạn là…" + "Tạo yêu cầu mới"; AI tạo loại (B/C, ≤ 3/người/ngày, admin được báo); người 2 thấy ngay.
