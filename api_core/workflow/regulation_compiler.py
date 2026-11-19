@@ -39,8 +39,16 @@ from typing import Any
 
 ORDER = {"A": 0, "B": 1, "C": 2}
 DEFAULT_SPLIT_TOTAL_GT = 20_000_000
-WINDOWS = ("CALENDAR_MONTH", "ROLLING_7D", "ROLLING_30D", "CALENDAR_QUARTER", "CALENDAR_YEAR")
-WINDOW_RE = re.compile(r"^(?:CALENDAR_(?:MONTH|QUARTER|YEAR)|ROLLING_(?:[1-9]\d{0,2})D)$")
+WINDOWS = (
+    "CALENDAR_MONTH",
+    "ROLLING_7D",
+    "ROLLING_30D",
+    "CALENDAR_QUARTER",
+    "CALENDAR_YEAR",
+)
+WINDOW_RE = re.compile(
+    r"^(?:CALENDAR_(?:MONTH|QUARTER|YEAR)|ROLLING_(?:[1-9]\d{0,2})D)$"
+)
 SENTENCE_WIDE = ("effective_from", "effective_until", "location_contains")
 CONTEXT_KEYS = (
     "due_within_hours",
@@ -55,7 +63,9 @@ class RequestTypeName:
     code: str
     name: str
     lifecycle: str | None = None
-    risk_weight: int | None = None  # chỉ dùng để báo "AI duyệt" vô tác dụng (xem regulation_validation)
+    risk_weight: int | None = (
+        None  # chỉ dùng để báo "AI duyệt" vô tác dụng (xem regulation_validation)
+    )
 
 
 def fold(text: str) -> str:
@@ -153,7 +163,9 @@ _LOWER_EXCL = r"(?:trên|vượt|vượt quá|quá|lớn hơn|cao hơn|hơn)\s*$
 _PERCENT = re.compile(r"(?P<num>\d+(?:[.,]\d+)?)\s*(?:%|phần trăm)")
 _DATE = re.compile(r"(?P<d>\d{1,2})/(?P<m>\d{1,2})/(?P<y>\d{4})")
 _DATE_FROM = r"(?:kể từ ngày|kể từ|từ ngày|áp dụng từ ngày|áp dụng từ|có hiệu lực từ ngày|có hiệu lực từ|bắt đầu từ ngày|từ)\s*$"
-_DATE_UNTIL = r"(?:đến hết ngày|đến hết|đến ngày|tới ngày|cho đến ngày|đến|tới|hết ngày)\s*$"
+_DATE_UNTIL = (
+    r"(?:đến hết ngày|đến hết|đến ngày|tới ngày|cho đến ngày|đến|tới|hết ngày)\s*$"
+)
 _RETRO = re.compile(
     r"(?:cho\s+)?ngày\s+(?:đã\s+quá|cách\s+(?:hiện tại|ngày gửi|lúc gửi)\s+(?:hơn|trên|quá))\s+(?P<num>\d+)\s*ngày"
 )
@@ -234,20 +246,42 @@ class _Parsed:
 
     loose_money: list[int] = field(default_factory=list)
     loose_percent: list[int] = field(default_factory=list)
-    consumed: list[tuple[int, int]] = field(default_factory=list)  # mọi số tiền / % / ngày đã đọc, kể cả không rõ hướng
-    loose_numbers: list[str] = field(default_factory=list)  # con số không thuộc điều kiện nào
+    consumed: list[tuple[int, int]] = field(
+        default_factory=list
+    )  # mọi số tiền / % / ngày đã đọc, kể cả không rõ hướng
+    loose_numbers: list[str] = field(
+        default_factory=list
+    )  # con số không thuộc điều kiện nào
 
     def add(self, start: int, end: int, kind: str, value: Any = None) -> None:
         self.spans.append(_Span(start, end, kind, value))
 
 
 def _money_value(num: str, unit: str) -> int | None:
-    if unit in {"tỷ", "ty", "triệu", "trieu", "trđ", "tr", "nghìn", "nghin", "ngàn", "k"}:
+    if unit in {
+        "tỷ",
+        "ty",
+        "triệu",
+        "trieu",
+        "trđ",
+        "tr",
+        "nghìn",
+        "nghin",
+        "ngàn",
+        "k",
+    }:
         try:
             value = float(num.replace(",", "."))
         except ValueError:
             return None
-        scale = {"tỷ": 1e9, "ty": 1e9, "triệu": 1e6, "trieu": 1e6, "trđ": 1e6, "tr": 1e6}.get(unit, 1e3)
+        scale = {
+            "tỷ": 1e9,
+            "ty": 1e9,
+            "triệu": 1e6,
+            "trieu": 1e6,
+            "trđ": 1e6,
+            "tr": 1e6,
+        }.get(unit, 1e3)
         return round(value * scale)
     digits = re.sub(r"[.,]", "", num)
     return int(digits) if digits.isdigit() else None
@@ -311,7 +345,9 @@ def _iso(m: re.Match) -> str | None:
     try:
         from datetime import date as _date
 
-        return _date(int(m.group("y")), int(m.group("m")), int(m.group("d"))).isoformat()
+        return _date(
+            int(m.group("y")), int(m.group("m")), int(m.group("d"))
+        ).isoformat()
     except ValueError:
         return None
 
@@ -338,10 +374,14 @@ _RANGE_UNIT = re.compile(
 
 def _expand_ranges(text: str) -> str:
     """'từ 3 đến 5 ngày' -> 'từ 3 ngày đến 5 ngày': đơn vị viết một lần dùng cho cả hai đầu khoảng."""
-    return _RANGE_UNIT.sub(lambda m: f"{m.group('a')} {m.group('u')}{m.group('mid')}{m.group('u')}", text)
+    return _RANGE_UNIT.sub(
+        lambda m: f"{m.group('a')} {m.group('u')}{m.group('mid')}{m.group('u')}", text
+    )
 
 
-def _bounded(p: _Parsed, scan: str, regex: re.Pattern, value_of, lower_kind: str, upper_kind: str) -> list[int]:
+def _bounded(
+    p: _Parsed, scan: str, regex: re.Pattern, value_of, lower_kind: str, upper_kind: str
+) -> list[int]:
     """Thêm cận dưới/cận trên cho mọi số khớp regex; trả về các giá trị KHÔNG xác định được hướng."""
     loose: list[int] = []
     for m in regex.finditer(scan):
@@ -406,7 +446,12 @@ def _parse(low: str) -> tuple[_Parsed, bool]:
             window = _window(w)
             taken.append((w.start(), w.end()))
             break
-        p.add(repeat[0], repeat[1], "repeat_count_gte", (repeat[2], window or "ROLLING_30D"))
+        p.add(
+            repeat[0],
+            repeat[1],
+            "repeat_count_gte",
+            (repeat[2], window or "ROLLING_30D"),
+        )
         taken.append((repeat[0], repeat[1]))
 
     for m in _SPLIT.finditer(low):
@@ -424,12 +469,28 @@ def _parse(low: str) -> tuple[_Parsed, bool]:
             taken.append((m.start(), m.end()))
 
     scan = _mask(low, taken)
-    p.loose_percent = _bounded(p, scan, _PERCENT, lambda m: round(float(m.group("num").replace(",", "."))),
-                               "percent_gt", "percent_lte")
-    scan = _mask(scan, [(sp.start, sp.end) for sp in p.spans if sp.kind.startswith("percent")])
-    p.loose_money = _bounded(p, scan, _MONEY, lambda m: _money_value(m.group("num"), m.group("unit")),
-                             "amount_gt", "amount_lte")
-    scan = _mask(scan, [(sp.start, sp.end) for sp in p.spans if sp.kind.startswith("amount")])
+    p.loose_percent = _bounded(
+        p,
+        scan,
+        _PERCENT,
+        lambda m: round(float(m.group("num").replace(",", "."))),
+        "percent_gt",
+        "percent_lte",
+    )
+    scan = _mask(
+        scan, [(sp.start, sp.end) for sp in p.spans if sp.kind.startswith("percent")]
+    )
+    p.loose_money = _bounded(
+        p,
+        scan,
+        _MONEY,
+        lambda m: _money_value(m.group("num"), m.group("unit")),
+        "amount_gt",
+        "amount_lte",
+    )
+    scan = _mask(
+        scan, [(sp.start, sp.end) for sp in p.spans if sp.kind.startswith("amount")]
+    )
     _bounded(p, scan, _DAYS, lambda m: int(m.group("num")), "days_gt", "days_lte")
     # "dưới 1 ngày" (nửa ngày): số ngày là số nguyên nên không biểu diễn được -> chưa đo được, bỏ qua câu.
     if any(sp.kind == "days_lte" and sp.value < 1 for sp in p.spans):
@@ -483,23 +544,36 @@ def _groups(low: str, parsed: _Parsed) -> list[dict[str, Any]]:
     return [{**c, **shared} for c in out]
 
 
-_PAIRS = (("amount_gt", "amount_lte"), ("days_gt", "days_lte"), ("percent_gt", "percent_lte"))
+_PAIRS = (
+    ("amount_gt", "amount_lte"),
+    ("days_gt", "days_lte"),
+    ("percent_gt", "percent_lte"),
+)
 
 
 def _invalid(parsed: _Parsed, groups: list[dict[str, Any]]) -> str | None:
     """Lý do câu có điều kiện vô nghĩa (không bao giờ khớp hoặc không đọc chắc được); None nếu ổn."""
-    if parsed.loose_percent or (parsed.loose_money and not any(sp.kind == "split_suspect" for sp in parsed.spans)):
+    if parsed.loose_percent or (
+        parsed.loose_money
+        and not any(sp.kind == "split_suspect" for sp in parsed.spans)
+    ):
         return "Có số tiền / phần trăm không rõ là cận trên hay cận dưới (ví dụ số âm, thiếu 'trên/dưới/từ')"
     if parsed.loose_numbers:
-        return (f"Có con số AI chưa gắn được với điều kiện nào ({', '.join(parsed.loose_numbers[:3])}); không sinh luật để "
-                "tránh chặn cả loại yêu cầu")
+        return (
+            f"Có con số AI chưa gắn được với điều kiện nào ({', '.join(parsed.loose_numbers[:3])}); không sinh luật để "
+            "tránh chặn cả loại yêu cầu"
+        )
     for cond in groups:
         if any(cond.get(k, 0) > 100 for k in ("percent_gt", "percent_lte")):
             return "Phần trăm lớn hơn 100%"
         for low_key, high_key in _PAIRS:
             if low_key in cond and high_key in cond and cond[low_key] >= cond[high_key]:
                 return "Khoảng rỗng: cận dưới không nhỏ hơn cận trên, luật sẽ không bao giờ khớp"
-        if cond.get("effective_from") and cond.get("effective_until") and cond["effective_from"] > cond["effective_until"]:
+        if (
+            cond.get("effective_from")
+            and cond.get("effective_until")
+            and cond["effective_from"] > cond["effective_until"]
+        ):
             return "Ngày bắt đầu hiệu lực sau ngày hết hiệu lực"
     return None
 
@@ -540,12 +614,24 @@ def _normalize(sentence: str) -> str:
 def _control_spans(low: str) -> list[tuple[int, int, str]]:
     """Vị trí các cụm "bắt duyệt thủ công" (MANUAL) và "cho AI tự duyệt" (AUTO), không tính cụm AUTO nằm trong
     một cụm MANUAL ("không được tự động duyệt")."""
-    manual = [(m.start(), m.end()) for w in (*_MANUAL, *_MANUAL_SHORT) for m in re.finditer(re.escape(w), low)]
-    manual += [(m.start(), m.end()) for rx in (_MANUAL_RE, _MANUAL_SHORT_RE) for m in rx.finditer(low)]
+    manual = [
+        (m.start(), m.end())
+        for w in (*_MANUAL, *_MANUAL_SHORT)
+        for m in re.finditer(re.escape(w), low)
+    ]
+    manual += [
+        (m.start(), m.end())
+        for rx in (_MANUAL_RE, _MANUAL_SHORT_RE)
+        for m in rx.finditer(low)
+    ]
     auto = [(m.start(), m.end()) for w in _AUTO for m in re.finditer(re.escape(w), low)]
     auto += [(m.start(), m.end()) for m in _AUTO_SHORT_RE.finditer(low)]
-    auto = [a for a in auto if not any(s <= a[0] < e or s < a[1] <= e for s, e in manual)]
-    return sorted([(s, e, "MANUAL") for s, e in manual] + [(s, e, "AUTO") for s, e in auto])
+    auto = [
+        a for a in auto if not any(s <= a[0] < e or s < a[1] <= e for s, e in manual)
+    ]
+    return sorted(
+        [(s, e, "MANUAL") for s, e in manual] + [(s, e, "AUTO") for s, e in auto]
+    )
 
 
 def _signals(low: str) -> tuple[bool, bool]:
@@ -584,7 +670,9 @@ def compile_sentence(
     parts = _split_mixed(low)
     if len(parts) == 1:
         return _compile_clause(low, types, [])
-    inherited, _ = _scope(low, types)  # "Thanh toán chi phí >3tr người duyệt, <5tr AI duyệt": vế sau cùng loại
+    inherited, _ = _scope(
+        low, types
+    )  # "Thanh toán chi phí >3tr người duyệt, <5tr AI duyệt": vế sau cùng loại
     return [rule for part in parts for rule in _compile_clause(part, types, inherited)]
 
 
@@ -606,8 +694,12 @@ def _compile_clause(
     sentence_amount = next(
         (sp.value for sp in parsed.spans if sp.kind == "amount_gt"), None
     ) or next(iter(parsed.loose_money), None)
-    unconstrained = all(not {k: v for k, v in g.items() if k not in ("effective_from", "effective_until")}
-                        for g in groups)
+    unconstrained = all(
+        not {
+            k: v for k, v in g.items() if k not in ("effective_from", "effective_until")
+        }
+        for g in groups
+    )
     if unconstrained and not scoped and not any(word in low for word in _EVERY):
         return []
     approvers = _approvers(masked)
@@ -650,10 +742,14 @@ def skip_reason(sentence: str, types: list[RequestTypeName]) -> str | None:
         return "Câu phủ định yêu cầu duyệt ('không bắt buộc / không cần duyệt'): AI không tự nới lỏng kiểm soát"
     parts = _split_mixed(low)
     inherited = _scope(low, types)[0] if len(parts) > 1 else []
-    return next((r for r in (_skip_clause(p, types, inherited) for p in parts) if r), None)
+    return next(
+        (r for r in (_skip_clause(p, types, inherited) for p in parts) if r), None
+    )
 
 
-def _skip_clause(low: str, types: list[RequestTypeName], inherited: list[RequestTypeName]) -> str | None:
+def _skip_clause(
+    low: str, types: list[RequestTypeName], inherited: list[RequestTypeName]
+) -> str | None:
     manual, auto = _signals(low)
     if not (manual or auto):
         plain = strip_marks(low)

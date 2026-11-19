@@ -257,9 +257,25 @@ EMPTY: dict[str, Any] = {
     "location_text": "",
     "same_type_dates": [],
 }
-REQUEST_FEATURES = ("notice_hours", "start_day_of_month", "start_weekday", "submit_hour")
-LOCATION_FIELDS = ("location", "destination", "room_code", "room_name", "facility_zone", "source_warehouse",
-                   "destination_warehouse", "site", "branch", "area", "address")
+REQUEST_FEATURES = (
+    "notice_hours",
+    "start_day_of_month",
+    "start_weekday",
+    "submit_hour",
+)
+LOCATION_FIELDS = (
+    "location",
+    "destination",
+    "room_code",
+    "room_name",
+    "facility_zone",
+    "source_warehouse",
+    "destination_warehouse",
+    "site",
+    "branch",
+    "area",
+    "address",
+)
 SQL_POLICY_FEATURES = """
     SELECT v.payload->>'discount_percent',
            concat_ws(' | ', VARIADIC ARRAY(SELECT v.payload->>k FROM unnest(%(fields)s::text[]) k
@@ -279,11 +295,19 @@ def _policy_features(request_id: str) -> dict:
     """Phần trăm chiết khấu, địa điểm (gộp các trường địa điểm của biểu mẫu), ngày các hồ sơ cùng loại trước đây."""
     try:
         with connection.cursor() as cursor:
-            cursor.execute(SQL_POLICY_FEATURES, {"request_id": request_id, "fields": list(LOCATION_FIELDS),
-                                                 "tz": LOCAL_TZ})
+            cursor.execute(
+                SQL_POLICY_FEATURES,
+                {
+                    "request_id": request_id,
+                    "fields": list(LOCATION_FIELDS),
+                    "tz": LOCAL_TZ,
+                },
+            )
             row = cursor.fetchone()
     except Exception:
-        logger.warning("policy features unavailable: request=%s", request_id, exc_info=True)
+        logger.warning(
+            "policy features unavailable: request=%s", request_id, exc_info=True
+        )
         return {"percent": None, "location_text": "", "same_type_dates": []}
     if not row:
         return {"percent": None, "location_text": "", "same_type_dates": []}
@@ -293,7 +317,11 @@ def _policy_features(request_id: str) -> dict:
         percent = None
     if percent is not None and not 0 <= percent <= 100:
         percent = None
-    return {"percent": percent, "location_text": (row[1] or "")[:600], "same_type_dates": list(row[2] or [])[:400]}
+    return {
+        "percent": percent,
+        "location_text": (row[1] or "")[:600],
+        "same_type_dates": list(row[2] or [])[:400],
+    }
 
 
 def load_signals(request_id: str) -> dict[str, Any]:
@@ -346,7 +374,9 @@ def _request_features(request_id: str) -> dict:
         with connection.cursor() as cursor:
             feats = request_features(cursor, request_id)
     except Exception:
-        logger.warning("request features unavailable: request=%s", request_id, exc_info=True)
+        logger.warning(
+            "request features unavailable: request=%s", request_id, exc_info=True
+        )
         return dict.fromkeys(REQUEST_FEATURES)
     return {k: feats.get(k) for k in REQUEST_FEATURES}
 

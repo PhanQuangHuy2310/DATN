@@ -24,19 +24,27 @@ def _http(response=None, error=None):
 
 
 class SuggestRulesOutageTests(SimpleTestCase):
-
     def test_ai_service_unreachable(self):
-        with patch("api_core.workflow.ai_learning._ai_http", return_value=_http(error=TimeoutError())):
-            self.assertEqual(ai_learning._suggest_rules(CLAUSE, TYPES), {"error": "TimeoutError"})
+        with patch(
+            "api_core.workflow.ai_learning._ai_http",
+            return_value=_http(error=TimeoutError()),
+        ):
+            self.assertEqual(
+                ai_learning._suggest_rules(CLAUSE, TYPES), {"error": "TimeoutError"}
+            )
 
     def test_gemini_quota_reported_by_the_ai_service(self):
         body = {"rules": [], "rejected": [], "error": "TooManyRequests"}
         resp = SimpleNamespace(status_code=200, json=lambda: body)
         with patch("api_core.workflow.ai_learning._ai_http", return_value=_http(resp)):
-            self.assertEqual(ai_learning._suggest_rules(CLAUSE, TYPES),
-                             {"rules": [], "rejected": [], "error": "TooManyRequests"})
+            self.assertEqual(
+                ai_learning._suggest_rules(CLAUSE, TYPES),
+                {"rules": [], "rejected": [], "error": "TooManyRequests"},
+            )
 
     def test_ai_service_error_status(self):
         resp = SimpleNamespace(status_code=429, json=dict)
         with patch("api_core.workflow.ai_learning._ai_http", return_value=_http(resp)):
-            self.assertEqual(ai_learning._suggest_rules(CLAUSE, TYPES), {"error": "HTTP 429"})
+            self.assertEqual(
+                ai_learning._suggest_rules(CLAUSE, TYPES), {"error": "HTTP 429"}
+            )

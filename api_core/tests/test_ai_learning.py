@@ -238,7 +238,9 @@ class AiDownLearningJobTests(SimpleTestCase):
             outcome = ai_learning.process_job(job, "owner-1")
         # SQL + tham số (sync_status / loại thông báo được truyền qua tham số).
         sql = " ".join(
-            str(c.args[0]) + " " + " ".join(map(str, c.args[1] if len(c.args) > 1 else []))
+            str(c.args[0])
+            + " "
+            + " ".join(map(str, c.args[1] if len(c.args) > 1 else []))
             for c in cursor.execute.call_args_list
         )
         return outcome, finish, sql

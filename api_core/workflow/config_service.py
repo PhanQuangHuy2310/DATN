@@ -798,7 +798,9 @@ def publish_config_release(
         from api_core.workflow import type_onboarding
 
         if lifecycle == "A":
-            type_onboarding.ensure_escalation_releases(cursor, type_id=type_id, actor_id=actor.id)
+            type_onboarding.ensure_escalation_releases(
+                cursor, type_id=type_id, actor_id=actor.id
+            )
         transaction.on_commit(lambda: type_onboarding.onboard_after_commit(type_code))
 
         _append_admin_audit(

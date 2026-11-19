@@ -604,17 +604,32 @@ def enforcement_probe(rule: dict[str, Any]) -> dict[str, Any]:
     # v3: cận trên, phần trăm, địa điểm, ngày đã quá N ngày, cửa sổ đếm khác 7/30 ngày/tháng.
     if rule.get("amount_lte") is not None:
         low = float(rule.get("amount_gt") or 0)
-        probe["amount"] = float(rule["amount_lte"]) if low + 1 > rule["amount_lte"] else min(low + 1, rule["amount_lte"])
+        probe["amount"] = (
+            float(rule["amount_lte"])
+            if low + 1 > rule["amount_lte"]
+            else min(low + 1, rule["amount_lte"])
+        )
     if rule.get("days_lte") is not None:
-        probe["days_requested"] = int(min((rule.get("days_gt") or 0) + 1, rule["days_lte"]))
+        probe["days_requested"] = int(
+            min((rule.get("days_gt") or 0) + 1, rule["days_lte"])
+        )
     if rule.get("percent_gt") is not None or rule.get("percent_lte") is not None:
-        low = float(rule.get("percent_gt") if rule.get("percent_gt") is not None else -1)
-        probe["percent"] = min(low + 1, float(rule["percent_lte"])) if rule.get("percent_lte") is not None else low + 1
+        low = float(
+            rule.get("percent_gt") if rule.get("percent_gt") is not None else -1
+        )
+        probe["percent"] = (
+            min(low + 1, float(rule["percent_lte"]))
+            if rule.get("percent_lte") is not None
+            else low + 1
+        )
     if rule.get("location_contains"):
         probe["location_text"] = rule["location_contains"]
     if rule.get("retro_days_gt") is not None:
         probe["notice_hours"] = -24.0 * (int(rule["retro_days_gt"]) + 1)
-    if rule.get("repeat_count_gte") and (rule.get("repeat_window") or "ROLLING_30D") not in window_field:
+    if (
+        rule.get("repeat_count_gte")
+        and (rule.get("repeat_window") or "ROLLING_30D") not in window_field
+    ):
         from datetime import datetime as _dt
         from zoneinfo import ZoneInfo as _Zone
 
@@ -643,7 +658,8 @@ def apply_to_ai(policy: dict[str, Any]) -> dict[str, Any]:
     try:
         with _ai_http() as client:
             pushed = client.post(
-                "/ai/policy/rules", json={"version": policy["version"], "rules": policy["rules"]}
+                "/ai/policy/rules",
+                json={"version": policy["version"], "rules": policy["rules"]},
             )
             if pushed.status_code >= 500:
                 raise TransientLearningError(f"AI service HTTP {pushed.status_code}")
@@ -688,7 +704,10 @@ def _restore_previous(previous_policy: dict[str, Any]) -> None:
         with _ai_http() as client:
             client.post(
                 "/ai/policy/rules",
-                json={"version": previous_policy["version"], "rules": previous_policy.get("rules") or []},
+                json={
+                    "version": previous_policy["version"],
+                    "rules": previous_policy.get("rules") or [],
+                },
             )
     except Exception:
         logger.warning("ai_policy_restore_failed", exc_info=True)
@@ -834,10 +853,15 @@ def _fail(job: dict[str, Any], owner: str, error: str, *, retry: bool) -> None:
             rejected = []
             try:
                 with transaction.atomic():
-                    rejected = rejection.rollback_to_applied(
-                        cursor, job_id=job["id"], cause="TECHNICAL", message=error
-                    ) or []
-            except Exception:  # khôi phục lỗi không được làm treo tác vụ: giữ cách cũ, vẫn báo admin
+                    rejected = (
+                        rejection.rollback_to_applied(
+                            cursor, job_id=job["id"], cause="TECHNICAL", message=error
+                        )
+                        or []
+                    )
+            except (
+                Exception
+            ):  # khôi phục lỗi không được làm treo tác vụ: giữ cách cũ, vẫn báo admin
                 logger.exception("regulation_rollback_failed job=%s", job["id"])
                 rejected = []
             cursor.execute(
@@ -858,7 +882,9 @@ def _fail(job: dict[str, Any], owner: str, error: str, *, retry: bool) -> None:
             )
             changes, guidance = [], []
             if rejected:
-                title, summary, changes, guidance = rejection.announcement_text(rejected, "TECHNICAL", error)
+                title, summary, changes, guidance = rejection.announcement_text(
+                    rejected, "TECHNICAL", error
+                )
             else:
                 title = f"AI chưa áp dụng được quy định v{job['target_version']}"
                 summary = (
@@ -944,14 +970,23 @@ def _reject(job: dict[str, Any], owner: str, checks: dict[str, dict[str, Any]]) 
                 ],
             )
             announce_job = job["id"]
-        title, summary, changes, guidance = rejection.announcement_text(rejected, "VALIDATION", message)
+        title, summary, changes, guidance = rejection.announcement_text(
+            rejected, "VALIDATION", message
+        )
         cursor.execute(
             """
             INSERT INTO eas.system_announcement (job_id, audience, kind, version, title, summary, changes, guidance)
             VALUES (%s, 'ADMIN', 'REGULATION_REJECTED', %s, %s, %s, %s, %s)
             ON CONFLICT (job_id) DO NOTHING
             """,
-            [announce_job, job["target_version"], title, summary, Jsonb(changes), Jsonb(guidance)],
+            [
+                announce_job,
+                job["target_version"],
+                title,
+                summary,
+                Jsonb(changes),
+                Jsonb(guidance),
+            ],
         )
     invalidate_lock_cache()
     return "REJECTED"
@@ -1156,7 +1191,9 @@ def process_job(job: dict[str, Any], owner: str) -> str:
         policy = {
             "version": f"v{version}",
             "rules": manual + kept,
-            "origins": precedence.next_origins(regulation_rules, origins, version, superseded),
+            "origins": precedence.next_origins(
+                regulation_rules, origins, version, superseded
+            ),
             "superseded": superseded,
         }
         snapshot = [
@@ -1182,7 +1219,10 @@ def process_job(job: dict[str, Any], owner: str) -> str:
             rules=policy["rules"],
             type_names={t.code: t.name for t in types},
         )
-        before = {(e["old_rule"], e["new_rule"]) for e in (previous["policy"] or {}).get("superseded") or []}
+        before = {
+            (e["old_rule"], e["new_rule"])
+            for e in (previous["policy"] or {}).get("superseded") or []
+        }
         names = {t.code: t.name for t in types}
         announcement["changes"] = [
             {"kind": "RULE_SUPERSEDED", "title": precedence.describe(e, names)}

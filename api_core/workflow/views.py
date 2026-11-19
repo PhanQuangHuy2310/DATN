@@ -1470,8 +1470,10 @@ def ai_type_create_view(request: HttpRequest) -> JsonResponse:
         result = ai_type_creation.create(request.actor, text, correlation_id(request))
     except CommandError as exc:
         return api_error(request, exc.code, status=exc.status, fields=exc.fields)
-    return JsonResponse({"data": result, "correlation_id": correlation_id(request)},
-                        status=201 if result.get("created") else 200)
+    return JsonResponse(
+        {"data": result, "correlation_id": correlation_id(request)},
+        status=201 if result.get("created") else 200,
+    )
 
 
 @require_POST

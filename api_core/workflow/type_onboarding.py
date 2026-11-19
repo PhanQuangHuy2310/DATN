@@ -38,7 +38,9 @@ DEFAULT_PLAN = ("EXECUTOR_ADMIN", [], ["DIRECTOR"])
 SCOPE_MIN_CONFIDENCE = 0.5
 
 
-def _escalated_route(route_rules: dict, lifecycle: str, plan: tuple[str, list[str], list[str]]) -> dict:
+def _escalated_route(
+    route_rules: dict, lifecycle: str, plan: tuple[str, list[str], list[str]]
+) -> dict:
     executor, extra_b, extra_c = plan
     extra = extra_b if lifecycle == "B" else extra_c
     rules = []
@@ -84,11 +86,22 @@ def ensure_escalation_releases(cursor, *, type_id: str, actor_id: str) -> list[s
         if cursor.fetchone():
             continue
         route = _escalated_route(route_rules or {}, lifecycle, plan)
-        sla = {**(sla_profile or {}), "execution_hours": 24, "acceptance_hours": 24 if lifecycle == "C" else None}
-        digest = canonical_sha256({
-            "actor_bindings": actor_bindings, "form_schema": form_schema, "lifecycle": lifecycle,
-            "route_rules": route, "sla_profile": sla, "type_id": type_id, "escalation": True,
-        })
+        sla = {
+            **(sla_profile or {}),
+            "execution_hours": 24,
+            "acceptance_hours": 24 if lifecycle == "C" else None,
+        }
+        digest = canonical_sha256(
+            {
+                "actor_bindings": actor_bindings,
+                "form_schema": form_schema,
+                "lifecycle": lifecycle,
+                "route_rules": route,
+                "sla_profile": sla,
+                "type_id": type_id,
+                "escalation": True,
+            }
+        )
         cursor.execute(
             """
             INSERT INTO eas.config_release(
@@ -97,8 +110,18 @@ def ensure_escalation_releases(cursor, *, type_id: str, actor_id: str) -> list[s
             VALUES (%s::uuid, (SELECT max(version) + 1 FROM eas.config_release WHERE type_id = %s::uuid), 'PUBLISHED',
                     %s, %s, %s, %s, %s, %s::uuid, %s::uuid, statement_timestamp(), %s, true)
             """,
-            [type_id, type_id, lifecycle, Jsonb(form_schema), Jsonb(route), Jsonb(actor_bindings), Jsonb(sla),
-             actor_id, actor_id, digest],
+            [
+                type_id,
+                type_id,
+                lifecycle,
+                Jsonb(form_schema),
+                Jsonb(route),
+                Jsonb(actor_bindings),
+                Jsonb(sla),
+                actor_id,
+                actor_id,
+                digest,
+            ],
         )
         created.append(lifecycle)
     return created
@@ -109,10 +132,20 @@ def _scope_code(base: str, type_code: str) -> str | None:
     return code if re.fullmatch(r"BC_[A-Z0-9_]{2,57}", code) else None
 
 
-def extend_bad_cases(cursor, *, type_code: str, nearest_code: str | None, confidence: float,
-                     nearest_name: str = "") -> list[str]:
+def extend_bad_cases(
+    cursor,
+    *,
+    type_code: str,
+    nearest_code: str | None,
+    confidence: float,
+    nearest_name: str = "",
+) -> list[str]:
     """Mở rộng tình huống xấu có sẵn của loại gần nhất sang loại mới (SCOPE, ACTIVE, nguồn AI)."""
-    if not nearest_code or confidence < SCOPE_MIN_CONFIDENCE or nearest_code == type_code:
+    if (
+        not nearest_code
+        or confidence < SCOPE_MIN_CONFIDENCE
+        or nearest_code == type_code
+    ):
         return []
     cursor.execute("SELECT to_regclass('eas.bad_case') IS NOT NULL")
     if not cursor.fetchone()[0]:
@@ -131,8 +164,10 @@ def extend_bad_cases(cursor, *, type_code: str, nearest_code: str | None, confid
         if not code:
             continue
         evaluation = {
-            "summary": (f"Loại mới {type_code} giống loại {nearest_name or nearest_code} "
-                        f"(độ tin cậy {confidence:.0%}); tình huống xấu của loại đó được áp dụng ngay cho loại mới."),
+            "summary": (
+                f"Loại mới {type_code} giống loại {nearest_name or nearest_code} "
+                f"(độ tin cậy {confidence:.0%}); tình huống xấu của loại đó được áp dụng ngay cho loại mới."
+            ),
             "nearest_type": nearest_code,
             "confidence": round(confidence, 4),
         }
@@ -145,28 +180,46 @@ def extend_bad_cases(cursor, *, type_code: str, nearest_code: str | None, confid
             ON CONFLICT (code) DO NOTHING
             RETURNING code
             """,
-            [code, title, rationale, condition_text, [type_code], base, risk, escalate_to, Jsonb(evaluation)],
+            [
+                code,
+                title,
+                rationale,
+                condition_text,
+                [type_code],
+                base,
+                risk,
+                escalate_to,
+                Jsonb(evaluation),
+            ],
         )
         if cursor.fetchone():
             created.append(code)
     return created
 
 
-def nearest_known_type(name: str, description: str = "") -> tuple[str | None, str, float]:
+def nearest_known_type(
+    name: str, description: str = ""
+) -> tuple[str | None, str, float]:
     """Loại có sẵn (mô hình đã học) gần nhất với tên + mô tả của loại mới; (None, "", 0) khi AI không phản hồi."""
     from api_core.workflow.ai_learning import _ai_http
 
     try:
         with _ai_http() as client:
-            response = client.post("/ai/classify/request", json={"title": name[:500], "description": description[:4000]})
+            response = client.post(
+                "/ai/classify/request",
+                json={"title": name[:500], "description": description[:4000]},
+            )
         data = response.json() if response.status_code == 200 else {}
     except Exception:
         logger.warning("nearest type lookup failed", exc_info=True)
         return None, "", 0.0
     if data.get("fallback_used") or data.get("unclear"):
         return None, "", 0.0
-    return data.get("predicted_request_type"), data.get("predicted_request_name") or "", float(
-        data.get("confidence_request_type") or 0.0)
+    return (
+        data.get("predicted_request_type"),
+        data.get("predicted_request_name") or "",
+        float(data.get("confidence_request_type") or 0.0),
+    )
 
 
 def onboard_after_commit(type_code: str) -> None:
@@ -179,14 +232,22 @@ def onboard_after_commit(type_code: str) -> None:
         return
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT name, description FROM eas.request_type WHERE code = %s", [type_code])
+            cursor.execute(
+                "SELECT name, description FROM eas.request_type WHERE code = %s",
+                [type_code],
+            )
             row = cursor.fetchone()
         if not row:
             return
         nearest, nearest_name, confidence = nearest_known_type(row[0], row[1] or "")
         with transaction.atomic(), connection.cursor() as cursor:
-            extend_bad_cases(cursor, type_code=type_code, nearest_code=nearest, confidence=confidence,
-                             nearest_name=nearest_name)
+            extend_bad_cases(
+                cursor,
+                type_code=type_code,
+                nearest_code=nearest,
+                confidence=confidence,
+                nearest_name=nearest_name,
+            )
     except Exception:
         logger.warning("type onboarding failed: %s", type_code, exc_info=True)
 

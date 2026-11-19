@@ -535,7 +535,10 @@ class SyncAIServiceClient:
     ) -> dict:
         return self._run(
             self._async_client.classify_request(
-                title, description, correlation_id=correlation_id, learned_types=learned_types
+                title,
+                description,
+                correlation_id=correlation_id,
+                learned_types=learned_types,
             )
         )
 

@@ -67,17 +67,23 @@ _cache: dict[str, Any] = {"at": 0.0, "items": None}
 
 
 def route_summary(route_rules: dict | None) -> str:
-    """"QL trực tiếp → Kế toán ⇒ thực hiện: Kế toán" từ luật mặc định của bản cấu hình."""
+    """ "QL trực tiếp → Kế toán ⇒ thực hiện: Kế toán" từ luật mặc định của bản cấu hình."""
     rules = (route_rules or {}).get("rules") or []
     default = next((r for r in rules if r.get("default")), rules[-1] if rules else {})
-    approvers = " → ".join(APPROVER_LABEL.get(a, a) for a in default.get("approvers") or [])
+    approvers = " → ".join(
+        APPROVER_LABEL.get(a, a) for a in default.get("approvers") or []
+    )
     executor = (route_rules or {}).get("executor")
     acceptor = (route_rules or {}).get("acceptor")
     text = approvers or "Quy trình phê duyệt tiêu chuẩn"
     if executor:
         text += f" ⇒ thực hiện: {EXECUTOR_LABEL.get(executor, executor)}"
     if acceptor:
-        text += " ⇒ nghiệm thu: " + ("Người yêu cầu" if acceptor == "REQUESTER" else APPROVER_LABEL.get(acceptor, acceptor))
+        text += " ⇒ nghiệm thu: " + (
+            "Người yêu cầu"
+            if acceptor == "REQUESTER"
+            else APPROVER_LABEL.get(acceptor, acceptor)
+        )
     return text
 
 
@@ -105,29 +111,45 @@ SQL_EXAMPLES = """
 def load(cursor) -> list[dict[str, Any]]:
     cursor.execute(SQL_TYPES)
     out = []
-    for type_id, code, name, description, category, category_label, lifecycle, route in cursor.fetchall():
+    for (
+        type_id,
+        code,
+        name,
+        description,
+        category,
+        category_label,
+        lifecycle,
+        route,
+    ) in cursor.fetchall():
         if catalog_v2_item(code):  # mô hình đã học loại này
             continue
         cursor.execute(SQL_EXAMPLES, [type_id, MAX_EXAMPLES])
         examples = [str(r[0])[:300] for r in cursor.fetchall()]
-        out.append({
-            "code": code,
-            "name": (name or code)[:200],
-            "description": (description or "")[:2000],
-            "category": category[:40],
-            "category_label": category_label[:120],
-            "department": EXECUTOR_DEPARTMENT.get((route or {}).get("executor") or "", "ADMIN"),
-            "lifecycle": lifecycle if lifecycle in ("A", "B", "C") else "B",
-            "approval_route": route_summary(route)[:400],
-            "examples": examples,
-        })
+        out.append(
+            {
+                "code": code,
+                "name": (name or code)[:200],
+                "description": (description or "")[:2000],
+                "category": category[:40],
+                "category_label": category_label[:120],
+                "department": EXECUTOR_DEPARTMENT.get(
+                    (route or {}).get("executor") or "", "ADMIN"
+                ),
+                "lifecycle": lifecycle if lifecycle in ("A", "B", "C") else "B",
+                "approval_route": route_summary(route)[:400],
+                "examples": examples,
+            }
+        )
     return out
 
 
 def current() -> list[dict[str, Any]]:
     """Danh sách loại mới (có cache); lỗi CSDL thì trả [] để phân loại vẫn chạy bằng mô hình gốc."""
     with _lock:
-        if _cache["items"] is not None and time.monotonic() - _cache["at"] < TTL_SECONDS:
+        if (
+            _cache["items"] is not None
+            and time.monotonic() - _cache["at"] < TTL_SECONDS
+        ):
             return _cache["items"]
     try:
         with connection.cursor() as cursor:

@@ -45,7 +45,10 @@ class ProcessProfileAdminTests(SimpleTestCase):
         return cur
 
     def test_impact_requires_admin_role(self):
-        with patch("api_core.authn.service.load_actor_from_session", return_value=_actor("REQUESTER")):
+        with patch(
+            "api_core.authn.service.load_actor_from_session",
+            return_value=_actor("REQUESTER"),
+        ):
             res = self.client.get(f"/api/v1/admin/regulations/{uuid4()}/impact")
         self.assertEqual(res.status_code, 403)
 
@@ -55,8 +58,22 @@ class ProcessProfileAdminTests(SimpleTestCase):
         self.assertEqual(res.status_code, 401)
 
     def test_impact_sends_current_config_and_returns_proposals(self):
-        reg = ("REG-007", "Nghiệm thu mua sắm", "Mọi đề nghị mua sắm phải được nghiệm thu trước khi thanh toán.")
-        types = [("PURCHASE_REQUEST", "Đề nghị mua sắm", "PROCUREMENT", "", ["amount_vnd"], "B", 3)]
+        reg = (
+            "REG-007",
+            "Nghiệm thu mua sắm",
+            "Mọi đề nghị mua sắm phải được nghiệm thu trước khi thanh toán.",
+        )
+        types = [
+            (
+                "PURCHASE_REQUEST",
+                "Đề nghị mua sắm",
+                "PROCUREMENT",
+                "",
+                ["amount_vnd"],
+                "B",
+                3,
+            )
+        ]
         cur = self._cursor(fetchone=reg, fetchall=types)
         calls = []
         ai = {
@@ -71,7 +88,10 @@ class ProcessProfileAdminTests(SimpleTestCase):
             ],
         }
         with (
-            patch("api_core.authn.service.load_actor_from_session", return_value=_actor("POLICY_ADMIN")),
+            patch(
+                "api_core.authn.service.load_actor_from_session",
+                return_value=_actor("POLICY_ADMIN"),
+            ),
             patch(f"{MOD}.connection.cursor") as mock_cur,
             patch(f"{MOD}._ai_http", return_value=_http(body=ai, calls=calls)),
         ):
@@ -82,40 +102,64 @@ class ProcessProfileAdminTests(SimpleTestCase):
         self.assertTrue(body["requires_admin_approval"])
         self.assertEqual(body["proposals"][0]["proposed"]["lifecycle"], "C")
         path, sent = calls[0]
-        self.assertEqual(path, "/ai/regulation-llm/analyze")  # mặc định: mô hình ngôn ngữ lớn + truy xuất
+        self.assertEqual(
+            path, "/ai/regulation-llm/analyze"
+        )  # mặc định: mô hình ngôn ngữ lớn + truy xuất
         self.assertIn("old_regulations", sent)
         self.assertEqual(sent["types"][0]["code"], "PURCHASE_REQUEST")
         self.assertEqual(sent["types"][0]["risk_weight"], 3)
         self.assertIn("nghiệm thu", sent["text"])
 
     def test_impact_ml_engine_uses_inhouse_model(self):
-        reg = ("REG-007", "Nghiệm thu mua sắm", "Mọi đề nghị mua sắm phải được nghiệm thu trước khi thanh toán.")
+        reg = (
+            "REG-007",
+            "Nghiệm thu mua sắm",
+            "Mọi đề nghị mua sắm phải được nghiệm thu trước khi thanh toán.",
+        )
         cur = self._cursor(fetchone=reg, fetchall=[])
         calls = []
         with (
-            patch("api_core.authn.service.load_actor_from_session", return_value=_actor("POLICY_ADMIN")),
+            patch(
+                "api_core.authn.service.load_actor_from_session",
+                return_value=_actor("POLICY_ADMIN"),
+            ),
             patch(f"{MOD}.connection.cursor") as mock_cur,
-            patch(f"{MOD}._ai_http", return_value=_http(body={"version": "process-profile-3"}, calls=calls)),
+            patch(
+                f"{MOD}._ai_http",
+                return_value=_http(body={"version": "process-profile-3"}, calls=calls),
+            ),
         ):
             mock_cur.return_value.__enter__.return_value = cur
-            res = self.client.get(f"/api/v1/admin/regulations/{uuid4()}/impact?engine=ml")
+            res = self.client.get(
+                f"/api/v1/admin/regulations/{uuid4()}/impact?engine=ml"
+            )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(calls[0][0], "/ai/process-profile/regulation-impact")
 
     def test_impact_rejects_unknown_engine(self):
-        cur = self._cursor(fetchone=("REG-1", "Quy định", "Nội dung quy định đủ dài để đánh giá."))
+        cur = self._cursor(
+            fetchone=("REG-1", "Quy định", "Nội dung quy định đủ dài để đánh giá.")
+        )
         with (
-            patch("api_core.authn.service.load_actor_from_session", return_value=_actor("OPS_ADMIN")),
+            patch(
+                "api_core.authn.service.load_actor_from_session",
+                return_value=_actor("OPS_ADMIN"),
+            ),
             patch(f"{MOD}.connection.cursor") as mock_cur,
         ):
             mock_cur.return_value.__enter__.return_value = cur
-            res = self.client.get(f"/api/v1/admin/regulations/{uuid4()}/impact?engine=gpt")
+            res = self.client.get(
+                f"/api/v1/admin/regulations/{uuid4()}/impact?engine=gpt"
+            )
         self.assertEqual(res.status_code, 422)
 
     def test_impact_unknown_regulation_is_404(self):
         cur = self._cursor(fetchone=None)
         with (
-            patch("api_core.authn.service.load_actor_from_session", return_value=_actor("OPS_ADMIN")),
+            patch(
+                "api_core.authn.service.load_actor_from_session",
+                return_value=_actor("OPS_ADMIN"),
+            ),
             patch(f"{MOD}.connection.cursor") as mock_cur,
         ):
             mock_cur.return_value.__enter__.return_value = cur
@@ -123,11 +167,20 @@ class ProcessProfileAdminTests(SimpleTestCase):
         self.assertEqual(res.status_code, 404)
 
     def test_impact_ai_failure_is_generic_502(self):
-        cur = self._cursor(fetchone=("REG-1", "Quy định", "Nội dung quy định đủ dài để đánh giá."), fetchall=[])
+        cur = self._cursor(
+            fetchone=("REG-1", "Quy định", "Nội dung quy định đủ dài để đánh giá."),
+            fetchall=[],
+        )
         with (
-            patch("api_core.authn.service.load_actor_from_session", return_value=_actor("OPS_ADMIN")),
+            patch(
+                "api_core.authn.service.load_actor_from_session",
+                return_value=_actor("OPS_ADMIN"),
+            ),
             patch(f"{MOD}.connection.cursor") as mock_cur,
-            patch(f"{MOD}._ai_http", return_value=_http(status=500, body={"detail": "Traceback ..."})),
+            patch(
+                f"{MOD}._ai_http",
+                return_value=_http(status=500, body={"detail": "Traceback ..."}),
+            ),
         ):
             mock_cur.return_value.__enter__.return_value = cur
             res = self.client.get(f"/api/v1/admin/regulations/{uuid4()}/impact")
@@ -135,29 +188,58 @@ class ProcessProfileAdminTests(SimpleTestCase):
         self.assertNotIn("Traceback", res.content.decode())
 
     def test_impact_rejects_post(self):
-        with patch("api_core.authn.service.load_actor_from_session", return_value=_actor("OPS_ADMIN")):
-            res = self.client.post(f"/api/v1/admin/regulations/{uuid4()}/impact", data={}, content_type="application/json")
+        with patch(
+            "api_core.authn.service.load_actor_from_session",
+            return_value=_actor("OPS_ADMIN"),
+        ):
+            res = self.client.post(
+                f"/api/v1/admin/regulations/{uuid4()}/impact",
+                data={},
+                content_type="application/json",
+            )
         self.assertIn(res.status_code, (403, 405))
 
     def test_assess_validates_input(self):
-        with patch("api_core.authn.service.load_actor_from_session", return_value=_actor("POLICY_ADMIN")):
-            for bad in ({}, {"name": ""}, {"name": "X", "fields": "amount"}, {"name": "X" * 201},
-                        {"name": "X", "fields": [1]}):
+        with patch(
+            "api_core.authn.service.load_actor_from_session",
+            return_value=_actor("POLICY_ADMIN"),
+        ):
+            for bad in (
+                {},
+                {"name": ""},
+                {"name": "X", "fields": "amount"},
+                {"name": "X" * 201},
+                {"name": "X", "fields": [1]},
+            ):
                 res = self.client.post(
-                    "/api/v1/admin/ai-engine/process-profile", data=bad, content_type="application/json"
+                    "/api/v1/admin/ai-engine/process-profile",
+                    data=bad,
+                    content_type="application/json",
                 )
                 self.assertIn(res.status_code, (403, 422), bad)
 
     def test_assess_forwards_to_ai(self):
         calls = []
-        ai = {"version": "process-profile-3", "lifecycle": "C", "risk_weight": 4, "requires_admin_approval": True}
+        ai = {
+            "version": "process-profile-3",
+            "lifecycle": "C",
+            "risk_weight": 4,
+            "requires_admin_approval": True,
+        }
         with (
-            patch("api_core.authn.service.load_actor_from_session", return_value=_actor("POLICY_ADMIN")),
+            patch(
+                "api_core.authn.service.load_actor_from_session",
+                return_value=_actor("POLICY_ADMIN"),
+            ),
             patch(f"{MOD}._ai_http", return_value=_http(body=ai, calls=calls)),
         ):
             res = self.client.post(
                 "/api/v1/admin/ai-engine/process-profile",
-                data={"name": "Thanh lý tài sản", "description": "Có biên bản bàn giao", "fields": ["amount_vnd"]},
+                data={
+                    "name": "Thanh lý tài sản",
+                    "description": "Có biên bản bàn giao",
+                    "fields": ["amount_vnd"],
+                },
                 content_type="application/json",
             )
         if res.status_code == 403:  # CSRF enforced by the test client setup

@@ -115,8 +115,16 @@ urlpatterns = [
     ),
     # Phase 5: Regulations & AI Engine Management
     path("regulations", regulations_list_create, name="admin-regulations"),
-    path("regulations/validate", regulation_validate_view, name="admin-regulation-validate"),
-    path("regulations/rejections", regulation_rejections_list, name="admin-regulation-rejections"),
+    path(
+        "regulations/validate",
+        regulation_validate_view,
+        name="admin-regulation-validate",
+    ),
+    path(
+        "regulations/rejections",
+        regulation_rejections_list,
+        name="admin-regulation-rejections",
+    ),
     path(
         "regulations/rejections/<uuid:rejection_id>/dismiss",
         regulation_rejection_dismiss,
