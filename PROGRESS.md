@@ -3,6 +3,7 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **19/11 — Bộ phân loại câu ngắn đời thường + Gemini hết hạn mức:** 2 bộ test băm trước (`request_eval_everyday*.json`); bổ sung đi muộn/về sớm/vắng mặt…; C cố định 5 (C=20 tự tin quá mức); bộ 2 kín 84,9% → 88,2%, 3 câu người dùng báo đúng. Gemini 429 → mọi chỗ có dự phòng (test giả lập). Còn yếu: 11 câu bộ 2 (thẻ ra vào vs tài khoản, chiết khấu vs mua sắm, "work from home"…). Mô hình xếp hạng người làm thay trên local tự học thêm (`+fb1`), không commit.
 - [x] **19/11 — Nạp quy định, đợt 2 (theo ảnh nhóm):** mã mặc định là mã REG còn trống do máy chủ tính (CSDL mới v1.0 từng gợi ý REG-002 trùng → 409 mọi lần); "AI kiểm tra trước" báo trùng mã + nút dùng mã trống; quy định đang hiệu lực có lỗi (nạp trước 18/11) được tô đỏ + banner. Thử thật: ban hành luôn 3 văn bản lỗi trong ảnh → 422, không lưu. Nhóm cần pull + rebuild api/worker/web/web-admin.
 - [x] **19/11 — Kiểm thử nạp quy định** (nhóm báo "không nạp được", ">3tr người duyệt <5tr AI duyệt" xung đột và AI tự xử lý):
   - Sửa biên dịch viết tắt (`>`/`<`/`≥`/`≤`, "người duyệt", "AI duyệt", câu hai vế); câu "duyệt" + số chưa hiểu thì báo, không bỏ qua.

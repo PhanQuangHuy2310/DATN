@@ -158,6 +158,46 @@ Kiểm chứng:
 
   Vậy các bản lỗi trong ảnh được áp dụng là do **container api/worker build trước ngày 18/11**. Cần `git pull` rồi `docker compose up -d --build api worker web web-admin`.
 
+### Bộ phân loại: câu ngắn đời thường, và Gemini hết hạn mức (19/11)
+
+- **Lỗi người dùng chụp:**
+  - "Xin đi muộn" → Mượn thiết bị (86%);
+  - "Về sớm" → "chưa có loại nào khớp";
+  - "Vắng mặt" → Hỗ trợ IT.
+
+  Nguyên nhân: dữ liệu huấn luyện thiếu các cách nói đi muộn / về sớm / vắng mặt, và đặc trưng ký tự bỏ dấu khiến "muộn", "mượn", "muốn" cùng thành "muon".
+- **Cách đo:** 2 bộ câu đời thường viết tay, băm SHA-256 và commit **trước** khi sửa.
+  - Bộ 1: 243 câu. Dữ liệu huấn luyện được sửa theo lỗi của bộ này.
+  - Bộ 2: 99 câu, giữ kín.
+- **Sửa:** bổ sung khái niệm còn thiếu vào `request_corpus.json` (không chép câu bộ 2), huấn luyện lại với **C cố định = 5**.
+- **Kết quả (cũ → mới):**
+
+  | Bộ | Cũ | Mới |
+  |---|---|---|
+  | Bộ 2 (kín) | 84,9% | **88,2%** |
+  | Bộ 1 | 93,1% | 99,1% |
+  | Bộ 1: sai mà tự tin | 7 | 1 |
+  | Câu rất ngắn | 94,6% | 95,7% |
+  | Công khai | 92,0% | 92,8% |
+  | Phiếu IT | 85,5% | 87,0% |
+  | Câu ngoài phạm vi được nhận ra | 86,3% | 87,0% |
+  | Viết tay | 89,0% | 89,0% |
+
+  3 câu trong ảnh giờ đúng trên giao diện (95–98%).
+- **Thử nghiệm không chọn**, ghi trong `ai_service/training/data/request_everyday_report.md`:
+  - C=20 (bộ chọn tự động): tự tin quá mức, câu ngoài phạm vi được nhận ra chỉ còn 74,3%;
+  - n-gram ký tự giữ dấu: lần đầu hết RAM; sau khi hiệu chỉnh ngưỡng trên dev thì không hơn rõ bản C=5.
+
+  Việc cố định C=5 là quyết định **sau khi đã xem kết quả test**, có ghi rõ trong báo cáo.
+- **Gemini hết hạn mức giữa chừng:** đã thử bằng test giả lập lỗi HTTP 429.
+  - Phân tích quy định chuyển sang mô hình nội bộ.
+  - Gợi ý luật cho câu AI chưa hiểu trả rỗng; câu vẫn vào hàng chờ admin, lượt học không hỏng.
+  - Tóm tắt hồ sơ dùng bản trích xuất cục bộ.
+  - OCR dùng PaddleOCR trước; chỉ khi cả hai cùng lỗi mới báo "Không bóc tách được".
+  - Phân loại, chấm rủi ro, bad case, chuyển luồng và học quy định không dùng Gemini.
+  - Test: `tests/test_gemini_outage.py`, `api_core/tests/test_ai_learning_gemini_outage.py`.
+- **Form "Tạo mẫu yêu cầu mới" của admin:** ô "AI gợi ý" hiện ngay cả khi form còn trống, kèm hướng dẫn nhập tên mẫu.
+
 ## Số đo trung thực của bộ phân loại lý do thu hồi
 
 Có 3 bộ test, mỗi bộ được băm trước khi huấn luyện phiên bản tương ứng. Bộ 3 gồm câu oái oăm: không dấu, viết tắt, phủ định, nhắc tên loại đơn nhưng không phải bad case của loại đó.
