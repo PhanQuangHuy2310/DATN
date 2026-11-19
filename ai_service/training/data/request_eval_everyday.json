@@ -1,0 +1,308 @@
+{
+  "version": 1,
+  "written": "2026-11-19",
+  "note": "Câu ngắn đời thường gõ vào ô tiêu đề, viết tay TRƯỚC khi sửa bộ phân loại (sau ảnh người dùng: 'Xin đi muộn' -> Mượn thiết bị, 'Về sớm' -> nhu cầu mới, 'Vắng mặt' -> Hỗ trợ IT). Không dùng để huấn luyện. 'accept' = các nhãn đều đúng khi câu hiểu được hai cách. OUT_OF_SCOPE = nhu cầu không có trong danh mục 58 loại: mong AI báo nhu cầu mới (novel) hoặc không hiểu (unclear).",
+  "items": [
+    {"text": "Xin đi muộn", "label": "ATTENDANCE_ADJUSTMENT"},
+    {"text": "Về sớm", "label": "ATTENDANCE_ADJUSTMENT"},
+    {"text": "Vắng mặt", "label": "LEAVE", "accept": ["LEAVE", "ATTENDANCE_ADJUSTMENT", "LEAVE_ANNUAL"]},
+    {"text": "đi trễ 30 phút do tắc đường", "label": "ATTENDANCE_ADJUSTMENT"},
+    {"text": "xin về sớm chiều nay", "label": "ATTENDANCE_ADJUSTMENT"},
+    {"text": "quên quẹt thẻ sáng nay", "label": "ATTENDANCE_ADJUSTMENT"},
+    {"text": "quen cham cong hom qua", "label": "ATTENDANCE_ADJUSTMENT"},
+    {"text": "đến muộn vì mưa to", "label": "ATTENDANCE_ADJUSTMENT"},
+    {"text": "xin di muon 1 tieng", "label": "ATTENDANCE_ADJUSTMENT"},
+    {"text": "ra về sớm đón con", "label": "ATTENDANCE_ADJUSTMENT"},
+
+    {"text": "cấp quyền vào hệ thống CRM", "label": "ACCESS"},
+    {"text": "xin tài khoản Jira", "label": "ACCESS"},
+    {"text": "mở quyền truy cập thư mục chung phòng kế toán", "label": "ACCESS"},
+    {"text": "cap quyen admin trang quan tri", "label": "ACCESS", "accept": ["ACCESS", "PROD_DATA_ACCESS"]},
+
+    {"text": "làm lại thẻ ra vào bị mất", "label": "ACCESS_FACILITY"},
+    {"text": "cấp thẻ từ cho nhân viên mới", "label": "ACCESS_FACILITY"},
+    {"text": "thẻ vào cửa bị hỏng", "label": "ACCESS_FACILITY"},
+    {"text": "xin the ra vao tang 5", "label": "ACCESS_FACILITY"},
+
+    {"text": "tạm ứng 80 triệu triển khai dự án", "label": "ADVANCE_LARGE"},
+    {"text": "ứng trước 120tr mua vật tư công trình", "label": "ADVANCE_LARGE"},
+    {"text": "tam ung 200 trieu cho du an ERP", "label": "ADVANCE_LARGE"},
+
+    {"text": "tạm ứng 20 triệu đi hội chợ", "label": "ADVANCE_MEDIUM"},
+    {"text": "ứng trước 30tr tổ chức sự kiện", "label": "ADVANCE_MEDIUM"},
+    {"text": "tam ung 15 trieu cong tac phi", "label": "ADVANCE_MEDIUM"},
+
+    {"text": "tạm ứng 3 triệu mua đồ sự kiện", "label": "ADVANCE_SMALL"},
+    {"text": "ứng 5tr đi công tác", "label": "ADVANCE_SMALL"},
+    {"text": "tam ung 2 trieu tiep khach", "label": "ADVANCE_SMALL"},
+
+    {"text": "thanh lý máy in cũ", "label": "ASSET_DISPOSAL"},
+    {"text": "hủy bàn ghế hỏng", "label": "ASSET_DISPOSAL"},
+    {"text": "thanh ly laptop het khau hao", "label": "ASSET_DISPOSAL"},
+    {"text": "xin thanh lý tủ lạnh văn phòng", "label": "ASSET_DISPOSAL"},
+
+    {"text": "chuyển ngân sách từ marketing sang sales", "label": "BUDGET_REALLOCATION"},
+    {"text": "bổ sung ngân sách quý 4 cho phòng IT", "label": "BUDGET_REALLOCATION"},
+    {"text": "dieu chuyen ngan sach giua 2 phong", "label": "BUDGET_REALLOCATION"},
+
+    {"text": "đi công tác Đà Nẵng 3 ngày", "label": "BUSINESS_TRIP"},
+    {"text": "công tác Hà Nội gặp khách hàng", "label": "BUSINESS_TRIP"},
+    {"text": "di cong tac singapore", "label": "BUSINESS_TRIP"},
+    {"text": "xin đi công tác chi nhánh HCM", "label": "BUSINESS_TRIP"},
+
+    {"text": "duyệt hợp đồng với khách hàng ABC", "label": "CONTRACT_APPROVAL"},
+    {"text": "ký hợp đồng thuê văn phòng mới", "label": "CONTRACT_APPROVAL"},
+    {"text": "duyet hop dong dich vu bao ve", "label": "CONTRACT_APPROVAL"},
+    {"text": "xem xét hợp đồng phân phối", "label": "CONTRACT_APPROVAL"},
+
+    {"text": "nhờ phòng IT hỗ trợ chuẩn bị sự kiện", "label": "CROSS_DEPT_SUPPORT"},
+    {"text": "cần phòng nhân sự hỗ trợ tuyển gấp", "label": "CROSS_DEPT_SUPPORT", "accept": ["CROSS_DEPT_SUPPORT", "RECRUITMENT_REQ"]},
+    {"text": "phối hợp với phòng kế toán đối soát", "label": "CROSS_DEPT_SUPPORT"},
+    {"text": "ho tro lien phong ban", "label": "CROSS_DEPT_SUPPORT"},
+
+    {"text": "xuất dữ liệu khách hàng tháng 10", "label": "DATA_UAT_EXPORT"},
+    {"text": "trích xuất báo cáo doanh thu từ hệ thống", "label": "DATA_UAT_EXPORT"},
+    {"text": "cần dữ liệu test UAT", "label": "DATA_UAT_EXPORT"},
+    {"text": "export data don hang", "label": "DATA_UAT_EXPORT"},
+
+    {"text": "kỷ luật nhân viên đi muộn nhiều lần", "label": "DISCIPLINE_REQ"},
+    {"text": "đề xuất cảnh cáo nhân viên vi phạm", "label": "DISCIPLINE_REQ"},
+    {"text": "xu ly ky luat nhan vien", "label": "DISCIPLINE_REQ"},
+    {"text": "lập biên bản vi phạm nội quy", "label": "DISCIPLINE_REQ"},
+
+    {"text": "đóng dấu giấy giới thiệu", "label": "DOCUMENT_SEAL"},
+    {"text": "đóng dấu công văn gửi đối tác", "label": "DOCUMENT_SEAL"},
+    {"text": "xin dấu đỏ vào biên bản", "label": "DOCUMENT_SEAL"},
+    {"text": "dong dau van ban gui so", "label": "DOCUMENT_SEAL"},
+
+    {"text": "nhận nhân viên mới tuần sau", "label": "EMPLOYEE_ONBOARDING"},
+    {"text": "chuẩn bị cho người mới vào làm", "label": "EMPLOYEE_ONBOARDING"},
+    {"text": "onboarding ban ke toan moi", "label": "EMPLOYEE_ONBOARDING"},
+    {"text": "tiếp nhận thực tập sinh", "label": "EMPLOYEE_ONBOARDING"},
+
+    {"text": "mua máy chiếu cho phòng họp", "label": "EQUIPMENT", "accept": ["EQUIPMENT", "PURCHASE_REQUEST"]},
+    {"text": "mua sắm thiết bị văn phòng mới", "label": "EQUIPMENT", "accept": ["EQUIPMENT", "PURCHASE_REQUEST"]},
+    {"text": "mua may in cho phong", "label": "EQUIPMENT", "accept": ["EQUIPMENT", "PURCHASE_REQUEST"]},
+
+    {"text": "mượn máy chiếu họp khách", "label": "EQUIPMENT_BORROW"},
+    {"text": "mượn loa cho buổi team building", "label": "EQUIPMENT_BORROW"},
+    {"text": "muon micro", "label": "EQUIPMENT_BORROW"},
+    {"text": "mượn ổ cứng di động 2 ngày", "label": "EQUIPMENT_BORROW"},
+
+    {"text": "thanh toán tiền taxi gặp khách", "label": "EXPENSE_CLAIM"},
+    {"text": "thanh toán hóa đơn ăn trưa với đối tác", "label": "EXPENSE_CLAIM"},
+    {"text": "thanh toan tien gui xe thang 10", "label": "EXPENSE_CLAIM"},
+    {"text": "thanh toán vé máy bay công tác", "label": "EXPENSE_CLAIM"},
+
+    {"text": "thêm tính năng xuất excel", "label": "FEATURE_RELEASE"},
+    {"text": "release phiên bản 2.3", "label": "FEATURE_RELEASE"},
+    {"text": "yêu cầu chức năng mới cho app", "label": "FEATURE_RELEASE"},
+    {"text": "deploy ban cap nhat len production", "label": "FEATURE_RELEASE"},
+
+    {"text": "chạy flash sale cuối tuần", "label": "FLASH_SALE_VOUCHER"},
+    {"text": "tạo voucher giảm 20% cho khách mới", "label": "FLASH_SALE_VOUCHER"},
+    {"text": "ma giam gia 11/11", "label": "FLASH_SALE_VOUCHER"},
+    {"text": "khuyến mãi giờ vàng", "label": "FLASH_SALE_VOUCHER"},
+
+    {"text": "xin giấy xác nhận thu nhập để vay ngân hàng", "label": "HR_CERTIFICATE"},
+    {"text": "giấy xác nhận đang công tác", "label": "HR_CERTIFICATE"},
+    {"text": "xac nhan luong lam visa", "label": "HR_CERTIFICATE"},
+    {"text": "xin giấy xác nhận làm việc", "label": "HR_CERTIFICATE"},
+
+    {"text": "chuyển sang phòng kinh doanh", "label": "INTERNAL_TRANSFER"},
+    {"text": "điều chuyển nhân viên sang chi nhánh Hà Nội", "label": "INTERNAL_TRANSFER"},
+    {"text": "xin chuyen bo phan", "label": "INTERNAL_TRANSFER"},
+    {"text": "luân chuyển công tác nội bộ", "label": "INTERNAL_TRANSFER"},
+
+    {"text": "máy tính không lên mạng", "label": "IT_SUPPORT"},
+    {"text": "outlook không gửi được mail", "label": "IT_SUPPORT"},
+    {"text": "may in bi ket giay", "label": "IT_SUPPORT", "accept": ["IT_SUPPORT", "FACILITY_REPAIR"]},
+    {"text": "quên mật khẩu email", "label": "IT_SUPPORT", "accept": ["IT_SUPPORT", "ACCESS"]},
+    {"text": "cài phần mềm vẽ", "label": "IT_SUPPORT", "accept": ["IT_SUPPORT", "SAAS_LICENSE_BUY"]},
+
+    {"text": "cấp laptop cho nhân viên mới", "label": "LAPTOP_PROVISION"},
+    {"text": "xin thêm màn hình phụ", "label": "LAPTOP_PROVISION"},
+    {"text": "cap may tinh moi", "label": "LAPTOP_PROVISION"},
+    {"text": "đổi laptop vì máy cũ quá chậm", "label": "LAPTOP_PROVISION"},
+
+    {"text": "xin nghỉ phép 2 ngày", "label": "LEAVE", "accept": ["LEAVE", "LEAVE_ANNUAL"]},
+    {"text": "nghỉ ốm hôm nay", "label": "LEAVE", "accept": ["LEAVE", "LEAVE_ANNUAL"]},
+    {"text": "xin nghi chieu nay", "label": "LEAVE", "accept": ["LEAVE", "LEAVE_ANNUAL"]},
+    {"text": "nghỉ phép về quê", "label": "LEAVE", "accept": ["LEAVE", "LEAVE_ANNUAL", "LEAVE_LONG"]},
+
+    {"text": "nghỉ cưới", "label": "LEAVE_SPECIAL"},
+    {"text": "vợ sinh con xin nghỉ", "label": "LEAVE_SPECIAL"},
+    {"text": "ông nội mất", "label": "LEAVE_SPECIAL"},
+    {"text": "nghi thai san", "label": "LEAVE_SPECIAL"},
+
+    {"text": "ngân sách quảng cáo facebook tháng 12", "label": "MARKETING_CAMPAIGN"},
+    {"text": "tổ chức sự kiện ra mắt sản phẩm", "label": "MARKETING_CAMPAIGN"},
+    {"text": "chay quang cao google ads", "label": "MARKETING_CAMPAIGN"},
+    {"text": "chi phí booking KOL", "label": "MARKETING_CAMPAIGN"},
+
+    {"text": "ký NDA với đối tác mới", "label": "NDA_PRIVACY_CLEARANCE"},
+    {"text": "chia sẻ dữ liệu khách hàng cho đối tác", "label": "NDA_PRIVACY_CLEARANCE"},
+    {"text": "tham dinh thoa thuan bao mat", "label": "NDA_PRIVACY_CLEARANCE"},
+    {"text": "gửi file dữ liệu cho bên thứ ba", "label": "NDA_PRIVACY_CLEARANCE"},
+
+    {"text": "xin giấy A4 và bút", "label": "OFFICE_SUPPLIES"},
+    {"text": "cấp sổ tay và ghim bấm", "label": "OFFICE_SUPPLIES"},
+    {"text": "van phong pham thang 11", "label": "OFFICE_SUPPLIES"},
+    {"text": "hết mực bút bi", "label": "OFFICE_SUPPLIES"},
+
+    {"text": "đăng ký làm thêm thứ 7", "label": "OVERTIME_REQ", "accept": ["OVERTIME_REQ", "OVERTIME_APPROVAL"]},
+    {"text": "OT tối nay để kịp deadline", "label": "OVERTIME_REQ", "accept": ["OVERTIME_REQ", "OVERTIME_APPROVAL"]},
+    {"text": "lam them gio cuoi tuan", "label": "OVERTIME_REQ", "accept": ["OVERTIME_REQ", "OVERTIME_APPROVAL"]},
+    {"text": "tăng ca 3 tiếng", "label": "OVERTIME_REQ", "accept": ["OVERTIME_REQ", "OVERTIME_APPROVAL"]},
+
+    {"text": "ban hành quy chế làm việc từ xa", "label": "POLICY_ISSUANCE"},
+    {"text": "sửa đổi nội quy công ty", "label": "POLICY_ISSUANCE"},
+    {"text": "ban hanh quy dinh chi tieu moi", "label": "POLICY_ISSUANCE"},
+    {"text": "dự thảo chính sách bảo mật nội bộ", "label": "POLICY_ISSUANCE"},
+
+    {"text": "xin quyền đọc database production", "label": "PROD_DATA_ACCESS"},
+    {"text": "truy cập server thật để kiểm tra lỗi", "label": "PROD_DATA_ACCESS"},
+    {"text": "cap quyen du lieu nhay cam", "label": "PROD_DATA_ACCESS"},
+    {"text": "quyền ssh vào máy chủ", "label": "PROD_DATA_ACCESS", "accept": ["PROD_DATA_ACCESS", "SERVER_FIREWALL"]},
+
+    {"text": "đề xuất dự án chuyển đổi số", "label": "PROJECT_INITIATION"},
+    {"text": "khởi động dự án app mới", "label": "PROJECT_INITIATION"},
+    {"text": "de xuat du an moi", "label": "PROJECT_INITIATION"},
+    {"text": "lập dự án nâng cấp kho", "label": "PROJECT_INITIATION"},
+
+    {"text": "đề xuất thăng chức trưởng nhóm", "label": "PROMOTION_REQ"},
+    {"text": "nâng bậc cho nhân viên xuất sắc", "label": "PROMOTION_REQ"},
+    {"text": "de xuat len chuc", "label": "PROMOTION_REQ"},
+    {"text": "bổ nhiệm phó phòng", "label": "PROMOTION_REQ"},
+
+    {"text": "đề nghị mua 10 ghế xoay", "label": "PURCHASE_REQUEST", "accept": ["PURCHASE_REQUEST", "EQUIPMENT"]},
+    {"text": "de nghi mua sam vat tu", "label": "PURCHASE_REQUEST"},
+    {"text": "mua sắm đồ dùng cho pantry", "label": "PURCHASE_REQUEST", "accept": ["PURCHASE_REQUEST", "OFFICE_SUPPLIES"]},
+
+    {"text": "tuyển thêm 2 lập trình viên", "label": "RECRUITMENT_REQ"},
+    {"text": "cần tuyển kế toán", "label": "RECRUITMENT_REQ"},
+    {"text": "tuyen dung nhan vien sales", "label": "RECRUITMENT_REQ"},
+    {"text": "mở vị trí tuyển dụng designer", "label": "RECRUITMENT_REQ"},
+
+    {"text": "hoàn tiền cho khách hàng hủy đơn", "label": "REFUND_COMPENSATION"},
+    {"text": "đền bù cho khách vì giao hàng trễ", "label": "REFUND_COMPENSATION"},
+    {"text": "hoan tien don loi", "label": "REFUND_COMPENSATION"},
+    {"text": "bồi thường hàng hỏng cho khách", "label": "REFUND_COMPENSATION"},
+
+    {"text": "quyết toán tạm ứng chuyến công tác", "label": "REIMBURSEMENT"},
+    {"text": "hoàn ứng sau sự kiện", "label": "REIMBURSEMENT"},
+    {"text": "quyet toan tien tam ung", "label": "REIMBURSEMENT"},
+    {"text": "nộp chứng từ quyết toán", "label": "REIMBURSEMENT"},
+
+    {"text": "xin nghỉ việc", "label": "RESIGNATION"},
+    {"text": "nộp đơn thôi việc", "label": "RESIGNATION"},
+    {"text": "nghi viec cuoi thang", "label": "RESIGNATION"},
+    {"text": "bàn giao trước khi nghỉ việc", "label": "RESIGNATION"},
+
+    {"text": "thu hồi laptop nhân viên nghỉ việc", "label": "RESOURCE_REVOKE"},
+    {"text": "khóa tài khoản người đã nghỉ", "label": "RESOURCE_REVOKE"},
+    {"text": "thu hoi the ra vao", "label": "RESOURCE_REVOKE"},
+    {"text": "hủy quyền truy cập của thực tập sinh", "label": "RESOURCE_REVOKE"},
+
+    {"text": "khen thưởng nhân viên xuất sắc tháng", "label": "REWARD_REQ"},
+    {"text": "đề xuất thưởng nóng cho team", "label": "REWARD_REQ"},
+    {"text": "thuong du an", "label": "REWARD_REQ"},
+    {"text": "tuyên dương nhân viên", "label": "REWARD_REQ"},
+
+    {"text": "đặt phòng họp 2 giờ chiều", "label": "ROOM_BOOKING"},
+    {"text": "book phòng họp tầng 3", "label": "ROOM_BOOKING"},
+    {"text": "dat phong hop", "label": "ROOM_BOOKING"},
+    {"text": "giữ phòng họp lớn sáng mai", "label": "ROOM_BOOKING"},
+
+    {"text": "mua bản quyền Figma", "label": "SAAS_LICENSE_BUY"},
+    {"text": "mua license Office 365", "label": "SAAS_LICENSE_BUY"},
+    {"text": "mua ban quyen phan mem", "label": "SAAS_LICENSE_BUY"},
+    {"text": "gia hạn bản quyền Adobe", "label": "SAAS_LICENSE_BUY"},
+
+    {"text": "đề xuất tăng lương", "label": "SALARY_ADJUSTMENT"},
+    {"text": "điều chỉnh lương sau thử việc", "label": "SALARY_ADJUSTMENT"},
+    {"text": "tang luong", "label": "SALARY_ADJUSTMENT"},
+    {"text": "xin xem xét lại mức lương", "label": "SALARY_ADJUSTMENT"},
+
+    {"text": "ứng lương 5 triệu", "label": "SALARY_ADVANCE"},
+    {"text": "xin ứng trước lương tháng này", "label": "SALARY_ADVANCE"},
+    {"text": "ung luong", "label": "SALARY_ADVANCE"},
+    {"text": "tạm ứng lương giữa tháng", "label": "SALARY_ADVANCE"},
+
+    {"text": "phát hiện lỗ hổng bảo mật trên web", "label": "SECURITY_INCIDENT_HOTFIX"},
+    {"text": "web bị tấn công", "label": "SECURITY_INCIDENT_HOTFIX"},
+    {"text": "hotfix lỗi thanh toán gấp", "label": "SECURITY_INCIDENT_HOTFIX"},
+    {"text": "lo email lua dao chua ma doc", "label": "SECURITY_INCIDENT_HOTFIX"},
+
+    {"text": "cấp máy chủ mới cho dự án", "label": "SERVER_FIREWALL"},
+    {"text": "mở port firewall 8443", "label": "SERVER_FIREWALL"},
+    {"text": "cap server test", "label": "SERVER_FIREWALL"},
+    {"text": "thêm rule tường lửa", "label": "SERVER_FIREWALL"},
+
+    {"text": "chiết khấu 15% cho khách hàng lớn", "label": "SPECIAL_DISCOUNT"},
+    {"text": "giảm giá đặc biệt cho đơn hàng 500 triệu", "label": "SPECIAL_DISCOUNT"},
+    {"text": "chiet khau dac biet", "label": "SPECIAL_DISCOUNT"},
+    {"text": "xin giá ưu đãi cho đại lý", "label": "SPECIAL_DISCOUNT"},
+
+    {"text": "thêm nhà cung cấp mới", "label": "SUPPLIER_ONBOARDING"},
+    {"text": "thẩm định nhà cung cấp in ấn", "label": "SUPPLIER_ONBOARDING"},
+    {"text": "duyet nha cung cap", "label": "SUPPLIER_ONBOARDING"},
+    {"text": "đăng ký vendor mới", "label": "SUPPLIER_ONBOARDING"},
+
+    {"text": "nhờ làm báo cáo tuần", "label": "TASK_REQUEST"},
+    {"text": "giao việc soạn tài liệu hướng dẫn", "label": "TASK_REQUEST"},
+    {"text": "yeu cau xu ly cong viec", "label": "TASK_REQUEST"},
+    {"text": "cần người cập nhật danh sách khách hàng", "label": "TASK_REQUEST"},
+
+    {"text": "xuất hóa đơn VAT cho khách", "label": "TAX_INVOICE_ISSUE"},
+    {"text": "điều chỉnh hóa đơn đỏ sai mã số thuế", "label": "TAX_INVOICE_ISSUE"},
+    {"text": "xuat hoa don", "label": "TAX_INVOICE_ISSUE"},
+    {"text": "hủy hóa đơn viết sai", "label": "TAX_INVOICE_ISSUE"},
+
+    {"text": "đăng ký khóa học AWS", "label": "TRAINING_COURSE"},
+    {"text": "thi chứng chỉ PMP", "label": "TRAINING_COURSE"},
+    {"text": "dang ky dao tao tieng anh", "label": "TRAINING_COURSE"},
+    {"text": "học khóa kỹ năng thuyết trình", "label": "TRAINING_COURSE"},
+
+    {"text": "mượn xe công ty đi gặp khách", "label": "VEHICLE_BOOKING"},
+    {"text": "đặt xe 7 chỗ đi Bắc Ninh", "label": "VEHICLE_BOOKING"},
+    {"text": "muon xe cong vu", "label": "VEHICLE_BOOKING"},
+    {"text": "xin xe đưa đón đoàn khách", "label": "VEHICLE_BOOKING"},
+
+    {"text": "thanh toán hợp đồng cho nhà cung cấp phần mềm", "label": "VENDOR_PAYMENT"},
+    {"text": "trả tiền đợt 2 cho vendor", "label": "VENDOR_PAYMENT"},
+    {"text": "thanh toan cong no nha cung cap", "label": "VENDOR_PAYMENT"},
+    {"text": "chi trả hợp đồng dịch vụ bảo trì", "label": "VENDOR_PAYMENT"},
+
+    {"text": "đăng ký cho khách vào tòa nhà", "label": "VISITOR_SECURITY_PASS"},
+    {"text": "thẻ khách cho đối tác đến họp", "label": "VISITOR_SECURITY_PASS"},
+    {"text": "dang ky khach tham quan", "label": "VISITOR_SECURITY_PASS"},
+    {"text": "khách đến làm việc chiều nay", "label": "VISITOR_SECURITY_PASS"},
+
+    {"text": "chuyển hàng từ kho Hà Nội vào HCM", "label": "WAREHOUSE_TRANSFER"},
+    {"text": "luân chuyển vật tư giữa 2 kho", "label": "WAREHOUSE_TRANSFER"},
+    {"text": "chuyen kho", "label": "WAREHOUSE_TRANSFER"},
+    {"text": "điều hàng sang kho chi nhánh", "label": "WAREHOUSE_TRANSFER"},
+
+    {"text": "làm việc ở nhà ngày mai", "label": "WFH_REQ"},
+    {"text": "xin WFH thứ 6", "label": "WFH_REQ"},
+    {"text": "lam online o nha", "label": "WFH_REQ"},
+    {"text": "làm từ xa vì con ốm", "label": "WFH_REQ"},
+
+    {"text": "điều hòa phòng họp bị hỏng", "label": "FACILITY_REPAIR"},
+    {"text": "bóng đèn hành lang cháy", "label": "FACILITY_REPAIR"},
+    {"text": "sua voi nuoc nha ve sinh", "label": "FACILITY_REPAIR"},
+    {"text": "cửa kính bị vỡ", "label": "FACILITY_REPAIR"},
+
+    {"text": "đăng ký gửi xe đạp điện ở hầm", "label": "OUT_OF_SCOPE"},
+    {"text": "xin tham gia câu lạc bộ bóng đá", "label": "OUT_OF_SCOPE"},
+    {"text": "đăng ký suất ăn trưa", "label": "OUT_OF_SCOPE"},
+    {"text": "xin chỗ đỗ ô tô", "label": "OUT_OF_SCOPE"},
+    {"text": "góp ý thực đơn căng tin", "label": "OUT_OF_SCOPE"},
+    {"text": "báo mất ví ở sảnh", "label": "OUT_OF_SCOPE"},
+    {"text": "đăng ký tiêm vắc xin công ty tổ chức", "label": "OUT_OF_SCOPE"},
+    {"text": "xin tủ đồ cá nhân", "label": "OUT_OF_SCOPE"},
+    {"text": "đăng ký giải chạy marathon công ty", "label": "OUT_OF_SCOPE"},
+    {"text": "xin phép mang thú cưng lên văn phòng", "label": "OUT_OF_SCOPE"}
+  ]
+}
