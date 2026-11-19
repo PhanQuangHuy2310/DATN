@@ -3,6 +3,14 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **19/11 — Một AI tự động khi tạo yêu cầu; "Có phải ý bạn là…"; AI tạo loại yêu cầu mới; loại mới được học ngay** (người dùng yêu cầu: gộp 2 khối AI, không tự chuyển trang, xử lý hết mục "!" / "chưa học"):
+  - Hộp "AI tự động" dưới ô tiêu đề (loại, bộ phận, tuyến, rủi ro); chỉ gợi ý chuyển, không tự chuyển (thay cho tự chuyển ngày 16/11).
+  - Ô tìm kiếm header + "Tìm nhanh biểu mẫu": "Có phải ý bạn là…" + "Tạo yêu cầu mới"; AI tạo loại (B/C, ≤ 3/người/ngày, admin được báo); người 2 thấy ngay.
+  - `ai_service/type_memory.py`: nhận loại mới qua tên + tiêu đề hồ sơ đã gửi, nhận ra nhu cầu ngoài danh mục.
+  - `type_onboarding.py`: loại A mới có bản nâng B/C; bad case loại gần nhất mở rộng sang loại mới.
+  - Form admin: ô "AI gợi ý" mẫu/trọng số.
+  - Còn yếu: từ đồng nghĩa không chung chữ cần hồ sơ mẫu; nhu cầu mới trùng chữ loại cũ chỉ được báo "chưa chắc".
+  - CSDL local còn loại thử `AI_9EFAD2ED` "Đăng ký suất ăn trưa ở căng tin" (tạo lúc kiểm thử, chỉ ở local).
 - [x] **19/11 — Cho AI học hết các trường hợp** (người dùng chọn: mọi kiểu điều kiện, mọi tình huống thay thế, huấn luyện thêm mô hình, ca oái oăm; quy định cũ bị thay thì bỏ vĩnh viễn). Mỗi bộ test băm trước khi làm:
   - Trình biên dịch quy định v3: 40 câu 9/40 → 40/40, thay thế 12/12, kiểm thử thật SP 6/6 (`regulation_v3_report.md`).
   - Ca oái oăm `tests/test_edge_cases.py`: tìm và sửa 6 lỗi an toàn của trình biên dịch (mất ngưỡng "50tr", "-5 triệu" → chặn mọi đơn; phủ định; khoảng rỗng; % > 100; ngày ngược; câu không dấu).

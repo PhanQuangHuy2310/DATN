@@ -74,6 +74,43 @@ Mọi bộ test dưới đây được viết và băm SHA-256 **trước** khi 
 - **Mô hình rủi ro, huấn luyện lại lần 2:** bộ kịch bản mới 26/30 → **29/30**, đúng cả ca công tác/WFH khi đang giữ việc gấp không ai làm thay.
 - **Mô hình chọn người làm thay, bản 2:** thêm ràng buộc đơn điệu. Bản cũ có 7/8.112 cặp vi phạm lẽ thường (thêm việc đến hạn mà điểm lại tăng); bản 2 không còn cặp nào, độ chính xác giữ nguyên.
 
+### Một AI tự động khi tạo yêu cầu, "Có phải ý bạn là…", AI tạo loại yêu cầu mới (19/11)
+
+- **Gộp hai khối AI thành một hộp "AI tự động" ngay dưới ô tiêu đề.** Gõ tiêu đề hoặc nội dung là AI tự hiện:
+  - loại đề xuất, độ tin cậy, bộ phận xử lý, khả năng khác;
+  - tuyến duyệt gợi ý (mã bộ phận như "HR", "ADMIN" đã đổi thành tên);
+  - điểm rủi ro.
+
+  Không còn nút "Gợi ý & đánh giá rủi ro" và **không còn tự chuyển biểu mẫu**. Nội dung giống loại khác thì AI chỉ hiện nút "Chuyển sang «…»" và "Bỏ qua". AI chỉ gợi ý chuyển khi đủ chắc: ≥ 50%, hoặc vượt trội rõ so với khả năng thứ hai. AI chưa chắc thì hiện "Tạo loại yêu cầu mới".
+- **"Có phải ý bạn là…"** ở ô tìm kiếm trên header và ô "Tìm nhanh biểu mẫu":
+  - AI liệt kê các loại giống nội dung gõ vào; bấm là mở biểu mẫu với tiêu đề điền sẵn;
+  - cuối danh sách luôn có "Không phải? Tạo yêu cầu mới «…»".
+- **AI tạo loại yêu cầu mới khi nhu cầu chưa có trong hệ thống** (`api_core/workflow/ai_type_creation.py`):
+  - AI kiểm tra lại trước. Nhu cầu đã có loại (kể cả loại người khác vừa tạo) thì dùng loại đó, không tạo trùng. Câu vô nghĩa bị từ chối.
+  - Chưa có thì cho xem tên, nhóm, quy trình B/C (không bao giờ A), tuyến duyệt và rủi ro. Người dùng đồng ý thì tạo loại, bản cấu hình đã ban hành và mục menu.
+  - Mỗi người tối đa 3 loại / 24 giờ. Admin nhận thông báo để rà soát; mọi lần tạo được ghi nhật ký kiểm toán.
+  - **Người thứ hai tìm là thấy ngay.** Ví dụ: người 1 tạo "Đăng ký suất ăn trưa ở căng tin"; người 2 gõ "đăng ký ăn trưa ở căng tin" thì AI đề xuất đúng loại đó, độ tin cậy 89%.
+- **Bộ phân loại nhận loại mới không cần huấn luyện lại** (`ai_service/type_memory.py`):
+  - loại tạo sau lúc huấn luyện (admin hoặc AI tạo) được so theo tên, mô tả và **tiêu đề các hồ sơ đã gửi**, nên mỗi hồ sơ là một ví dụ mới;
+  - AI nhận ra nhu cầu chưa có trong danh mục khi từ ngữ không khớp từ vựng của loại được đoán. Trước đây "Xin cấp chỗ đỗ ô tô" bị đoán "Cấp máy tính" 84%.
+  - Sửa luôn lỗi có từ trước: các từ chức năng có chữ "đ" ("đăng", "để", "được") chưa bao giờ được bỏ khi so khớp.
+- **Loại mới dùng ngay cơ chế AI của loại có sẵn** (`type_onboarding.py`, chạy khi admin ban hành hoặc AI tạo loại):
+  - loại mẫu A có sẵn bản nâng cấp B/C, để bad case chuyển được luồng;
+  - bad case của loại gần nhất (độ giống ≥ 50%) được mở rộng sang loại mới.
+- **Form chỉnh sửa loại yêu cầu của admin:** có ô "AI gợi ý" (mẫu A/B/C, trọng số rủi ro) và nút "Áp dụng gợi ý".
+
+Giới hạn, ghi trung thực:
+- Loại mới được nhận qua so khớp chữ, không phải huấn luyện lại mô hình chính. Từ đồng nghĩa không chung chữ (ví dụ "đặt cơm" với "suất ăn trưa") chỉ được nhận sau khi đã có hồ sơ viết theo cách đó.
+- Một nhu cầu mới có chữ trùng loại cũ vẫn có thể được đoán sang loại cũ với độ tin cậy thấp. Ví dụ "gửi xe đạp điện" được đoán "Mượn xe công vụ" 35%. Khi đó AI hiện "chưa chắc" kèm nút tạo loại mới, chứ không gợi ý chuyển biểu mẫu.
+
+Lỗi do chính đợt này gây ra, đã sửa:
+- **Hiện tượng:** thông báo "AI đã tạo loại yêu cầu mới" lúc đầu ghi phần hướng dẫn sai dạng, làm **sập trang quản trị** khi mở thông báo.
+- **Đã sửa:**
+  - ghi đúng dạng `{title, steps}`;
+  - hộp thông báo chịu được dữ liệu sai dạng;
+  - sửa bản ghi lỗi trên CSDL local;
+  - thêm test.
+
 ## Số đo trung thực của bộ phân loại lý do thu hồi
 
 Có 3 bộ test, mỗi bộ được băm trước khi huấn luyện phiên bản tương ứng. Bộ 3 gồm câu oái oăm: không dấu, viết tắt, phủ định, nhắc tên loại đơn nhưng không phải bad case của loại đó.
@@ -95,11 +132,13 @@ Lỗi của v2 trên bộ 3 đã được xem trước khi làm v3 (ghi trong b�
 
 | Bộ | Kết quả |
 |---|---|
-| Django (`manage.py test api_core`) | 465 OK |
-| `tests/` (unittest, venv gốc) | 307 OK (76 bỏ qua vì cần fastapi, chạy ở venv AI) |
+| Django (`manage.py test`, cả `api_core` và `tests/`) | 812 OK (92 bỏ qua) |
+| `tests/` (unittest, venv gốc) | 327 OK (phần cần fastapi/scikit-learn bỏ qua, chạy ở venv AI) |
 | `tests/` (venv AI) | 293 OK, trừ `test_regulation_validation` (venv AI không có psycopg; chạy OK ở venv gốc) |
 | Chấm lại các bộ test đã băm | Quy định v3 40/40, thay thế 12/12, bộ cũ 28/30; rủi ro bộ 2 29/30; người làm thay test top-1 0,898; lý do thu hồi bộ 3 76,4% |
-| Web (`npm test`) | 85/85 OK, build OK (không đổi trong đợt sau cùng) |
+| Web (`npm test`) | 87/87 OK, eslint 0 lỗi |
+| `tests/` mới cho loại mới (venv AI) | `test_type_memory` 15/15 (cả mô hình thật), `test_edge_cases` 39/39 |
+| Thử trên trình duyệt (Playwright, local) | Hộp AI tự động, gợi ý chuyển không tự chuyển, "Có phải ý bạn là" ở 2 ô tìm kiếm, hộp thoại tạo loại mới, người 2 thấy loại người 1 tạo, ô gợi ý AI của admin |
 | Kiểm thử thật (bản sao CSDL local, sau khi build lại Docker với mô hình mới) | Thay thế quy định 6/6; trả lại quy định lỗi 5/5; học bad case 4/4; học từ phản hồi 4/5; chuyển quy trình 4/6 (chạy trước đợt này) |
 
 SP-05 trượt một lần vì chạy lúc nửa đêm: đơn chiết khấu 10% bị bad case "gửi hàng loạt ngoài giờ" chuyển B. AI làm đúng, quy định 15% không khớp. Đã sửa test để chỉ xét nguyên nhân là quy định, chạy lại 6/6.
