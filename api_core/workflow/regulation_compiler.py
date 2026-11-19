@@ -122,6 +122,7 @@ _LOCATION = re.compile(
     r"(?=\s*(?:$|[,.;:]|\bbắt buộc\b|\bphải\b|\bđược\b|\bkhông\b|\bcó\b|\bvới\b|\bhoặc\b|\bvà\b|"
     r"\btrên\b|\bdưới\b|\btừ\b|\bkèm\b|\bcần\b))"
 )
+_FLOOR = re.compile(r"\btầng\s*\d+(?!\d)")
 # Điều kiện định tính / đơn vị chưa đo được: câu bị bỏ qua thay vì chặn cả loại.
 _QUALITATIVE = re.compile(
     r"\bcho\s+(?:khách hàng|nhân viên|đối tác)\s+(?!\d)[^\W\d_]+|trùng\s+(?:ngày lễ|lịch|ca)|ngày lễ|thử việc"
@@ -193,6 +194,8 @@ class _Parsed:
 
     loose_money: list[int] = field(default_factory=list)
     loose_percent: list[int] = field(default_factory=list)
+    consumed: list[tuple[int, int]] = field(default_factory=list)  # mọi số tiền / % / ngày đã đọc, kể cả không rõ hướng
+    loose_numbers: list[str] = field(default_factory=list)  # con số không thuộc điều kiện nào
 
     def add(self, start: int, end: int, kind: str, value: Any = None) -> None:
         self.spans.append(_Span(start, end, kind, value))
@@ -305,6 +308,7 @@ def _bounded(p: _Parsed, scan: str, regex: re.Pattern, value_of, lower_kind: str
         value = value_of(m)
         if value is None:
             continue
+        p.consumed.append((m.start(), m.end()))
         kind, bound = _bound(scan, m.start(), m.end(), value)
         if kind == "lower":
             p.add(m.start(), m.end(), lower_kind, bound)
@@ -373,6 +377,11 @@ def _parse(low: str) -> tuple[_Parsed, bool]:
         if place:
             p.add(m.start(), m.end(), "location_contains", place)
             taken.append((m.start(), m.end()))
+    # "phòng họp tầng 10": tầng đứng một mình, không có "khu vực / chi nhánh" phía trước.
+    if not any(sp.kind == "location_contains" for sp in p.spans):
+        for m in _FLOOR.finditer(_mask(low, taken)):
+            p.add(m.start(), m.end(), "location_contains", " ".join(m.group(0).split()))
+            taken.append((m.start(), m.end()))
 
     scan = _mask(low, taken)
     p.loose_percent = _bounded(p, scan, _PERCENT, lambda m: round(float(m.group("num").replace(",", "."))),
@@ -385,6 +394,10 @@ def _parse(low: str) -> tuple[_Parsed, bool]:
     # "dưới 1 ngày" (nửa ngày): số ngày là số nguyên nên không biểu diễn được -> chưa đo được, bỏ qua câu.
     if any(sp.kind == "days_lte" and sp.value < 1 for sp in p.spans):
         return p, True
+    # Con số không thuộc điều kiện nào ("tầng 10" kiểu chưa hiểu, "05/2026"...): nếu bỏ qua thì luật mất điều kiện và
+    # chặn cả loại yêu cầu, nên ghi lại để không sinh luật (xem _invalid).
+    rest = _mask(low, taken + [(sp.start, sp.end) for sp in p.spans] + p.consumed)
+    p.loose_numbers = re.findall(r"\d+", rest)
     return p, False
 
 
@@ -437,6 +450,9 @@ def _invalid(parsed: _Parsed, groups: list[dict[str, Any]]) -> str | None:
     """Lý do câu có điều kiện vô nghĩa (không bao giờ khớp hoặc không đọc chắc được); None nếu ổn."""
     if parsed.loose_percent or (parsed.loose_money and not any(sp.kind == "split_suspect" for sp in parsed.spans)):
         return "Có số tiền / phần trăm không rõ là cận trên hay cận dưới (ví dụ số âm, thiếu 'trên/dưới/từ')"
+    if parsed.loose_numbers:
+        return (f"Có con số AI chưa gắn được với điều kiện nào ({', '.join(parsed.loose_numbers[:3])}); không sinh luật để "
+                "tránh chặn cả loại yêu cầu")
     for cond in groups:
         if any(cond.get(k, 0) > 100 for k in ("percent_gt", "percent_lte")):
             return "Phần trăm lớn hơn 100%"
