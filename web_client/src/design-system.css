@@ -5037,24 +5037,88 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .password-reset-mode .radio-row input { margin-top: 4px; width: auto; min-height: 0; }
 .ai-workflow-help { margin: 4px 0 0; font-size: 14px; }
 
-/* AI moved the user to another request form (RequestEditor + aiTypeSwitch.js). */
-.ai-type-switch {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--ds-space-2) var(--ds-space-3);
-  margin: 0 0 var(--ds-space-4);
+/* AI tự động under the request title (RequestEditor + AiAssist.jsx): never switches the form on its own. */
+.ai-auto-insight {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: calc(-1 * var(--ds-space-2)) 0 var(--ds-space-2);
   padding: var(--ds-space-3) var(--ds-space-4);
   border: 1px solid var(--ds-line);
   border-left: 4px solid var(--ds-primary);
   border-radius: var(--ds-radius-sm);
   background: var(--ds-primary-soft);
   color: var(--ds-ink);
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.55;
 }
-.ai-type-switch > span { flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere; }
-.ai-type-switch button { white-space: nowrap; }
-.ai-type-switch-suggest { border-left-color: var(--ds-warning); background: var(--ds-warning-soft); }
+.ai-auto-insight p { margin: 0; overflow-wrap: anywhere; }
+.ai-auto-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ai-auto-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ds-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.ai-auto-new { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ai-auto-new button,
+.ai-auto-switch button { min-height: 34px; padding: 4px 12px; white-space: nowrap; }
+.ai-auto-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2) var(--ds-space-3);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-left: 3px solid var(--ds-warning);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-warning-soft);
+}
+.ai-auto-switch > span { flex: 1 1 280px; min-width: 0; overflow-wrap: anywhere; }
+.ai-auto-switch small { flex-basis: 100%; }
+
+/* "Có phải ý bạn là…" in the request catalogue search (RequestTypeMenu). */
+.request-menu-ai {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0 0 var(--ds-space-4);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-left: 4px solid var(--ds-primary);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-primary-soft);
+}
+.request-menu-ai > strong { display: flex; align-items: center; gap: 8px; }
+.request-menu-ai-list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); }
+.request-menu-ai-list button { min-height: 36px; padding: 4px 14px; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.request-menu-ai-list small { opacity: 0.75; }
+.ds-search-ai-new strong { color: var(--ds-primary); }
+
+/* AI creates a request type for a need not in the catalogue (AiNewType.jsx). */
+.ai-new-type { display: grid; gap: var(--ds-space-3); max-width: 560px; }
+.ai-new-type p { margin: 0; }
+.ai-new-type-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+}
+.ai-new-type-facts dt { color: var(--ds-muted); }
+.ai-new-type-facts dd { margin: 0; overflow-wrap: anywhere; }
+.ai-new-type .modal-actions { display: flex; flex-wrap: wrap; gap: var(--ds-space-2); justify-content: flex-end; }
+@media (max-width: 480px) {
+  .ai-new-type-facts { grid-template-columns: 1fr; }
+  .ai-new-type-facts dt { margin-top: 4px; }
+}
 
 /* AI chuyển quy trình A -> B/C và đề xuất xử lý (bad cases, 18/11/2026). */
 .ai-escalation { margin: var(--ds-space-3, 12px) 0; padding: 14px 16px; border: 1px solid var(--ds-warning); border-radius: var(--ds-radius); background: var(--ds-warning-soft); }
@@ -5190,3 +5254,7 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
   .work-status-actions > button, .work-status-actions-main { width: 100%; }
   .work-status-actions-main > button { flex: 1 1 0; }
 }
+
+/* AI gợi ý phân loại / trọng số trong form tạo mẫu yêu cầu (admin). */
+.ai-profile-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 4px 0 12px; padding: 10px 12px; border: 1px solid var(--ds-primary-soft); border-left: 3px solid var(--ds-primary); border-radius: 8px; background: var(--ds-surface); font-size: 14px; }
+.ai-profile-hint button { min-height: 32px; padding: 4px 12px; margin-left: auto; }

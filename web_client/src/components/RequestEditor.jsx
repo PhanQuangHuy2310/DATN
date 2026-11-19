@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, idempotencyKey, notify } from "../api.js";
 import {
   fields,
@@ -20,10 +20,11 @@ import {
   vndToVietnameseWords,
 } from "../formatters.js";
 import { Badge, command } from "./ui.jsx";
-import { AiRequestAssist } from "./AiAssist.jsx";
+import { AiAutoInsight, riskPayload } from "./AiAssist.jsx";
+import { NewTypeDialog } from "./AiNewType.jsx";
 import RequestTypeMenu from "./RequestTypeMenu.jsx";
 import RoutePreview from "./RoutePreview.jsx";
-import { carriedValues, decideTypeSwitch, INTENT_FIELDS, intentText } from "../aiTypeSwitch.js";
+import { carriedValues, decideTypeSwitch, intentText, isNewNeed, offerNewType } from "../aiTypeSwitch.js";
 import { CardGridSkeleton, ConfirmDialog } from "./design.jsx";
 
 // String properties representing evidence are stored as sanitized filenames in
@@ -269,8 +270,9 @@ function FormFieldControl({
   );
 }
 
-export default function RequestEditor({ initial, onDone, onCancel }) {
-  const [type, setType] = useState(initial?.type_code || ""),
+/** `start` ({ type, label, title }) opens a form directly, e.g. from the AI suggestions in search. */
+export default function RequestEditor({ initial, start, onDone, onCancel }) {
+  const [type, setType] = useState(initial?.type_code || start?.type || ""),
     [record, setRecord] = useState(initial),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -278,8 +280,8 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     [notice, setNotice] = useState("");
   const [catalog, setCatalog] = useState([]);
   const [menu, setMenu] = useState([]);
-  const [chosenLabel, setChosenLabel] = useState("");
-  const [stage, setStage] = useState(initial?.id ? "form" : "choose");
+  const [chosenLabel, setChosenLabel] = useState(start?.label || "");
+  const [stage, setStage] = useState(initial?.id || start?.type ? "form" : "choose");
   const [colleagues, setColleagues] = useState([]);
   // Catalogue options per type; null while loading so code fields never
   // render as text boxes that a select then replaces (losing typed input).
@@ -298,14 +300,17 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
   const submitKeys = useRef(new Map());
   const [confirmSend, setConfirmSend] = useState(false);
   const [circuitBreaker, setCircuitBreaker] = useState(null);
-  // AI form switch: text typed before a switch is carried into the new form.
-  const [carry, setCarry] = useState({});
-  const [aiSwitch, setAiSwitch] = useState(null);
-  const touchedOther = useRef(false);
+  // AI tự động under the title: text typed before a switch is carried into the new form.
+  const [carry, setCarry] = useState(start?.title ? { title: start.title } : {});
+  const [insight, setInsight] = useState({ status: "idle" });
+  const [newTypeText, setNewTypeText] = useState("");
+  const [catalogVersion, setCatalogVersion] = useState(0);
   const classifyTimer = useRef(null);
-  const lastClassified = useRef("");
+  const lastAnalysed = useRef("");
   const dismissedText = useRef("");
   const typeRef = useRef(type);
+  const profileRef = useRef({});
+  const analyseRef = useRef(() => {});
   const focusTitleAfterSwitch = useRef(false);
   useEffect(() => {
     typeRef.current = type;
@@ -380,7 +385,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     return () => {
       active = false;
     };
-  }, [initial?.id, initial?.type_code]);
+  }, [initial?.id, initial?.type_code, catalogVersion]);
 
   useEffect(() => {
     if (stage !== "form") return;
@@ -452,75 +457,88 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     setSelectedAppCode("");
     setChosenLabel(typeName(code));
     setError("");
-    touchedOther.current = false;
+    setInsight((prev) => ({ ...prev, suggestion: null }));
+    lastAnalysed.current = "";
     // The new form's fields appear once its options are loaded (see effect below).
     focusTitleAfterSwitch.current = focusTitle;
   }
 
-  async function classifyIntent() {
-    const text = intentText(Object.fromEntries(readForm()));
-    if (!text || text === lastClassified.current || record) return;
-    lastClassified.current = text;
-    try {
-      const values = Object.fromEntries(readForm());
-      const response = await api("/api/v1/ai/classify", {
+  /** Classify the title/reason and score the risk; suggest (never switch to) a better matching form. */
+  async function analyse() {
+    if (!formElementRef.current) return;
+    const values = Object.fromEntries(readForm());
+    const text = intentText(values);
+    const currentType = typeRef.current;
+    const amount = Number(values.amount_vnd) || 0;
+    if (!text) {
+      lastAnalysed.current = "";
+      setInsight({ status: "idle" });
+      return;
+    }
+    const key = `${currentType}|${amount}|${text}`;
+    if (key === lastAnalysed.current) return;
+    lastAnalysed.current = key;
+    setInsight((prev) => ({ ...prev, status: "running" }));
+    const { lifecycle, riskWeight } = profileRef.current;
+    const [classified, scored] = await Promise.allSettled([
+      api("/api/v1/ai/classify", {
         method: "POST",
         silent: true,
         body: JSON.stringify({
           title: String(values.title || values.reason || "").trim(),
           description: values.title ? String(values.reason || "").trim() : "",
         }),
-      });
-      // The user kept typing meanwhile: a newer request will decide.
-      if (intentText(Object.fromEntries(readForm())) !== text) return;
-      const from = typeRef.current;
-      const decision = decideTypeSwitch({
-        result: response.data,
-        currentType: from,
-        allowedTypes,
-        pristine: !touchedOther.current,
-        dismissed: dismissedText.current === text,
-      });
-      if (!decision) {
-        setAiSwitch((prev) => (prev?.action === "suggest" ? null : prev));
-        return;
-      }
-      const switchInfo = {
-        ...decision,
-        text,
-        from: { type: from, label: chosenLabel || typeName(from), preset, appCode: selectedAppCode },
-      };
-      if (decision.action === "auto") switchType(decision.code, { focusTitle: true });
-      setAiSwitch(switchInfo);
-    } catch {
-      // The AI helper is optional: a failed call never blocks the form.
-      lastClassified.current = "";
-    }
+      }),
+      api("/api/v1/ai/risk-score", {
+        method: "POST",
+        silent: true,
+        body: JSON.stringify(riskPayload(currentType, amount, lifecycle, riskWeight)),
+      }),
+    ]);
+    // The user kept typing meanwhile: a newer analysis decides.
+    if (lastAnalysed.current !== key) return;
+    const result = classified.status === "fulfilled" ? classified.value.data : null;
+    const risk = scored.status === "fulfilled" ? scored.value.data : null;
+    // The AI helper is optional: a failed call never blocks the form and is retried on the next input.
+    if (!result || !risk) lastAnalysed.current = "";
+    setInsight({
+      status: "done",
+      text,
+      classify: result,
+      risk,
+      newNeed: isNewNeed(result),
+      offerNew: offerNewType(result),
+      failed: !result || !risk || Boolean(result.fallback_used || risk.fallback_used),
+      suggestion: record
+        ? null
+        : decideTypeSwitch({ result, currentType, allowedTypes, dismissed: dismissedText.current === text }),
+    });
   }
 
-  function onFormInput(event) {
-    // The visible money box has no name (its value goes through a hidden
-    // input), so an unnamed field also counts as the user filling the form.
-    const name = event.target?.name;
-    if (!name || !INTENT_FIELDS.has(name)) {
-      touchedOther.current = true;
-      return;
-    }
+  function onFormInput() {
+    // Any field may matter (title/reason for the type, the amount for the risk); analyse() skips repeats.
     clearTimeout(classifyTimer.current);
-    classifyTimer.current = setTimeout(classifyIntent, 900);
+    classifyTimer.current = setTimeout(analyse, 900);
   }
 
-  function undoAiSwitch() {
-    if (!aiSwitch) return;
-    const { from, text } = aiSwitch;
-    dismissedText.current = text;
-    setCarry(carriedValues(readForm(), from.preset));
-    setType(from.type);
-    setPreset(from.preset || {});
-    setSelectedAppCode(from.appCode || "");
-    setChosenLabel(from.label);
-    setAiSwitch(null);
+  /** Open a form from the catalogue (or an AI suggestion), optionally with text already typed. */
+  function chooseType(choice, carryValues = {}) {
+    setType(choice.code);
+    setPreset(choice.preset || {});
+    setSelectedAppCode(choice.preset?.app_code || "");
+    setChosenLabel(choice.label);
+    setStage("form");
+    setError("");
+    setCarry(carryValues);
+    resetInsight();
   }
+
+  function resetInsight() {
+    setInsight({ status: "idle" });
+    lastAnalysed.current = "";
+    dismissedText.current = "";
+  }
+
   const formFields = schema?.properties
     ? orderFormFields(Object.entries(schema.properties))
         .filter(([name]) => name !== "department_id")
@@ -554,6 +572,45 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
     : (fields[type] || [])
         .filter(([name]) => name !== "department_id")
         .map(([name, label, kind]) => [name, label, kind, {}]);
+
+  const insightAnchor = ["title", "reason"].find((name) => formFields.some(([field]) => field === name)) || null;
+  const riskWeight = current?.risk_weight || typeLevels[type]?.risk_weight;
+  const formReady = stage === "form" && fieldOptions !== null;
+  useEffect(() => {
+    profileRef.current = { lifecycle: current?.lifecycle, riskWeight };
+    analyseRef.current = analyse;
+  });
+  // A form opened with text already in it (from search, after a switch, a saved draft) is analysed at once,
+  // once its fields exist (the catalogue may arrive after the options) and are enabled.
+  const fieldsReady = formReady && Boolean(insightAnchor) && Boolean(current);
+  useEffect(() => {
+    if (!fieldsReady) return undefined;
+    const timer = setTimeout(() => analyseRef.current(), 150);
+    return () => clearTimeout(timer);
+  }, [fieldsReady, type]);
+
+  const aiBox = (
+    <AiAutoInsight
+      insight={insight}
+      nameOf={(code, fallback) => {
+        const name = typeName(code);
+        return name !== code ? name : fallback || code;
+      }}
+      onSwitch={record ? undefined : (code) => switchType(code, { focusTitle: true })}
+      onDismiss={() => {
+        dismissedText.current = insight.text;
+        setInsight((prev) => ({ ...prev, suggestion: null }));
+      }}
+      onNewType={
+        record
+          ? undefined
+          : () => {
+              const values = Object.fromEntries(readForm());
+              setNewTypeText(String(values.title || values.reason || "").trim().slice(0, 120));
+            }
+      }
+    />
+  );
 
   useEffect(() => {
     if (!initial?.id) return;
@@ -819,19 +876,12 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
             options={enrichedMenu}
             groups={groups}
             disabled={busy}
-            onSelect={(choice) => {
-              setType(choice.code);
-              setPreset(choice.preset || {});
-              setSelectedAppCode(choice.preset?.app_code || "");
-              setChosenLabel(choice.label);
-              setStage("form");
-              setError("");
-              setCarry({});
-              setAiSwitch(null);
-              touchedOther.current = false;
-              lastClassified.current = "";
-              dismissedText.current = "";
+            onSelect={(choice) => chooseType(choice)}
+            onStartType={(suggestion, title) => {
+              const item = enrichedMenu.find((entry) => entry.code === suggestion.code && entry.available);
+              chooseType(item || { code: suggestion.code, label: suggestion.name }, { title });
             }}
+            onNewType={setNewTypeText}
           />
         </div>
       )}
@@ -863,7 +913,7 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                   setSelectedAppCode("");
                   setError("");
                   setCarry({});
-                  setAiSwitch(null);
+                  resetInsight();
                   requestAnimationFrame(() =>
                     menuRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
                   );
@@ -916,54 +966,11 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
             {fieldOptions === null && (
               <p className="muted" role="status">Đang tải danh mục…</p>
             )}
-            {aiSwitch && !record && (
-              <div className={`ai-type-switch ai-type-switch-${aiSwitch.action}`} role="status">
-                {aiSwitch.action === "auto" ? (
-                  <>
-                    <span>
-                      AI nhận thấy nội dung «{aiSwitch.text}» thuộc loại{" "}
-                      <strong>{typeName(aiSwitch.code)}</strong> (độ tin cậy{" "}
-                      {Math.round(aiSwitch.confidence * 100)}%) nên đã chuyển sang biểu mẫu này.
-                      Nội dung đã nhập được giữ nguyên.
-                    </span>
-                    <button type="button" className="secondary" onClick={undoAiSwitch}>
-                      Quay lại «{aiSwitch.from.label}»
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span>
-                      AI thấy nội dung giống loại <strong>{typeName(aiSwitch.code)}</strong> (độ tin cậy{" "}
-                      {Math.round(aiSwitch.confidence * 100)}%).
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const info = aiSwitch;
-                        switchType(info.code, { focusTitle: true });
-                        setAiSwitch({ ...info, action: "auto" });
-                      }}
-                    >
-                      Chuyển sang biểu mẫu này
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => {
-                        dismissedText.current = aiSwitch.text;
-                        setAiSwitch(null);
-                      }}
-                    >
-                      Bỏ qua
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+            {fieldOptions !== null && !insightAnchor && aiBox}
             <div className="form-grid" hidden={fieldOptions === null}>
               {fieldOptions !== null && formFields.map(([name, label, kind, spec]) => {
                 const isReq = Boolean(schema?.required?.includes(name));
-                return (
+                const field = (
                   <label
                     key={type + name}
                     className={kind === "textarea" || name === "title" ? "wide" : ""}
@@ -991,6 +998,14 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                       onAppCodeChange={setSelectedAppCode}
                     />
                   </label>
+                );
+                if (name !== insightAnchor) return field;
+                // The automatic AI box sits right under the title (or the reason when a form has no title).
+                return (
+                  <Fragment key={type + name}>
+                    {field}
+                    {aiBox}
+                  </Fragment>
                 );
               })}
             </div>
@@ -1027,18 +1042,6 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
                 </button>
               )}
             </div>
-            <AiRequestAssist
-              type={type}
-              lifecycle={current?.lifecycle}
-              riskWeight={current?.risk_weight || typeLevels[type]?.risk_weight}
-              getValues={() =>
-                formElementRef.current
-                  ? Object.fromEntries(new FormData(formElementRef.current))
-                  : {}
-              }
-              onSuggestType={record ? undefined : (code) => switchType(code, { focusTitle: true })}
-              allowedTypes={allowedTypes}
-            />
             <RoutePreview
               type={type}
               getValues={() =>
@@ -1099,6 +1102,21 @@ export default function RequestEditor({ initial, onDone, onCancel }) {
           onConfirm={async () => {
             setConfirmSend(false);
             await persist(formElementRef.current, true);
+          }}
+        />
+      )}
+      {newTypeText && (
+        <NewTypeDialog
+          text={newTypeText}
+          onClose={() => setNewTypeText("")}
+          onStart={({ type: code, label, title }) => {
+            setNewTypeText("");
+            // The new type joins the catalogue: reload it, then open its form with the typed text.
+            setCatalogVersion((value) => value + 1);
+            if (stage === "form") {
+              switchType(code, { focusTitle: true });
+              setChosenLabel(label);
+            } else chooseType({ code, label }, { title });
           }}
         />
       )}

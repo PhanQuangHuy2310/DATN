@@ -91,11 +91,17 @@ test('request detail and editor surface real progress, route preview and persist
  assert.match(preview,/silent: true/);
  assert.match(ai,/\/ai-assessments/);
 });
-test('AI assist suggests another form but never switches it on its own', () => {
+test('AI box under the title suggests another form but never switches it on its own', () => {
  const ai=readFileSync(new URL('../src/components/AiAssist.jsx',import.meta.url),'utf8');
- const classifyHandler=ai.slice(ai.indexOf('/api/v1/ai/classify'),ai.indexOf('/api/v1/ai/risk-score'));
- assert.doesNotMatch(classifyHandler,/onSuggestType/);
- assert.match(ai,/Chuyển sang biểu mẫu này/);
+ const editor=readFileSync(new URL('../src/components/RequestEditor.jsx',import.meta.url),'utf8');
+ const analyse=editor.slice(editor.indexOf('async function analyse('),editor.indexOf('function onFormInput('));
+ assert.match(analyse,/\/api\/v1\/ai\/classify/);
+ assert.match(analyse,/\/api\/v1\/ai\/risk-score/);
+ assert.doesNotMatch(analyse,/switchType\(/);
+ assert.match(ai,/Chuyển sang «/);
+ assert.match(ai,/Bỏ qua/);
+ assert.doesNotMatch(editor,/Quay lại «/);
+ assert.doesNotMatch(editor,/AiRequestAssist/);
  assert.doesNotMatch(ai,/type === "EQUIPMENT" \? 3 : 2/);
 });
 test('user form lets admins set the direct manager, excluding the edited user', () => {
