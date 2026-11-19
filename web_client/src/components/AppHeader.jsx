@@ -4,6 +4,7 @@ import { date, types } from "../domain.js";
 import { Badge, useResource } from "./ui.jsx";
 import { useDebounced } from "./design.jsx";
 import { formatNotificationLabel } from "./NotificationsPage.jsx";
+import { NewTypeDialog, useAiTypeSuggestions } from "./AiNewType.jsx";
 
 function useDismiss(open, setOpen) {
   const ref = useRef(null);
@@ -69,13 +70,17 @@ const SearchIcon = () => (
 );
 
 /** Searches by request code, title, requester name or quick feature title. */
-export function GlobalSearch({ portal, onOpen, onNavigate }) {
+export function GlobalSearch({ portal, onOpen, onNavigate, onStartRequest }) {
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [newTypeText, setNewTypeText] = useState("");
   const compact = useCompactSearch();
   const inputRef = useRef(null);
   const query = useDebounced(text.trim(), 280);
+  // "Có phải ý bạn là…": AI so nội dung gõ vào với các loại yêu cầu (chỉ ở cổng nhân viên, nơi tạo yêu cầu).
+  const aiText = useDebounced(text.trim(), 600).slice(0, 120);
+  const ai = useAiTypeSuggestions(aiText, { enabled: Boolean(onStartRequest) });
   const base = portal === "admin" ? "/api/v1/ops/requests" : "/api/v1/requests";
   const results = useResource(
     query.length >= 2
@@ -101,9 +106,21 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
   }, [expanded]);
   // Chuyển trang: App.jsx gắn key theo trang nên ô tìm kiếm được tạo lại, về trạng thái ban đầu.
 
+  const newTypeDialog = newTypeText && (
+    <NewTypeDialog
+      text={newTypeText}
+      onClose={() => setNewTypeText("")}
+      onStart={(start) => {
+        setNewTypeText("");
+        onStartRequest(start);
+      }}
+    />
+  );
+
   if (compact && !expanded) {
     return (
       <div className="ds-global-search is-compact" role="search">
+        {newTypeDialog}
         <button
           type="button"
           className="secondary ds-icon-button ds-search-toggle"
@@ -128,6 +145,7 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
 
   return (
     <div className={`ds-global-search${compact ? " is-expanded" : ""}`} ref={ref} role="search">
+      {newTypeDialog}
       <label htmlFor="ds-global-search" className="sr-only">
         Tìm nhanh chức năng, tiêu đề đơn, người gửi hoặc mã hồ sơ
       </label>
@@ -217,6 +235,60 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
             <li className="muted" style={{ padding: 10 }}>
               Không tìm thấy hồ sơ hoặc chức năng phù hợp.
             </li>
+          )}
+          {onStartRequest && ai.active && (
+            <>
+              <li className="ds-search-group-header">AI gợi ý · Có phải ý bạn là</li>
+              {ai.loading && (
+                <li className="muted" style={{ padding: 10 }}>
+                  AI đang xem nhu cầu này giống loại yêu cầu nào…
+                </li>
+              )}
+              {ai.items.map((suggestion) => (
+                <li key={`ai:${suggestion.code}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      collapse();
+                      onStartRequest({ type: suggestion.code, label: suggestion.name, title: aiText });
+                    }}
+                  >
+                    <span className="ds-search-item-main">
+                      <strong>Tạo yêu cầu «{suggestion.name}»</strong>
+                      <small>
+                        Độ tin cậy {Math.round(suggestion.confidence * 100)}% · tiêu đề «{aiText}» được điền sẵn
+                      </small>
+                    </span>
+                    <span className="ds-search-badge">Tạo ↵</span>
+                  </button>
+                </li>
+              ))}
+              {!ai.loading && ai.newNeed && (
+                <li className="muted" style={{ padding: "6px 10px" }}>
+                  AI chưa thấy loại yêu cầu nào trong hệ thống khớp với «{aiText}».
+                </li>
+              )}
+              {!ai.loading && (
+                <li>
+                  <button
+                    type="button"
+                    className="ds-search-ai-new"
+                    onClick={() => {
+                      setNewTypeText(aiText);
+                      collapse();
+                    }}
+                  >
+                    <span className="ds-search-item-main">
+                      <strong>
+                        {ai.items.length ? "Không phải? " : ""}Tạo yêu cầu mới «{aiText}»
+                      </strong>
+                      <small>AI kiểm tra lại; chưa có loại phù hợp thì AI đề xuất tạo loại mới</small>
+                    </span>
+                    <span className="ds-search-badge">AI ✦</span>
+                  </button>
+                </li>
+              )}
+            </>
           )}
         </ul>
       )}

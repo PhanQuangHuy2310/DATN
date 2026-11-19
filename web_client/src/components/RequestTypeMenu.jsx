@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from "react";
-import { InfoHint } from "./design.jsx";
+import { InfoHint, useDebounced } from "./design.jsx";
+import { useAiTypeSuggestions } from "./AiNewType.jsx";
 import { riskLevels, approvalLevels, typeLevels } from "../domain";
 
 const GROUP_ICONS = {
@@ -42,9 +43,14 @@ export default function RequestTypeMenu({
   options = [],
   groups: groupInfo = [],
   onSelect,
+  onStartType,
+  onNewType,
   disabled = false,
 }) {
   const [query, setQuery] = useState("");
+  // AI: "Có phải ý bạn là…" cho nội dung gõ vào; không đúng thì tạo yêu cầu (và loại) mới.
+  const aiText = useDebounced(query.trim(), 600).slice(0, 120);
+  const ai = useAiTypeSuggestions(aiText, { enabled: Boolean(onStartType) && !disabled });
   const [group, setGroup] = useState("Tất cả");
   const [availability, setAvailability] = useState("all");
   const [levelFilter, setLevelFilter] = useState("all");
@@ -173,6 +179,39 @@ export default function RequestTypeMenu({
           </button>
         )}
       </div>
+
+      {onStartType && ai.active && (
+        <section className="request-menu-ai" aria-label="AI gợi ý loại yêu cầu" aria-live="polite">
+          <strong>
+            <span className="ai-auto-badge">AI</span> Có phải ý bạn là
+          </strong>
+          {ai.loading ? (
+            <span className="muted">AI đang xem «{aiText}» giống loại yêu cầu nào…</span>
+          ) : (
+            <div className="request-menu-ai-list">
+              {ai.items.map((suggestion) => (
+                <button
+                  key={suggestion.code}
+                  type="button"
+                  className="secondary"
+                  disabled={disabled}
+                  onClick={() => onStartType(suggestion, aiText)}
+                >
+                  {suggestion.name} <small>{Math.round(suggestion.confidence * 100)}%</small>
+                </button>
+              ))}
+              {ai.newNeed && (
+                <span className="muted">AI chưa thấy loại yêu cầu nào khớp với «{aiText}».</span>
+              )}
+              {onNewType && (
+                <button type="button" disabled={disabled} onClick={() => onNewType(aiText)}>
+                  {ai.items.length ? "Không phải? " : ""}Tạo yêu cầu mới «{aiText}»
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       {showGroupCards ? (
         <div className="request-group-grid" aria-label="Nhóm yêu cầu">
