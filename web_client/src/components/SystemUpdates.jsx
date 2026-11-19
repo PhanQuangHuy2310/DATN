@@ -12,7 +12,7 @@ function UpdateBody({ item }) {
           <h3>Thay đổi</h3>
           <ul>
             {item.changes.map((c, i) => (
-              <li key={i}>{c.title}</li>
+              <li key={i}>{typeof c === "string" ? c : c?.title}</li>
             ))}
           </ul>
         </>
@@ -20,16 +20,23 @@ function UpdateBody({ item }) {
       {item.guidance?.length > 0 && (
         <>
           <h3>Hướng dẫn thao tác theo quy trình mới</h3>
-          {item.guidance.map((g, i) => (
-            <div key={i}>
-              <strong>{g.title}</strong>
-              <ol>
-                {g.steps.map((step, j) => (
-                  <li key={j}>{step}</li>
-                ))}
-              </ol>
-            </div>
-          ))}
+          {/* A malformed announcement must never take the whole portal down. */}
+          {item.guidance.map((g, i) =>
+            typeof g === "string" ? (
+              <p key={i}>{g}</p>
+            ) : (
+              <div key={i}>
+                <strong>{g?.title}</strong>
+                {Array.isArray(g?.steps) && (
+                  <ol>
+                    {g.steps.map((step, j) => (
+                      <li key={j}>{step}</li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            ),
+          )}
         </>
       )}
     </div>
