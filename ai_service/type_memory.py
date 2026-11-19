@@ -32,6 +32,11 @@ về lại này đó
 # Cùng phép chuẩn hóa với câu đầu vào (normalize_text đổi "đ" thành "d").
 STOP = frozenset(re.findall(r"\w+", normalize_text(_STOP_TEXT)))
 VOCAB_COEF = 0.5          # từ có hệ số dương > 0,5 với một loại được coi là từ vựng của loại đó
+# Mô hình có thêm n-gram ký tự giữ dấu (train.py ACCENT_CHARS) chia trọng số với đặc trưng từ nên hệ số từ nhỏ hơn.
+# Ngưỡng hiệu chỉnh trên 2 bộ dev (viết tay + câu ngắn, 234 câu, không dùng test) để tỉ lệ báo nhầm "nhu cầu
+# mới" không cao hơn mô hình không dấu: 0,5 -> 10 câu, 0,4 -> 5, 0,35 -> 3 (tham chiếu 4). Xem
+# training/data/request_everyday_report.md.
+VOCAB_COEF_ACCENT = 0.35
 NOVEL_SUPPORT = 0.34      # ≤ 1/3 từ nội dung khớp từ vựng của 3 loại được đoán -> nhu cầu mới
 NOVEL_MAX_CONFIDENCE = 0.9
 LEARNED_MIN = 0.2         # độ giống tối thiểu để đưa loại mới vào danh sách khả năng
@@ -61,13 +66,15 @@ class ModelVocab:
     """Từ vựng theo loại rút từ chính bộ phân loại (hệ số của đặc trưng từ)."""
 
     def __init__(self, pipeline):
-        word = pipeline.named_steps["features"].transformer_list[0][1]
+        transformers = pipeline.named_steps["features"].transformer_list
+        word = transformers[0][1]
         clf = pipeline.named_steps["classifier"]
+        threshold = VOCAB_COEF_ACCENT if any(name == "char_accent" for name, _ in transformers) else VOCAB_COEF
         self.vocab = word.vocabulary_
         inverse = {i: t for t, i in self.vocab.items()}
         coef = clf.coef_[:, : len(self.vocab)]
         self.per_class = {
-            str(code): {inverse[j] for j in np.nonzero(coef[i] > VOCAB_COEF)[0] if " " not in inverse[j]}
+            str(code): {inverse[j] for j in np.nonzero(coef[i] > threshold)[0] if " " not in inverse[j]}
             for i, code in enumerate(clf.classes_)
         }
 

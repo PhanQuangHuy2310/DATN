@@ -268,7 +268,19 @@ def heldout_template_split(
     return np.where(~is_test)[0], np.where(is_test)[0]
 
 
-def make_text_pipeline(c_value: float, seed: int) -> Pipeline:
+ACCENT_CHARS = False
+
+
+def make_text_pipeline(c_value: float, seed: int, accent_chars: bool = ACCENT_CHARS) -> Pipeline:
+    accented = [
+        (
+            # Ký tự GIỮ DẤU: không dấu thì "muộn" (đi muộn), "mượn" (mượn đồ), "muốn" cùng là "muon".
+            # Đứng sau "word" để type_memory vẫn đọc từ vựng ở transformer_list[0].
+            "char_accent",
+            TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 3), min_df=5, sublinear_tf=True,
+                            max_features=30000),
+        )
+    ] if accent_chars else []
     features = FeatureUnion(
         [
             (
@@ -290,6 +302,7 @@ def make_text_pipeline(c_value: float, seed: int) -> Pipeline:
                     max_features=150000,
                 ),
             ),
+            *accented,
         ]
     )
     classifier = LogisticRegression(C=c_value, max_iter=3000, random_state=seed)
@@ -412,7 +425,12 @@ def train_nlp(
     per_type: int,
     seed: int,
     short_per_type: int = 200,
+    # C=5 cố định (19/11): với C>=10 mô hình tự tin quá mức, câu ngoài danh mục được nhận ra 87% -> 74%
+    # (xem data/request_everyday_report.md). Muốn dò lại: --nlp-c 2 5 10 20.
+    c_values: tuple[float, ...] = (5.0,),
+    accent_chars: bool | None = None,
 ) -> dict[str, Any]:
+    accent_chars = ACCENT_CHARS if accent_chars is None else accent_chars
     corpus = json.loads(CORPUS_PATH.read_text(encoding="utf-8"))
     validate_corpus(corpus, catalog)
     frame = build_nlp_dataset(corpus, per_type, seed, short_per_type)
@@ -448,9 +466,9 @@ def train_nlp(
     candidates: list[tuple[float, int, float, float, float, float]] = []
     for weight in weights:
         extra_texts, extra_labels = public_rows(public_train, weight)
-        for c_value in (2.0, 5.0, 10.0, 20.0):
+        for c_value in c_values:
             started = time.monotonic()
-            model = make_text_pipeline(c_value, seed)
+            model = make_text_pipeline(c_value, seed, accent_chars)
             model.fit(
                 [texts[i] for i in train_idx] + extra_texts,
                 np.concatenate([labels[train_idx], np.array(extra_labels, dtype=labels.dtype)]),
@@ -476,7 +494,7 @@ def train_nlp(
 
     # Metrics for the chosen settings, measured before the final refit.
     extra_texts, extra_labels = public_rows(public_train, best_weight)
-    model = make_text_pipeline(best_c, seed)
+    model = make_text_pipeline(best_c, seed, accent_chars)
     model.fit(
         [texts[i] for i in train_idx] + extra_texts,
         np.concatenate([labels[train_idx], np.array(extra_labels, dtype=labels.dtype)]),
@@ -505,7 +523,7 @@ def train_nlp(
     # Final model: every synthetic sentence plus every public train+dev sentence
     # (hand-written eval and the public test set stay unseen).
     all_texts, all_labels = public_rows(public_items, best_weight)
-    final = make_text_pipeline(best_c, seed)
+    final = make_text_pipeline(best_c, seed, accent_chars)
     final.fit(texts + all_texts, np.concatenate([labels, np.array(all_labels, dtype=labels.dtype)]))
     realistic = score_realistic(final, eval_items, catalog)
     short_scores = score_realistic(final, short_items, catalog)
@@ -1148,6 +1166,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--threads", type=int, default=max(1, min(4, os.cpu_count() or 1)))
     parser.add_argument("--nlp-per-type", type=int, default=600)
     parser.add_argument("--nlp-short-per-type", type=int, default=200)
+    parser.add_argument("--nlp-accent-chars", choices=("on", "off"),
+                        help="thêm n-gram ký tự giữ dấu (mặc định theo ACCENT_CHARS)")
+    parser.add_argument("--nlp-c", type=float, nargs="+",
+                        help="giá trị C của Logistic Regression được thử (mặc định 5)")
     parser.add_argument("--risk-per-type", type=int, default=1500)
     args = parser.parse_args(argv)
     if args.check:
@@ -1172,7 +1194,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.only in (None, "nlp"):
             print("== 1. Bộ phân loại văn bản ==")
             nlp_metrics = train_nlp(
-                staging, catalog, args.nlp_per_type, args.seed, args.nlp_short_per_type
+                staging, catalog, args.nlp_per_type, args.seed, args.nlp_short_per_type,
+                **({"c_values": tuple(args.nlp_c)} if args.nlp_c else {}),
+                **({"accent_chars": args.nlp_accent_chars == "on"} if args.nlp_accent_chars else {}),
             )
             names += NLP_ARTIFACTS
         if args.only in (None, "risk"):
