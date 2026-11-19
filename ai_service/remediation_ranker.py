@@ -34,7 +34,11 @@ MODEL_PATH = os.path.join(
 META_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "models", "remediation_ranker_meta.json"
 )
-MODEL_VERSION = "remediation-ranker-1"
+MODEL_VERSION = "remediation-ranker-2"
+# Ràng buộc đơn điệu (theo thứ tự FEATURES): thêm việc đến hạn / việc đang mở / là cấp trên không bao giờ làm
+# điểm TĂNG; cùng phòng / cùng nhóm / thêm kinh nghiệm không bao giờ làm điểm GIẢM. Bản 1 (không ràng buộc) có
+# 7/8.112 cặp vi phạm, ví dụ thêm 1 việc đến hạn mà điểm lại tăng; xem training/data/remediation_report.md.
+MONOTONE = "(1,1,-1,-1,1,-1)"
 
 
 def vector(c: dict[str, Any]) -> list[float]:
@@ -215,7 +219,7 @@ def retrain_with_feedback(real_groups: list[list[dict[str, Any]]]) -> dict[str, 
     xtr, ytr, qtr = tr.to_matrix(sim_train + real_rel * REAL_WEIGHT)
     xdv, ydv, qdv = tr.to_matrix(sim_dev)
     params = {"objective": "rank:pairwise", "eta": 0.1, "max_depth": 4, "min_child_weight": 2,
-              "subsample": 0.9, "eval_metric": "ndcg@3", "seed": 42}
+              "subsample": 0.9, "eval_metric": "ndcg@3", "seed": 42, "monotone_constraints": MONOTONE}
     booster = xgb.train(
         params,
         xgb.DMatrix(xtr, label=ytr, qid=qtr, feature_names=list(FEATURES)),

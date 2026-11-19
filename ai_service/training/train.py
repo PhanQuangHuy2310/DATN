@@ -651,6 +651,11 @@ RISK_FEATURES = [
     "same_type_count_30d",
 ]
 CONTEXT_CATEGORIES = {"ABSENCE"}
+# Lần 2 (19/11): bộ 1 cho thấy mô hình gần như bỏ qua ngữ cảnh ở công tác/WFH vì mẫu có ngữ cảnh quá hiếm
+# (~11% dòng nhóm vắng mặt chạm luật). Nhóm vắng mặt: gấp đôi số dòng, ngữ cảnh dày hơn, lấy mẫu sát ngưỡng
+# (vắng 30-50%, lần 2-6). Các nhóm khác giữ phân phối cũ.
+RISK_DATA_VERSION = "context-2"
+CONTEXT_ROWS_FACTOR = 2
 
 
 def risk_domain(code: str, catalog: dict[str, Any]) -> str:
@@ -716,13 +721,34 @@ def _risk_label(row: dict[str, Any], typical_high: float, rng: random.Random) ->
     return int(min(5, max(1, score)))
 
 
+def _team_ratio(rng: random.Random, dense: bool) -> float:
+    roll = rng.random()
+    if dense and roll < 0.2:
+        return rng.uniform(0.3, 0.5)  # sát ngưỡng 40%
+    if roll < (0.3 if dense else 0.1):
+        return rng.uniform(0.35, 0.8)
+    return rng.betavariate(1.3, 7)
+
+
+def _same_type_count(rng: random.Random, dense: bool) -> int:
+    roll = rng.random()
+    if dense and roll < 0.2:
+        return rng.randint(2, 6)  # sát ngưỡng lần thứ 4
+    if roll < (0.3 if dense else 0.08):
+        return rng.randint(4, 10)
+    return min(3, int(rng.expovariate(1 / 1.2)))
+
+
 def build_risk_dataset(
     catalog: dict[str, Any], per_type: int, seed: int
 ) -> pd.DataFrame:
     rng = random.Random(seed + 101)
     rows: list[dict[str, Any]] = []
     codes = sorted(catalog["types"])
-    plan = [(code, per_type) for code in codes] + [(OTHER_TYPE, per_type * 3)]
+    plan = [
+        (code, per_type * (CONTEXT_ROWS_FACTOR if catalog["types"][code]["category"] in CONTEXT_CATEGORIES else 1))
+        for code in codes
+    ] + [(OTHER_TYPE, per_type * 3)]
     for code, count in plan:
         spec = catalog["types"].get(code)
         for _ in range(count):
@@ -759,6 +785,7 @@ def build_risk_dataset(
             rejection = (
                 rng.uniform(0.3, 0.8) if rng.random() < 0.08 else min(0.3, rng.betavariate(1, 9))
             )
+            dense = category in CONTEXT_CATEGORIES
             row = {
                 "request_type": code,
                 "category": category,
@@ -779,17 +806,14 @@ def build_risk_dataset(
                 "is_template_matched": int(rng.random() < 0.92),
                 # Ngữ cảnh vận hành, sinh cho MỌI loại để mô hình học được nó chỉ có tác dụng
                 # với nhóm vắng mặt (ABSENCE).
-                "pending_work_due_24h": 0 if rng.random() < 0.75 else rng.randint(1, 4),
-                "work_due_in_absence": 0 if rng.random() < 0.8 else rng.randint(1, 3),
-                "team_absence_ratio": round(
-                    rng.uniform(0.35, 0.8) if rng.random() < 0.1 else rng.betavariate(1.3, 7), 3
-                ),
-                "same_type_count_30d": (
-                    rng.randint(4, 10) if rng.random() < 0.08 else min(3, int(rng.expovariate(1 / 1.2)))
-                ),
+                "pending_work_due_24h": 0 if rng.random() < (0.5 if dense else 0.75) else rng.randint(1, 4),
+                "work_due_in_absence": 0 if rng.random() < (0.55 if dense else 0.8) else rng.randint(1, 3),
+                "team_absence_ratio": round(_team_ratio(rng, dense), 3),
+                "same_type_count_30d": _same_type_count(rng, dense),
             }
             row["handover_uncovered"] = int(
-                (row["pending_work_due_24h"] > 0 or row["work_due_in_absence"] > 0) and rng.random() < 0.45
+                (row["pending_work_due_24h"] > 0 or row["work_due_in_absence"] > 0)
+                and rng.random() < (0.5 if dense else 0.45)
             )
             row["risk_score"] = _risk_label(row, profile[1] if profile else 0.0, rng)
             rows.append(row)
@@ -956,6 +980,7 @@ def train_risk(
         results[domain] = metrics
     _write_json(staging / "domain_model_registry.json", registry)
     results["rows"] = int(len(frame))
+    results["data_version"] = RISK_DATA_VERSION
     results["rows_per_type"] = per_type
     results["label_policy"] = (
         "Mô phỏng: điểm gốc = risk_weight của loại; vượt ngân sách còn lại = 5; "

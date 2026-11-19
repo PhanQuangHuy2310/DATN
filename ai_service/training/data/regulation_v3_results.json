@@ -1,0 +1,560 @@
+{
+ "test_sha256": "e7ef23667475eb34e203d8b271c08ea42fe1bde478da66947a40f08facd6c60c",
+ "v2_baseline": {
+  "label": "v2",
+  "date": "2026-11-18",
+  "clauses": {
+   "n": 40,
+   "correct": 9,
+   "accuracy": 0.225,
+   "errors": [
+    {
+     "id": "V01",
+     "want": [
+      {
+       "request_type": "LEAVE",
+       "days_lte": 2,
+       "auto_approve": true
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V02",
+     "want": [
+      {
+       "request_type": "REFUND_COMPENSATION",
+       "amount_lte": 2000000,
+       "auto_approve": true
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V03",
+     "want": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_gt": 9999999,
+       "amount_lte": 50000000,
+       "auto_approve": false
+      }
+     ],
+     "got": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_gt": 9999999,
+       "auto_approve": false
+      }
+     ]
+    },
+    {
+     "id": "V04",
+     "want": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_gt": 9999999,
+       "amount_lte": 49999999,
+       "auto_approve": false
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V05",
+     "want": [
+      {
+       "request_type": "SPECIAL_DISCOUNT",
+       "percent_gt": 14,
+       "auto_approve": false
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V06",
+     "want": [
+      {
+       "request_type": "SPECIAL_DISCOUNT",
+       "percent_gt": 20,
+       "auto_approve": false
+      }
+     ],
+     "got": [
+      {
+       "request_type": "SPECIAL_DISCOUNT",
+       "auto_approve": false
+      }
+     ]
+    },
+    {
+     "id": "V07",
+     "want": [
+      {
+       "request_type": "SPECIAL_DISCOUNT",
+       "percent_lte": 5,
+       "auto_approve": true
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V08",
+     "want": [
+      {
+       "request_type": "ROOM_BOOKING",
+       "location_contains": "tầng 10",
+       "auto_approve": false
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V09",
+     "want": [
+      {
+       "request_type": "VEHICLE_BOOKING",
+       "location_contains": "bắc ninh",
+       "auto_approve": false
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V10",
+     "want": [
+      {
+       "request_type": "WFH_REQ",
+       "repeat_count_gte": 3,
+       "repeat_window": "ROLLING_14D",
+       "auto_approve": false,
+       "escalate_to": "B"
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V11",
+     "want": [
+      {
+       "request_type": "ATTENDANCE_ADJUSTMENT",
+       "repeat_count_gte": 10,
+       "repeat_window": "CALENDAR_QUARTER",
+       "auto_approve": false,
+       "escalate_to": "B"
+      }
+     ],
+     "got": [
+      {
+       "request_type": "ATTENDANCE_ADJUSTMENT",
+       "repeat_count_gte": 10,
+       "repeat_window": "ROLLING_30D",
+       "auto_approve": false,
+       "escalate_to": "B"
+      }
+     ]
+    },
+    {
+     "id": "V12",
+     "want": [
+      {
+       "request_type": "LEAVE_SPECIAL",
+       "repeat_count_gte": 4,
+       "repeat_window": "CALENDAR_YEAR",
+       "auto_approve": false,
+       "escalate_to": "B"
+      }
+     ],
+     "got": [
+      {
+       "request_type": "LEAVE_SPECIAL",
+       "repeat_count_gte": 4,
+       "repeat_window": "ROLLING_30D",
+       "auto_approve": false,
+       "escalate_to": "B"
+      }
+     ]
+    },
+    {
+     "id": "V13",
+     "want": [
+      {
+       "request_type": "REFUND_COMPENSATION",
+       "repeat_count_gte": 5,
+       "repeat_window": "ROLLING_90D",
+       "auto_approve": false,
+       "escalate_to": "B"
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V14",
+     "want": [
+      {
+       "request_type": "ATTENDANCE_ADJUSTMENT",
+       "retro_days_gt": 7,
+       "auto_approve": false
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V15",
+     "want": [
+      {
+       "request_type": "LEAVE",
+       "days_gt": 7,
+       "effective_from": "2027-01-01",
+       "auto_approve": false
+      }
+     ],
+     "got": [
+      {
+       "request_type": "LEAVE",
+       "days_gt": 7,
+       "auto_approve": false
+      }
+     ]
+    },
+    {
+     "id": "V16",
+     "want": [
+      {
+       "request_type": "WFH_REQ",
+       "effective_until": "2026-12-31",
+       "auto_approve": true
+      }
+     ],
+     "got": [
+      {
+       "request_type": "WFH_REQ",
+       "auto_approve": true
+      }
+     ]
+    },
+    {
+     "id": "V17",
+     "want": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_gt": 5000000,
+       "effective_from": "2027-03-15",
+       "effective_until": "2027-06-30",
+       "auto_approve": false
+      }
+     ],
+     "got": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_gt": 5000000,
+       "auto_approve": false
+      }
+     ]
+    },
+    {
+     "id": "V18",
+     "want": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_gt": 29999999,
+       "auto_approve": false
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V20",
+     "want": [
+      {
+       "request_type": "REFUND_COMPENSATION",
+       "amount_lte": 499999,
+       "auto_approve": true
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V21",
+     "want": [
+      {
+       "request_type": "LEAVE",
+       "days_lte": 2,
+       "auto_approve": true
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V22",
+     "want": [
+      {
+       "request_type": "LEAVE",
+       "days_gt": 2,
+       "days_lte": 5,
+       "auto_approve": false
+      }
+     ],
+     "got": [
+      {
+       "request_type": "LEAVE",
+       "auto_approve": false
+      }
+     ]
+    },
+    {
+     "id": "V23",
+     "want": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_gt": 5000000,
+       "location_contains": "đà nẵng",
+       "auto_approve": false
+      }
+     ],
+     "got": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_gt": 5000000,
+       "auto_approve": false
+      }
+     ]
+    },
+    {
+     "id": "V24",
+     "want": [
+      {
+       "request_type": "SPECIAL_DISCOUNT",
+       "percent_gt": 9,
+       "percent_lte": 20,
+       "auto_approve": false
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V25",
+     "want": [
+      {
+       "request_type": "ACCESS_FACILITY",
+       "location_contains": "phòng máy chủ",
+       "auto_approve": false
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V29",
+     "want": [],
+     "got": [
+      {
+       "request_type": "REFUND_COMPENSATION",
+       "auto_approve": false
+      }
+     ]
+    },
+    {
+     "id": "V31",
+     "want": [],
+     "got": [
+      {
+       "request_type": "ROOM_BOOKING",
+       "auto_approve": true
+      }
+     ]
+    },
+    {
+     "id": "V35",
+     "want": [
+      {
+       "request_type": "SPECIAL_DISCOUNT",
+       "percent_gt": 30,
+       "effective_from": "2027-07-01",
+       "auto_approve": false
+      }
+     ],
+     "got": []
+    },
+    {
+     "id": "V36",
+     "want": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_lte": 2000000,
+       "auto_approve": true
+      }
+     ],
+     "got": [
+      {
+       "request_type": "EXPENSE_CLAIM",
+       "amount_gt": 1999999,
+       "auto_approve": true
+      }
+     ]
+    },
+    {
+     "id": "V37",
+     "want": [
+      {
+       "request_type": "ATTENDANCE_ADJUSTMENT",
+       "retro_days_gt": 30,
+       "auto_approve": false
+      }
+     ],
+     "got": [
+      {
+       "request_type": "ATTENDANCE_ADJUSTMENT",
+       "days_gt": 30,
+       "auto_approve": false
+      }
+     ]
+    },
+    {
+     "id": "V38",
+     "want": [
+      {
+       "request_type": "WAREHOUSE_TRANSFER",
+       "location_contains": "bình dương",
+       "auto_approve": false
+      }
+     ],
+     "got": [
+      {
+       "request_type": "WAREHOUSE_TRANSFER",
+       "auto_approve": false
+      }
+     ]
+    },
+    {
+     "id": "V39",
+     "want": [
+      {
+       "request_type": "LEAVE",
+       "days_gt": 5,
+       "auto_approve": false
+      },
+      {
+       "request_type": "LEAVE",
+       "days_lte": 5,
+       "auto_approve": true
+      }
+     ],
+     "got": [
+      {
+       "request_type": "LEAVE",
+       "days_gt": 5,
+       "auto_approve": false
+      }
+     ]
+    }
+   ]
+  },
+  "supersede": {
+   "scenarios": 12,
+   "scenarios_correct": 8,
+   "probes": 25,
+   "probes_correct": 20,
+   "errors": [
+    {
+     "id": "S02",
+     "about": "Khoảng mới cho tự duyệt 4-6 tr, phần cũ trên 6 tr còn hiệu lực",
+     "probes": [
+      {
+       "type": "REFUND_COMPENSATION",
+       "amount": 7000000,
+       "expect": "MANUAL",
+       "got": "FREE"
+      }
+     ]
+    },
+    {
+     "id": "S07",
+     "about": "Bãi bỏ quy định mới: quy định cũ đã bị thay KHÔNG sống lại",
+     "probes": [
+      {
+       "type": "EXPENSE_CLAIM",
+       "amount": 45000000,
+       "expect": "FREE",
+       "got": "MANUAL"
+      },
+      {
+       "type": "EXPENSE_CLAIM",
+       "amount": 55000000,
+       "expect": "FREE",
+       "got": "MANUAL"
+      }
+     ]
+    },
+    {
+     "id": "S09",
+     "about": "Quy định mới có ngày hiệu lực tương lai: cũ còn áp tới ngày đó",
+     "probes": [
+      {
+       "type": "LEAVE",
+       "days": 6,
+       "today": "2026-12-15",
+       "expect": "MANUAL",
+       "got": "FREE"
+      }
+     ]
+    },
+    {
+     "id": "S12",
+     "about": "Ngưỡng phần trăm 10% -> 20%",
+     "probes": [
+      {
+       "type": "SPECIAL_DISCOUNT",
+       "percent": 25,
+       "expect": "MANUAL",
+       "got": "FREE"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "v3_first_scoring": {
+  "clauses": {
+   "n": 40,
+   "correct": 39,
+   "accuracy": 0.975,
+   "errors": [
+    {
+     "id": "V22",
+     "want": [
+      {
+       "request_type": "LEAVE",
+       "days_gt": 2,
+       "days_lte": 5,
+       "auto_approve": false
+      }
+     ],
+     "got": [
+      {
+       "request_type": "LEAVE",
+       "days_lte": 5,
+       "auto_approve": false
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "v3_final": {
+  "label": "v3-final",
+  "date": "2026-11-18",
+  "clauses": {
+   "n": 40,
+   "correct": 40,
+   "accuracy": 1.0,
+   "errors": []
+  },
+  "supersede": {
+   "scenarios": 12,
+   "scenarios_correct": 12,
+   "probes": 25,
+   "probes_correct": 25,
+   "errors": []
+  }
+ }
+}

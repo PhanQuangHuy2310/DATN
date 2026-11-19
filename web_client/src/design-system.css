@@ -5071,7 +5071,10 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .ai-remedy-item p { margin: 4px 0; }
 .ai-remedy-suggestion { color: var(--ds-ink); }
 .ai-remedy-choices { display: grid; gap: 6px; margin-top: 6px; }
-.ai-remedy-choices label { display: flex; gap: 6px; align-items: flex-start; font-size: 14px; color: var(--ds-ink); }
+.ai-remedy-choices label { display: flex; gap: 8px; align-items: flex-start; justify-content: flex-start; font-size: 14px; color: var(--ds-ink); text-align: left; }
+/* Ô chọn tròn không nhận min-height/padding của ô nhập chung (từng làm nút tròn to, chữ bị đẩy sang phải). */
+.ai-remedy-choices input[type="radio"] { flex: 0 0 auto; width: 16px; height: 16px; min-height: 0; padding: 0; margin: 3px 0 0; }
+.ai-remedy-choices label > span { flex: 1 1 auto; min-width: 0; }
 .ai-remedy-candidate span { line-height: 1.45; }
 .ai-remedy-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 640px) { .ai-remedy, .ai-escalation { padding: 12px; } }
@@ -5134,3 +5137,10 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
     box-shadow: none; transform: none; outline: none; cursor: default;
   }
 }
+
+/* Quy định mới thay thế quy định cũ tương tự (regulation_precedence) */
+.reg-check-item.info { border-left-color: var(--ds-primary, #2563eb); }
+.reg-superseded-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--ds-line); color: var(--ds-ink); }
+.reg-superseded { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--ds-line); border-radius: var(--ds-radius); }
+.reg-superseded h4 { margin: 0 0 6px; }
+.reg-superseded ul { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }

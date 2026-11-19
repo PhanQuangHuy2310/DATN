@@ -165,13 +165,28 @@ def _forbidden_unless_writer(request: HttpRequest):
     return None
 
 
+def _superseded(cur) -> list[dict[str, Any]]:
+    """Điều nào của văn bản nào đang bị văn bản mới hơn thay thế (bộ luật AI đã áp dụng)."""
+    cur.execute("SELECT coalesce(applied_policy->'superseded', '[]'::jsonb) FROM eas.ai_system_state WHERE id = 1")
+    row = cur.fetchone()
+    return list(row[0] or []) if row else []
+
+
+def _attach_superseded(items: list[dict], superseded: list[dict[str, Any]]) -> list[dict]:
+    for item in items:
+        item["superseded_by"] = [e for e in superseded if e.get("old_code") == item["code"]]
+        item["supersedes"] = [e for e in superseded if e.get("new_code") == item["code"]]
+    return items
+
+
 def _list_regulations() -> list[dict]:
     with connection.cursor() as cur:
         cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
             f"SELECT {REGULATION_COLUMNS} FROM eas.company_regulations "
             "WHERE NOT is_deleted ORDER BY code"
         )
-        return [_serialize_regulation(r) for r in cur.fetchall()]
+        items = [_serialize_regulation(r) for r in cur.fetchall()]
+        return _attach_superseded(items, _superseded(cur))
 
 
 def _content_check(cur, *, code: str, fields: dict) -> dict[str, Any]:
@@ -447,6 +462,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
             item["history"] = [
                 {**dict(zip(keys, h)), "created_at": _iso(h[7])} for h in cur.fetchall()
             ]
+            _attach_superseded([item], _superseded(cur))
         return JsonResponse({"regulation": item})
 
     if request.method not in ("PATCH", "PUT", "DELETE"):

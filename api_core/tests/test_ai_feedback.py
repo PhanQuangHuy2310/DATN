@@ -87,8 +87,11 @@ class ReviewRuleValidationTests(SimpleTestCase):
 class SkipReasonTests(SimpleTestCase):
 
     def test_reports_only_controlled_sentences_that_could_not_compile(self):
-        self.assertIsNotNone(skip_reason("Phê duyệt chiết khấu thương mại đặc biệt từ 25% trở lên bắt buộc "
-                                         "duyệt thủ công.", list(TYPES)))
+        # v3 hiểu phần trăm; câu có điều kiện định tính (nhóm khách hàng) vẫn phải lên hàng chờ của admin.
+        self.assertIsNotNone(skip_reason("Phê duyệt chiết khấu thương mại đặc biệt cho khách hàng thân thiết bắt "
+                                         "buộc duyệt thủ công.", list(TYPES)))
+        self.assertIsNone(skip_reason("Phê duyệt chiết khấu thương mại đặc biệt từ 25% trở lên bắt buộc "
+                                      "duyệt thủ công.", list(TYPES)))
         self.assertIsNone(skip_reason("Thanh toán chi phí từ 40 triệu đồng trở lên bắt buộc duyệt thủ công.",
                                       list(TYPES)))
         self.assertIsNone(skip_reason("Phòng họp giao ban sáng thứ Hai.", list(TYPES)))

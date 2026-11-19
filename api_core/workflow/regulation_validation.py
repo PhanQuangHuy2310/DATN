@@ -3,13 +3,13 @@
 Lỗi (ERROR, chặn ban hành; nếu lọt vào lượt học thì quy định bị trả lại và hiệu lực quay về bản cũ):
   GARBLED        văn bản lỗi ký tự: ký tự thay thế (U+FFFD), ký tự điều khiển, chữ Việt bị hỏng mã hóa
                  ("Ä‘", "á»", "Æ°"...), hoặc dấu "?" thay cho chữ có dấu ("Ngh? ph?p").
-  CONTRADICTION  hai điều khoản cùng áp cho một hồ sơ nhưng ngược nhau: một điều cho AI tự duyệt, một điều bắt
-                 duyệt thủ công (trong cùng văn bản hoặc với quy định đang hiệu lực). Bộ máy AI luôn ưu tiên
-                 "duyệt thủ công", nên điều "cho phép" bị vô hiệu mà không ai biết.
+  CONTRADICTION  hai điều khoản TRONG CÙNG văn bản cùng áp cho một hồ sơ nhưng ngược nhau: một điều cho AI tự duyệt,
+                 một điều bắt duyệt thủ công (người soạn tự mâu thuẫn).
+Thay thế (INFO, không chặn): luật tương tự / ngược chiều với một văn bản KHÁC đang hiệu lực -> văn bản đang ban hành
+  là mới nhất nên thay thế điều cũ khi AI áp dụng xong (regulation_precedence).
 Cảnh báo (WARNING, không chặn):
   UNPARSED       câu có yêu cầu kiểm soát nhưng AI chưa hiểu (phần trăm, khu vực, cận trên...): vào hàng chờ duyệt
                  cách hiểu của admin.
-  DUPLICATE      điều khoản trùng hệt luật của một quy định khác.
   NO_CONTROL     văn bản không có câu nào thay đổi cách duyệt (AI học xong cũng không đổi hành vi).
 
 Module thuần (không truy cập CSDL), dùng chung cho API ban hành (trả lỗi ngay cho admin) và lượt học của AI.
@@ -24,13 +24,14 @@ from typing import Any
 from api_core.workflow.regulation_compiler import (
     RequestTypeName,
     compile_sentence,
-    rule_key,
     sentences,
     skip_reason,
 )
+from api_core.workflow.regulation_precedence import overlaps, relation
 
 ERROR = "ERROR"
 WARNING = "WARNING"
+INFO = "INFO"
 
 _MOJIBAKE = re.compile(r"Ã[\u0080-¿]|Ä[\u0080-¿‘’]|á»|áº|Æ°|Æ¡|â€[\u0080-¿™œ\u009d“”˜]")
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f�]")
@@ -152,6 +153,8 @@ def validate(
                                    sentence=c["sentence"], article=c["article"]))
 
     seen_pairs = set()
+    supersedes: list[dict[str, Any]] = []
+    seen_supersede = set()
     for i, a in enumerate(mine):
         for ra in a["rules"]:
             for b in mine[i:] + theirs:
@@ -164,6 +167,32 @@ def validate(
                     seen_pairs.add(pair)
                     if not _same_scope(ra, rb):
                         continue
+                    if b["code"] != code:
+                        # Văn bản khác: văn bản đang ban hành là MỚI NHẤT nên thay thế luật cũ tương tự / ngược chiều
+                        # (regulation_precedence), không còn là lỗi.
+                        how = relation(ra, rb)
+                        if how and (a["sentence"], b["code"], b["sentence"]) not in seen_supersede:
+                            seen_supersede.add((a["sentence"], b["code"], b["sentence"]))
+                            only_type = ra.get("request_type") and not rb.get("request_type")
+                            kind = name.get(ra.get("request_type") or rb.get("request_type") or "", "mọi loại yêu cầu")
+                            if how == "UNTIL":
+                                tail = f" (điều cũ còn áp đến trước ngày {ra['effective_from']})"
+                            elif how == "EXCLUDE" and not only_type:
+                                tail = " (chỉ trong vùng của điều mới; ngoài vùng đó điều cũ vẫn áp)"
+                            elif only_type:
+                                tail = " (chỉ với loại này; điều cũ vẫn áp cho các loại khác)"
+                            else:
+                                tail = ""
+                            supersedes.append(_issue(
+                                INFO, "SUPERSEDES",
+                                f"Sẽ thay thế {_where(b, code)} ở {kind}: {_cond_text(ra)} thay cho {_cond_text(rb)}"
+                                + tail + ". Khi AI áp dụng xong, phần bị thay của điều cũ hết hiệu lực vĩnh viễn.",
+                                sentence=a["sentence"], article=a["article"],
+                                related={"code": b["code"], "article": b["article"], "sentence": b["sentence"][:400]},
+                            ))
+                        continue
+                    if not overlaps(ra, rb):
+                        continue  # cùng văn bản nhưng không chồng (vd. "trên 5 ngày" và "không quá 5 ngày")
                     if ra.get("auto_approve") is not None and rb.get("auto_approve") is not None \
                             and bool(ra["auto_approve"]) != bool(rb["auto_approve"]):
                         allow, deny = (ra, rb) if ra["auto_approve"] else (rb, ra)
@@ -178,18 +207,11 @@ def validate(
                             sentence=a["sentence"], article=a["article"],
                             related={"code": b["code"], "article": b["article"], "sentence": b["sentence"][:400]},
                         ))
-                    elif b is not a and b["code"] != code and rule_key(ra) == rule_key(rb):
-                        warnings.append(_issue(
-                            WARNING, "DUPLICATE",
-                            f"Trùng với {_where(b, code)}: cùng một luật được nêu ở hai văn bản",
-                            sentence=a["sentence"], article=a["article"],
-                            related={"code": b["code"], "article": b["article"], "sentence": b["sentence"][:400]},
-                        ))
     rules = [r for c in mine for r in c["rules"]]
     if content.strip() and not rules and not errors and not any(w["kind"] == "UNPARSED" for w in warnings):
         warnings.append(_issue(WARNING, "NO_CONTROL",
                                "Văn bản không có câu nào thay đổi cách duyệt hồ sơ; AI học xong cũng không đổi hành vi"))
-    return {"ok": not errors, "errors": errors, "warnings": warnings, "rules": len(rules)}
+    return {"ok": not errors, "errors": errors, "warnings": warnings, "supersedes": supersedes, "rules": len(rules)}
 
 
 def summary_text(result: dict[str, Any], limit: int = 3) -> str:

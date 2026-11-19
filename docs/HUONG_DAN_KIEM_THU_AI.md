@@ -207,11 +207,27 @@ Nguyên tắc: quy định có lỗi thì **không** được áp dụng. Hiệu
 **8.2 Lỗi ký tự.** Dán một đoạn bị hỏng mã hóa, ví dụ `YÃªu cáº§u Nghá»‰ phÃ©p…`, hoặc bị mất dấu, ví dụ `Ngh? ph?p`.
 - **Mong đợi:** lỗi **Lỗi ký tự**, kèm hướng dẫn lưu lại file dạng UTF-8.
 
-**8.3 Mâu thuẫn với quy định đang hiệu lực.** Sau khi ban hành QC05-2026 (kịch bản 4), thử ban hành `Điều 1: Yêu cầu Làm việc từ xa (WFH) được tự động duyệt.`
-- **Mong đợi:** lỗi mâu thuẫn, chỉ ra **Điều 5 của QC05-2026**.
+**8.3 Quy định mới thay thế quy định cũ tương tự.**
+
+Nguyên tắc: hai văn bản khác nhau cùng nói về một loại đơn, cùng kiểu điều kiện (ví dụ cùng là ngưỡng số tiền) hoặc ngược chiều nhau, thì **văn bản mới hơn thắng**. Điều cũ bị bỏ khỏi bộ luật AI khi văn bản mới được áp dụng xong. Nếu văn bản mới bị trả lại thì không thay thế gì.
+
+1. Ban hành `QD-CU`: `Điều 1: Yêu cầu Hoàn tiền / Đền bù có giá trị trên 4 triệu đồng không được tự động duyệt, bắt buộc Kế toán phê duyệt thủ công kèm nghiệm thu độc lập.`
+   - **Mong đợi:** một nhân viên gửi Hoàn tiền 5.000.000 đ thì bị chuyển C.
+2. Thêm `QD-MOI` với ngưỡng **6 triệu**, bấm **AI kiểm tra trước**.
+   - **Mong đợi:** không lỗi; mục xanh **"Sẽ thay thế Điều 1 của QD-CU ở Hoàn tiền / Đền bù: số tiền > 6.000.000 thay cho số tiền > 4.000.000"**.
+3. Ban hành QD-MOI.
+   - **Mong đợi:**
+     - thẻ QD-CU có nhãn "1 điều đã bị thay thế"; mở chi tiết thấy điều cũ bị gạch, kèm "→ thay bởi QD-MOI…";
+     - người dùng nhận thông báo "QD-MOI thay thế QD-CU…";
+     - đơn hoàn tiền 5.000.000 đ **không** bị chuyển C nữa, đơn 7.000.000 đ vẫn bị chuyển C.
+4. Không bị thay thế:
+   - hai điều khác kiểu điều kiện, ví dụ "Nghỉ phép từ 5 ngày" và "Thanh toán từ 50 triệu";
+   - hai điều trong **cùng một** văn bản.
+5. Quy định chung cho mọi loại đơn (ví dụ "mọi yêu cầu trên 100 triệu") chỉ bị thay **ở loại đơn của văn bản mới**, vẫn áp cho các loại khác.
+6. Nếu chính văn bản mới tự mâu thuẫn (Điều 1 cho tự duyệt, Điều 2 bắt duyệt thủ công) thì vẫn **bị chặn** như mục 8.1.
 
 **8.4 Cảnh báo không chặn.**
-- Câu AI chưa hiểu (phần trăm, khu vực) và câu trùng luật với văn bản khác chỉ hiện **lưu ý** màu vàng.
+- Câu AI chưa hiểu (phần trăm, khu vực) chỉ hiện **lưu ý** màu vàng.
 - Vẫn ban hành được.
 - Câu chưa hiểu vào hàng chờ duyệt của admin, như kịch bản 7.
 
@@ -229,7 +245,7 @@ Nguyên tắc: quy định có lỗi thì **không** được áp dụng. Hiệu
   - **Sửa và nạp lại:** mở form điền sẵn nội dung bị trả lại kèm danh sách lỗi. Nạp lại thành công thì mục này tự đóng.
   - **Bỏ qua:** đóng mục này, phải ghi lý do.
 
-Kiểm thử tự động tương ứng: `tests/live/test_regulation_rejection.py` (RV-01…RV-05).
+Kiểm thử tự động tương ứng: `tests/live/test_regulation_rejection.py` (RV-01…RV-05) và `tests/live/test_regulation_supersede.py` (SP-01…SP-04).
 
 ## Xem AI đã làm gì
 

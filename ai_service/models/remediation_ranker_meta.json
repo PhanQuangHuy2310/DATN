@@ -1,9 +1,9 @@
 {
- "model_version": "remediation-ranker-1",
+ "model_version": "remediation-ranker-2",
  "status": "READY_FOR_INFERENCE",
- "trained_at": "2026-11-17T19:48:44+00:00",
- "training_seconds": 2.8,
- "best_iteration": 116,
+ "trained_at": "2026-11-18T17:06:26+00:00",
+ "training_seconds": 4.6,
+ "best_iteration": 133,
  "params": {
   "objective": "rank:pairwise",
   "eta": 0.1,
@@ -12,7 +12,8 @@
   "subsample": 0.9,
   "colsample_bytree": 1.0,
   "eval_metric": "ndcg@3",
-  "seed": 42
+  "seed": 42,
+  "monotone_constraints": "(1,1,-1,-1,1,-1)"
  },
  "features": [
   "same_department",
@@ -32,8 +33,8 @@
  "metrics": {
   "dev": {
    "xgboost_ranker": {
-    "top1": 0.88,
-    "ndcg@3": 0.9639,
+    "top1": 0.8738,
+    "ndcg@3": 0.9645,
     "groups": 800
    },
    "baseline_random": {
@@ -86,11 +87,11 @@
   }
  },
  "feature_gain": {
-  "same_department": 72.704,
-  "same_team": 64.434,
-  "open_items": 22.054,
-  "due_in_window": 30.856,
-  "type_experience": 27.226,
-  "is_superior": 14.904
+  "same_department": 46.261,
+  "same_team": 37.725,
+  "open_items": 22.659,
+  "due_in_window": 31.349,
+  "type_experience": 28.027,
+  "is_superior": 28.209
  }
 }

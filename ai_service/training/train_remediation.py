@@ -153,6 +153,7 @@ def train() -> int:
         "colsample_bytree": 1.0,
         "eval_metric": "ndcg@3",
         "seed": 42,
+        "monotone_constraints": rr.MONOTONE,
     }
     dtr = xgb.DMatrix(xtr, label=ytr, qid=qtr, feature_names=list(rr.FEATURES))
     ddv = xgb.DMatrix(xdv, label=ydv, qid=qdv, feature_names=list(rr.FEATURES))

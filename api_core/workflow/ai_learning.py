@@ -601,7 +601,39 @@ def enforcement_probe(rule: dict[str, Any]) -> dict[str, Any]:
         probe["amount"] = total
         probe["requester_amount_7d"] = total * 2 + 1
         probe["requester_finance_count_7d"] = 3
+    # v3: cận trên, phần trăm, địa điểm, ngày đã quá N ngày, cửa sổ đếm khác 7/30 ngày/tháng.
+    if rule.get("amount_lte") is not None:
+        low = float(rule.get("amount_gt") or 0)
+        probe["amount"] = float(rule["amount_lte"]) if low + 1 > rule["amount_lte"] else min(low + 1, rule["amount_lte"])
+    if rule.get("days_lte") is not None:
+        probe["days_requested"] = int(min((rule.get("days_gt") or 0) + 1, rule["days_lte"]))
+    if rule.get("percent_gt") is not None or rule.get("percent_lte") is not None:
+        low = float(rule.get("percent_gt") if rule.get("percent_gt") is not None else -1)
+        probe["percent"] = min(low + 1, float(rule["percent_lte"])) if rule.get("percent_lte") is not None else low + 1
+    if rule.get("location_contains"):
+        probe["location_text"] = rule["location_contains"]
+    if rule.get("retro_days_gt") is not None:
+        probe["notice_hours"] = -24.0 * (int(rule["retro_days_gt"]) + 1)
+    if rule.get("repeat_count_gte") and (rule.get("repeat_window") or "ROLLING_30D") not in window_field:
+        from datetime import datetime as _dt
+        from zoneinfo import ZoneInfo as _Zone
+
+        today = _dt.now(_Zone("Asia/Ho_Chi_Minh")).date().isoformat()
+        probe["same_type_dates"] = [today] * (int(rule["repeat_count_gte"]) - 1)
     return probe
+
+
+def _verifiable(rule: dict[str, Any]) -> bool:
+    """Luật đang có hiệu lực hôm nay và không có vùng loại trừ (hồ sơ thử có thể rơi vào vùng đó)."""
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _Zone
+
+    today = _dt.now(_Zone("Asia/Ho_Chi_Minh")).date().isoformat()
+    if rule.get("effective_from") and rule["effective_from"] > today:
+        return False
+    if rule.get("effective_until") and rule["effective_until"] < today:
+        return False
+    return not rule.get("exclude")
 
 
 def apply_to_ai(policy: dict[str, Any]) -> dict[str, Any]:
@@ -610,7 +642,9 @@ def apply_to_ai(policy: dict[str, Any]) -> dict[str, Any]:
 
     try:
         with _ai_http() as client:
-            pushed = client.post("/ai/policy/rules", json=policy)
+            pushed = client.post(
+                "/ai/policy/rules", json={"version": policy["version"], "rules": policy["rules"]}
+            )
             if pushed.status_code >= 500:
                 raise TransientLearningError(f"AI service HTTP {pushed.status_code}")
             if pushed.status_code != 200:
@@ -624,7 +658,7 @@ def apply_to_ai(policy: dict[str, Any]) -> dict[str, Any]:
                 raise RuntimeError("AI service did not load the new policy")
             checks = 0
             for rule in policy["rules"]:
-                if rule.get("auto_approve") is not False:
+                if rule.get("auto_approve") is not False or not _verifiable(rule):
                     continue
                 probe = enforcement_probe(rule)
                 decision = client.post("/ai/auto-approve/evaluate", json=probe).json()
@@ -652,7 +686,10 @@ def _restore_previous(previous_policy: dict[str, Any]) -> None:
         return
     try:
         with _ai_http() as client:
-            client.post("/ai/policy/rules", json=previous_policy)
+            client.post(
+                "/ai/policy/rules",
+                json={"version": previous_policy["version"], "rules": previous_policy.get("rules") or []},
+            )
     except Exception:
         logger.warning("ai_policy_restore_failed", exc_info=True)
 
@@ -1101,11 +1138,26 @@ def process_job(job: dict[str, Any], owner: str) -> str:
             reviewed = []
         seen = {r["id"] for r in manual}
         seen_reviewed = seen | {r["id"] for r in compiled}
+        # Văn bản mới thay thế luật tương tự / ngược chiều của văn bản cũ (regulation_precedence): 40 tr -> 50 tr.
+        from api_core.workflow import regulation_precedence as precedence
+
+        codes = sorted({r["code"] for r in regulations}, key=len, reverse=True)
+
+        def _tag(rule: dict[str, Any]) -> dict[str, Any]:
+            base = rule["id"].removeprefix("REV-")
+            code = next((c for c in codes if base.startswith(f"{c}-")), None)
+            return {**rule, "source_code": code} if code else rule
+
+        regulation_rules = [_tag(r) for r in compiled if r["id"] not in seen] + [
+            _tag(r) for r in reviewed if r["id"] not in seen_reviewed
+        ]
+        origins = (previous["policy"] or {}).get("origins") or {}
+        kept, superseded = precedence.resolve(regulation_rules, origins)
         policy = {
             "version": f"v{version}",
-            "rules": manual
-            + [r for r in compiled if r["id"] not in seen]
-            + [r for r in reviewed if r["id"] not in seen_reviewed],
+            "rules": manual + kept,
+            "origins": precedence.next_origins(regulation_rules, origins, version, superseded),
+            "superseded": superseded,
         }
         snapshot = [
             {
@@ -1130,6 +1182,13 @@ def process_job(job: dict[str, Any], owner: str) -> str:
             rules=policy["rules"],
             type_names={t.code: t.name for t in types},
         )
+        before = {(e["old_rule"], e["new_rule"]) for e in (previous["policy"] or {}).get("superseded") or []}
+        names = {t.code: t.name for t in types}
+        announcement["changes"] = [
+            {"kind": "RULE_SUPERSEDED", "title": precedence.describe(e, names)}
+            for e in superseded
+            if (e["old_rule"], e["new_rule"]) not in before
+        ] + list(announcement.get("changes") or [])
         applied = _finish_applied(
             job,
             owner,

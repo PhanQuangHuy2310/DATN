@@ -1,32 +1,39 @@
 {
  "meta": {
-  "version": "bad-case-reason-2",
-  "trained_at": "2026-11-18T07:10:30+00:00",
-  "n_train": 1796,
+  "version": "bad-case-reason-3",
+  "trained_at": "2026-11-18T17:51:38+00:00",
+  "n_train": 2654,
   "C": 16.0,
   "type_token": true,
   "cues": false,
-  "cv_accuracy": 0.915,
+  "cv_accuracy": 0.912,
   "feature_C": 4.0,
   "feature_type_token": false,
   "feature_cv_accuracy": 0.812,
   "test_sha256": {
    "1": "eb01b749c90bfaf6acdabffb6a5cc336bdc99ed93dfffe7fd8fc6aa1bceddc52",
-   "2": "16cd8f18210b5f0fbaabe039218dd6af63b05f2944f23c218d6c24bb91e7e433"
+   "2": "16cd8f18210b5f0fbaabe039218dd6af63b05f2944f23c218d6c24bb91e7e433",
+   "3": "58a946a7fdabb0e97f16507cd0e39a613e253b92b7a98f1275088ce88091c043"
   },
   "feature_data": "train1 (lượt 1)",
   "test": {
    "1": {
-    "accuracy_exact": 0.736,
-    "accuracy_group": 0.778,
-    "macro_f1_group": 0.742,
-    "feature_accuracy_on_new": 0.611
+    "accuracy_exact": 0.764,
+    "accuracy_group": 0.806,
+    "macro_f1_group": 0.781,
+    "feature_accuracy_on_new": 0.667
    },
    "2": {
-    "accuracy_exact": 0.708,
-    "accuracy_group": 0.736,
-    "macro_f1_group": 0.654,
-    "feature_accuracy_on_new": 0.5
+    "accuracy_exact": 0.75,
+    "accuracy_group": 0.764,
+    "macro_f1_group": 0.7,
+    "feature_accuracy_on_new": 0.444
+   },
+   "3": {
+    "accuracy_exact": 0.764,
+    "accuracy_group": 0.778,
+    "macro_f1_group": 0.73,
+    "feature_accuracy_on_new": 0.444
    }
   }
  },
@@ -35,49 +42,49 @@
    "C": 4.0,
    "type_token": false,
    "cues": false,
-   "cv_accuracy": 0.851
+   "cv_accuracy": 0.864
   },
   {
    "C": 16.0,
    "type_token": false,
    "cues": false,
-   "cv_accuracy": 0.86
+   "cv_accuracy": 0.871
   },
   {
    "C": 4.0,
    "type_token": false,
    "cues": true,
-   "cv_accuracy": 0.845
+   "cv_accuracy": 0.859
   },
   {
    "C": 16.0,
    "type_token": false,
    "cues": true,
-   "cv_accuracy": 0.854
+   "cv_accuracy": 0.874
   },
   {
    "C": 4.0,
    "type_token": true,
    "cues": false,
-   "cv_accuracy": 0.888
+   "cv_accuracy": 0.883
   },
   {
    "C": 16.0,
    "type_token": true,
    "cues": false,
-   "cv_accuracy": 0.915
+   "cv_accuracy": 0.912
   },
   {
    "C": 4.0,
    "type_token": true,
    "cues": true,
-   "cv_accuracy": 0.872
+   "cv_accuracy": 0.879
   },
   {
    "C": 16.0,
    "type_token": true,
    "cues": true,
-   "cv_accuracy": 0.91
+   "cv_accuracy": 0.904
   }
  ],
  "feature_cv": [
@@ -105,6 +112,225 @@
  "test": {
   "1": {
    "model": {
+    "n": 72,
+    "accuracy_exact": 0.764,
+    "accuracy_group": 0.806,
+    "macro_f1_group": 0.781,
+    "f1_by_group": {
+     "EXISTING": 0.865,
+     "NEW_PATTERN": 0.688,
+     "ONE_OFF": 0.789
+    },
+    "existing_code_accuracy": 0.806,
+    "one_off_called_pattern": 3,
+    "pattern_called_one_off": 5,
+    "errors": [
+     {
+      "id": "R08",
+      "gold": "BC_TEAM_ABSENCE_PEAK",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "R12",
+      "gold": "BC_REPEATED_EXEMPTION",
+      "pred": "NEW_PATTERN"
+     },
+     {
+      "id": "R14",
+      "gold": "BC_WFH_FREQUENT",
+      "pred": "NEW_PATTERN"
+     },
+     {
+      "id": "R20",
+      "gold": "BC_DUPLICATE_INVOICE",
+      "pred": "BC_REFUND_FREQUENT"
+     },
+     {
+      "id": "R31",
+      "gold": "BC_AI_REVOKED_HISTORY",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "R33",
+      "gold": "BC_AI_REVOKED_HISTORY",
+      "pred": "BC_DUPLICATE_INVOICE"
+     },
+     {
+      "id": "R36",
+      "gold": "BC_OFF_HOURS_BULK",
+      "pred": "NEW_PATTERN"
+     },
+     {
+      "id": "N03",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N10",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_TEAM_ABSENCE_PEAK"
+     },
+     {
+      "id": "N12",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N13",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N14",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "N15",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N17",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_REQUESTER_ABSENT_ON_EVENT"
+     },
+     {
+      "id": "O09",
+      "gold": "ONE_OFF",
+      "pred": "BC_REQUESTER_ABSENT_ON_EVENT"
+     },
+     {
+      "id": "O10",
+      "gold": "ONE_OFF",
+      "pred": "BC_DEADLINE_CONFLICT"
+     },
+     {
+      "id": "O15",
+      "gold": "ONE_OFF",
+      "pred": "BC_DUPLICATE_INVOICE"
+     }
+    ],
+    "feature_accuracy_on_new": 0.667,
+    "feature_errors": [
+     {
+      "id": "N01",
+      "gold": "notice_hours",
+      "pred": "submit_hour"
+     },
+     {
+      "id": "N06",
+      "gold": "start_day_of_month",
+      "pred": "start_weekday"
+     },
+     {
+      "id": "N10",
+      "gold": "days_requested",
+      "pred": null
+     },
+     {
+      "id": "N14",
+      "gold": "requester_rejected_30d",
+      "pred": null
+     },
+     {
+      "id": "N15",
+      "gold": "notice_hours",
+      "pred": "submit_hour"
+     },
+     {
+      "id": "N16",
+      "gold": null,
+      "pred": "start_day_of_month"
+     }
+    ],
+    "feature_head": {
+     "n": 18,
+     "accuracy": 0.778
+    }
+   },
+   "keyword_baseline": {
+    "n": 72,
+    "accuracy_exact": 0.819,
+    "accuracy_group": 0.819,
+    "macro_f1_group": 0.802,
+    "f1_by_group": {
+     "EXISTING": 0.909,
+     "NEW_PATTERN": 0.774,
+     "ONE_OFF": 0.723
+    },
+    "existing_code_accuracy": 0.833,
+    "one_off_called_pattern": 1,
+    "pattern_called_one_off": 12,
+    "errors": [
+     {
+      "id": "R05",
+      "gold": "BC_HANDOVER_OVERLOADED",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "R08",
+      "gold": "BC_TEAM_ABSENCE_PEAK",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "R09",
+      "gold": "BC_TEAM_ABSENCE_PEAK",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "R22",
+      "gold": "BC_REFUND_FREQUENT",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "R24",
+      "gold": "BC_REFUND_FREQUENT",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "R36",
+      "gold": "BC_OFF_HOURS_BULK",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N10",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N14",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N15",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N16",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N17",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "N18",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "O13",
+      "gold": "ONE_OFF",
+      "pred": "NEW_PATTERN"
+     }
+    ]
+   },
+   "previous_model": {
     "n": 72,
     "accuracy_exact": 0.736,
     "accuracy_group": 0.778,
@@ -256,276 +482,32 @@
      "n": 18,
      "accuracy": 0.778
     }
-   },
-   "keyword_baseline": {
-    "n": 72,
-    "accuracy_exact": 0.819,
-    "accuracy_group": 0.819,
-    "macro_f1_group": 0.802,
-    "f1_by_group": {
-     "EXISTING": 0.909,
-     "NEW_PATTERN": 0.774,
-     "ONE_OFF": 0.723
-    },
-    "existing_code_accuracy": 0.833,
-    "one_off_called_pattern": 1,
-    "pattern_called_one_off": 12,
-    "errors": [
-     {
-      "id": "R05",
-      "gold": "BC_HANDOVER_OVERLOADED",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "R08",
-      "gold": "BC_TEAM_ABSENCE_PEAK",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "R09",
-      "gold": "BC_TEAM_ABSENCE_PEAK",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "R22",
-      "gold": "BC_REFUND_FREQUENT",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "R24",
-      "gold": "BC_REFUND_FREQUENT",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "R36",
-      "gold": "BC_OFF_HOURS_BULK",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N10",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N14",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N15",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N16",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N17",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N18",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "O13",
-      "gold": "ONE_OFF",
-      "pred": "NEW_PATTERN"
-     }
-    ]
-   },
-   "previous_model": {
-    "n": 72,
-    "accuracy_exact": 0.694,
-    "accuracy_group": 0.736,
-    "macro_f1_group": 0.716,
-    "f1_by_group": {
-     "EXISTING": 0.831,
-     "NEW_PATTERN": 0.649,
-     "ONE_OFF": 0.667
-    },
-    "existing_code_accuracy": 0.667,
-    "one_off_called_pattern": 4,
-    "pattern_called_one_off": 10,
-    "errors": [
-     {
-      "id": "R01",
-      "gold": "BC_DEADLINE_CONFLICT",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "R05",
-      "gold": "BC_HANDOVER_OVERLOADED",
-      "pred": "BC_DEADLINE_CONFLICT"
-     },
-     {
-      "id": "R07",
-      "gold": "BC_TEAM_ABSENCE_PEAK",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "R08",
-      "gold": "BC_TEAM_ABSENCE_PEAK",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "R10",
-      "gold": "BC_REPEATED_EXEMPTION",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "R11",
-      "gold": "BC_REPEATED_EXEMPTION",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "R13",
-      "gold": "BC_WFH_FREQUENT",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "R14",
-      "gold": "BC_WFH_FREQUENT",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "R16",
-      "gold": "BC_SPLIT_AMOUNT_EVASION",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "R22",
-      "gold": "BC_REFUND_FREQUENT",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "R24",
-      "gold": "BC_REFUND_FREQUENT",
-      "pred": "BC_AI_REVOKED_HISTORY"
-     },
-     {
-      "id": "R33",
-      "gold": "BC_AI_REVOKED_HISTORY",
-      "pred": "BC_REPEATED_EXEMPTION"
-     },
-     {
-      "id": "N01",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N03",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N09",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N11",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N12",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "N16",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "O02",
-      "gold": "ONE_OFF",
-      "pred": "BC_DUPLICATE_INVOICE"
-     },
-     {
-      "id": "O06",
-      "gold": "ONE_OFF",
-      "pred": "BC_DUPLICATE_INVOICE"
-     },
-     {
-      "id": "O09",
-      "gold": "ONE_OFF",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "O15",
-      "gold": "ONE_OFF",
-      "pred": "NEW_PATTERN"
-     }
-    ],
-    "feature_accuracy_on_new": 0.778,
-    "feature_errors": [
-     {
-      "id": "N01",
-      "gold": "notice_hours",
-      "pred": "submit_hour"
-     },
-     {
-      "id": "N06",
-      "gold": "start_day_of_month",
-      "pred": "start_weekday"
-     },
-     {
-      "id": "N15",
-      "gold": "notice_hours",
-      "pred": "submit_hour"
-     },
-     {
-      "id": "N16",
-      "gold": null,
-      "pred": "start_day_of_month"
-     }
-    ],
-    "feature_head": {
-     "n": 18,
-     "accuracy": 0.778
-    }
    }
   },
   "2": {
    "model": {
     "n": 72,
-    "accuracy_exact": 0.708,
-    "accuracy_group": 0.736,
-    "macro_f1_group": 0.654,
+    "accuracy_exact": 0.75,
+    "accuracy_group": 0.764,
+    "macro_f1_group": 0.7,
     "f1_by_group": {
      "EXISTING": 0.843,
-     "NEW_PATTERN": 0.417,
-     "ONE_OFF": 0.703
+     "NEW_PATTERN": 0.5,
+     "ONE_OFF": 0.757
     },
-    "existing_code_accuracy": 0.917,
-    "one_off_called_pattern": 5,
-    "pattern_called_one_off": 6,
+    "existing_code_accuracy": 0.944,
+    "one_off_called_pattern": 4,
+    "pattern_called_one_off": 5,
     "errors": [
      {
-      "id": "S02",
-      "gold": "BC_DEADLINE_CONFLICT",
-      "pred": "BC_TEAM_ABSENCE_PEAK"
+      "id": "S25",
+      "gold": "BC_DISCOUNT_REPEAT_CUSTOMER",
+      "pred": "ONE_OFF"
      },
      {
       "id": "S33",
       "gold": "BC_AI_REVOKED_HISTORY",
       "pred": "BC_REFUND_FREQUENT"
-     },
-     {
-      "id": "S35",
-      "gold": "BC_OFF_HOURS_BULK",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "M01",
-      "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
      },
      {
       "id": "M02",
@@ -550,7 +532,7 @@
      {
       "id": "M10",
       "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
+      "pred": "BC_DEADLINE_CONFLICT"
      },
      {
       "id": "M12",
@@ -560,7 +542,7 @@
      {
       "id": "M13",
       "gold": "NEW_PATTERN",
-      "pred": "BC_SPLIT_AMOUNT_EVASION"
+      "pred": "BC_REFUND_FREQUENT"
      },
      {
       "id": "M14",
@@ -603,17 +585,12 @@
       "pred": "BC_REQUESTER_ABSENT_ON_EVENT"
      },
      {
-      "id": "P15",
-      "gold": "ONE_OFF",
-      "pred": "BC_REFUND_FREQUENT"
-     },
-     {
       "id": "P17",
       "gold": "ONE_OFF",
       "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
      }
     ],
-    "feature_accuracy_on_new": 0.5,
+    "feature_accuracy_on_new": 0.444,
     "feature_errors": [
      {
       "id": "M01",
@@ -633,6 +610,11 @@
      {
       "id": "M08",
       "gold": "start_weekday",
+      "pred": null
+     },
+     {
+      "id": "M10",
+      "gold": "days_requested",
       "pred": null
      },
      {
@@ -879,92 +861,42 @@
    },
    "previous_model": {
     "n": 72,
-    "accuracy_exact": 0.611,
-    "accuracy_group": 0.611,
-    "macro_f1_group": 0.601,
+    "accuracy_exact": 0.708,
+    "accuracy_group": 0.736,
+    "macro_f1_group": 0.654,
     "f1_by_group": {
-     "EXISTING": 0.677,
-     "NEW_PATTERN": 0.512,
-     "ONE_OFF": 0.615
+     "EXISTING": 0.843,
+     "NEW_PATTERN": 0.417,
+     "ONE_OFF": 0.703
     },
-    "existing_code_accuracy": 0.583,
-    "one_off_called_pattern": 6,
-    "pattern_called_one_off": 9,
+    "existing_code_accuracy": 0.917,
+    "one_off_called_pattern": 5,
+    "pattern_called_one_off": 6,
     "errors": [
      {
       "id": "S02",
       "gold": "BC_DEADLINE_CONFLICT",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "S05",
-      "gold": "BC_HANDOVER_OVERLOADED",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "S07",
-      "gold": "BC_TEAM_ABSENCE_PEAK",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "S09",
-      "gold": "BC_TEAM_ABSENCE_PEAK",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "S10",
-      "gold": "BC_REPEATED_EXEMPTION",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "S12",
-      "gold": "BC_REPEATED_EXEMPTION",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "S13",
-      "gold": "BC_WFH_FREQUENT",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "S15",
-      "gold": "BC_WFH_FREQUENT",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "S22",
-      "gold": "BC_REFUND_FREQUENT",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "S23",
-      "gold": "BC_REFUND_FREQUENT",
-      "pred": "ONE_OFF"
-     },
-     {
-      "id": "S24",
-      "gold": "BC_REFUND_FREQUENT",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "S25",
-      "gold": "BC_DISCOUNT_REPEAT_CUSTOMER",
-      "pred": "NEW_PATTERN"
-     },
-     {
-      "id": "S30",
-      "gold": "BC_REQUESTER_ABSENT_ON_EVENT",
-      "pred": "ONE_OFF"
+      "pred": "BC_TEAM_ABSENCE_PEAK"
      },
      {
       "id": "S33",
       "gold": "BC_AI_REVOKED_HISTORY",
-      "pred": "NEW_PATTERN"
+      "pred": "BC_REFUND_FREQUENT"
      },
      {
       "id": "S35",
       "gold": "BC_OFF_HOURS_BULK",
       "pred": "NEW_PATTERN"
+     },
+     {
+      "id": "M01",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "M02",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
      },
      {
       "id": "M03",
@@ -977,14 +909,24 @@
       "pred": "ONE_OFF"
      },
      {
-      "id": "M09",
+      "id": "M08",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "M10",
       "gold": "NEW_PATTERN",
       "pred": "ONE_OFF"
      },
      {
       "id": "M12",
       "gold": "NEW_PATTERN",
-      "pred": "ONE_OFF"
+      "pred": "BC_REFUND_FREQUENT"
+     },
+     {
+      "id": "M13",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_SPLIT_AMOUNT_EVASION"
      },
      {
       "id": "M14",
@@ -997,6 +939,16 @@
       "pred": "BC_OFF_HOURS_BULK"
      },
      {
+      "id": "M16",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "M17",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
+     },
+     {
       "id": "M18",
       "gold": "NEW_PATTERN",
       "pred": "ONE_OFF"
@@ -1007,14 +959,9 @@
       "pred": "BC_DUPLICATE_INVOICE"
      },
      {
-      "id": "P07",
-      "gold": "ONE_OFF",
-      "pred": "NEW_PATTERN"
-     },
-     {
       "id": "P12",
       "gold": "ONE_OFF",
-      "pred": "BC_DUPLICATE_INVOICE"
+      "pred": "BC_TEAM_ABSENCE_PEAK"
      },
      {
       "id": "P13",
@@ -1022,17 +969,17 @@
       "pred": "BC_REQUESTER_ABSENT_ON_EVENT"
      },
      {
-      "id": "P14",
+      "id": "P15",
       "gold": "ONE_OFF",
-      "pred": "NEW_PATTERN"
+      "pred": "BC_REFUND_FREQUENT"
      },
      {
       "id": "P17",
       "gold": "ONE_OFF",
-      "pred": "NEW_PATTERN"
+      "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
      }
     ],
-    "feature_accuracy_on_new": 0.611,
+    "feature_accuracy_on_new": 0.5,
     "feature_errors": [
      {
       "id": "M01",
@@ -1050,6 +997,21 @@
       "pred": "start_weekday"
      },
      {
+      "id": "M08",
+      "gold": "start_weekday",
+      "pred": null
+     },
+     {
+      "id": "M12",
+      "gold": "amount",
+      "pred": null
+     },
+     {
+      "id": "M13",
+      "gold": "requester_rejected_30d",
+      "pred": null
+     },
+     {
       "id": "M14",
       "gold": "requester_rejected_30d",
       "pred": null
@@ -1060,11 +1022,6 @@
       "pred": null
      },
      {
-      "id": "M16",
-      "gold": null,
-      "pred": "amount"
-     },
-     {
       "id": "M18",
       "gold": null,
       "pred": "start_weekday"
@@ -1073,6 +1030,550 @@
     "feature_head": {
      "n": 18,
      "accuracy": 0.722
+    }
+   }
+  },
+  "3": {
+   "model": {
+    "n": 72,
+    "accuracy_exact": 0.764,
+    "accuracy_group": 0.778,
+    "macro_f1_group": 0.73,
+    "f1_by_group": {
+     "EXISTING": 0.847,
+     "NEW_PATTERN": 0.615,
+     "ONE_OFF": 0.727
+    },
+    "existing_code_accuracy": 0.972,
+    "one_off_called_pattern": 6,
+    "pattern_called_one_off": 3,
+    "errors": [
+     {
+      "id": "X36",
+      "gold": "BC_OFF_HOURS_BULK",
+      "pred": "BC_REFUND_FREQUENT"
+     },
+     {
+      "id": "Y01",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "Y06",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "Y08",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "Y11",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_SPLIT_AMOUNT_EVASION"
+     },
+     {
+      "id": "Y13",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y14",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_DEADLINE_CONFLICT"
+     },
+     {
+      "id": "Y15",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_OFF_HOURS_BULK"
+     },
+     {
+      "id": "Y16",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y17",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
+     },
+     {
+      "id": "Y18",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Z01",
+      "gold": "ONE_OFF",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "Z02",
+      "gold": "ONE_OFF",
+      "pred": "BC_DUPLICATE_INVOICE"
+     },
+     {
+      "id": "Z03",
+      "gold": "ONE_OFF",
+      "pred": "BC_TEAM_ABSENCE_PEAK"
+     },
+     {
+      "id": "Z08",
+      "gold": "ONE_OFF",
+      "pred": "BC_REPEATED_EXEMPTION"
+     },
+     {
+      "id": "Z12",
+      "gold": "ONE_OFF",
+      "pred": "BC_TEAM_ABSENCE_PEAK"
+     },
+     {
+      "id": "Z16",
+      "gold": "ONE_OFF",
+      "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
+     }
+    ],
+    "feature_accuracy_on_new": 0.444,
+    "feature_errors": [
+     {
+      "id": "Y01",
+      "gold": "notice_hours",
+      "pred": null
+     },
+     {
+      "id": "Y02",
+      "gold": "notice_hours",
+      "pred": "start_day_of_month"
+     },
+     {
+      "id": "Y05",
+      "gold": "start_day_of_month",
+      "pred": "amount"
+     },
+     {
+      "id": "Y06",
+      "gold": "start_day_of_month",
+      "pred": null
+     },
+     {
+      "id": "Y08",
+      "gold": "start_weekday",
+      "pred": null
+     },
+     {
+      "id": "Y10",
+      "gold": "days_requested",
+      "pred": "start_day_of_month"
+     },
+     {
+      "id": "Y11",
+      "gold": "amount",
+      "pred": null
+     },
+     {
+      "id": "Y14",
+      "gold": "requester_rejected_30d",
+      "pred": null
+     },
+     {
+      "id": "Y15",
+      "gold": "submit_hour",
+      "pred": null
+     },
+     {
+      "id": "Y18",
+      "gold": null,
+      "pred": "start_weekday"
+     }
+    ],
+    "feature_head": {
+     "n": 18,
+     "accuracy": 0.611
+    }
+   },
+   "keyword_baseline": {
+    "n": 72,
+    "accuracy_exact": 0.486,
+    "accuracy_group": 0.486,
+    "macro_f1_group": 0.489,
+    "f1_by_group": {
+     "EXISTING": 0.449,
+     "NEW_PATTERN": 0.519,
+     "ONE_OFF": 0.5
+    },
+    "existing_code_accuracy": 0.306,
+    "one_off_called_pattern": 1,
+    "pattern_called_one_off": 33,
+    "errors": [
+     {
+      "id": "X01",
+      "gold": "BC_DEADLINE_CONFLICT",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X02",
+      "gold": "BC_DEADLINE_CONFLICT",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X03",
+      "gold": "BC_DEADLINE_CONFLICT",
+      "pred": "NEW_PATTERN"
+     },
+     {
+      "id": "X04",
+      "gold": "BC_HANDOVER_OVERLOADED",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X05",
+      "gold": "BC_HANDOVER_OVERLOADED",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X06",
+      "gold": "BC_HANDOVER_OVERLOADED",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X07",
+      "gold": "BC_TEAM_ABSENCE_PEAK",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X08",
+      "gold": "BC_TEAM_ABSENCE_PEAK",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X09",
+      "gold": "BC_TEAM_ABSENCE_PEAK",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X11",
+      "gold": "BC_REPEATED_EXEMPTION",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X12",
+      "gold": "BC_REPEATED_EXEMPTION",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X15",
+      "gold": "BC_WFH_FREQUENT",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X16",
+      "gold": "BC_SPLIT_AMOUNT_EVASION",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X17",
+      "gold": "BC_SPLIT_AMOUNT_EVASION",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X18",
+      "gold": "BC_SPLIT_AMOUNT_EVASION",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X19",
+      "gold": "BC_DUPLICATE_INVOICE",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X20",
+      "gold": "BC_DUPLICATE_INVOICE",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X22",
+      "gold": "BC_REFUND_FREQUENT",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X23",
+      "gold": "BC_REFUND_FREQUENT",
+      "pred": "NEW_PATTERN"
+     },
+     {
+      "id": "X24",
+      "gold": "BC_REFUND_FREQUENT",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X25",
+      "gold": "BC_DISCOUNT_REPEAT_CUSTOMER",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X26",
+      "gold": "BC_DISCOUNT_REPEAT_CUSTOMER",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X29",
+      "gold": "BC_REQUESTER_ABSENT_ON_EVENT",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X31",
+      "gold": "BC_AI_REVOKED_HISTORY",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "X34",
+      "gold": "BC_OFF_HOURS_BULK",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y01",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "Y02",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y03",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y08",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y09",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y10",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y14",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y15",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y16",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y17",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y18",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Z01",
+      "gold": "ONE_OFF",
+      "pred": "BC_WFH_FREQUENT"
+     }
+    ]
+   },
+   "previous_model": {
+    "n": 72,
+    "accuracy_exact": 0.708,
+    "accuracy_group": 0.736,
+    "macro_f1_group": 0.665,
+    "f1_by_group": {
+     "EXISTING": 0.828,
+     "NEW_PATTERN": 0.5,
+     "ONE_OFF": 0.667
+    },
+    "existing_code_accuracy": 0.944,
+    "one_off_called_pattern": 7,
+    "pattern_called_one_off": 4,
+    "errors": [
+     {
+      "id": "X33",
+      "gold": "BC_AI_REVOKED_HISTORY",
+      "pred": "BC_DUPLICATE_INVOICE"
+     },
+     {
+      "id": "X36",
+      "gold": "BC_OFF_HOURS_BULK",
+      "pred": "BC_REFUND_FREQUENT"
+     },
+     {
+      "id": "Y01",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "Y03",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y06",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "Y08",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "Y09",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_TEAM_ABSENCE_PEAK"
+     },
+     {
+      "id": "Y11",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_SPLIT_AMOUNT_EVASION"
+     },
+     {
+      "id": "Y13",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y14",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_AI_REVOKED_HISTORY"
+     },
+     {
+      "id": "Y15",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_OFF_HOURS_BULK"
+     },
+     {
+      "id": "Y16",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Y17",
+      "gold": "NEW_PATTERN",
+      "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
+     },
+     {
+      "id": "Y18",
+      "gold": "NEW_PATTERN",
+      "pred": "ONE_OFF"
+     },
+     {
+      "id": "Z01",
+      "gold": "ONE_OFF",
+      "pred": "BC_WFH_FREQUENT"
+     },
+     {
+      "id": "Z02",
+      "gold": "ONE_OFF",
+      "pred": "BC_DUPLICATE_INVOICE"
+     },
+     {
+      "id": "Z03",
+      "gold": "ONE_OFF",
+      "pred": "BC_TEAM_ABSENCE_PEAK"
+     },
+     {
+      "id": "Z06",
+      "gold": "ONE_OFF",
+      "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
+     },
+     {
+      "id": "Z08",
+      "gold": "ONE_OFF",
+      "pred": "BC_REPEATED_EXEMPTION"
+     },
+     {
+      "id": "Z12",
+      "gold": "ONE_OFF",
+      "pred": "BC_TEAM_ABSENCE_PEAK"
+     },
+     {
+      "id": "Z16",
+      "gold": "ONE_OFF",
+      "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
+     }
+    ],
+    "feature_accuracy_on_new": 0.389,
+    "feature_errors": [
+     {
+      "id": "Y01",
+      "gold": "notice_hours",
+      "pred": null
+     },
+     {
+      "id": "Y02",
+      "gold": "notice_hours",
+      "pred": "start_day_of_month"
+     },
+     {
+      "id": "Y05",
+      "gold": "start_day_of_month",
+      "pred": "amount"
+     },
+     {
+      "id": "Y06",
+      "gold": "start_day_of_month",
+      "pred": null
+     },
+     {
+      "id": "Y08",
+      "gold": "start_weekday",
+      "pred": null
+     },
+     {
+      "id": "Y09",
+      "gold": "days_requested",
+      "pred": null
+     },
+     {
+      "id": "Y10",
+      "gold": "days_requested",
+      "pred": "start_day_of_month"
+     },
+     {
+      "id": "Y11",
+      "gold": "amount",
+      "pred": null
+     },
+     {
+      "id": "Y14",
+      "gold": "requester_rejected_30d",
+      "pred": null
+     },
+     {
+      "id": "Y15",
+      "gold": "submit_hour",
+      "pred": null
+     },
+     {
+      "id": "Y18",
+      "gold": null,
+      "pred": "start_weekday"
+     }
+    ],
+    "feature_head": {
+     "n": 18,
+     "accuracy": 0.611
     }
    }
   }
@@ -3410,6 +3911,1064 @@
       "feature_head": {
        "n": 18,
        "accuracy": 0.444
+      }
+     },
+     "keyword_baseline": {
+      "n": 72,
+      "accuracy_exact": 0.458,
+      "accuracy_group": 0.458,
+      "macro_f1_group": 0.463,
+      "f1_by_group": {
+       "EXISTING": 0.364,
+       "NEW_PATTERN": 0.538,
+       "ONE_OFF": 0.486
+      },
+      "existing_code_accuracy": 0.222,
+      "one_off_called_pattern": 0,
+      "pattern_called_one_off": 38,
+      "errors": [
+       {
+        "id": "S01",
+        "gold": "BC_DEADLINE_CONFLICT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S02",
+        "gold": "BC_DEADLINE_CONFLICT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S03",
+        "gold": "BC_DEADLINE_CONFLICT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S04",
+        "gold": "BC_HANDOVER_OVERLOADED",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S05",
+        "gold": "BC_HANDOVER_OVERLOADED",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S06",
+        "gold": "BC_HANDOVER_OVERLOADED",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S07",
+        "gold": "BC_TEAM_ABSENCE_PEAK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S09",
+        "gold": "BC_TEAM_ABSENCE_PEAK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S10",
+        "gold": "BC_REPEATED_EXEMPTION",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S11",
+        "gold": "BC_REPEATED_EXEMPTION",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S12",
+        "gold": "BC_REPEATED_EXEMPTION",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S13",
+        "gold": "BC_WFH_FREQUENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S14",
+        "gold": "BC_WFH_FREQUENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S16",
+        "gold": "BC_SPLIT_AMOUNT_EVASION",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S18",
+        "gold": "BC_SPLIT_AMOUNT_EVASION",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S21",
+        "gold": "BC_DUPLICATE_INVOICE",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S22",
+        "gold": "BC_REFUND_FREQUENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S23",
+        "gold": "BC_REFUND_FREQUENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S25",
+        "gold": "BC_DISCOUNT_REPEAT_CUSTOMER",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S26",
+        "gold": "BC_DISCOUNT_REPEAT_CUSTOMER",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S29",
+        "gold": "BC_REQUESTER_ABSENT_ON_EVENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S30",
+        "gold": "BC_REQUESTER_ABSENT_ON_EVENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S31",
+        "gold": "BC_AI_REVOKED_HISTORY",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S32",
+        "gold": "BC_AI_REVOKED_HISTORY",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S33",
+        "gold": "BC_AI_REVOKED_HISTORY",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S34",
+        "gold": "BC_OFF_HOURS_BULK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S35",
+        "gold": "BC_OFF_HOURS_BULK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S36",
+        "gold": "BC_OFF_HOURS_BULK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M01",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M02",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M03",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M09",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M10",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M11",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M13",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M15",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M16",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M17",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M18",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       }
+      ]
+     },
+     "previous_model": {
+      "n": 72,
+      "accuracy_exact": 0.611,
+      "accuracy_group": 0.611,
+      "macro_f1_group": 0.601,
+      "f1_by_group": {
+       "EXISTING": 0.677,
+       "NEW_PATTERN": 0.512,
+       "ONE_OFF": 0.615
+      },
+      "existing_code_accuracy": 0.583,
+      "one_off_called_pattern": 6,
+      "pattern_called_one_off": 9,
+      "errors": [
+       {
+        "id": "S02",
+        "gold": "BC_DEADLINE_CONFLICT",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S05",
+        "gold": "BC_HANDOVER_OVERLOADED",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S07",
+        "gold": "BC_TEAM_ABSENCE_PEAK",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S09",
+        "gold": "BC_TEAM_ABSENCE_PEAK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S10",
+        "gold": "BC_REPEATED_EXEMPTION",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S12",
+        "gold": "BC_REPEATED_EXEMPTION",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S13",
+        "gold": "BC_WFH_FREQUENT",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S15",
+        "gold": "BC_WFH_FREQUENT",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S22",
+        "gold": "BC_REFUND_FREQUENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S23",
+        "gold": "BC_REFUND_FREQUENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S24",
+        "gold": "BC_REFUND_FREQUENT",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S25",
+        "gold": "BC_DISCOUNT_REPEAT_CUSTOMER",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S30",
+        "gold": "BC_REQUESTER_ABSENT_ON_EVENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "S33",
+        "gold": "BC_AI_REVOKED_HISTORY",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "S35",
+        "gold": "BC_OFF_HOURS_BULK",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "M03",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M06",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M09",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M12",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M14",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_AI_REVOKED_HISTORY"
+       },
+       {
+        "id": "M15",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_OFF_HOURS_BULK"
+       },
+       {
+        "id": "M18",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "P01",
+        "gold": "ONE_OFF",
+        "pred": "BC_DUPLICATE_INVOICE"
+       },
+       {
+        "id": "P07",
+        "gold": "ONE_OFF",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "P12",
+        "gold": "ONE_OFF",
+        "pred": "BC_DUPLICATE_INVOICE"
+       },
+       {
+        "id": "P13",
+        "gold": "ONE_OFF",
+        "pred": "BC_REQUESTER_ABSENT_ON_EVENT"
+       },
+       {
+        "id": "P14",
+        "gold": "ONE_OFF",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "P17",
+        "gold": "ONE_OFF",
+        "pred": "NEW_PATTERN"
+       }
+      ],
+      "feature_accuracy_on_new": 0.611,
+      "feature_errors": [
+       {
+        "id": "M01",
+        "gold": "notice_hours",
+        "pred": "submit_hour"
+       },
+       {
+        "id": "M03",
+        "gold": "notice_hours",
+        "pred": null
+       },
+       {
+        "id": "M06",
+        "gold": "start_day_of_month",
+        "pred": "start_weekday"
+       },
+       {
+        "id": "M14",
+        "gold": "requester_rejected_30d",
+        "pred": null
+       },
+       {
+        "id": "M15",
+        "gold": "submit_hour",
+        "pred": null
+       },
+       {
+        "id": "M16",
+        "gold": null,
+        "pred": "amount"
+       },
+       {
+        "id": "M18",
+        "gold": null,
+        "pred": "start_weekday"
+       }
+      ],
+      "feature_head": {
+       "n": 18,
+       "accuracy": 0.722
+      }
+     }
+    }
+   }
+  },
+  {
+   "meta": {
+    "version": "bad-case-reason-2",
+    "trained_at": "2026-11-18T07:10:30+00:00",
+    "n_train": 1796,
+    "C": 16.0,
+    "type_token": true,
+    "cues": false,
+    "cv_accuracy": 0.915,
+    "feature_C": 4.0,
+    "feature_type_token": false,
+    "feature_cv_accuracy": 0.812,
+    "test_sha256": {
+     "1": "eb01b749c90bfaf6acdabffb6a5cc336bdc99ed93dfffe7fd8fc6aa1bceddc52",
+     "2": "16cd8f18210b5f0fbaabe039218dd6af63b05f2944f23c218d6c24bb91e7e433"
+    },
+    "feature_data": "train1 (lượt 1)",
+    "test": {
+     "1": {
+      "accuracy_exact": 0.736,
+      "accuracy_group": 0.778,
+      "macro_f1_group": 0.742,
+      "feature_accuracy_on_new": 0.611
+     },
+     "2": {
+      "accuracy_exact": 0.708,
+      "accuracy_group": 0.736,
+      "macro_f1_group": 0.654,
+      "feature_accuracy_on_new": 0.5
+     }
+    }
+   },
+   "cv": [
+    {
+     "C": 4.0,
+     "type_token": false,
+     "cues": false,
+     "cv_accuracy": 0.851
+    },
+    {
+     "C": 16.0,
+     "type_token": false,
+     "cues": false,
+     "cv_accuracy": 0.86
+    },
+    {
+     "C": 4.0,
+     "type_token": false,
+     "cues": true,
+     "cv_accuracy": 0.845
+    },
+    {
+     "C": 16.0,
+     "type_token": false,
+     "cues": true,
+     "cv_accuracy": 0.854
+    },
+    {
+     "C": 4.0,
+     "type_token": true,
+     "cues": false,
+     "cv_accuracy": 0.888
+    },
+    {
+     "C": 16.0,
+     "type_token": true,
+     "cues": false,
+     "cv_accuracy": 0.915
+    },
+    {
+     "C": 4.0,
+     "type_token": true,
+     "cues": true,
+     "cv_accuracy": 0.872
+    },
+    {
+     "C": 16.0,
+     "type_token": true,
+     "cues": true,
+     "cv_accuracy": 0.91
+    }
+   ],
+   "test": {
+    "1": {
+     "model": {
+      "n": 72,
+      "accuracy_exact": 0.736,
+      "accuracy_group": 0.778,
+      "macro_f1_group": 0.742,
+      "f1_by_group": {
+       "EXISTING": 0.857,
+       "NEW_PATTERN": 0.667,
+       "ONE_OFF": 0.703
+      },
+      "existing_code_accuracy": 0.833,
+      "one_off_called_pattern": 5,
+      "pattern_called_one_off": 6,
+      "errors": [
+       {
+        "id": "R08",
+        "gold": "BC_TEAM_ABSENCE_PEAK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R14",
+        "gold": "BC_WFH_FREQUENT",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "R20",
+        "gold": "BC_DUPLICATE_INVOICE",
+        "pred": "BC_REFUND_FREQUENT"
+       },
+       {
+        "id": "R31",
+        "gold": "BC_AI_REVOKED_HISTORY",
+        "pred": "BC_WFH_FREQUENT"
+       },
+       {
+        "id": "R33",
+        "gold": "BC_AI_REVOKED_HISTORY",
+        "pred": "BC_DUPLICATE_INVOICE"
+       },
+       {
+        "id": "R36",
+        "gold": "BC_OFF_HOURS_BULK",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "N03",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N05",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_WFH_FREQUENT"
+       },
+       {
+        "id": "N10",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_TEAM_ABSENCE_PEAK"
+       },
+       {
+        "id": "N12",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N13",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N14",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_WFH_FREQUENT"
+       },
+       {
+        "id": "N15",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N17",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "O06",
+        "gold": "ONE_OFF",
+        "pred": "BC_HANDOVER_OVERLOADED"
+       },
+       {
+        "id": "O09",
+        "gold": "ONE_OFF",
+        "pred": "BC_REQUESTER_ABSENT_ON_EVENT"
+       },
+       {
+        "id": "O10",
+        "gold": "ONE_OFF",
+        "pred": "BC_DEADLINE_CONFLICT"
+       },
+       {
+        "id": "O15",
+        "gold": "ONE_OFF",
+        "pred": "BC_DUPLICATE_INVOICE"
+       },
+       {
+        "id": "O17",
+        "gold": "ONE_OFF",
+        "pred": "BC_REFUND_FREQUENT"
+       }
+      ],
+      "feature_accuracy_on_new": 0.611,
+      "feature_errors": [
+       {
+        "id": "N01",
+        "gold": "notice_hours",
+        "pred": "submit_hour"
+       },
+       {
+        "id": "N05",
+        "gold": "start_day_of_month",
+        "pred": null
+       },
+       {
+        "id": "N06",
+        "gold": "start_day_of_month",
+        "pred": "start_weekday"
+       },
+       {
+        "id": "N10",
+        "gold": "days_requested",
+        "pred": null
+       },
+       {
+        "id": "N14",
+        "gold": "requester_rejected_30d",
+        "pred": null
+       },
+       {
+        "id": "N15",
+        "gold": "notice_hours",
+        "pred": "submit_hour"
+       },
+       {
+        "id": "N16",
+        "gold": null,
+        "pred": "start_day_of_month"
+       }
+      ],
+      "feature_head": {
+       "n": 18,
+       "accuracy": 0.778
+      }
+     },
+     "keyword_baseline": {
+      "n": 72,
+      "accuracy_exact": 0.819,
+      "accuracy_group": 0.819,
+      "macro_f1_group": 0.802,
+      "f1_by_group": {
+       "EXISTING": 0.909,
+       "NEW_PATTERN": 0.774,
+       "ONE_OFF": 0.723
+      },
+      "existing_code_accuracy": 0.833,
+      "one_off_called_pattern": 1,
+      "pattern_called_one_off": 12,
+      "errors": [
+       {
+        "id": "R05",
+        "gold": "BC_HANDOVER_OVERLOADED",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R08",
+        "gold": "BC_TEAM_ABSENCE_PEAK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R09",
+        "gold": "BC_TEAM_ABSENCE_PEAK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R22",
+        "gold": "BC_REFUND_FREQUENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R24",
+        "gold": "BC_REFUND_FREQUENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R36",
+        "gold": "BC_OFF_HOURS_BULK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N10",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N14",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N15",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N16",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N17",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N18",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "O13",
+        "gold": "ONE_OFF",
+        "pred": "NEW_PATTERN"
+       }
+      ]
+     },
+     "previous_model": {
+      "n": 72,
+      "accuracy_exact": 0.694,
+      "accuracy_group": 0.736,
+      "macro_f1_group": 0.716,
+      "f1_by_group": {
+       "EXISTING": 0.831,
+       "NEW_PATTERN": 0.649,
+       "ONE_OFF": 0.667
+      },
+      "existing_code_accuracy": 0.667,
+      "one_off_called_pattern": 4,
+      "pattern_called_one_off": 10,
+      "errors": [
+       {
+        "id": "R01",
+        "gold": "BC_DEADLINE_CONFLICT",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "R05",
+        "gold": "BC_HANDOVER_OVERLOADED",
+        "pred": "BC_DEADLINE_CONFLICT"
+       },
+       {
+        "id": "R07",
+        "gold": "BC_TEAM_ABSENCE_PEAK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R08",
+        "gold": "BC_TEAM_ABSENCE_PEAK",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R10",
+        "gold": "BC_REPEATED_EXEMPTION",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R11",
+        "gold": "BC_REPEATED_EXEMPTION",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "R13",
+        "gold": "BC_WFH_FREQUENT",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "R14",
+        "gold": "BC_WFH_FREQUENT",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "R16",
+        "gold": "BC_SPLIT_AMOUNT_EVASION",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "R22",
+        "gold": "BC_REFUND_FREQUENT",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "R24",
+        "gold": "BC_REFUND_FREQUENT",
+        "pred": "BC_AI_REVOKED_HISTORY"
+       },
+       {
+        "id": "R33",
+        "gold": "BC_AI_REVOKED_HISTORY",
+        "pred": "BC_REPEATED_EXEMPTION"
+       },
+       {
+        "id": "N01",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N03",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N09",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N11",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N12",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "N16",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "O02",
+        "gold": "ONE_OFF",
+        "pred": "BC_DUPLICATE_INVOICE"
+       },
+       {
+        "id": "O06",
+        "gold": "ONE_OFF",
+        "pred": "BC_DUPLICATE_INVOICE"
+       },
+       {
+        "id": "O09",
+        "gold": "ONE_OFF",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "O15",
+        "gold": "ONE_OFF",
+        "pred": "NEW_PATTERN"
+       }
+      ],
+      "feature_accuracy_on_new": 0.778,
+      "feature_errors": [
+       {
+        "id": "N01",
+        "gold": "notice_hours",
+        "pred": "submit_hour"
+       },
+       {
+        "id": "N06",
+        "gold": "start_day_of_month",
+        "pred": "start_weekday"
+       },
+       {
+        "id": "N15",
+        "gold": "notice_hours",
+        "pred": "submit_hour"
+       },
+       {
+        "id": "N16",
+        "gold": null,
+        "pred": "start_day_of_month"
+       }
+      ],
+      "feature_head": {
+       "n": 18,
+       "accuracy": 0.778
+      }
+     }
+    },
+    "2": {
+     "model": {
+      "n": 72,
+      "accuracy_exact": 0.708,
+      "accuracy_group": 0.736,
+      "macro_f1_group": 0.654,
+      "f1_by_group": {
+       "EXISTING": 0.843,
+       "NEW_PATTERN": 0.417,
+       "ONE_OFF": 0.703
+      },
+      "existing_code_accuracy": 0.917,
+      "one_off_called_pattern": 5,
+      "pattern_called_one_off": 6,
+      "errors": [
+       {
+        "id": "S02",
+        "gold": "BC_DEADLINE_CONFLICT",
+        "pred": "BC_TEAM_ABSENCE_PEAK"
+       },
+       {
+        "id": "S33",
+        "gold": "BC_AI_REVOKED_HISTORY",
+        "pred": "BC_REFUND_FREQUENT"
+       },
+       {
+        "id": "S35",
+        "gold": "BC_OFF_HOURS_BULK",
+        "pred": "NEW_PATTERN"
+       },
+       {
+        "id": "M01",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M02",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M03",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M06",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M08",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_WFH_FREQUENT"
+       },
+       {
+        "id": "M10",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "M12",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_REFUND_FREQUENT"
+       },
+       {
+        "id": "M13",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_SPLIT_AMOUNT_EVASION"
+       },
+       {
+        "id": "M14",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_AI_REVOKED_HISTORY"
+       },
+       {
+        "id": "M15",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_OFF_HOURS_BULK"
+       },
+       {
+        "id": "M16",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_WFH_FREQUENT"
+       },
+       {
+        "id": "M17",
+        "gold": "NEW_PATTERN",
+        "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
+       },
+       {
+        "id": "M18",
+        "gold": "NEW_PATTERN",
+        "pred": "ONE_OFF"
+       },
+       {
+        "id": "P01",
+        "gold": "ONE_OFF",
+        "pred": "BC_DUPLICATE_INVOICE"
+       },
+       {
+        "id": "P12",
+        "gold": "ONE_OFF",
+        "pred": "BC_TEAM_ABSENCE_PEAK"
+       },
+       {
+        "id": "P13",
+        "gold": "ONE_OFF",
+        "pred": "BC_REQUESTER_ABSENT_ON_EVENT"
+       },
+       {
+        "id": "P15",
+        "gold": "ONE_OFF",
+        "pred": "BC_REFUND_FREQUENT"
+       },
+       {
+        "id": "P17",
+        "gold": "ONE_OFF",
+        "pred": "BC_DISCOUNT_REPEAT_CUSTOMER"
+       }
+      ],
+      "feature_accuracy_on_new": 0.5,
+      "feature_errors": [
+       {
+        "id": "M01",
+        "gold": "notice_hours",
+        "pred": "submit_hour"
+       },
+       {
+        "id": "M03",
+        "gold": "notice_hours",
+        "pred": null
+       },
+       {
+        "id": "M06",
+        "gold": "start_day_of_month",
+        "pred": "start_weekday"
+       },
+       {
+        "id": "M08",
+        "gold": "start_weekday",
+        "pred": null
+       },
+       {
+        "id": "M12",
+        "gold": "amount",
+        "pred": null
+       },
+       {
+        "id": "M13",
+        "gold": "requester_rejected_30d",
+        "pred": null
+       },
+       {
+        "id": "M14",
+        "gold": "requester_rejected_30d",
+        "pred": null
+       },
+       {
+        "id": "M15",
+        "gold": "submit_hour",
+        "pred": null
+       },
+       {
+        "id": "M18",
+        "gold": null,
+        "pred": "start_weekday"
+       }
+      ],
+      "feature_head": {
+       "n": 18,
+       "accuracy": 0.722
       }
      },
      "keyword_baseline": {
