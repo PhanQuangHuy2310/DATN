@@ -191,19 +191,22 @@ def _list_regulations() -> list[dict]:
 
 def _content_check(cur, *, code: str, fields: dict) -> dict[str, Any]:
     """AI đọc văn bản trước khi lưu: lỗi ký tự, mâu thuẫn giữa các điều / với quy định đang hiệu lực."""
+    from django.conf import settings
+
     from api_core.workflow.regulation_compiler import RequestTypeName
     from api_core.workflow.regulation_validation import validate
 
-    cur.execute("SELECT code, name, lifecycle FROM eas.request_type WHERE is_active")
-    types = [RequestTypeName(code=r[0], name=r[1] or "", lifecycle=(r[2] or "").strip() or None)
+    cur.execute("SELECT code, name, lifecycle, risk_weight FROM eas.request_type WHERE is_active")
+    types = [RequestTypeName(code=r[0], name=r[1] or "", lifecycle=(r[2] or "").strip() or None, risk_weight=r[3])
              for r in cur.fetchall()]
+    auto_max = settings.EAS_AI_AUTO_APPROVE_MAX_WEIGHT if settings.EAS_AI_AUTO_APPROVE_ENABLED else 0
     cur.execute(
         "SELECT code, title, content FROM eas.company_regulations WHERE NOT is_deleted AND code <> %s",
         [code],
     )
     others = [{"code": r[0], "title": r[1], "content": r[2] or ""} for r in cur.fetchall()]
     return validate(code=code or "MỚI", title=fields["title"], content=fields["content"], types=types,
-                    others=others)
+                    others=others, auto_max_weight=auto_max)
 
 
 def _invalid_regulation(request: HttpRequest, check: dict[str, Any]) -> JsonResponse:

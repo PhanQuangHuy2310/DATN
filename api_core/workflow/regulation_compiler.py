@@ -55,6 +55,7 @@ class RequestTypeName:
     code: str
     name: str
     lifecycle: str | None = None
+    risk_weight: int | None = None  # chỉ dùng để báo "AI duyệt" vô tác dụng (xem regulation_validation)
 
 
 def fold(text: str) -> str:
@@ -91,6 +92,45 @@ _NEG_MANUAL = re.compile(
     r"(?:duyệt|phê duyệt|xét duyệt|trình|qua|chuyển)"
 )
 _AUTO = ("tự động duyệt", "tự động phê duyệt", "duyệt tự động", "đối chiếu tự động")
+# Cách viết ngắn hay gặp khi soạn nhanh (19/11: ">3tr người duyệt, <5tr AI duyệt" trước đây bị bỏ qua im lặng, nên
+# loại mẫu A vẫn để AI tự duyệt mọi hồ sơ).
+_MANUAL_SHORT = (
+    "người duyệt",
+    "người phê duyệt",
+    "người kiểm duyệt",
+    "duyệt tay",
+    "không được tự duyệt",
+    "không tự duyệt",
+    "cần duyệt",
+    "phải duyệt",
+    "cần phê duyệt",
+    "phải phê duyệt",
+    "cần được duyệt",
+    "cần được phê duyệt",
+)
+_MANUAL_SHORT_RE = re.compile(
+    r"\bai\s+(?:không\s+được|không|chưa\s+được)\s+(?:tự\s+)?(?:phê\s+)?(?:duyệt|xử lý)"
+    r"|không\s+(?:cho|để)\s+ai\s+(?:tự\s+)?(?:phê\s+)?(?:duyệt|xử lý)"
+    r"|(?:trưởng bộ phận|quản lý|trưởng phòng|giám đốc|kế toán|nhân sự|\bhr|pháp chế|lãnh đạo|sếp)"
+    r"\s+(?:trực tiếp\s+)?(?:phải\s+|sẽ\s+)?(?:phê\s+)?duyệt"
+)
+_AUTO_SHORT_RE = re.compile(
+    r"\bai\s+(?:được\s+)?(?:tự\s+(?:động\s+)?)?(?:phê\s+)?duyệt"
+    r"|\bai\s+(?:được\s+)?(?:tự\s+)?xử lý"
+    r"|\btự\s+duyệt\b"
+    r"|hệ thống\s+(?:được\s+)?tự\s+(?:động\s+)?(?:phê\s+)?duyệt"
+    r"|để\s+ai\s+(?:tự\s+)?(?:phê\s+)?(?:duyệt|xử lý)"
+)
+# Ký hiệu so sánh viết tắt -> chữ mà bộ đọc điều kiện hiểu (">3tr" = "trên 3tr", "≤ 5 triệu" = "không quá 5 triệu").
+_SYMBOLS = (
+    (re.compile(r"(?:>=|≥)\s*(?=\d)"), " từ "),
+    (re.compile(r"(?:<=|≤)\s*(?=\d)"), " không quá "),
+    (re.compile(r">\s*(?=\d)"), " trên "),
+    (re.compile(r"<\s*(?=\d)"), " dưới "),
+)
+# Ranh giới giữa hai vế trái chiều trong một câu ("…người duyệt, còn dưới 5 tr thì AI duyệt").
+_CLAUSE_BREAK = re.compile(r"[,;:]|\b(?:còn|nhưng|ngược lại|trường hợp)\b")
+_APPROVAL_WORD = re.compile(r"duyệt|xử lý")
 _EVERY = (
     "mọi yêu cầu",
     "tất cả yêu cầu",
@@ -248,7 +288,7 @@ def _scope(low: str, types: list[RequestTypeName]) -> tuple[list[RequestTypeName
     found: list[tuple[int, RequestTypeName]] = []
     masked = low
     for t in sorted(types, key=lambda x: -len(x.name or "")):
-        name = fold(t.name)
+        name = _symbols(fold(t.name))
         if not name:
             continue
         pos = masked.find(name)
@@ -486,18 +526,76 @@ def _escalate(lifecycle: str | None, low: str, cond: dict[str, Any]) -> str | No
     return None
 
 
+def _symbols(text: str) -> str:
+    for rx, word in _SYMBOLS:
+        text = rx.sub(word, text)
+    return " ".join(text.split())
+
+
+def _normalize(sentence: str) -> str:
+    # Tên loại cũng đi qua _symbols (xem _scope): "Tạm ứng chi phí (<10tr)" vẫn khớp tên loại.
+    return _symbols(_ARTICLE_HEADER.sub("", fold(sentence), count=1))
+
+
+def _control_spans(low: str) -> list[tuple[int, int, str]]:
+    """Vị trí các cụm "bắt duyệt thủ công" (MANUAL) và "cho AI tự duyệt" (AUTO), không tính cụm AUTO nằm trong
+    một cụm MANUAL ("không được tự động duyệt")."""
+    manual = [(m.start(), m.end()) for w in (*_MANUAL, *_MANUAL_SHORT) for m in re.finditer(re.escape(w), low)]
+    manual += [(m.start(), m.end()) for rx in (_MANUAL_RE, _MANUAL_SHORT_RE) for m in rx.finditer(low)]
+    auto = [(m.start(), m.end()) for w in _AUTO for m in re.finditer(re.escape(w), low)]
+    auto += [(m.start(), m.end()) for m in _AUTO_SHORT_RE.finditer(low)]
+    auto = [a for a in auto if not any(s <= a[0] < e or s < a[1] <= e for s, e in manual)]
+    return sorted([(s, e, "MANUAL") for s, e in manual] + [(s, e, "AUTO") for s, e in auto])
+
+
+def _signals(low: str) -> tuple[bool, bool]:
+    kinds = {k for _s, _e, k in _control_spans(low)}
+    manual = "MANUAL" in kinds
+    return manual, not manual and "AUTO" in kinds
+
+
+def _split_mixed(low: str) -> list[str]:
+    """Câu có cả vế bắt duyệt thủ công lẫn vế cho AI tự duyệt -> tách thành từng vế (">3tr người duyệt <5tr AI duyệt").
+    Câu chỉ một chiều giữ nguyên."""
+    spans = _control_spans(low)
+    if len({k for _s, _e, k in spans}) < 2:
+        return [low]
+    cuts = []
+    for (_s1, e1, k1), (s2, _e2, k2) in pairwise(spans):
+        if k1 == k2 or s2 < e1:
+            continue
+        breaks = [m.start() for m in _CLAUSE_BREAK.finditer(low, e1, s2)]
+        cuts.append(breaks[-1] if breaks else e1)
+    parts, start = [], 0
+    for cut in cuts:
+        parts.append(low[start:cut])
+        start = cut
+    parts.append(low[start:])
+    return [p.strip(" ,;:") for p in parts if p.strip(" ,;:")]
+
+
 def compile_sentence(
     sentence: str, types: list[RequestTypeName]
 ) -> list[dict[str, Any]]:
     """Rules (without id) for one sentence; [] when it carries no enforceable control."""
-    low = _ARTICLE_HEADER.sub("", fold(sentence), count=1)
+    low = _normalize(sentence)
     if _NEG_MANUAL.search(low):
         return []
-    manual = any(word in low for word in _MANUAL) or bool(_MANUAL_RE.search(low))
-    auto = not manual and any(word in low for word in _AUTO)
+    parts = _split_mixed(low)
+    if len(parts) == 1:
+        return _compile_clause(low, types, [])
+    inherited, _ = _scope(low, types)  # "Thanh toán chi phí >3tr người duyệt, <5tr AI duyệt": vế sau cùng loại
+    return [rule for part in parts for rule in _compile_clause(part, types, inherited)]
+
+
+def _compile_clause(
+    low: str, types: list[RequestTypeName], inherited: list[RequestTypeName]
+) -> list[dict[str, Any]]:
+    manual, auto = _signals(low)
     if not (manual or auto):
         return []
     scoped, masked = _scope(low, types)
+    scoped = scoped or inherited
     masked = _expand_ranges(masked)
     parsed, unsupported = _parse(masked)
     if unsupported or _unsupported_condition(masked, parsed):
@@ -547,17 +645,26 @@ def compile_sentence(
 def skip_reason(sentence: str, types: list[RequestTypeName]) -> str | None:
     """Vì sao một câu CÓ yêu cầu kiểm soát lại không sinh được luật (để đưa lên admin duyệt); None nếu
     câu không có yêu cầu kiểm soát hoặc đã biên dịch được."""
-    low = _ARTICLE_HEADER.sub("", fold(sentence), count=1)
+    low = _normalize(sentence)
     if _NEG_MANUAL.search(low):
         return "Câu phủ định yêu cầu duyệt ('không bắt buộc / không cần duyệt'): AI không tự nới lỏng kiểm soát"
-    manual = any(word in low for word in _MANUAL) or bool(_MANUAL_RE.search(low))
-    auto = not manual and any(word in low for word in _AUTO)
+    parts = _split_mixed(low)
+    inherited = _scope(low, types)[0] if len(parts) > 1 else []
+    return next((r for r in (_skip_clause(p, types, inherited) for p in parts) if r), None)
+
+
+def _skip_clause(low: str, types: list[RequestTypeName], inherited: list[RequestTypeName]) -> str | None:
+    manual, auto = _signals(low)
     if not (manual or auto):
         plain = strip_marks(low)
-        if any(strip_marks(w) in plain for w in (*_MANUAL, *_AUTO)):
+        if any(strip_marks(w) in plain for w in (*_MANUAL, *_MANUAL_SHORT, *_AUTO)):
             return "Câu viết không dấu: AI chỉ đọc quy định tiếng Việt có dấu"
+        if _APPROVAL_WORD.search(low) and re.search(r"\d", low):
+            # Không bỏ qua im lặng: câu nói về duyệt và có con số nhưng không rõ ai duyệt.
+            return "Câu có con số và nhắc tới duyệt nhưng AI chưa hiểu là bắt người duyệt hay cho AI tự duyệt"
         return None
     scoped, masked = _scope(low, types)
+    scoped = scoped or inherited
     masked = _expand_ranges(masked)
     parsed, unsupported = _parse(masked)
     targeted = bool(scoped) or any(word in low for word in _EVERY) or bool(parsed.spans)
@@ -572,7 +679,7 @@ def skip_reason(sentence: str, types: list[RequestTypeName]) -> str | None:
     invalid = _invalid(parsed, _groups(masked, parsed))
     if invalid:
         return invalid
-    if compile_sentence(sentence, types):
+    if _compile_clause(low, types, inherited):
         return None
     if auto:
         return "Cho phép tự duyệt kèm điều kiện ngữ cảnh (AI không tự mở rộng tự duyệt)"
