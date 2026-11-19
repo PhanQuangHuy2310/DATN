@@ -4,6 +4,7 @@ import { usePermission } from "../hooks/usePermission.jsx";
 import { api, peekResource, rememberResource } from "../api.js";
 import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
+import { freeCode } from "../regulationCode.js";
 import AiLearningPanel from "./AiLearningPanel.jsx";
 import { RegulationCheckList, RejectedRegulations, SupersededNotes } from "./RegulationCheck.jsx";
 
@@ -48,12 +49,15 @@ export function RegulationsManagementPage() {
   const [check, setCheck] = useState(null);
   const [checking, setChecking] = useState(false);
   const [rejectedVersion, setRejectedVersion] = useState(0);
+  // Mã còn trống do máy chủ tính (không theo số phiên bản: v1.0 từng gợi ý REG-002 đã có -> 409 mọi lần).
+  const [nextCode, setNextCode] = useState(() => peekResource(`${apiBase}/regulations`)?.next_code || "");
 
   const loadData = async (silent = false) => {
     try {
       const res = rememberResource(`${apiBase}/regulations`, await api(`${apiBase}/regulations`));
       setRegulations(res.regulations || []);
       setAiState(res.ai_state || {});
+      setNextCode(res.next_code || "");
     } catch (err) {
       if (!silent) showToast("Không thể tải danh sách quy định: " + errorText(err), "error");
     } finally {
@@ -79,8 +83,7 @@ export function RegulationsManagementPage() {
   }, [relearning, aiState]);
 
   const openCreateModal = () => {
-    const nextMajor = (aiState?.global_major_version || 1) + 1;
-    setFormCode(`REG-${String(nextMajor).padStart(3, "0")}`);
+    setFormCode(nextCode || freeCode(regulations));
     setFormTitle("");
     setFormCategory("Thời gian & Nghỉ phép");
     setFormContent("");
@@ -96,7 +99,8 @@ export function RegulationsManagementPage() {
     setFormCategory(reg.category || "Quy định chung");
     setFormContent(reg.content || "");
     setFormSummary("");
-    setCheck(null);
+    // Văn bản đang hiệu lực mà có lỗi (nạp trước khi có bước kiểm tra): hiện ngay lỗi để sửa.
+    setCheck(reg.issues?.length ? { errors: reg.issues, warnings: [] } : null);
   };
 
   const runCheck = async () => {
@@ -109,7 +113,13 @@ export function RegulationsManagementPage() {
       const res = await api(`${apiBase}/regulations/validate`, {
         method: "POST",
         silent: true,
-        body: JSON.stringify({ code: formCode.trim(), title: formTitle.trim(), category: formCategory, content: formContent.trim() }),
+        body: JSON.stringify({
+          code: formCode.trim(),
+          title: formTitle.trim(),
+          category: formCategory,
+          content: formContent.trim(),
+          creating: !editingRegulation,
+        }),
       });
       setCheck(res.validation);
       if (res.validation?.errors?.length) {
@@ -383,6 +393,21 @@ export function RegulationsManagementPage() {
         <RejectedRegulations apiBase={apiBase} onRevise={reviseRejected} version={rejectedVersion} />
       )}
 
+      {regulations.some((r) => r.issues?.length) && (
+        <section className="reg-issues-banner" role="alert">
+          <strong>
+            {regulations.filter((r) => r.issues?.length).length} quy định đang hiệu lực có lỗi AI phát hiện
+          </strong>{" "}
+          (thường do nạp trước khi có bước kiểm tra, hoặc nhập thẳng CSDL):{" "}
+          {regulations
+            .filter((r) => r.issues?.length)
+            .map((r) => r.code)
+            .join(", ")}
+          . Bấm <em>Sửa</em> trên thẻ để xem lỗi và sửa; văn bản lỗi ký tự không sinh luật nào, văn bản mâu thuẫn thì
+          hồ sơ khớp cả hai điều luôn do người duyệt.
+        </section>
+      )}
+
       {/* Regulations Table / Grid */}
       <div className="regulations-table-container">
         {loading ? (
@@ -398,7 +423,7 @@ export function RegulationsManagementPage() {
         ) : (
           <div className="regulations-list">
             {filteredRegulations.map((reg) => (
-              <div key={reg.id} className="regulation-card">
+              <div key={reg.id} className={`regulation-card${reg.issues?.length ? " has-issues" : ""}`}>
                 <div className="regulation-card-header">
                   <div className="regulation-code-tag">
                     <span className="reg-code">{reg.code}</span>
@@ -442,6 +467,15 @@ export function RegulationsManagementPage() {
                 <p className="regulation-card-content">{reg.content}</p>
 
                 <div className="regulation-card-footer">
+                  {reg.issues?.length > 0 && (
+                    <p className="reg-card-issue">
+                      <span className="reg-check-badge">
+                        {reg.issues[0].kind === "GARBLED" ? "Lỗi ký tự" : reg.issues[0].kind === "CONTRADICTION" ? "Mâu thuẫn" : "Lỗi"}
+                      </span>{" "}
+                      {reg.issues[0].message}
+                      {reg.issues.length > 1 ? ` (và ${reg.issues.length - 1} lỗi khác)` : ""}
+                    </p>
+                  )}
                   <span className="reg-updated-at">
                     🕒 Cập nhật: {reg.updated_at ? new Date(reg.updated_at).toLocaleString("vi-VN") : "Ban đầu"}
                   </span>
@@ -548,6 +582,18 @@ export function RegulationsManagementPage() {
               </div>
 
               <RegulationCheckList check={check} />
+              {check?.suggested_code && check.suggested_code !== formCode.trim().toUpperCase() && (
+                <button
+                  type="button"
+                  className="btn-secondary reg-use-code"
+                  onClick={() => {
+                    setFormCode(check.suggested_code);
+                    setCheck(null);
+                  }}
+                >
+                  Dùng mã còn trống {check.suggested_code}
+                </button>
+              )}
 
               <div className="eas-modal-actions">
                 <button type="button" className="btn-secondary" onClick={runCheck} disabled={checking || submitting}>

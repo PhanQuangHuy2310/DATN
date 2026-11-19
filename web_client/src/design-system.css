@@ -5280,3 +5280,28 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .eas-toast-notification.error { border-left-color: var(--ds-danger, #d7494f); }
 .eas-toast-notification.warning { border-left-color: var(--ds-warning, #d98a00); }
 .eas-toast-notification.info { border-left-color: var(--ds-primary); }
+
+/* Regulations in force that fail the AI check (published before the check existed, or written straight to the DB). */
+.reg-issues-banner {
+  margin: 0 0 var(--ds-space-4);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border: 1px solid var(--ds-danger);
+  border-left-width: 4px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-danger-soft, #fdecec);
+  color: var(--ds-ink);
+  line-height: 1.55;
+}
+.regulation-card.has-issues { border-color: var(--ds-danger); box-shadow: inset 4px 0 0 var(--ds-danger); }
+.regulation-card-footer > .reg-card-issue {
+  flex-basis: 100%;
+  margin: 0 0 var(--ds-space-1, 4px);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-danger-soft, #fdecec);
+  color: var(--ds-danger);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.reg-use-code { margin: var(--ds-space-2) 0 0; }

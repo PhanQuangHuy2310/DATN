@@ -10,6 +10,7 @@ const KIND_TEXT = {
   DUPLICATE: "Trùng lặp",
   NO_CONTROL: "Không đổi cách duyệt",
   SUPERSEDES: "Sẽ thay thế",
+  CODE_EXISTS: "Trùng mã",
   RELAXES: "Nới lỏng kiểm soát",
   AUTO_NO_EFFECT: "AI duyệt không có tác dụng",
   VALIDATION: "Văn bản lỗi",

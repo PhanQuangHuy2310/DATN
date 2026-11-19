@@ -608,6 +608,7 @@ const ERROR_MESSAGES = {
   PASSWORD_CHANGE_REQUIRED: "Bạn cần đổi mật khẩu lần đầu trước khi sử dụng hệ thống.",
   PASSWORD_REUSE_NOT_ALLOWED: "Mật khẩu mới không được trùng với mật khẩu đang sử dụng.",
   PASSWORD_POLICY_VIOLATION: "Mật khẩu mới cần dài từ 15–128 ký tự, bao gồm chữ hoa, chữ thường, chữ số, ký tự đặc biệt và không chứa địa chỉ email của bạn.",
+  REGULATION_CODE_EXISTS: "Mã quy định này đã tồn tại.",
   REGULATION_INVALID: "AI phát hiện lỗi trong văn bản quy định; xem danh sách lỗi ngay trong form để sửa rồi ban hành lại.",
   TEXT_UNCLEAR: "AI chưa hiểu nhu cầu này. Hãy mô tả rõ hơn, ví dụ: \"Đăng ký suất ăn trưa tại căng tin\".",
   TEXT_LENGTH_INVALID: "Nhu cầu cần dài từ 6 đến 120 ký tự.",
