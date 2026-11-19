@@ -837,6 +837,58 @@ export default function RequestWorkflowsPage() {
   );
 }
 
+// AI gợi ý mẫu A/B/C và trọng số cho loại đang soạn (mô hình hồ sơ quy trình, Phụ lục E); admin quyết định áp dụng.
+function AiProfileHint({ name, description, fields, onApply }) {
+  const [state, setState] = useState({ status: "idle", data: null });
+  const fieldKey = fields.join("|");
+  useEffect(() => {
+    const text = name.trim();
+    if (text.length < 4) return undefined;
+    let active = true;
+    const timer = setTimeout(() => {
+      setState((prev) => ({ ...prev, status: "loading" }));
+      api("/api/v1/admin/ai-engine/process-profile", {
+        method: "POST",
+        silent: true,
+        body: JSON.stringify({ name: text, description: description || "", category: "", fields: fieldKey ? fieldKey.split("|") : [] }),
+      })
+        .then((data) => active && setState({ status: "done", data }))
+        .catch(() => active && setState({ status: "error", data: null }));
+    }, 700);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [name, description, fieldKey]);
+
+  if (name.trim().length < 4) return null;
+  const data = state.data;
+  const reasons = (data?.reasons_lifecycle || []).filter((r) => !r.startsWith("có cụm từ")).slice(0, 2);
+  return (
+    <div className="ai-profile-hint" role="status" aria-live="polite">
+      <strong>AI gợi ý</strong>
+      {state.status === "loading" && !data && <span className="muted"> · đang đánh giá…</span>}
+      {state.status === "error" && <span className="muted"> · dịch vụ AI chưa phản hồi, bạn tự chọn phân loại.</span>}
+      {data && (
+        <>
+          <span>
+            {" "}· Phân loại <b>{data.lifecycle}</b> (độ tin cậy {Math.round((data.lifecycle_confidence || 0) * 100)}%) ·
+            Trọng số rủi ro <b>{data.risk_weight}/5</b> (tự động hóa {(5 - data.risk_weight) * 25}%)
+          </span>
+          {reasons.length > 0 && <small className="muted"> Lý do: {reasons.join("; ")}.</small>}
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => onApply(data.lifecycle, (5 - data.risk_weight) * 25)}
+          >
+            Áp dụng gợi ý
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 // Sub-component: Template Editor Modal
 function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
   const isNew = !template.id;
@@ -964,6 +1016,15 @@ function TemplateEditorModal({ template, mockApis, onClose, onSave }) {
                 />
               </label>
             </div>
+
+            <AiProfileHint
+              name={formData.name}
+              description={formData.request_type}
+              fields={fields.map((f) => f.id || f.label || "").filter(Boolean)}
+              onApply={(lifecycle, weight) =>
+                setFormData((prev) => ({ ...prev, category_code: lifecycle, automation_weight: weight }))
+              }
+            />
 
             <div className="rw-form-row">
               <label className="rw-form-label rw-flex-1">
