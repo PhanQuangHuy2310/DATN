@@ -284,6 +284,8 @@ urlpatterns = [
     ),
     # AI Assistance Proxy
     path("ai/classify", views.ai_classify_view, name="ai-classify"),
+    path("ai/request-types/proposal", views.ai_type_proposal_view, name="ai-request-type-proposal"),
+    path("ai/request-types", views.ai_type_create_view, name="ai-request-type-create"),
     path("ai/risk-score", views.ai_risk_score_view, name="ai-risk-score"),
     path("ai/summarize", views.ai_summarize_view, name="ai-summarize"),
 ]
