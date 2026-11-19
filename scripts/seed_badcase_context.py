@@ -3,7 +3,7 @@
 Usage inside `api` container (or host with local Postgres + API env configured):
   docker compose stop worker
   docker compose exec -T -e EAS_LOCAL_SUPERUSER_DSN=... api \
-    python scripts/seed_badcase_context.py --json seed_summary.json
+    python scripts/seed_badcase_context.py > seed_summary.json
   docker compose start worker
   docker compose exec -T redis redis-cli FLUSHALL
 
@@ -22,6 +22,7 @@ import json
 import os
 import sys
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -44,11 +45,8 @@ import psycopg
 from django.db import connection
 
 from api_core.authn.models import Actor
-from api_core.domain import PayloadValidationError
-from api_core.domain.routing import RoutingError
 from api_core.integrations import requests as ext_requests
 from api_core.workflow import attachments, service
-from api_core.workflow.errors import CommandError
 
 VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "host.docker.internal"}
@@ -102,6 +100,16 @@ TYPE_C_POOL = (
     "PROJECT_INITIATION",
     "CONTRACT_APPROVAL",
     "FACILITY_REPAIR",
+)
+FULL_POOLS = {
+    "A": TYPE_A_POOL,
+    "B": TYPE_B_POOL,
+    "C": TYPE_C_POOL,
+}
+OPEN_STATUSES = (
+    "PENDING_APPROVAL",
+    "IN_PROGRESS",
+    "WAITING_FOR_ACCEPTANCE",
 )
 
 
@@ -178,7 +186,7 @@ def _load_existing_per_user() -> dict[str, dict[str, Any]]:
             SELECT r.requester_id::text, rt.code, COALESCE(wi.lifecycle, rt.lifecycle)
             FROM eas.request r
             JOIN eas.request_type rt ON rt.id = r.type_id
-            LEFT JOIN eas.workflow_instance wi ON wi.revision_id = r.current_revision_id AND wi.state = 'ACTIVE'
+            LEFT JOIN eas.workflow_instance wi ON wi.request_id = r.id AND wi.state = 'ACTIVE'
             WHERE r.status <> 'DRAFT'
             """
         )
@@ -209,9 +217,396 @@ def _load_pickers() -> dict[str, Any]:
                 k: [item for item in items if item.get("available", True)]
                 for k, items in opts.items()
             }
-        except (CommandError, OSError, ValueError):
+        except (OSError, ValueError):
             pickers[tcode] = {}
     return pickers
+
+
+def _pick_option(
+    pickers: dict[str, Any],
+    type_code: str,
+    field: str,
+    fallback: str,
+    seq: int,
+) -> str:
+    options = pickers.get(type_code, {}).get(field) or [{"value": fallback}]
+    return str(options[seq % len(options)]["value"])
+
+
+def _p_wfh(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    d = ctx["today"] + timedelta(days=3 + (seq % 12))
+    return {
+        "title": f"Làm việc từ xa xử lý hồ sơ nghiệp vụ {dept} #{seq}",
+        "date": d.isoformat(),
+        "task_list": f"Hoàn thiện tài liệu và báo cáo nghiệp vụ {dept}",
+        "communication_channel": "Microsoft Teams & Email công ty",
+    }
+
+
+def _p_expense_claim(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    cat = _pick_option(
+        ctx["pickers"], "EXPENSE_CLAIM", "expense_category", "OFFICE", seq
+    )
+    amt = ctx["amount_override"] or (1_200_000 + (seq % 5) * 400_000)
+    return {
+        "title": f"Thanh toán chi phí nghiệp vụ {dept} đợt {seq}",
+        "amount_vnd": amt,
+        "expense_category": cat,
+        "invoice_number": f"HD-SEED-{dept}-{seq:04d}",
+        "beneficiary_account": f"VCB 0123{seq:06d} - {ctx['name']}",
+        "reason": f"Thanh toán chứng từ nghiệp vụ phát sinh của bộ phận {dept}.",
+    }
+
+
+def _p_leave(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    start_off, dur = ctx["leave_window"] or (14 + (seq % 20), 1)
+    d1 = ctx["today"] + timedelta(days=start_off)
+    d2 = d1 + timedelta(days=max(0, dur - 1))
+    return {
+        "title": f"Đăng ký nghỉ phép kế hoạch {dept} - {ctx['name']}",
+        "leave_kind": "CO_LUONG",
+        "start_date": d1.isoformat(),
+        "end_date": d2.isoformat(),
+        "handover_user_id": ctx["handover"],
+        "reason": f"Nghỉ phép theo kế hoạch cá nhân và đã sắp xếp bàn giao tại {dept}.",
+    }
+
+
+def _p_leave_special(ctx: dict[str, Any]) -> dict[str, Any]:
+    d1 = ctx["today"] + timedelta(days=18 + (ctx["seq"] % 10))
+    return {
+        "title": f"Nghỉ phép chế độ đặc biệt {ctx['dept']} - {ctx['name']}",
+        "special_leave_type": "KHAC",
+        "start_date": d1.isoformat(),
+        "end_date": d1.isoformat(),
+        "handover_user_id": ctx["handover"],
+        "reason": "Giải quyết công việc gia đình theo chế độ nội bộ công ty.",
+    }
+
+
+def _p_attendance(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    d1 = ctx["today"] - timedelta(days=2 + (seq % 12))
+    kinds = ("Đi muộn", "Về sớm", "Quên chấm công")
+    return {
+        "title": f"Điều chỉnh dữ liệu chấm công {ctx['dept']} #{seq}",
+        "work_date": d1.isoformat(),
+        "change_type": kinds[seq % len(kinds)],
+        "reason": "Họp với đối tác bên ngoài trước giờ làm việc nên cần xác nhận công.",
+    }
+
+
+def _p_refund(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    amt = ctx["amount_override"] or (1_500_000 + (seq % 4) * 500_000)
+    return {
+        "title": f"Đề xuất hoàn tiền giao dịch khách hàng #{seq}",
+        "order_code": f"ORD-SEED-{dept}-{seq:04d}",
+        "amount_vnd": amt,
+        "customer_reference": f"KH-{dept}-{seq:04d}",
+        "reason": "Hoàn tiền chênh lệch dịch vụ theo biên bản đối soát khách hàng.",
+    }
+
+
+def _p_discount(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    cust = ctx["customer_name"] or NAMED_CUSTOMERS[seq % len(NAMED_CUSTOMERS)]
+    return {
+        "title": f"Phê duyệt chiết khấu hợp đồng {cust}",
+        "customer_name": cust,
+        "deal_value_vnd": 80_000_000,
+        "discount_percent": 5,
+        "amount_vnd": 4_000_000,
+        "reason": "Áp dụng mức chiết khấu chiến lược cho gói gia hạn hợp đồng năm.",
+    }
+
+
+def _p_visitor(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    d1 = ctx["today"] + timedelta(days=10 + (seq % 15))
+    return {
+        "title": f"Đăng ký thẻ an ninh tiếp đón đối tác {ctx['dept']}",
+        "visitor_name": f"Nguyễn Văn Khách {seq}",
+        "visitor_org": "Công ty Đối tác Chiến lược Việt Nam",
+        "visit_date": d1.isoformat(),
+        "facility_zone": "Khu vực sảnh tiếp khách tầng 3",
+        "reason": "Đón đoàn đối tác sang trao đổi tiến độ triển khai dự án quý IV.",
+    }
+
+
+def _p_room(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    room = _pick_option(ctx["pickers"], "ROOM_BOOKING", "room_code", "MR-HCM-01", seq)
+    d1 = ctx["today"] + timedelta(days=12 + (seq % 35))
+    hour = 9 + (seq % 7)
+    return {
+        "title": f"Đặt phòng họp giao ban chuyên môn {ctx['dept']} #{seq}",
+        "room_code": room,
+        "booking_date": d1.isoformat(),
+        "start_time": f"{hour:02d}:00",
+        "end_time": f"{hour + 1:02d}:00",
+        "attendees_count": 6,
+        "purpose": f"Họp rà soát tiến độ công việc định kỳ của phòng {ctx['dept']}.",
+    }
+
+
+def _p_advance_small(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    amt = ctx["amount_override"] or (4_500_000 + (seq % 4) * 500_000)
+    return {
+        "title": f"Tạm ứng chi phí triển khai {dept} đợt {seq}",
+        "amount": amt,
+        "currency": "VND",
+        "purpose": f"Tạm ứng mua sắm vật tư và chi phí tiếp khách của {dept}.",
+        "expected_refund_date": (ctx["today"] + timedelta(days=25)).isoformat(),
+    }
+
+
+def _p_business_trip(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    d1 = ctx["today"] + timedelta(days=20 + (seq % 20))
+    return {
+        "title": f"Đăng ký công tác làm việc với chi nhánh #{seq}",
+        "destination": "Đà Nẵng",
+        "transportation": "MAY_BAY",
+        "start_date": d1.isoformat(),
+        "end_date": (d1 + timedelta(days=1)).isoformat(),
+        "amount_vnd": 4_200_000,
+        "reason": "Làm việc trực tiếp với khách hàng doanh nghiệp tại khu vực miền Trung.",
+    }
+
+
+def _p_it_support(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    return {
+        "title": f"Yêu cầu hỗ trợ cài đặt phần mềm {dept} #{seq}",
+        "support_category": "PHAN_MEM_OFFICE",
+        "urgency": "BINH_THUONG",
+        "device_asset_tag": f"LAP-{dept}-{seq:03d}",
+        "reason": "Cấp quyền và cài đặt bộ công cụ văn phòng phục vụ báo cáo quý.",
+    }
+
+
+def _p_office_supplies(ctx: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "title": f"Đề nghị cấp văn phòng phẩm định kỳ {ctx['dept']}",
+        "items_list": "Giấy in A4, bút bi xanh, kẹp hồ sơ và sổ ghi chép",
+        "quantity": 10,
+        "department_id": ctx["user"]["department_id"],
+    }
+
+
+def _p_overtime(ctx: dict[str, Any]) -> dict[str, Any]:
+    dept = ctx["dept"]
+    return {
+        "title": f"Đăng ký làm thêm giờ hoàn tất bàn giao {dept}",
+        "work_date": (ctx["today"] + timedelta(days=1)).isoformat(),
+        "hours": 2,
+        "project_id": f"PRJ-{dept}-2026",
+        "deliverables": "Hoàn tất rà soát số liệu và tổng hợp báo cáo tuần.",
+    }
+
+
+def _p_hr_cert(ctx: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "title": f"Xin giấy xác nhận công tác tại {ctx['dept']}",
+        "certificate_kind": "CONG_TAC",
+        "purpose": "Hoàn thiện hồ sơ cá nhân theo yêu cầu thủ tục hành chính.",
+    }
+
+
+def _p_doc_seal(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    return {
+        "title": f"Đề nghị đóng dấu văn bản phối hợp {dept}",
+        "document_name": f"Biên bản xác nhận khối lượng {dept} số {seq}",
+        "copies": 2,
+        "reason": "Đóng dấu pháp nhân để gửi đối tác lưu trữ theo hợp đồng đã ký.",
+    }
+
+
+def _p_training(ctx: dict[str, Any]) -> dict[str, Any]:
+    d1 = ctx["today"] + timedelta(days=25 + (ctx["seq"] % 15))
+    return {
+        "title": f"Đăng ký khóa đào tạo chuyên môn {ctx['dept']}",
+        "course_name": "Quản trị rủi ro & vận hành hệ thống doanh nghiệp",
+        "provider": "Học viện Quản trị Doanh nghiệp Việt Nam",
+        "start_date": d1.isoformat(),
+        "end_date": (d1 + timedelta(days=1)).isoformat(),
+        "amount_vnd": 2_500_000,
+        "reason": "Nâng cao kỹ năng kiểm soát quy trình và đánh giá nghiệp vụ.",
+    }
+
+
+def _p_access(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    app_val = _pick_option(ctx["pickers"], "ACCESS", "app_code", "CRM", seq)
+    roles_opt = ctx["pickers"].get("ACCESS", {}).get("requested_role") or []
+    matching = [r for r in roles_opt if r.get("app_code") == app_val] or roles_opt
+    role_val = matching[0]["value"] if matching else "CRM_SALES_REP"
+    return {
+        "title": f"Cấp quyền truy cập hệ thống {app_val} cho {dept}",
+        "app_code": app_val,
+        "requested_role": role_val,
+        "duration_days": 30,
+        "purpose": "Phục vụ tra cứu và đối soát số liệu công việc hằng ngày.",
+        "reason": "Cần quyền truy cập đọc báo cáo để phối hợp xử lý hồ sơ liên phòng ban.",
+    }
+
+
+def _p_reimbursement(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    return {
+        "title": f"Quyết toán chi phí tiếp khách phòng {ctx['dept']} #{seq}",
+        "invoice_images": f"receipt_seed_{seq}.png",
+        "total_amount": ctx["amount_override"] or 1_800_000,
+        "tax_id": "0102030405",
+        "merchant": "Công ty Dịch vụ Văn phòng An Bình",
+    }
+
+
+def _p_salary_advance(ctx: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "title": f"Đề nghị tạm ứng lương đột xuất tháng 11 #{ctx['seq']}",
+        "amount_vnd": ctx["amount_override"] or 3_000_000,
+        "reason": "Có kế hoạch chi tiêu gia đình cần xử lý sớm trong tháng.",
+    }
+
+
+def _p_task(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    return {
+        "title": f"Giao việc rà soát quy trình nội bộ {dept} #{seq}",
+        "description": f"Tổng hợp các điểm tồn đọng và lập bảng theo dõi tiến độ cho {dept}.",
+        "due_date": (ctx["today"] + timedelta(days=7 + (seq % 10))).isoformat(),
+    }
+
+
+def _p_cross_dept(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    return {
+        "title": f"Đề nghị hỗ trợ đối soát liên phòng ban {ctx['dept']} #{seq}",
+        "target_department": "OPS",
+        "description": "Phối hợp kiểm tra chứng từ và cập nhật trạng thái hồ sơ giữa hai đơn vị.",
+        "due_date": (ctx["today"] + timedelta(days=8 + (seq % 10))).isoformat(),
+    }
+
+
+def _p_laptop(ctx: dict[str, Any]) -> dict[str, Any]:
+    dept = ctx["dept"]
+    return {
+        "title": f"Đề nghị cấp thiết bị làm việc chuyên dụng {dept}",
+        "specs_needed": "Laptop Core i5, RAM 16GB, SSD 512GB",
+        "position": f"Chuyên viên {dept}",
+        "location": "Văn phòng TP. Hồ Chí Minh",
+        "reason": "Bổ sung thiết bị làm việc phục vụ xử lý dữ liệu nghiệp vụ.",
+    }
+
+
+def _p_equipment_borrow(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    cat = _pick_option(ctx["pickers"], "EQUIPMENT_BORROW", "asset_category", "AV", seq)
+    d1 = ctx["today"] + timedelta(days=15 + (seq % 15))
+    return {
+        "title": f"Mượn thiết bị trình chiếu phục vụ hội thảo {ctx['dept']}",
+        "asset_category": cat,
+        "start_date": d1.isoformat(),
+        "end_date": (d1 + timedelta(days=1)).isoformat(),
+        "quantity": 1,
+        "reason": "Sử dụng cho buổi tập huấn quy trình vận hành phòng ban.",
+    }
+
+
+def _p_equipment(ctx: dict[str, Any]) -> dict[str, Any]:
+    dept = ctx["dept"]
+    return {
+        "title": f"Đề nghị trang bị thiết bị văn phòng {dept} #{ctx['seq']}",
+        "item_name": "Màn hình làm việc 27 inch chống lóa",
+        "quantity": 1,
+        "amount_vnd": 5_500_000,
+        "specs": "Độ phân giải 2K IPS, hỗ trợ USB-C và chân nâng hạ chuẩn công thái học",
+        "location": f"Khu vực làm việc {dept} tầng 5",
+        "reason": "Thay thế thiết bị đã hết khấu hao để đảm bảo tiến độ xử lý hồ sơ.",
+    }
+
+
+def _p_project(ctx: dict[str, Any]) -> dict[str, Any]:
+    d1 = ctx["today"] + timedelta(days=5)
+    return {
+        "title": f"Đề xuất khởi tạo sáng kiến cải tiến {ctx['dept']} #{ctx['seq']}",
+        "objective": "Tự động hóa đối soát chứng từ định kỳ và giảm thời gian xử lý thủ công.",
+        "amount_vnd": 15_000_000,
+        "start_date": d1.isoformat(),
+        "end_date": (d1 + timedelta(days=45)).isoformat(),
+    }
+
+
+def _p_contract(ctx: dict[str, Any]) -> dict[str, Any]:
+    seq = ctx["seq"]
+    dept = ctx["dept"]
+    return {
+        "title": f"Phê duyệt hợp đồng dịch vụ bảo trì {dept} #{seq}",
+        "contract_title": f"Hợp đồng cung cấp dịch vụ định kỳ {dept} 2026",
+        "partner": "Công ty Cổ phần Giải pháp Công nghệ Việt",
+        "amount_vnd": 18_000_000,
+        "purpose": "Đảm bảo hạ tầng vận hành ổn định và hỗ trợ kỹ thuật 24/7.",
+        "contract_reference": f"HDVT-{dept}-{seq:04d}",
+    }
+
+
+def _p_facility(ctx: dict[str, Any]) -> dict[str, Any]:
+    dept = ctx["dept"]
+    return {
+        "title": f"Đề xuất xử lý bảo trì sự cố văn phòng {dept} #{ctx['seq']}",
+        "location": f"Khu vực {dept} tầng 4",
+        "issue_type": "Thiết bị điện chiếu sáng và điều hòa văn phòng",
+        "photo_evidence": "photo_seed.png",
+        "urgency": "BINH_THUONG",
+    }
+
+
+_PAYLOAD_BUILDERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
+    "WFH_REQ": _p_wfh,
+    "EXPENSE_CLAIM": _p_expense_claim,
+    "LEAVE": _p_leave,
+    "LEAVE_SPECIAL": _p_leave_special,
+    "ATTENDANCE_ADJUSTMENT": _p_attendance,
+    "REFUND_COMPENSATION": _p_refund,
+    "SPECIAL_DISCOUNT": _p_discount,
+    "VISITOR_SECURITY_PASS": _p_visitor,
+    "ROOM_BOOKING": _p_room,
+    "ADVANCE_SMALL": _p_advance_small,
+    "BUSINESS_TRIP": _p_business_trip,
+    "IT_SUPPORT": _p_it_support,
+    "OFFICE_SUPPLIES": _p_office_supplies,
+    "OVERTIME_REQ": _p_overtime,
+    "HR_CERTIFICATE": _p_hr_cert,
+    "DOCUMENT_SEAL": _p_doc_seal,
+    "TRAINING_COURSE": _p_training,
+    "ACCESS": _p_access,
+    "REIMBURSEMENT": _p_reimbursement,
+    "SALARY_ADVANCE": _p_salary_advance,
+    "TASK_REQUEST": _p_task,
+    "CROSS_DEPT_SUPPORT": _p_cross_dept,
+    "LAPTOP_PROVISION": _p_laptop,
+    "EQUIPMENT_BORROW": _p_equipment_borrow,
+    "EQUIPMENT": _p_equipment,
+    "PROJECT_INITIATION": _p_project,
+    "CONTRACT_APPROVAL": _p_contract,
+    "FACILITY_REPAIR": _p_facility,
+}
 
 
 def _build_payload(
@@ -225,278 +620,21 @@ def _build_payload(
     amount_override: int | None = None,
     customer_name: str | None = None,
 ) -> dict[str, Any]:
-    today = datetime.now(VN_TZ).date()
-    dept = user["dept_code"]
-    name = user["display_name"]
     other_peers = [p for p in peers if p["id"] != user["id"]]
     handover = other_peers[seq % len(other_peers)]["id"] if other_peers else user["id"]
-
-    if type_code == "WFH_REQ":
-        d = today + timedelta(days=3 + (seq % 12))
-        return {
-            "title": f"Làm việc từ xa xử lý hồ sơ nghiệp vụ {dept} #{seq}",
-            "date": d.isoformat(),
-            "task_list": f"Hoàn thiện tài liệu và báo cáo nghiệp vụ {dept}",
-            "communication_channel": "Microsoft Teams & Email công ty",
-        }
-    if type_code == "EXPENSE_CLAIM":
-        cats = pickers.get("EXPENSE_CLAIM", {}).get("expense_category") or [
-            {"value": "OFFICE"}
-        ]
-        cat = cats[seq % len(cats)]["value"]
-        amt = amount_override or (1_200_000 + (seq % 5) * 400_000)
-        return {
-            "title": f"Thanh toán chi phí nghiệp vụ {dept} đợt {seq}",
-            "amount_vnd": amt,
-            "expense_category": cat,
-            "invoice_number": f"HD-SEED-{dept}-{seq:04d}",
-            "beneficiary_account": f"VCB 0123{seq:06d} - {name}",
-            "reason": f"Thanh toán chứng từ nghiệp vụ phát sinh của bộ phận {dept}.",
-        }
-    if type_code == "LEAVE":
-        start_off, dur = leave_window or (14 + (seq % 20), 1)
-        d1 = today + timedelta(days=start_off)
-        d2 = d1 + timedelta(days=max(0, dur - 1))
-        return {
-            "title": f"Đăng ký nghỉ phép kế hoạch {dept} - {name}",
-            "leave_kind": "CO_LUONG",
-            "start_date": d1.isoformat(),
-            "end_date": d2.isoformat(),
-            "handover_user_id": handover,
-            "reason": f"Nghỉ phép theo kế hoạch cá nhân và đã sắp xếp bàn giao tại {dept}.",
-        }
-    if type_code == "LEAVE_SPECIAL":
-        d1 = today + timedelta(days=18 + (seq % 10))
-        return {
-            "title": f"Nghỉ phép chế độ đặc biệt {dept} - {name}",
-            "special_leave_type": "KHAC",
-            "start_date": d1.isoformat(),
-            "end_date": d1.isoformat(),
-            "handover_user_id": handover,
-            "reason": "Giải quyết công việc gia đình theo chế độ nội bộ công ty.",
-        }
-    if type_code == "ATTENDANCE_ADJUSTMENT":
-        d1 = today - timedelta(days=2 + (seq % 12))
-        kinds = ("Đi muộn", "Về sớm", "Quên chấm công")
-        return {
-            "title": f"Điều chỉnh dữ liệu chấm công {dept} #{seq}",
-            "work_date": d1.isoformat(),
-            "change_type": kinds[seq % len(kinds)],
-            "reason": "Họp với đối tác bên ngoài trước giờ làm việc nên cần xác nhận công.",
-        }
-    if type_code == "REFUND_COMPENSATION":
-        amt = amount_override or (1_500_000 + (seq % 4) * 500_000)
-        return {
-            "title": f"Đề xuất hoàn tiền giao dịch khách hàng #{seq}",
-            "order_code": f"ORD-SEED-{dept}-{seq:04d}",
-            "amount_vnd": amt,
-            "customer_reference": f"KH-{dept}-{seq:04d}",
-            "reason": "Hoàn tiền chênh lệch dịch vụ theo biên bản đối soát khách hàng.",
-        }
-    if type_code == "SPECIAL_DISCOUNT":
-        cust = customer_name or NAMED_CUSTOMERS[seq % len(NAMED_CUSTOMERS)]
-        return {
-            "title": f"Phê duyệt chiết khấu hợp đồng {cust}",
-            "customer_name": cust,
-            "deal_value_vnd": 80_000_000,
-            "discount_percent": 5,
-            "amount_vnd": 4_000_000,
-            "reason": "Áp dụng mức chiết khấu chiến lược cho gói gia hạn hợp đồng năm.",
-        }
-    if type_code == "VISITOR_SECURITY_PASS":
-        d1 = today + timedelta(days=10 + (seq % 15))
-        return {
-            "title": f"Đăng ký thẻ an ninh tiếp đón đối tác {dept}",
-            "visitor_name": f"Nguyễn Văn Khách {seq}",
-            "visitor_org": "Công ty Đối tác Chiến lược Việt Nam",
-            "visit_date": d1.isoformat(),
-            "facility_zone": "Khu vực sảnh tiếp khách tầng 3",
-            "reason": "Đón đoàn đối tác sang trao đổi tiến độ triển khai dự án quý IV.",
-        }
-    if type_code == "ROOM_BOOKING":
-        rooms = pickers.get("ROOM_BOOKING", {}).get("room_code") or [
-            {"value": "MR-HCM-01"}
-        ]
-        room = rooms[seq % len(rooms)]["value"]
-        d1 = today + timedelta(days=12 + (seq % 35))
-        hour = 9 + (seq % 7)
-        return {
-            "title": f"Đặt phòng họp giao ban chuyên môn {dept} #{seq}",
-            "room_code": room,
-            "booking_date": d1.isoformat(),
-            "start_time": f"{hour:02d}:00",
-            "end_time": f"{hour + 1:02d}:00",
-            "attendees_count": 6,
-            "purpose": f"Họp rà soát tiến độ công việc định kỳ của phòng {dept}.",
-        }
-    if type_code == "ADVANCE_SMALL":
-        amt = amount_override or (4_500_000 + (seq % 4) * 500_000)
-        return {
-            "title": f"Tạm ứng chi phí triển khai {dept} đợt {seq}",
-            "amount": amt,
-            "currency": "VND",
-            "purpose": f"Tạm ứng mua sắm vật tư và chi phí tiếp khách của {dept}.",
-            "expected_refund_date": (today + timedelta(days=25)).isoformat(),
-        }
-    if type_code == "BUSINESS_TRIP":
-        d1 = today + timedelta(days=20 + (seq % 20))
-        d2 = d1 + timedelta(days=1)
-        return {
-            "title": f"Đăng ký công tác làm việc với chi nhánh #{seq}",
-            "destination": "Đà Nẵng",
-            "transportation": "MAY_BAY",
-            "start_date": d1.isoformat(),
-            "end_date": d2.isoformat(),
-            "amount_vnd": 4_200_000,
-            "reason": "Làm việc trực tiếp với khách hàng doanh nghiệp tại khu vực miền Trung.",
-        }
-    if type_code == "IT_SUPPORT":
-        return {
-            "title": f"Yêu cầu hỗ trợ cài đặt phần mềm {dept} #{seq}",
-            "support_category": "PHAN_MEM_OFFICE",
-            "urgency": "BINH_THUONG",
-            "device_asset_tag": f"LAP-{dept}-{seq:03d}",
-            "reason": "Cấp quyền và cài đặt bộ công cụ văn phòng phục vụ báo cáo quý.",
-        }
-    if type_code == "OFFICE_SUPPLIES":
-        return {
-            "title": f"Đề nghị cấp văn phòng phẩm định kỳ {dept}",
-            "items_list": "Giấy in A4, bút bi xanh, kẹp hồ sơ và sổ ghi chép",
-            "quantity": 10,
-            "department_id": user["department_id"],
-        }
-    if type_code == "OVERTIME_REQ":
-        return {
-            "title": f"Đăng ký làm thêm giờ hoàn tất bàn giao {dept}",
-            "work_date": (today + timedelta(days=1)).isoformat(),
-            "hours": 2,
-            "project_id": f"PRJ-{dept}-2026",
-            "deliverables": "Hoàn tất rà soát số liệu và tổng hợp báo cáo tuần.",
-        }
-    if type_code == "HR_CERTIFICATE":
-        return {
-            "title": f"Xin giấy xác nhận công tác tại {dept}",
-            "certificate_kind": "CONG_TAC",
-            "purpose": "Hoàn thiện hồ sơ cá nhân theo yêu cầu thủ tục hành chính.",
-        }
-    if type_code == "DOCUMENT_SEAL":
-        return {
-            "title": f"Đề nghị đóng dấu văn bản phối hợp {dept}",
-            "document_name": f"Biên bản xác nhận khối lượng {dept} số {seq}",
-            "copies": 2,
-            "reason": "Đóng dấu pháp nhân để gửi đối tác lưu trữ theo hợp đồng đã ký.",
-        }
-    if type_code == "TRAINING_COURSE":
-        d1 = today + timedelta(days=25 + (seq % 15))
-        return {
-            "title": f"Đăng ký khóa đào tạo chuyên môn {dept}",
-            "course_name": "Quản trị rủi ro & vận hành hệ thống doanh nghiệp",
-            "provider": "Học viện Quản trị Doanh nghiệp Việt Nam",
-            "start_date": d1.isoformat(),
-            "end_date": (d1 + timedelta(days=1)).isoformat(),
-            "amount_vnd": 2_500_000,
-            "reason": "Nâng cao kỹ năng kiểm soát quy trình và đánh giá nghiệp vụ.",
-        }
-    if type_code == "ACCESS":
-        apps = pickers.get("ACCESS", {}).get("app_code") or [{"value": "CRM"}]
-        roles_opt = pickers.get("ACCESS", {}).get("requested_role") or []
-        app_val = apps[seq % len(apps)]["value"]
-        matching_roles = [
-            r for r in roles_opt if r.get("app_code") == app_val
-        ] or roles_opt
-        role_val = matching_roles[0]["value"] if matching_roles else "CRM_SALES_REP"
-        return {
-            "title": f"Cấp quyền truy cập hệ thống {app_val} cho {dept}",
-            "app_code": app_val,
-            "requested_role": role_val,
-            "duration_days": 30,
-            "purpose": "Phục vụ tra cứu và đối soát số liệu công việc hằng ngày.",
-            "reason": "Cần quyền truy cập đọc báo cáo để phối hợp xử lý hồ sơ liên phòng ban.",
-        }
-    if type_code == "REIMBURSEMENT":
-        return {
-            "title": f"Quyết toán chi phí tiếp khách phòng {dept} #{seq}",
-            "invoice_images": f"receipt_seed_{seq}.png",
-            "total_amount": amount_override or 1_800_000,
-            "tax_id": "0102030405",
-            "merchant": "Công ty Dịch vụ Văn phòng An Bình",
-        }
-    if type_code == "SALARY_ADVANCE":
-        return {
-            "title": f"Đề nghị tạm ứng lương đột xuất tháng 11 #{seq}",
-            "amount_vnd": amount_override or 3_000_000,
-            "reason": "Có kế hoạch chi tiêu gia đình cần xử lý sớm trong tháng.",
-        }
-    if type_code == "TASK_REQUEST":
-        return {
-            "title": f"Giao việc rà soát quy trình nội bộ {dept} #{seq}",
-            "description": f"Tổng hợp các điểm tồn đọng và lập bảng theo dõi tiến độ cho {dept}.",
-            "due_date": (today + timedelta(days=7 + (seq % 10))).isoformat(),
-        }
-    if type_code == "CROSS_DEPT_SUPPORT":
-        return {
-            "title": f"Đề nghị hỗ trợ đối soát liên phòng ban {dept} #{seq}",
-            "target_department": "OPS",
-            "description": "Phối hợp kiểm tra chứng từ và cập nhật trạng thái hồ sơ giữa hai đơn vị.",
-            "due_date": (today + timedelta(days=8 + (seq % 10))).isoformat(),
-        }
-    if type_code == "LAPTOP_PROVISION":
-        return {
-            "title": f"Đề nghị cấp thiết bị làm việc chuyên dụng {dept}",
-            "specs_needed": "Laptop Core i5, RAM 16GB, SSD 512GB",
-            "position": f"Chuyên viên {dept}",
-            "location": "Văn phòng TP. Hồ Chí Minh",
-            "reason": "Bổ sung thiết bị làm việc phục vụ xử lý dữ liệu nghiệp vụ.",
-        }
-    if type_code == "EQUIPMENT_BORROW":
-        cats = pickers.get("EQUIPMENT_BORROW", {}).get("asset_category") or [
-            {"value": "AV"}
-        ]
-        cat = cats[seq % len(cats)]["value"]
-        d1 = today + timedelta(days=15 + (seq % 15))
-        return {
-            "title": f"Mượn thiết bị trình chiếu phục vụ hội thảo {dept}",
-            "asset_category": cat,
-            "start_date": d1.isoformat(),
-            "end_date": (d1 + timedelta(days=1)).isoformat(),
-            "quantity": 1,
-            "reason": "Sử dụng cho buổi tập huấn quy trình vận hành phòng ban.",
-        }
-    if type_code == "EQUIPMENT":
-        return {
-            "title": f"Đề nghị trang bị thiết bị văn phòng {dept} #{seq}",
-            "item_name": "Màn hình làm việc 27 inch chống lóa",
-            "quantity": 1,
-            "amount_vnd": 5_500_000,
-            "specs": "Độ phân giải 2K IPS, hỗ trợ USB-C và chân nâng hạ chuẩn công thái học",
-            "location": f"Khu vực làm việc {dept} tầng 5",
-            "reason": "Thay thế thiết bị đã hết khấu hao để đảm bảo tiến độ xử lý hồ sơ.",
-        }
-    if type_code == "PROJECT_INITIATION":
-        d1 = today + timedelta(days=5)
-        return {
-            "title": f"Đề xuất khởi tạo sáng kiến cải tiến {dept} #{seq}",
-            "objective": "Tự động hóa đối soát chứng từ định kỳ và giảm thời gian xử lý thủ công.",
-            "amount_vnd": 15_000_000,
-            "start_date": d1.isoformat(),
-            "end_date": (d1 + timedelta(days=45)).isoformat(),
-        }
-    if type_code == "CONTRACT_APPROVAL":
-        return {
-            "title": f"Phê duyệt hợp đồng dịch vụ bảo trì {dept} #{seq}",
-            "contract_title": f"Hợp đồng cung cấp dịch vụ định kỳ {dept} 2026",
-            "partner": "Công ty Cổ phần Giải pháp Công nghệ Việt",
-            "amount_vnd": 18_000_000,
-            "purpose": "Đảm bảo hạ tầng vận hành ổn định và hỗ trợ kỹ thuật 24/7.",
-            "contract_reference": f"HDVT-{dept}-{seq:04d}",
-        }
-    return {
-        "title": f"Đề xuất xử lý bảo trì sự cố văn phòng {dept} #{seq}",
-        "location": f"Khu vực {dept} tầng 4",
-        "issue_type": "Thiết bị điện chiếu sáng và điều hòa văn phòng",
-        "photo_evidence": "photo_seed.png",
-        "urgency": "BINH_THUONG",
+    ctx = {
+        "today": datetime.now(VN_TZ).date(),
+        "dept": user["dept_code"],
+        "name": user["display_name"],
+        "user": user,
+        "handover": handover,
+        "pickers": pickers,
+        "seq": seq,
+        "leave_window": leave_window,
+        "amount_override": amount_override,
+        "customer_name": customer_name,
     }
+    return _PAYLOAD_BUILDERS.get(type_code, _p_facility)(ctx)
 
 
 def _create_and_submit(
@@ -526,56 +664,47 @@ def _create_and_submit(
     return str(out_req["id"]), int(out_req["lock_version"]), str(out_req["status"])
 
 
-def _advance_workflow(
+def _reject_active_step(
     req_id: str,
-    version: int,
     status: str,
-    target_state: str,
+    version: int,
     actors_by_id: dict[str, Actor],
-) -> tuple[str, int, list[tuple[str, datetime]]]:
-    """Advance a submitted request cleanly using service layer to `target_state`.
+) -> tuple[str, int]:
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT s.assignee_id::text
+            FROM eas.approval_step s
+            JOIN eas.workflow_instance wi ON wi.id = s.instance_id
+            WHERE s.request_id = %s AND wi.state = 'ACTIVE' AND s.state = 'ACTIVE'
+            ORDER BY s.step_no LIMIT 1
+            """,
+            [req_id],
+        )
+        row = cur.fetchone()
+    if not row or row[0] not in actors_by_id:
+        return status, version
+    res = service.decide_approval(
+        actor=actors_by_id[row[0]],
+        request_id=req_id,
+        body={
+            "outcome": "REJECT",
+            "reason": "Chứng từ bổ sung chưa khớp kế hoạch ngân sách kỳ này.",
+            "expected_version": version,
+        },
+        idempotency_key=str(uuid4()),
+        correlation_id=str(uuid4()),
+    )
+    out_r = res.body["request"]
+    return str(out_r["status"]), int(out_r["lock_version"])
 
-    Supported `target_state`:
-      - 'PENDING_APPROVAL': stays at first active approval step.
-      - 'REJECTED': rejects at active approval step.
-      - 'IN_PROGRESS': approves all steps, then starts execution (Types B/C).
-      - 'WAITING_FOR_ACCEPTANCE': approves all steps, starts & submits execution (Type C).
-      - 'COMPLETED': drives all the way to terminal COMPLETED.
-    """
-    lifecycle_events: list[tuple[str, datetime]] = []
-    if target_state == "PENDING_APPROVAL":
-        return status, version, lifecycle_events
 
-    if target_state == "REJECTED":
-        with connection.cursor() as cur:
-            cur.execute(
-                """
-                SELECT s.assignee_id::text
-                FROM eas.approval_step s
-                JOIN eas.workflow_instance wi ON wi.id = s.instance_id
-                WHERE s.request_id = %s AND wi.state = 'ACTIVE' AND s.state = 'ACTIVE'
-                ORDER BY s.step_no LIMIT 1
-                """,
-                [req_id],
-            )
-            row = cur.fetchone()
-        if row and row[0] in actors_by_id:
-            res = service.decide_approval(
-                actor=actors_by_id[row[0]],
-                request_id=req_id,
-                body={
-                    "outcome": "REJECT",
-                    "reason": "Chứng từ bổ sung chưa khớp kế hoạch ngân sách kỳ này.",
-                    "expected_version": version,
-                },
-                idempotency_key=str(uuid4()),
-                correlation_id=str(uuid4()),
-            )
-            out_r = res.body["request"]
-            return str(out_r["status"]), int(out_r["lock_version"]), lifecycle_events
-        return status, version, lifecycle_events
-
-    # Approve step-by-step while PENDING_APPROVAL
+def _approve_all_steps(
+    req_id: str,
+    status: str,
+    version: int,
+    actors_by_id: dict[str, Actor],
+) -> tuple[str, int]:
     for _ in range(8):
         with connection.cursor() as cur:
             cur.execute(
@@ -591,7 +720,6 @@ def _advance_workflow(
             row = cur.fetchone()
         if not row or row[0] != "PENDING_APPROVAL" or not row[2]:
             break
-        version = int(row[1])
         approver = actors_by_id.get(row[2])
         if not approver:
             break
@@ -601,7 +729,7 @@ def _advance_workflow(
             body={
                 "outcome": "APPROVE",
                 "reason": "Đã kiểm tra đầy đủ thông tin, đồng ý phê duyệt theo quy định.",
-                "expected_version": version,
+                "expected_version": int(row[1]),
             },
             idempotency_key=str(uuid4()),
             correlation_id=str(uuid4()),
@@ -611,11 +739,18 @@ def _advance_workflow(
         version = int(out_r["lock_version"])
         if status != "PENDING_APPROVAL":
             break
+    return status, version
 
+
+def _run_execution_phase(
+    req_id: str,
+    status: str,
+    version: int,
+    target_state: str,
+    actors_by_id: dict[str, Actor],
+) -> tuple[str, int]:
     if status != "READY_FOR_EXECUTION":
-        return status, version, lifecycle_events
-
-    # Execution phase (Type B or Type C)
+        return status, version
     with connection.cursor() as cur:
         cur.execute(
             """
@@ -629,7 +764,7 @@ def _advance_workflow(
         )
         ex_row = cur.fetchone()
     if not ex_row or ex_row[0] not in actors_by_id:
-        return status, version, lifecycle_events
+        return status, version
     executor = actors_by_id[ex_row[0]]
     start_res = service.start_execution(
         actor=executor,
@@ -640,9 +775,8 @@ def _advance_workflow(
     )
     status = str(start_res.body["request"]["status"])
     version = int(start_res.body["request"]["lock_version"])
-
     if target_state == "IN_PROGRESS":
-        return status, version, lifecycle_events
+        return status, version
 
     attachments.register_execution_evidence(
         actor=executor,
@@ -662,13 +796,18 @@ def _advance_workflow(
         idempotency_key=str(uuid4()),
         correlation_id=str(uuid4()),
     )
-    status = str(sub_res.body["request"]["status"])
-    version = int(sub_res.body["request"]["lock_version"])
+    out_r = sub_res.body["request"]
+    return str(out_r["status"]), int(out_r["lock_version"])
 
-    if target_state == "WAITING_FOR_ACCEPTANCE" or status != "WAITING_FOR_ACCEPTANCE":
-        return status, version, lifecycle_events
 
-    # Acceptance phase (Type C)
+def _run_acceptance_phase(
+    req_id: str,
+    status: str,
+    version: int,
+    actors_by_id: dict[str, Actor],
+) -> tuple[str, int]:
+    if status != "WAITING_FOR_ACCEPTANCE":
+        return status, version
     with connection.cursor() as cur:
         cur.execute(
             """
@@ -681,10 +820,9 @@ def _advance_workflow(
         )
         acc_row = cur.fetchone()
     if not acc_row or acc_row[0] not in actors_by_id:
-        return status, version, lifecycle_events
-    acceptor = actors_by_id[acc_row[0]]
+        return status, version
     acc_res = service.decide_acceptance(
-        actor=acceptor,
+        actor=actors_by_id[acc_row[0]],
         request_id=req_id,
         body={
             "outcome": "ACCEPT",
@@ -694,9 +832,30 @@ def _advance_workflow(
         idempotency_key=str(uuid4()),
         correlation_id=str(uuid4()),
     )
-    status = str(acc_res.body["request"]["status"])
-    version = int(acc_res.body["request"]["lock_version"])
-    return status, version, lifecycle_events
+    out_r = acc_res.body["request"]
+    return str(out_r["status"]), int(out_r["lock_version"])
+
+
+def _advance_workflow(
+    req_id: str,
+    version: int,
+    status: str,
+    target_state: str,
+    actors_by_id: dict[str, Actor],
+) -> tuple[str, int]:
+    """Advance a submitted request cleanly through service layer to `target_state`."""
+    if target_state == "PENDING_APPROVAL":
+        return status, version
+    if target_state == "REJECTED":
+        return _reject_active_step(req_id, status, version, actors_by_id)
+
+    status, version = _approve_all_steps(req_id, status, version, actors_by_id)
+    status, version = _run_execution_phase(
+        req_id, status, version, target_state, actors_by_id
+    )
+    if target_state == "WAITING_FOR_ACCEPTANCE":
+        return status, version
+    return _run_acceptance_phase(req_id, status, version, actors_by_id)
 
 
 def _apply_oracle_adjustments(
@@ -823,7 +982,7 @@ def _compute_history_timing(
     off_hours_cohort_ids: set[str],
 ) -> tuple[datetime, int | None]:
     is_reserved = uid in reserved_ids
-    is_open = status in ("PENDING_APPROVAL", "IN_PROGRESS", "WAITING_FOR_ACCEPTANCE")
+    is_open = status in OPEN_STATUSES
     due_hours: int | None = None
 
     if is_reserved and tcode in (
@@ -883,11 +1042,7 @@ def _reconcile_recent_requests(
     for idx, (rid, uid, tcode, status) in enumerate(rows):
         u_i = per_user_idx[uid]
         per_user_idx[uid] += 1
-        is_open = status in (
-            "PENDING_APPROVAL",
-            "IN_PROGRESS",
-            "WAITING_FOR_ACCEPTANCE",
-        )
+        is_open = status in OPEN_STATUSES
         eff_i = u_i if is_open else per_user_non_open_idx[uid]
         if not is_open:
             per_user_non_open_idx[uid] += 1
@@ -915,12 +1070,273 @@ def _reconcile_recent_requests(
     }
 
 
-def main() -> int:
+def _plan_user_lifecycles(info: dict[str, Any], idx: int) -> list[str]:
+    target_total = 5 + (idx % 3)  # 5, 6, or 7
+    need_more = max(0, target_total - info["total"])
+    missing_lcs = [lc for lc in ("A", "B", "C") if lc not in info["lifecycles"]]
+    if need_more == 0 and not missing_lcs:
+        return []
+
+    if info["total"] == 0:
+        planned = ["A", "A", "B", "B", "C"]
+        even = idx % 2 == 0
+        if target_total >= 6:
+            planned.append("A" if even else "C")
+        if target_total >= 7:
+            planned.append("B" if even else "C")
+        return planned
+
+    planned = list(missing_lcs)
+    goal = max(need_more, len(missing_lcs))
+    for lc in ("C", "B", "A"):
+        if len(planned) >= goal:
+            break
+        if lc not in planned:
+            planned.append(lc)
+    while len(planned) < need_more:
+        planned.append(("A", "B", "C")[len(planned) % 3])
+    return planned
+
+
+def _select_type_pools(
+    user: dict[str, Any],
+    *,
+    is_reserved: bool,
+    team_peak_ids: set[str],
+    split_cohort_ids: set[str],
+) -> dict[str, list[str]]:
+    uid = user["id"]
+    is_ceo = user["manager_id"] is None
+
+    a_pool = list(TYPE_A_POOL)
+    b_pool = list(TYPE_B_POOL)
+    c_pool = list(TYPE_C_POOL)
+
+    if is_ceo:
+        a_pool = ["EXPENSE_CLAIM", "SPECIAL_DISCOUNT", "LEAVE_SPECIAL"]
+        b_pool = [
+            "HR_CERTIFICATE",
+            "TRAINING_COURSE",
+            "DOCUMENT_SEAL",
+            "ADVANCE_SMALL",
+            "BUSINESS_TRIP",
+        ]
+        c_pool = [
+            "CONTRACT_APPROVAL",
+            "CROSS_DEPT_SUPPORT",
+            "EQUIPMENT_BORROW",
+            "FACILITY_REPAIR",
+        ]
+        return {"A": a_pool, "B": b_pool, "C": c_pool}
+
+    if is_reserved:
+        a_pool = [
+            "ROOM_BOOKING",
+            "VISITOR_SECURITY_PASS",
+            "WFH_REQ",
+            "EXPENSE_CLAIM",
+            "ATTENDANCE_ADJUSTMENT",
+            "SPECIAL_DISCOUNT",
+            "REFUND_COMPENSATION",
+            "LEAVE",
+        ]
+    elif uid in team_peak_ids:
+        a_pool = [
+            "LEAVE",
+            "EXPENSE_CLAIM",
+            "VISITOR_SECURITY_PASS",
+            "WFH_REQ",
+            "ROOM_BOOKING",
+            "SPECIAL_DISCOUNT",
+        ]
+    elif uid in split_cohort_ids:
+        a_pool = [
+            "EXPENSE_CLAIM",
+            "REFUND_COMPENSATION",
+            "SPECIAL_DISCOUNT",
+            "WFH_REQ",
+            "LEAVE",
+            "ROOM_BOOKING",
+        ]
+        b_pool = [
+            "ADVANCE_SMALL",
+            "IT_SUPPORT",
+            "OFFICE_SUPPLIES",
+            "TRAINING_COURSE",
+            "DOCUMENT_SEAL",
+            "OVERTIME_REQ",
+        ]
+
+    return {"A": a_pool, "B": b_pool, "C": c_pool}
+
+
+def _candidate_types(pool: list[str], lc: str, used_types: set[str]) -> list[str]:
+    candidates = [t for t in pool if t not in used_types]
+    if candidates:
+        return candidates
+    full = FULL_POOLS[lc]
+    unused_full = [t for t in full if t not in used_types]
+    return unused_full or list(full)
+
+
+def _leave_window_for(
+    tcode: str,
+    uid: str,
+    seq_counter: int,
+    *,
+    is_reserved: bool,
+    team_peak_ids: set[str],
+) -> tuple[int, int] | None:
+    if tcode != "LEAVE":
+        return None
+    if uid in team_peak_ids:
+        return (5, 2)
+    if not is_reserved:
+        return (3 + (seq_counter % 3), 1)
+    return None
+
+
+def _amount_override_for(
+    tcode: str, uid: str, split_cohort_ids: set[str]
+) -> int | None:
+    if uid not in split_cohort_ids:
+        return None
+    if tcode in ("EXPENSE_CLAIM", "ADVANCE_SMALL"):
+        return 8_500_000
+    if tcode == "REFUND_COMPENSATION":
+        return 2_000_000
+    return None
+
+
+def _choose_open_target(lc: str, seq_counter: int) -> tuple[str, int | None]:
+    if lc == "A" and seq_counter % 3 == 0:
+        return "PENDING_APPROVAL", 8 + (seq_counter % 12)
+    if lc == "B" and seq_counter % 4 == 0:
+        return "IN_PROGRESS", 10 + (seq_counter % 10)
+    if lc == "C" and seq_counter % 4 == 0:
+        return "WAITING_FOR_ACCEPTANCE", 10 + (seq_counter % 10)
+    return "COMPLETED", None
+
+
+def _choose_target_state(
+    *,
+    lc: str,
+    tcode: str,
+    item_i: int,
+    seq_counter: int,
+    is_reserved: bool,
+    user: dict[str, Any],
+    reserved_ids: set[str],
+    open_budget: int,
+) -> tuple[str, int | None, int]:
+    if (
+        not is_reserved
+        and item_i == 1
+        and tcode == "REFUND_COMPENSATION"
+        and seq_counter % 4 == 0
+    ):
+        return "REJECTED", None, open_budget
+
+    can_stay_open = (
+        not is_reserved
+        and user["manager_id"] not in reserved_ids
+        and open_budget > 0
+        and tcode not in ("LEAVE", "LEAVE_SPECIAL", "ROOM_BOOKING")
+    )
+    if can_stay_open:
+        state, due_hours = _choose_open_target(lc, seq_counter)
+        if due_hours is not None:
+            return state, due_hours, open_budget - 1
+
+    return "COMPLETED", None, open_budget
+
+
+def _try_place_request(
+    *,
+    user: dict[str, Any],
+    lc: str,
+    item_i: int,
+    pool: list[str],
+    used_types: set[str],
+    peers: list[dict[str, Any]],
+    pickers: dict[str, Any],
+    actors_by_id: dict[str, Actor],
+    cohorts: tuple[set[str], set[str], set[str], set[str]],
+    seq_counter: int,
+    open_budget: int,
+    stats: dict[str, Any],
+    oracle_adjustments: list[dict[str, Any]],
+) -> tuple[int, int]:
+    reserved_ids, team_peak_ids, split_cohort_ids, off_hours_cohort_ids = cohorts
+    uid = user["id"]
+    is_reserved = uid in reserved_ids
+
+    for tcode in _candidate_types(pool, lc, used_types):
+        seq_counter += 1
+        payload = _build_payload(
+            tcode,
+            user,
+            peers,
+            pickers,
+            seq=seq_counter,
+            leave_window=_leave_window_for(
+                tcode,
+                uid,
+                seq_counter,
+                is_reserved=is_reserved,
+                team_peak_ids=team_peak_ids,
+            ),
+            amount_override=_amount_override_for(tcode, uid, split_cohort_ids),
+        )
+        target_state, due_hours, next_budget = _choose_target_state(
+            lc=lc,
+            tcode=tcode,
+            item_i=item_i,
+            seq_counter=seq_counter,
+            is_reserved=is_reserved,
+            user=user,
+            reserved_ids=reserved_ids,
+            open_budget=open_budget,
+        )
+        try:
+            req_id, ver, init_status = _create_and_submit(user["actor"], tcode, payload)
+            fin_status, _ver = _advance_workflow(
+                req_id, ver, init_status, target_state, actors_by_id
+            )
+        except (OSError, ValueError) as exc:
+            stats["errors"].append(f"{user['email']} {tcode}: {exc}")
+            continue
+
+        open_budget = next_budget
+        ts, computed_due = _compute_history_timing(
+            uid=uid,
+            tcode=tcode,
+            status=fin_status,
+            item_i=item_i,
+            slot=seq_counter,
+            reserved_ids=reserved_ids,
+            split_cohort_ids=split_cohort_ids,
+            off_hours_cohort_ids=off_hours_cohort_ids,
+        )
+        final_due = due_hours if due_hours is not None else computed_due
+        oracle_adjustments.append(
+            {"request_id": req_id, "ts": ts, "due_hours": final_due}
+        )
+        used_types.add(tcode)
+        stats["created_total"] += 1
+        stats["by_lifecycle"][lc] += 1
+        stats["by_status"][fin_status] += 1
+        return seq_counter, open_budget
+
+    stats["errors"].append(f"{user['email']} FAILED lifecycle={lc}")
+    return seq_counter, open_budget
+
+
+def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--oracle-dsn", default=os.environ.get("EAS_LOCAL_SUPERUSER_DSN", "")
     )
-    ap.add_argument("--json", default="")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--reconcile-recent-minutes", type=int, default=0)
     args = ap.parse_args()
@@ -931,9 +1347,8 @@ def main() -> int:
         )
 
     actors_by_id, requesters, by_dept = _load_actors()
-    reserved_ids, team_peak_ids, split_cohort_ids, off_hours_cohort_ids = (
-        _build_cohorts(requesters)
-    )
+    cohorts = _build_cohorts(requesters)
+    reserved_ids, team_peak_ids, split_cohort_ids, off_hours_cohort_ids = cohorts
 
     if args.reconcile_recent_minutes > 0:
         if args.dry_run:
@@ -945,16 +1360,12 @@ def main() -> int:
             split_cohort_ids,
             off_hours_cohort_ids,
         )
-        out_json = json.dumps(rec_stats, ensure_ascii=False, indent=2)
-        print(out_json)
-        if args.json:
-            Path(args.json).write_text(out_json, encoding="utf-8")
-        return 0
+        print(json.dumps(rec_stats, ensure_ascii=False, indent=2))
+        return
 
     existing = _load_existing_per_user()
     pickers = _load_pickers()
-
-    stats = {
+    stats: dict[str, Any] = {
         "total_requesters": len(requesters),
         "reserved_clean": len(reserved_ids),
         "created_total": 0,
@@ -969,231 +1380,44 @@ def main() -> int:
     for idx, user in enumerate(requesters):
         uid = user["id"]
         info = existing[uid]
-        target_total = 5 + (idx % 3)  # 5, 6, or 7
-        need_more = max(0, target_total - info["total"])
-        missing_lcs = [lc for lc in ("A", "B", "C") if lc not in info["lifecycles"]]
-        if need_more == 0 and not missing_lcs:
+        planned_lcs = _plan_user_lifecycles(info, idx)
+        if not planned_lcs:
             continue
-
-        # Decide exact lifecycle mix for this user's new requests
-        planned_lcs: list[str] = list(missing_lcs)
-        if info["total"] == 0:
-            # Fresh user: strictly guarantee >= 2 A, >= 2 B, >= 1 C (up to 7 total)
-            planned_lcs = ["A", "A", "B", "B", "C"]
-            if target_total >= 6:
-                planned_lcs.append("A" if idx % 2 == 0 else "C")
-            if target_total >= 7:
-                planned_lcs.append("B" if idx % 2 == 0 else "C")
-        else:
-            for lc in ("C", "B", "A"):
-                if len(planned_lcs) >= max(need_more, len(missing_lcs)):
-                    break
-                if lc not in planned_lcs:
-                    planned_lcs.append(lc)
-            while len(planned_lcs) < need_more:
-                planned_lcs.append(("A", "B", "C")[len(planned_lcs) % 3])
-
-        is_reserved = uid in reserved_ids
-        is_ceo = user["manager_id"] is None
-        used_types = set(info["types"])
-        peers = by_dept[user["dept_code"]]
-
-        # Build prioritized distinct type pools for each lifecycle
-        a_pool = list(TYPE_A_POOL)
-        if is_ceo:
-            a_pool = ["EXPENSE_CLAIM", "SPECIAL_DISCOUNT", "LEAVE_SPECIAL"]
-        elif is_reserved:
-            a_pool = [
-                "ROOM_BOOKING",
-                "VISITOR_SECURITY_PASS",
-                "WFH_REQ",
-                "EXPENSE_CLAIM",
-                "ATTENDANCE_ADJUSTMENT",
-                "SPECIAL_DISCOUNT",
-                "REFUND_COMPENSATION",
-                "LEAVE",
-            ]
-        elif uid in team_peak_ids:
-            a_pool = [
-                "LEAVE",
-                "EXPENSE_CLAIM",
-                "VISITOR_SECURITY_PASS",
-                "WFH_REQ",
-                "ROOM_BOOKING",
-                "SPECIAL_DISCOUNT",
-            ]
-        elif uid in split_cohort_ids:
-            a_pool = [
-                "EXPENSE_CLAIM",
-                "REFUND_COMPENSATION",
-                "SPECIAL_DISCOUNT",
-                "WFH_REQ",
-                "LEAVE",
-                "ROOM_BOOKING",
-            ]
-
-        b_pool = list(TYPE_B_POOL)
-        if is_ceo:
-            b_pool = [
-                "HR_CERTIFICATE",
-                "TRAINING_COURSE",
-                "DOCUMENT_SEAL",
-                "ADVANCE_SMALL",
-                "BUSINESS_TRIP",
-            ]
-        elif uid in split_cohort_ids:
-            b_pool = [
-                "ADVANCE_SMALL",
-                "IT_SUPPORT",
-                "OFFICE_SUPPLIES",
-                "TRAINING_COURSE",
-                "DOCUMENT_SEAL",
-                "OVERTIME_REQ",
-            ]
-
-        c_pool = list(TYPE_C_POOL)
-        if is_ceo:
-            c_pool = [
-                "CONTRACT_APPROVAL",
-                "CROSS_DEPT_SUPPORT",
-                "EQUIPMENT_BORROW",
-                "FACILITY_REPAIR",
-            ]
-
         if args.dry_run:
             stats["created_total"] += len(planned_lcs)
             continue
 
+        used_types = set(info["types"])
+        peers = by_dept[user["dept_code"]]
+        pools = _select_type_pools(
+            user,
+            is_reserved=uid in reserved_ids,
+            team_peak_ids=team_peak_ids,
+            split_cohort_ids=split_cohort_ids,
+        )
         for item_i, lc in enumerate(planned_lcs):
-            pool = a_pool if lc == "A" else (b_pool if lc == "B" else c_pool)
-            candidates = [t for t in pool if t not in used_types]
-            if not candidates:
-                full = (
-                    TYPE_A_POOL
-                    if lc == "A"
-                    else (TYPE_B_POOL if lc == "B" else TYPE_C_POOL)
-                )
-                candidates = [t for t in full if t not in used_types] or list(full)
-
-            placed = False
-            for tcode in candidates:
-                seq_counter += 1
-                leave_win = (
-                    (5, 2)
-                    if (tcode == "LEAVE" and uid in team_peak_ids)
-                    else (
-                        (3 + (seq_counter % 3), 1)
-                        if tcode == "LEAVE" and not is_reserved
-                        else None
-                    )
-                )
-                amt_override = None
-                if (
-                    uid in split_cohort_ids
-                    and tcode == "EXPENSE_CLAIM"
-                    or uid in split_cohort_ids
-                    and tcode == "ADVANCE_SMALL"
-                ):
-                    amt_override = 8_500_000
-                elif uid in split_cohort_ids and tcode == "REFUND_COMPENSATION":
-                    amt_override = 2_000_000
-
-                payload = _build_payload(
-                    tcode,
-                    user,
-                    peers,
-                    pickers,
-                    seq=seq_counter,
-                    leave_window=leave_win,
-                    amount_override=amt_override,
-                )
-
-                # Choose desired workflow target status
-                target_state = "COMPLETED"
-                due_hours: int | None = None
-                if (
-                    not is_reserved
-                    and item_i == 1
-                    and tcode == "REFUND_COMPENSATION"
-                    and seq_counter % 4 == 0
-                ):
-                    target_state = "REJECTED"
-                elif (
-                    not is_reserved
-                    and user["manager_id"] not in reserved_ids
-                    and open_deadline_budget > 0
-                    and tcode not in ("LEAVE", "LEAVE_SPECIAL", "ROOM_BOOKING")
-                ):
-                    if lc == "A" and seq_counter % 3 == 0:
-                        target_state = "PENDING_APPROVAL"
-                        due_hours = 8 + (seq_counter % 12)
-                        open_deadline_budget -= 1
-                    elif lc == "B" and seq_counter % 4 == 0:
-                        target_state = "IN_PROGRESS"
-                        due_hours = 10 + (seq_counter % 10)
-                        open_deadline_budget -= 1
-                    elif lc == "C" and seq_counter % 4 == 0:
-                        target_state = "WAITING_FOR_ACCEPTANCE"
-                        due_hours = 10 + (seq_counter % 10)
-                        open_deadline_budget -= 1
-
-                try:
-                    req_id, ver, init_status = _create_and_submit(
-                        user["actor"], tcode, payload
-                    )
-                    fin_status, _ver, _ = _advance_workflow(
-                        req_id, ver, init_status, target_state, actors_by_id
-                    )
-                except (
-                    CommandError,
-                    RoutingError,
-                    PayloadValidationError,
-                    OSError,
-                    ValueError,
-                ) as exc:
-                    stats["errors"].append(f"{user['email']} {tcode}: {exc}")
-                    continue
-
-                ts, computed_due = _compute_history_timing(
-                    uid=uid,
-                    tcode=tcode,
-                    status=fin_status,
-                    item_i=item_i,
-                    slot=seq_counter,
-                    reserved_ids=reserved_ids,
-                    split_cohort_ids=split_cohort_ids,
-                    off_hours_cohort_ids=off_hours_cohort_ids,
-                )
-
-                oracle_adjustments.append(
-                    {
-                        "request_id": req_id,
-                        "ts": ts,
-                        "due_hours": due_hours
-                        if due_hours is not None
-                        else computed_due,
-                    }
-                )
-                used_types.add(tcode)
-                stats["created_total"] += 1
-                stats["by_lifecycle"][lc] += 1
-                stats["by_status"][fin_status] += 1
-                placed = True
-                break
-
-            if not placed:
-                stats["errors"].append(f"{user['email']} FAILED lifecycle={lc}")
+            seq_counter, open_deadline_budget = _try_place_request(
+                user=user,
+                lc=lc,
+                item_i=item_i,
+                pool=pools[lc],
+                used_types=used_types,
+                peers=peers,
+                pickers=pickers,
+                actors_by_id=actors_by_id,
+                cohorts=cohorts,
+                seq_counter=seq_counter,
+                open_budget=open_deadline_budget,
+                stats=stats,
+                oracle_adjustments=oracle_adjustments,
+            )
 
     if not args.dry_run and oracle_adjustments:
         _apply_oracle_adjustments(args.oracle_dsn, oracle_adjustments)
 
     stats["by_status"] = dict(stats["by_status"])
-    out_json = json.dumps(stats, ensure_ascii=False, indent=2)
-    print(out_json)
-    if args.json:
-        Path(args.json).write_text(out_json, encoding="utf-8")
-    return 0
+    print(json.dumps(stats, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
