@@ -5305,3 +5305,17 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
   overflow-wrap: anywhere;
 }
 .reg-use-code { margin: var(--ds-space-2) 0 0; }
+
+/* Mẫu nạp nhanh quy định + quyết định giữ/bỏ điều cũ + cập nhật lớn (20/11). */
+.reg-quick { margin: 0 0 var(--ds-space-3); padding: var(--ds-space-3); border: 1px dashed var(--ds-primary); border-radius: var(--ds-radius-sm); background: var(--ds-primary-soft); }
+.reg-quick legend { padding: 0 6px; font-weight: 700; color: var(--ds-primary); }
+.reg-quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--ds-space-2) var(--ds-space-3); }
+.reg-quick-grid label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+.reg-quick-preview { margin: var(--ds-space-2) 0; padding: var(--ds-space-2) var(--ds-space-3); border-radius: var(--ds-radius-sm); background: var(--ds-surface); font-style: italic; overflow-wrap: anywhere; }
+.reg-decision { margin: var(--ds-space-2) 0 0; padding: var(--ds-space-2) var(--ds-space-3); border-radius: var(--ds-radius-sm); background: var(--ds-surface); border-left: 3px solid var(--ds-primary); font-size: 13px; line-height: 1.5; }
+.reg-decision.keep { border-left-color: var(--ds-warning); }
+.reg-decision-choice { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; }
+.reg-decision-choice label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.reg-decision-choice input { width: auto; }
+.reg-big-update { display: flex; align-items: center; gap: 8px; margin: var(--ds-space-2) 0; font-size: 13px; }
+.reg-big-update input { width: auto; }

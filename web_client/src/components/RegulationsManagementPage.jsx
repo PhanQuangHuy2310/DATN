@@ -5,6 +5,7 @@ import { api, peekResource, rememberResource } from "../api.js";
 import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
 import { freeCode } from "../regulationCode.js";
+import RegulationQuickBuilder from "./RegulationQuickBuilder.jsx";
 import AiLearningPanel from "./AiLearningPanel.jsx";
 import { RegulationCheckList, RejectedRegulations, SupersededNotes } from "./RegulationCheck.jsx";
 
@@ -17,7 +18,14 @@ const CATEGORIES = [
   "Quy định chung",
 ];
 
-export function RegulationsManagementPage() {
+export /** Phiên bản sau khi ban hành: thường chỉ tăng số sau (1.0 -> 1.1), "cập nhật lớn" tăng số đầu (2.0). */
+function versionLabel(aiState, big) {
+  const major = aiState?.global_major_version || 1;
+  const minor = aiState?.global_minor_version || 0;
+  return big ? `v${major + 1}.0` : `v${major}.${minor + 1}`;
+}
+
+function RegulationsManagementPage() {
   const apiBase = useApiBase();
   // Buttons follow the rights the admin granted on module "regulations".
   const { canCreate, canUpdate, canDelete } = usePermission("regulations");
@@ -51,6 +59,16 @@ export function RegulationsManagementPage() {
   const [rejectedVersion, setRejectedVersion] = useState(0);
   // Mã còn trống do máy chủ tính (không theo số phiên bản: v1.0 từng gợi ý REG-002 đã có -> 409 mọi lần).
   const [nextCode, setNextCode] = useState(() => peekResource(`${apiBase}/regulations`)?.next_code || "");
+  // Mẫu nạp nhanh cần tên loại đúng như AI nhận ra; "cập nhật lớn" mới tăng số đầu (migration 27).
+  const [requestTypes, setRequestTypes] = useState(() => peekResource(`${apiBase}/regulations`)?.request_types || []);
+  const [bigUpdate, setBigUpdate] = useState(false);
+  // Giữ / bỏ điều cũ bị văn bản mới đè lên: mặc định theo đề xuất của AI, admin đổi được.
+  const [decisions, setDecisions] = useState({});
+  const appendClause = (clause, typeName) => {
+    setFormContent((prev) => (prev.trim() ? `${prev.trim()}\n${clause}` : clause));
+    setFormTitle((prev) => prev || `Quy định ${typeName}`);
+    setCheck(null);
+  };
 
   const loadData = async (silent = false) => {
     try {
@@ -58,6 +76,9 @@ export function RegulationsManagementPage() {
       setRegulations(res.regulations || []);
       setAiState(res.ai_state || {});
       setNextCode(res.next_code || "");
+      // Form mở trước khi danh sách tải xong (máy chậm): điền mã còn trống ngay khi có, không đoán từ danh sách rỗng.
+      if (res.next_code) setFormCode((prev) => prev || res.next_code);
+      setRequestTypes(res.request_types || []);
     } catch (err) {
       if (!silent) showToast("Không thể tải danh sách quy định: " + errorText(err), "error");
     } finally {
@@ -83,12 +104,14 @@ export function RegulationsManagementPage() {
   }, [relearning, aiState]);
 
   const openCreateModal = () => {
-    setFormCode(nextCode || freeCode(regulations));
+    setFormCode(nextCode || (regulations.length ? freeCode(regulations) : ""));
     setFormTitle("");
     setFormCategory("Thời gian & Nghỉ phép");
     setFormContent("");
     setFormSummary("");
     setCheck(null);
+    setBigUpdate(false);
+    setDecisions({});
     setShowCreateModal(true);
   };
 
@@ -99,6 +122,8 @@ export function RegulationsManagementPage() {
     setFormCategory(reg.category || "Quy định chung");
     setFormContent(reg.content || "");
     setFormSummary("");
+    setBigUpdate(false);
+    setDecisions({});
     // Văn bản đang hiệu lực mà có lỗi (nạp trước khi có bước kiểm tra): hiện ngay lỗi để sửa.
     setCheck(reg.issues?.length ? { errors: reg.issues, warnings: [] } : null);
   };
@@ -178,6 +203,8 @@ export function RegulationsManagementPage() {
           title: formTitle.trim(),
           category: formCategory,
           content: formContent.trim(),
+          big_update: bigUpdate,
+          supersede_decisions: decisions,
         }),
       });
       showToast(
@@ -212,6 +239,8 @@ export function RegulationsManagementPage() {
           category: formCategory,
           content: formContent.trim(),
           change_summary: formSummary.trim(),
+          big_update: bigUpdate,
+          supersede_decisions: decisions,
         }),
       });
       showToast(
@@ -444,7 +473,7 @@ export function RegulationsManagementPage() {
                       <button
                         type="button"
                         className="btn-action btn-edit"
-                        title="Chỉnh sửa (Tăng Minor Version)"
+                        title="Chỉnh sửa (tăng số sau dấu chấm)"
                         onClick={() => openEditModal(reg)}
                       >
                         ✎ Sửa
@@ -454,7 +483,7 @@ export function RegulationsManagementPage() {
                       <button
                         type="button"
                         className="btn-action btn-delete"
-                        title="Xóa quy định (Tăng Major Version)"
+                        title="Gỡ quy định (tăng số sau dấu chấm)"
                         onClick={() => setDeletingRegulation(reg)}
                       >
                         ✕ Xóa
@@ -495,10 +524,10 @@ export function RegulationsManagementPage() {
         <div className="notice-body">
           <ul>
             <li>
-              <strong>Sửa nội dung điều khoản hiện có:</strong> Tự động tăng <strong>Phiên bản nhỏ (Minor Version)</strong> (Ví dụ: từ <code>{activeVersion}</code> lên <code>v{aiState?.global_major_version || 1}.{(aiState?.global_minor_version || 0) + 1}</code>).
+              <strong>Mọi thay đổi (thêm, sửa, gỡ):</strong> chỉ tăng số sau dấu chấm (ví dụ từ <code>{activeVersion}</code> lên <code>{versionLabel(aiState, false)}</code>).
             </li>
             <li>
-              <strong>Thêm mới hoặc Xóa điều khoản:</strong> Tự động tăng <strong>Phiên bản lớn (Major Version)</strong> (Ví dụ: từ <code>{activeVersion}</code> lên <code>v{(aiState?.global_major_version || 1) + 1}.0</code>).
+              <strong>Cập nhật lớn:</strong> chỉ khi admin tích "Cập nhật lớn" mới tăng số đầu (ví dụ lên <code>{versionLabel(aiState, true)}</code>).
             </li>
             <li>
               <strong>Tự động học AI:</strong> Mọi thao tác Thêm / Sửa / Xóa đều kích hoạt luồng đồng bộ sang AI Service và tạm khóa Web Client trong ít giây cho tới khi hoàn tất.
@@ -526,7 +555,7 @@ export function RegulationsManagementPage() {
               <div className="version-bump-alert major">
                 <span className="alert-icon">⚡</span>
                 <div className="alert-text">
-                  <strong>Thao tác này sẽ tăng Major Version:</strong> Hệ thống sẽ nâng phiên bản từ <strong>{activeVersion}</strong> lên <strong>v{(aiState?.global_major_version || 1) + 1}.0</strong> và đẩy AI Service học lại.
+                  <strong>Phiên bản:</strong> từ <strong>{activeVersion}</strong> lên <strong>{versionLabel(aiState, bigUpdate)}</strong> và AI học lại.
                 </div>
               </div>
 
@@ -569,6 +598,8 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
+              <RegulationQuickBuilder types={requestTypes} content={formContent} onAppend={appendClause} />
+
               <div className="form-group">
                 <label htmlFor="regulationsmanagementpage-field-430">Nội dung chi tiết điều khoản:</label>
                 <textarea id="regulationsmanagementpage-field-430"
@@ -581,7 +612,15 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
-              <RegulationCheckList check={check} />
+              <RegulationCheckList
+                check={check}
+                decisions={decisions}
+                onDecide={(key, value) => setDecisions((prev) => ({ ...prev, [key]: value }))}
+              />
+              <label className="reg-big-update">
+                <input type="checkbox" checked={bigUpdate} onChange={(e) => setBigUpdate(e.target.checked)} />
+                Cập nhật lớn (tăng số đầu: {versionLabel(aiState, true)}); bỏ trống thì chỉ tăng số sau ({versionLabel(aiState, false)})
+              </label>
               {check?.suggested_code && check.suggested_code !== formCode.trim().toUpperCase() && (
                 <button
                   type="button"
@@ -607,7 +646,7 @@ export function RegulationsManagementPage() {
                   Hủy bỏ
                 </button>
                 <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? "Đang lưu & Huấn luyện AI..." : "Ban hành & Huấn luyện AI (v" + ((aiState?.global_major_version || 1) + 1) + ".0)"}
+                  {submitting ? "Đang lưu & Huấn luyện AI..." : `Ban hành & Huấn luyện AI (${versionLabel(aiState, bigUpdate)})`}
                 </button>
               </div>
             </form>
@@ -634,7 +673,7 @@ export function RegulationsManagementPage() {
               <div className="version-bump-alert minor">
                 <span className="alert-icon">📝</span>
                 <div className="alert-text">
-                  <strong>Thao tác chỉnh sửa sẽ tăng Minor Version:</strong> Hệ thống sẽ nâng phiên bản từ <strong>{activeVersion}</strong> lên <strong>v{aiState?.global_major_version || 1}.{(aiState?.global_minor_version || 0) + 1}</strong>.
+                  <strong>Phiên bản:</strong> từ <strong>{activeVersion}</strong> lên <strong>{versionLabel(aiState, bigUpdate)}</strong> và AI học lại.
                 </div>
               </div>
 
@@ -675,6 +714,8 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
+              <RegulationQuickBuilder types={requestTypes} content={formContent} onAppend={appendClause} />
+
               <div className="form-group">
                 <label htmlFor="regulationsmanagementpage-field-519">Nội dung chi tiết điều khoản:</label>
                 <textarea id="regulationsmanagementpage-field-519"
@@ -697,7 +738,15 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
-              <RegulationCheckList check={check} />
+              <RegulationCheckList
+                check={check}
+                decisions={decisions}
+                onDecide={(key, value) => setDecisions((prev) => ({ ...prev, [key]: value }))}
+              />
+              <label className="reg-big-update">
+                <input type="checkbox" checked={bigUpdate} onChange={(e) => setBigUpdate(e.target.checked)} />
+                Cập nhật lớn (tăng số đầu: {versionLabel(aiState, true)}); bỏ trống thì chỉ tăng số sau ({versionLabel(aiState, false)})
+              </label>
 
               <div className="eas-modal-actions">
                 <button type="button" className="btn-secondary" onClick={runCheck} disabled={checking || submitting}>
@@ -713,7 +762,7 @@ export function RegulationsManagementPage() {
                 <button type="submit" className="btn-primary" disabled={submitting}>
                   {submitting
                     ? "Đang lưu & Huấn luyện AI..."
-                    : `Cập nhật & Huấn luyện AI (v${aiState?.global_major_version || 1}.${(aiState?.global_minor_version || 0) + 1})`}
+                    : `Cập nhật & Huấn luyện AI (${versionLabel(aiState, bigUpdate)})`}
                 </button>
               </div>
             </form>
@@ -740,7 +789,7 @@ export function RegulationsManagementPage() {
               <div className="version-bump-alert major">
                 <span className="alert-icon">🚨</span>
                 <div className="alert-text">
-                  <strong>Xóa điều khoản sẽ tăng Major Version:</strong> Nâng phiên bản hệ thống lên <strong>v{(aiState?.global_major_version || 1) + 1}.0</strong> và đẩy AI Service học lại.
+                  <strong>Gỡ quy định:</strong> nâng phiên bản hệ thống lên <strong>{versionLabel(aiState, false)}</strong> và AI học lại.
                 </div>
               </div>
 

@@ -18,15 +18,36 @@ const KIND_TEXT = {
 };
 const ACTION_TEXT = { CREATE: "Thêm mới", UPDATE: "Sửa", DELETE: "Bãi bỏ" };
 
-function Issue({ item }) {
+function Issue({ item, decision, onDecide }) {
+  const choice = decision || item.recommendation;
   return (
     <li className={`reg-check-item ${item.severity === "ERROR" ? "error" : item.severity === "INFO" ? "info" : "warning"}`}>
-      <span className="reg-check-badge">{KIND_TEXT[item.kind] || item.kind}</span>
+      <span className="reg-check-badge">
+        {item.kind === "SUPERSEDES" && choice === "KEEP" ? "Giữ điều cũ" : KIND_TEXT[item.kind] || item.kind}
+      </span>
       {item.article && <strong> {item.article}: </strong>} {item.message}
       {item.sentence && <blockquote className="ai-citation-quote">{item.sentence}</blockquote>}
+      {item.recommendation && (
+        <div className={`reg-decision ${choice === "KEEP" ? "keep" : "drop"}`}>
+          <strong>AI đề xuất: {item.recommendation === "KEEP" ? "GIỮ điều cũ" : "BỎ / thu hẹp điều cũ"}.</strong>{" "}
+          {item.reason}
+          {onDecide && item.key && (
+            <span className="reg-decision-choice">
+              <label>
+                <input type="radio" name={`d-${item.key}`} checked={choice === "KEEP"}
+                  onChange={() => onDecide(item.key, "KEEP")} /> Giữ điều cũ
+              </label>
+              <label>
+                <input type="radio" name={`d-${item.key}`} checked={choice === "DROP"}
+                  onChange={() => onDecide(item.key, "DROP")} /> Bỏ điều cũ (văn bản mới thắng)
+              </label>
+            </span>
+          )}
+        </div>
+      )}
       {item.related?.sentence && (
         <p className="muted">
-          {item.kind === "SUPERSEDES" ? "Điều cũ bị thay" : item.kind === "RELAXES" ? "Điều cũ bắt người duyệt" : "Chồng với"} {item.related.article || "một điều"}
+          {item.kind === "SUPERSEDES" ? (choice === "KEEP" ? "Điều cũ (giữ nguyên)" : "Điều cũ bị thay") : item.kind === "RELAXES" ? "Điều cũ bắt người duyệt" : "Chồng với"} {item.related.article || "một điều"}
           {item.related.code ? ` của ${item.related.code}` : ""}: “{item.related.sentence}”
         </p>
       )}
@@ -35,11 +56,13 @@ function Issue({ item }) {
 }
 
 /** Kết quả AI đọc văn bản quy định: lỗi chặn (đỏ) và cảnh báo (vàng), chỉ rõ từng câu. */
-export function RegulationCheckList({ check }) {
+export function RegulationCheckList({ check, decisions = {}, onDecide }) {
   if (!check) return null;
   const errors = check.errors || [];
   const warnings = check.warnings || [];
   const supersedes = check.supersedes || [];
+  const replaced = supersedes.filter((x) => (decisions[x.key] || x.recommendation || "DROP") !== "KEEP").length;
+  const kept = supersedes.length - replaced;
   return (
     <section className="reg-check" aria-label="AI kiểm tra văn bản quy định" role="status">
       <p className={errors.length ? "reg-check-head error" : "reg-check-head ok"}>
@@ -47,7 +70,8 @@ export function RegulationCheckList({ check }) {
           ? `AI phát hiện ${errors.length} lỗi, cần sửa trước khi ban hành.`
           : `AI không thấy lỗi chặn${check.rules != null ? ` · hiểu được ${check.rules} luật duyệt` : ""}.`}
         {warnings.length ? ` ${warnings.length} lưu ý.` : ""}
-        {supersedes.length ? ` Sẽ thay thế ${supersedes.length} điều của quy định cũ.` : ""}
+        {replaced ? ` Sẽ thay thế ${replaced} điều của quy định cũ.` : ""}
+        {kept ? ` Giữ nguyên ${kept} điều cũ.` : ""}
       </p>
       {(errors.length > 0 || warnings.length > 0 || supersedes.length > 0) && (
         <ul className="reg-check-list">
@@ -55,7 +79,7 @@ export function RegulationCheckList({ check }) {
             <Issue key={`e${i}`} item={e} />
           ))}
           {supersedes.map((x, i) => (
-            <Issue key={`s${i}`} item={x} />
+            <Issue key={`s${i}`} item={x} decision={decisions[x.key]} onDecide={onDecide} />
           ))}
           {warnings.map((w, i) => (
             <Issue key={`w${i}`} item={w} />
