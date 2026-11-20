@@ -4,6 +4,8 @@ import { usePermission } from "../hooks/usePermission.jsx";
 import { api, peekResource, rememberResource } from "../api.js";
 import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
+import { freeCode } from "../regulationCode.js";
+import RegulationQuickBuilder from "./RegulationQuickBuilder.jsx";
 import AiLearningPanel from "./AiLearningPanel.jsx";
 import { RegulationCheckList, RejectedRegulations, SupersededNotes } from "./RegulationCheck.jsx";
 
@@ -16,7 +18,14 @@ const CATEGORIES = [
   "Quy định chung",
 ];
 
-export function RegulationsManagementPage() {
+export /** Phiên bản sau khi ban hành: thường chỉ tăng số sau (1.0 -> 1.1), "cập nhật lớn" tăng số đầu (2.0). */
+function versionLabel(aiState, big) {
+  const major = aiState?.global_major_version || 1;
+  const minor = aiState?.global_minor_version || 0;
+  return big ? `v${major + 1}.0` : `v${major}.${minor + 1}`;
+}
+
+function RegulationsManagementPage() {
   const apiBase = useApiBase();
   // Buttons follow the rights the admin granted on module "regulations".
   const { canCreate, canUpdate, canDelete } = usePermission("regulations");
@@ -48,12 +57,28 @@ export function RegulationsManagementPage() {
   const [check, setCheck] = useState(null);
   const [checking, setChecking] = useState(false);
   const [rejectedVersion, setRejectedVersion] = useState(0);
+  // Mã còn trống do máy chủ tính (không theo số phiên bản: v1.0 từng gợi ý REG-002 đã có -> 409 mọi lần).
+  const [nextCode, setNextCode] = useState(() => peekResource(`${apiBase}/regulations`)?.next_code || "");
+  // Mẫu nạp nhanh cần tên loại đúng như AI nhận ra; "cập nhật lớn" mới tăng số đầu (migration 27).
+  const [requestTypes, setRequestTypes] = useState(() => peekResource(`${apiBase}/regulations`)?.request_types || []);
+  const [bigUpdate, setBigUpdate] = useState(false);
+  // Giữ / bỏ điều cũ bị văn bản mới đè lên: mặc định theo đề xuất của AI, admin đổi được.
+  const [decisions, setDecisions] = useState({});
+  const appendClause = (clause, typeName) => {
+    setFormContent((prev) => (prev.trim() ? `${prev.trim()}\n${clause}` : clause));
+    setFormTitle((prev) => prev || `Quy định ${typeName}`);
+    setCheck(null);
+  };
 
   const loadData = async (silent = false) => {
     try {
       const res = rememberResource(`${apiBase}/regulations`, await api(`${apiBase}/regulations`));
       setRegulations(res.regulations || []);
       setAiState(res.ai_state || {});
+      setNextCode(res.next_code || "");
+      // Form mở trước khi danh sách tải xong (máy chậm): điền mã còn trống ngay khi có, không đoán từ danh sách rỗng.
+      if (res.next_code) setFormCode((prev) => prev || res.next_code);
+      setRequestTypes(res.request_types || []);
     } catch (err) {
       if (!silent) showToast("Không thể tải danh sách quy định: " + errorText(err), "error");
     } finally {
@@ -79,13 +104,14 @@ export function RegulationsManagementPage() {
   }, [relearning, aiState]);
 
   const openCreateModal = () => {
-    const nextMajor = (aiState?.global_major_version || 1) + 1;
-    setFormCode(`REG-${String(nextMajor).padStart(3, "0")}`);
+    setFormCode(nextCode || (regulations.length ? freeCode(regulations) : ""));
     setFormTitle("");
     setFormCategory("Thời gian & Nghỉ phép");
     setFormContent("");
     setFormSummary("");
     setCheck(null);
+    setBigUpdate(false);
+    setDecisions({});
     setShowCreateModal(true);
   };
 
@@ -96,7 +122,10 @@ export function RegulationsManagementPage() {
     setFormCategory(reg.category || "Quy định chung");
     setFormContent(reg.content || "");
     setFormSummary("");
-    setCheck(null);
+    setBigUpdate(false);
+    setDecisions({});
+    // Văn bản đang hiệu lực mà có lỗi (nạp trước khi có bước kiểm tra): hiện ngay lỗi để sửa.
+    setCheck(reg.issues?.length ? { errors: reg.issues, warnings: [] } : null);
   };
 
   const runCheck = async () => {
@@ -109,9 +138,20 @@ export function RegulationsManagementPage() {
       const res = await api(`${apiBase}/regulations/validate`, {
         method: "POST",
         silent: true,
-        body: JSON.stringify({ code: formCode.trim(), title: formTitle.trim(), category: formCategory, content: formContent.trim() }),
+        body: JSON.stringify({
+          code: formCode.trim(),
+          title: formTitle.trim(),
+          category: formCategory,
+          content: formContent.trim(),
+          creating: !editingRegulation,
+        }),
       });
       setCheck(res.validation);
+      if (res.validation?.errors?.length) {
+        requestAnimationFrame(() =>
+          document.querySelector(".reg-check-item.error")?.scrollIntoView({ block: "center", behavior: "smooth" }),
+        );
+      }
     } catch (err) {
       showToast("AI chưa kiểm tra được văn bản: " + errorText(err), "error");
     } finally {
@@ -124,6 +164,10 @@ export function RegulationsManagementPage() {
     if (err?.body?.validation) {
       setCheck(err.body.validation);
       showToast(err.serverMessage || "AI phát hiện lỗi trong văn bản; xem danh sách bên dưới", "error");
+      // The list can be long (supersede notes): bring the first blocking error into view.
+      requestAnimationFrame(() =>
+        document.querySelector(".reg-check-item.error")?.scrollIntoView({ block: "center", behavior: "smooth" }),
+      );
       return true;
     }
     return false;
@@ -149,13 +193,18 @@ export function RegulationsManagementPage() {
     }
     setSubmitting(true);
     try {
+      // silent: this page reports the exact result itself (the generic "Không thể thực hiện thao tác" hid the
+      // validation errors that block publishing).
       const res = await api(`${apiBase}/regulations`, {
         method: "POST",
+        silent: true,
         body: JSON.stringify({
           code: formCode.trim(),
           title: formTitle.trim(),
           category: formCategory,
           content: formContent.trim(),
+          big_update: bigUpdate,
+          supersede_decisions: decisions,
         }),
       });
       showToast(
@@ -184,11 +233,14 @@ export function RegulationsManagementPage() {
     try {
       const res = await api(`${apiBase}/regulations/${editingRegulation.id}`, {
         method: "PATCH",
+        silent: true,
         body: JSON.stringify({
           title: formTitle.trim(),
           category: formCategory,
           content: formContent.trim(),
           change_summary: formSummary.trim(),
+          big_update: bigUpdate,
+          supersede_decisions: decisions,
         }),
       });
       showToast(
@@ -213,6 +265,7 @@ export function RegulationsManagementPage() {
     try {
       const res = await api(`${apiBase}/regulations/${deletingRegulation.id}`, {
         method: "DELETE",
+        silent: true,
       });
       showToast(res.message || "Đã gỡ bỏ quy định và nâng phiên bản lớn!", "success");
       setDeletingRegulation(null);
@@ -369,6 +422,21 @@ export function RegulationsManagementPage() {
         <RejectedRegulations apiBase={apiBase} onRevise={reviseRejected} version={rejectedVersion} />
       )}
 
+      {regulations.some((r) => r.issues?.length) && (
+        <section className="reg-issues-banner" role="alert">
+          <strong>
+            {regulations.filter((r) => r.issues?.length).length} quy định đang hiệu lực có lỗi AI phát hiện
+          </strong>{" "}
+          (thường do nạp trước khi có bước kiểm tra, hoặc nhập thẳng CSDL):{" "}
+          {regulations
+            .filter((r) => r.issues?.length)
+            .map((r) => r.code)
+            .join(", ")}
+          . Bấm <em>Sửa</em> trên thẻ để xem lỗi và sửa; văn bản lỗi ký tự không sinh luật nào, văn bản mâu thuẫn thì
+          hồ sơ khớp cả hai điều luôn do người duyệt.
+        </section>
+      )}
+
       {/* Regulations Table / Grid */}
       <div className="regulations-table-container">
         {loading ? (
@@ -384,7 +452,7 @@ export function RegulationsManagementPage() {
         ) : (
           <div className="regulations-list">
             {filteredRegulations.map((reg) => (
-              <div key={reg.id} className="regulation-card">
+              <div key={reg.id} className={`regulation-card${reg.issues?.length ? " has-issues" : ""}`}>
                 <div className="regulation-card-header">
                   <div className="regulation-code-tag">
                     <span className="reg-code">{reg.code}</span>
@@ -405,7 +473,7 @@ export function RegulationsManagementPage() {
                       <button
                         type="button"
                         className="btn-action btn-edit"
-                        title="Chỉnh sửa (Tăng Minor Version)"
+                        title="Chỉnh sửa (tăng số sau dấu chấm)"
                         onClick={() => openEditModal(reg)}
                       >
                         ✎ Sửa
@@ -415,7 +483,7 @@ export function RegulationsManagementPage() {
                       <button
                         type="button"
                         className="btn-action btn-delete"
-                        title="Xóa quy định (Tăng Major Version)"
+                        title="Gỡ quy định (tăng số sau dấu chấm)"
                         onClick={() => setDeletingRegulation(reg)}
                       >
                         ✕ Xóa
@@ -428,6 +496,15 @@ export function RegulationsManagementPage() {
                 <p className="regulation-card-content">{reg.content}</p>
 
                 <div className="regulation-card-footer">
+                  {reg.issues?.length > 0 && (
+                    <p className="reg-card-issue">
+                      <span className="reg-check-badge">
+                        {reg.issues[0].kind === "GARBLED" ? "Lỗi ký tự" : reg.issues[0].kind === "CONTRADICTION" ? "Mâu thuẫn" : "Lỗi"}
+                      </span>{" "}
+                      {reg.issues[0].message}
+                      {reg.issues.length > 1 ? ` (và ${reg.issues.length - 1} lỗi khác)` : ""}
+                    </p>
+                  )}
                   <span className="reg-updated-at">
                     🕒 Cập nhật: {reg.updated_at ? new Date(reg.updated_at).toLocaleString("vi-VN") : "Ban đầu"}
                   </span>
@@ -447,10 +524,10 @@ export function RegulationsManagementPage() {
         <div className="notice-body">
           <ul>
             <li>
-              <strong>Sửa nội dung điều khoản hiện có:</strong> Tự động tăng <strong>Phiên bản nhỏ (Minor Version)</strong> (Ví dụ: từ <code>{activeVersion}</code> lên <code>v{aiState?.global_major_version || 1}.{(aiState?.global_minor_version || 0) + 1}</code>).
+              <strong>Mọi thay đổi (thêm, sửa, gỡ):</strong> chỉ tăng số sau dấu chấm (ví dụ từ <code>{activeVersion}</code> lên <code>{versionLabel(aiState, false)}</code>).
             </li>
             <li>
-              <strong>Thêm mới hoặc Xóa điều khoản:</strong> Tự động tăng <strong>Phiên bản lớn (Major Version)</strong> (Ví dụ: từ <code>{activeVersion}</code> lên <code>v{(aiState?.global_major_version || 1) + 1}.0</code>).
+              <strong>Cập nhật lớn:</strong> chỉ khi admin tích "Cập nhật lớn" mới tăng số đầu (ví dụ lên <code>{versionLabel(aiState, true)}</code>).
             </li>
             <li>
               <strong>Tự động học AI:</strong> Mọi thao tác Thêm / Sửa / Xóa đều kích hoạt luồng đồng bộ sang AI Service và tạm khóa Web Client trong ít giây cho tới khi hoàn tất.
@@ -478,7 +555,7 @@ export function RegulationsManagementPage() {
               <div className="version-bump-alert major">
                 <span className="alert-icon">⚡</span>
                 <div className="alert-text">
-                  <strong>Thao tác này sẽ tăng Major Version:</strong> Hệ thống sẽ nâng phiên bản từ <strong>{activeVersion}</strong> lên <strong>v{(aiState?.global_major_version || 1) + 1}.0</strong> và đẩy AI Service học lại.
+                  <strong>Phiên bản:</strong> từ <strong>{activeVersion}</strong> lên <strong>{versionLabel(aiState, bigUpdate)}</strong> và AI học lại.
                 </div>
               </div>
 
@@ -521,6 +598,8 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
+              <RegulationQuickBuilder types={requestTypes} content={formContent} onAppend={appendClause} />
+
               <div className="form-group">
                 <label htmlFor="regulationsmanagementpage-field-430">Nội dung chi tiết điều khoản:</label>
                 <textarea id="regulationsmanagementpage-field-430"
@@ -533,7 +612,27 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
-              <RegulationCheckList check={check} />
+              <RegulationCheckList
+                check={check}
+                decisions={decisions}
+                onDecide={(key, value) => setDecisions((prev) => ({ ...prev, [key]: value }))}
+              />
+              <label className="reg-big-update">
+                <input type="checkbox" checked={bigUpdate} onChange={(e) => setBigUpdate(e.target.checked)} />
+                Cập nhật lớn (tăng số đầu: {versionLabel(aiState, true)}); bỏ trống thì chỉ tăng số sau ({versionLabel(aiState, false)})
+              </label>
+              {check?.suggested_code && check.suggested_code !== formCode.trim().toUpperCase() && (
+                <button
+                  type="button"
+                  className="btn-secondary reg-use-code"
+                  onClick={() => {
+                    setFormCode(check.suggested_code);
+                    setCheck(null);
+                  }}
+                >
+                  Dùng mã còn trống {check.suggested_code}
+                </button>
+              )}
 
               <div className="eas-modal-actions">
                 <button type="button" className="btn-secondary" onClick={runCheck} disabled={checking || submitting}>
@@ -547,7 +646,7 @@ export function RegulationsManagementPage() {
                   Hủy bỏ
                 </button>
                 <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? "Đang lưu & Huấn luyện AI..." : "Ban hành & Huấn luyện AI (v" + ((aiState?.global_major_version || 1) + 1) + ".0)"}
+                  {submitting ? "Đang lưu & Huấn luyện AI..." : `Ban hành & Huấn luyện AI (${versionLabel(aiState, bigUpdate)})`}
                 </button>
               </div>
             </form>
@@ -574,7 +673,7 @@ export function RegulationsManagementPage() {
               <div className="version-bump-alert minor">
                 <span className="alert-icon">📝</span>
                 <div className="alert-text">
-                  <strong>Thao tác chỉnh sửa sẽ tăng Minor Version:</strong> Hệ thống sẽ nâng phiên bản từ <strong>{activeVersion}</strong> lên <strong>v{aiState?.global_major_version || 1}.{(aiState?.global_minor_version || 0) + 1}</strong>.
+                  <strong>Phiên bản:</strong> từ <strong>{activeVersion}</strong> lên <strong>{versionLabel(aiState, bigUpdate)}</strong> và AI học lại.
                 </div>
               </div>
 
@@ -615,6 +714,8 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
+              <RegulationQuickBuilder types={requestTypes} content={formContent} onAppend={appendClause} />
+
               <div className="form-group">
                 <label htmlFor="regulationsmanagementpage-field-519">Nội dung chi tiết điều khoản:</label>
                 <textarea id="regulationsmanagementpage-field-519"
@@ -637,7 +738,15 @@ export function RegulationsManagementPage() {
                 />
               </div>
 
-              <RegulationCheckList check={check} />
+              <RegulationCheckList
+                check={check}
+                decisions={decisions}
+                onDecide={(key, value) => setDecisions((prev) => ({ ...prev, [key]: value }))}
+              />
+              <label className="reg-big-update">
+                <input type="checkbox" checked={bigUpdate} onChange={(e) => setBigUpdate(e.target.checked)} />
+                Cập nhật lớn (tăng số đầu: {versionLabel(aiState, true)}); bỏ trống thì chỉ tăng số sau ({versionLabel(aiState, false)})
+              </label>
 
               <div className="eas-modal-actions">
                 <button type="button" className="btn-secondary" onClick={runCheck} disabled={checking || submitting}>
@@ -653,7 +762,7 @@ export function RegulationsManagementPage() {
                 <button type="submit" className="btn-primary" disabled={submitting}>
                   {submitting
                     ? "Đang lưu & Huấn luyện AI..."
-                    : `Cập nhật & Huấn luyện AI (v${aiState?.global_major_version || 1}.${(aiState?.global_minor_version || 0) + 1})`}
+                    : `Cập nhật & Huấn luyện AI (${versionLabel(aiState, bigUpdate)})`}
                 </button>
               </div>
             </form>
@@ -680,7 +789,7 @@ export function RegulationsManagementPage() {
               <div className="version-bump-alert major">
                 <span className="alert-icon">🚨</span>
                 <div className="alert-text">
-                  <strong>Xóa điều khoản sẽ tăng Major Version:</strong> Nâng phiên bản hệ thống lên <strong>v{(aiState?.global_major_version || 1) + 1}.0</strong> và đẩy AI Service học lại.
+                  <strong>Gỡ quy định:</strong> nâng phiên bản hệ thống lên <strong>{versionLabel(aiState, false)}</strong> và AI học lại.
                 </div>
               </div>
 

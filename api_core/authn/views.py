@@ -129,6 +129,19 @@ def _check_maintenance_login(
     return None, m_payload
 
 
+def _record_login(user_id: str) -> None:
+    """Lần đăng nhập trước / gần nhất (migration 27): thông báo quy định chỉ hiện bản tạo sau lần đăng nhập trước."""
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE eas.app_user SET previous_login_at = last_login_at, last_login_at = statement_timestamp() "
+                "WHERE id = %s",
+                [user_id],
+            )
+    except DatabaseError:
+        logger.info("login timestamps unavailable (migration 27 not applied)")
+
+
 def _establish_user_session(request: HttpRequest, user) -> None:
     request.session.flush()
     request.session.cycle_key()
@@ -260,6 +273,7 @@ def login(request: HttpRequest) -> JsonResponse:
 
     clear_account_failures(cache, keys)
     _establish_user_session(request, user)
+    _record_login(user.id)
 
     payload = {
         "user": _login_user_payload(user),

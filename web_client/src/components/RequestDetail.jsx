@@ -5,7 +5,7 @@ import { EscalationBanner, RemediationPanel } from "./AiEscalation.jsx";
 import { AiAdviceCard, AiAssessmentPanel, ProgressSummary } from "./RequestProgress.jsx";
 import { DetailSkeleton, EmptyState, PageTabs, WorkflowTimeline } from "./design.jsx";
 import { requestActionPayload } from "../actionPayload.js";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, API_BASE } from "../api.js";
 import {
   date,
@@ -556,6 +556,24 @@ export default function RequestDetail({
   const uploadedEvidence = useRef("");
   const r = resource.data?.request,
     p = r ? permissions(user, r) : {};
+  // Hồ sơ luồng A vừa gửi: AI đánh giá sau vài giây (tự duyệt hoặc chuyển quy trình). Tự làm mới tối đa 60 giây
+  // để người xem không phải bấm "Làm mới hồ sơ".
+  const [aiWaitDeadline] = useState(() => Date.now() + 60_000);
+  const [aiWaitOver, setAiWaitOver] = useState(false);
+  // ai_pending: máy chủ còn sự kiện chờ AI xử lý (API cũ không có trường này thì đoán theo luồng A chưa chuyển).
+  const awaitingAi = Boolean(
+    r && r.status === "PENDING_APPROVAL" &&
+      ("ai_pending" in r ? r.ai_pending : r.workflow?.lifecycle === "A" && !r.ai_escalation),
+  );
+  const reload = resource.reload;
+  useEffect(() => {
+    if (!awaitingAi || aiWaitOver) return undefined;
+    const timer = setTimeout(() => {
+      if (Date.now() < aiWaitDeadline) reload();
+      else setAiWaitOver(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [awaitingAi, aiWaitOver, aiWaitDeadline, reload, resource.data]);
 
   async function done() {
     setAction(null);
@@ -648,6 +666,11 @@ export default function RequestDetail({
               <Badge value={r.status} />
             </div>
             <ProgressSummary progress={r.progress} />
+            {awaitingAi && !aiWaitOver && (
+              <p className="muted ai-wait-note" role="status">
+                AI đang đánh giá hồ sơ (tự duyệt hoặc chuyển cho người duyệt)… trang sẽ tự cập nhật.
+              </p>
+            )}
             <EscalationBanner escalation={r.ai_escalation} requestId={id} onChanged={resource.reload} />
             {r.ai_escalation?.pending_remediations > 0 && (
               <RemediationPanel requestId={id} onDone={resource.reload} />

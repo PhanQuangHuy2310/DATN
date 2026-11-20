@@ -34,7 +34,7 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
 
   const [leaveModalUser, setLeaveModalUser] = useState(null);
   const [leaveType, setLeaveType] = useState("BUSINESS_TRIP");
-  const [leaveReason, setLeaveReason] = useState("Công tác khách hàng ngoại tỉnh");
+  const [leaveReason, setLeaveReason] = useState("");
   const [leaveSubmitting, setLeaveSubmitting] = useState(false);
 
   const [editUserModal, setEditUserModal] = useState(null);
@@ -469,9 +469,9 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
                             onClick={() => {
                               setLeaveModalUser(u);
                               setLeaveType("BUSINESS_TRIP");
-                              setLeaveReason("Công tác đối tác ngoại tỉnh");
+                              setLeaveReason("");
                             }}
-                            title="Cập nhật đơn nghỉ / công tác (Đổi trạng thái tức thì)"
+                            title="Cập nhật trạng thái làm việc (công tác, nghỉ, đi muộn, về sớm)"
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -672,55 +672,60 @@ export default function UserManagementPage({ onNavigateOrgChart }) {
       {/* MODAL 2: Quick Leave / Trip Update */}
       {leaveModalUser && (
         <div className="modal-backdrop" role="presentation" onClick={(e) => e.target === e.currentTarget && setLeaveModalUser(null)} onKeyDown={(e) => e.key === "Escape" && setLeaveModalUser(null)}>
-          <div className="modal-card" role="dialog" aria-modal="true" style={{ maxWidth: "520px" }}>
+          <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="work-status-title" style={{ maxWidth: "520px" }}>
             <div className="modal-head">
-              <h2>Cập nhật trạng thái làm việc</h2>
-              <button type="button" className="secondary ds-icon-button" onClick={() => setLeaveModalUser(null)}>
+              <h2 id="work-status-title">Cập nhật trạng thái làm việc</h2>
+              <button type="button" className="secondary ds-icon-button" aria-label="Đóng" onClick={() => setLeaveModalUser(null)}>
                 ✕
               </button>
             </div>
-            <p className="muted" style={{ marginTop: "0.25rem", marginBottom: "1rem" }}>
+            <p className="muted" style={{ marginTop: "0.25rem", marginBottom: "0.5rem" }}>
               Nhân viên: <strong>{leaveModalUser.full_name}</strong> ({leaveModalUser.email})
+            </p>
+            <p className="work-status-note">
+              Có hiệu lực ngay, kéo dài khoảng 8 giờ tới, không qua quy trình phê duyệt và được ghi vào nhật ký kiểm toán.
             </p>
 
             <div className="form-group">
-              <label htmlFor="usermanagementpage-field-648">Loại hình đăng ký (Được duyệt ngay để kiểm thử logic):</label>
+              <label htmlFor="usermanagementpage-field-648">Trạng thái</label>
               <select id="usermanagementpage-field-648"
                 value={leaveType}
                 onChange={(e) => setLeaveType(e.target.value)}
                 className="input-select"
               >
-                <option value="BUSINESS_TRIP">🔵 Công tác (Business Trip) → Badge Xanh dương</option>
-                <option value="PAID_LEAVE">🟡 Nghỉ phép có lương (Paid Leave) → Badge Vàng</option>
-                <option value="UNPAID_LEAVE">🟡 Nghỉ không lương (Unpaid Leave) → Badge Vàng</option>
-                <option value="LATE_IN">🟡 Đi muộn (Late In) → Badge Vàng</option>
-                <option value="EARLY_OUT">🟡 Về sớm (Early Out) → Badge Vàng</option>
+                <option value="BUSINESS_TRIP">Đi công tác</option>
+                <option value="PAID_LEAVE">Nghỉ phép có lương</option>
+                <option value="UNPAID_LEAVE">Nghỉ không lương</option>
+                <option value="LATE_IN">Đi muộn</option>
+                <option value="EARLY_OUT">Về sớm</option>
               </select>
             </div>
 
             <div className="form-group" style={{ marginTop: "1rem" }}>
-              <label htmlFor="usermanagementpage-field-663">Lý do / Nội dung tóm tắt:</label>
+              <label htmlFor="usermanagementpage-field-663">
+                {leaveType === "BUSINESS_TRIP" ? "Nơi công tác / nội dung" : "Lý do"}
+              </label>
               <input id="usermanagementpage-field-663"
                 type="text"
                 value={leaveReason}
                 onChange={(e) => setLeaveReason(e.target.value)}
-                placeholder="Nhập lý do nghỉ hoặc điểm đến công tác..."
+                placeholder={leaveType === "BUSINESS_TRIP" ? "Ví dụ: Làm việc với đối tác tại Bắc Ninh" : "Ví dụ: Việc gia đình"}
                 className="input-text"
               />
             </div>
 
-            <div className="modal-actions" style={{ marginTop: "1.5rem", display: "flex", justifyContent: "space-between" }}>
+            <div className="modal-actions work-status-actions">
               <button
                 type="button"
                 className="secondary"
                 disabled={leaveSubmitting}
                 onClick={() => handleLeaveTripSubmit("CANCEL_TODAY")}
-                title="Hủy các lịch trình hôm nay để trở về trạng thái Đang làm việc mặc định"
+                title="Xóa lịch công tác / nghỉ đang có hiệu lực để nhân viên trở về Đang làm việc"
               >
-                🔄 Xóa đơn hôm nay (về Đang làm)
+                Xóa lịch hôm nay
               </button>
 
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div className="work-status-actions-main">
                 <button
                   type="button"
                   className="secondary"

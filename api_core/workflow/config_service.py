@@ -4,7 +4,7 @@ import re
 from typing import Any
 from uuid import UUID, uuid4
 
-from django.db import connection
+from django.db import connection, transaction
 from psycopg.types.json import Jsonb
 
 from api_core.audit import canonical_sha256
@@ -793,6 +793,15 @@ def publish_config_release(
             """,
             [norm_id, type_id],
         )
+        # Loại mới dùng được ngay các cơ chế AI của loại có sẵn: bản nâng luồng B/C (mẫu A) trong giao dịch này,
+        # mở rộng tình huống xấu sau khi giao dịch xong (cần gọi dịch vụ AI).
+        from api_core.workflow import type_onboarding
+
+        if lifecycle == "A":
+            type_onboarding.ensure_escalation_releases(
+                cursor, type_id=type_id, actor_id=actor.id
+            )
+        transaction.on_commit(lambda: type_onboarding.onboard_after_commit(type_code))
 
         _append_admin_audit(
             cursor,

@@ -438,8 +438,10 @@ export function permissions(user, r) {
     accept: granted.has("ACCEPTOR") && r.status === "WAITING_FOR_ACCEPTANCE" &&
       r.workflow?.lifecycle === "C" && r.workflow?.acceptor_id === user.id &&
       attempt?.state === "SUBMITTED" && !isExecutor,
-    revokeAi: granted.has("APPROVER") && !own && r.status === "COMPLETED" &&
+    // Máy chủ tính can_revoke: quản lý cấp 1 / cấp 2 của người gửi hoặc người duyệt hợp lệ (trong 24 giờ).
+    revokeAi: !own && r.status === "COMPLETED" &&
       Boolean(r.ai_auto_approval?.revocable) &&
+      ("can_revoke" in (r.ai_auto_approval || {}) ? Boolean(r.ai_auto_approval.can_revoke) : granted.has("APPROVER")) &&
       Date.now() < Date.parse(r.ai_auto_approval?.revocable_until || 0),
   };
 }
@@ -608,6 +610,11 @@ const ERROR_MESSAGES = {
   PASSWORD_CHANGE_REQUIRED: "Bạn cần đổi mật khẩu lần đầu trước khi sử dụng hệ thống.",
   PASSWORD_REUSE_NOT_ALLOWED: "Mật khẩu mới không được trùng với mật khẩu đang sử dụng.",
   PASSWORD_POLICY_VIOLATION: "Mật khẩu mới cần dài từ 15–128 ký tự, bao gồm chữ hoa, chữ thường, chữ số, ký tự đặc biệt và không chứa địa chỉ email của bạn.",
+  REGULATION_CODE_EXISTS: "Mã quy định này đã tồn tại.",
+  REGULATION_INVALID: "AI phát hiện lỗi trong văn bản quy định; xem danh sách lỗi ngay trong form để sửa rồi ban hành lại.",
+  TEXT_UNCLEAR: "AI chưa hiểu nhu cầu này. Hãy mô tả rõ hơn, ví dụ: \"Đăng ký suất ăn trưa tại căng tin\".",
+  TEXT_LENGTH_INVALID: "Nhu cầu cần dài từ 6 đến 120 ký tự.",
+  AI_TYPE_CREATION_LIMIT: "Bạn đã đề xuất đủ 3 loại yêu cầu mới trong 24 giờ. Vui lòng thử lại sau hoặc liên hệ quản trị.",
   LOGIN_RATE_LIMITED: "Tài khoản tạm khóa đăng nhập ngắn hạn do nhập sai nhiều lần. Vui lòng thử lại sau ít phút.",
   PASSWORD_CHANGE_RATE_LIMITED: "Bạn đã nhập sai mật khẩu hiện tại quá số lần quy định. Vui lòng thử lại sau ít phút.",
   PASSWORD_RESET_DELIVERY_FAILED: "Không thể gửi thông báo đặt lại mật khẩu lúc này. Vui lòng liên hệ bộ phận CNTT.",

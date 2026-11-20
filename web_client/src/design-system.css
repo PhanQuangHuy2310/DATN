@@ -5037,24 +5037,88 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .password-reset-mode .radio-row input { margin-top: 4px; width: auto; min-height: 0; }
 .ai-workflow-help { margin: 4px 0 0; font-size: 14px; }
 
-/* AI moved the user to another request form (RequestEditor + aiTypeSwitch.js). */
-.ai-type-switch {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--ds-space-2) var(--ds-space-3);
-  margin: 0 0 var(--ds-space-4);
+/* AI tự động under the request title (RequestEditor + AiAssist.jsx): never switches the form on its own. */
+.ai-auto-insight {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: calc(-1 * var(--ds-space-2)) 0 var(--ds-space-2);
   padding: var(--ds-space-3) var(--ds-space-4);
   border: 1px solid var(--ds-line);
   border-left: 4px solid var(--ds-primary);
   border-radius: var(--ds-radius-sm);
   background: var(--ds-primary-soft);
   color: var(--ds-ink);
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.55;
 }
-.ai-type-switch > span { flex: 1 1 320px; min-width: 0; overflow-wrap: anywhere; }
-.ai-type-switch button { white-space: nowrap; }
-.ai-type-switch-suggest { border-left-color: var(--ds-warning); background: var(--ds-warning-soft); }
+.ai-auto-insight p { margin: 0; overflow-wrap: anywhere; }
+.ai-auto-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ai-auto-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ds-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.ai-auto-new { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ai-auto-new button,
+.ai-auto-switch button { min-height: 34px; padding: 4px 12px; white-space: nowrap; }
+.ai-auto-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2) var(--ds-space-3);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-left: 3px solid var(--ds-warning);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-warning-soft);
+}
+.ai-auto-switch > span { flex: 1 1 280px; min-width: 0; overflow-wrap: anywhere; }
+.ai-auto-switch small { flex-basis: 100%; }
+
+/* "Có phải ý bạn là…" in the request catalogue search (RequestTypeMenu). */
+.request-menu-ai {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0 0 var(--ds-space-4);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-left: 4px solid var(--ds-primary);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-primary-soft);
+}
+.request-menu-ai > strong { display: flex; align-items: center; gap: 8px; }
+.request-menu-ai-list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); }
+.request-menu-ai-list button { min-height: 36px; padding: 4px 14px; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.request-menu-ai-list small { opacity: 0.75; }
+.ds-search-ai-new strong { color: var(--ds-primary); }
+
+/* AI creates a request type for a need not in the catalogue (AiNewType.jsx). */
+.ai-new-type { display: grid; gap: var(--ds-space-3); max-width: 560px; }
+.ai-new-type p { margin: 0; }
+.ai-new-type-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface);
+}
+.ai-new-type-facts dt { color: var(--ds-muted); }
+.ai-new-type-facts dd { margin: 0; overflow-wrap: anywhere; }
+.ai-new-type .modal-actions { display: flex; flex-wrap: wrap; gap: var(--ds-space-2); justify-content: flex-end; }
+@media (max-width: 480px) {
+  .ai-new-type-facts { grid-template-columns: 1fr; }
+  .ai-new-type-facts dt { margin-top: 4px; }
+}
 
 /* AI chuyển quy trình A -> B/C và đề xuất xử lý (bad cases, 18/11/2026). */
 .ai-escalation { margin: var(--ds-space-3, 12px) 0; padding: 14px 16px; border: 1px solid var(--ds-warning); border-radius: var(--ds-radius); background: var(--ds-warning-soft); }
@@ -5144,3 +5208,114 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .reg-superseded { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--ds-line); border-radius: var(--ds-radius); }
 .reg-superseded h4 { margin: 0 0 6px; }
 .reg-superseded ul { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
+
+/* Tìm kiếm trên điện thoại (≤640px): chỉ còn nút kính lúp; bấm vào thì thanh tìm kiếm phủ kín thanh đầu trang,
+   Esc / bấm ra ngoài / nút × / chuyển trang thì về lại kính lúp (AppHeader.jsx GlobalSearch). */
+@media (max-width: 640px) {
+  .app-shell .topbar .ds-global-search.is-compact { order: 0; flex: 0 0 auto; min-width: 0; }
+  .app-shell .topbar .ds-global-search.is-expanded {
+    position: absolute; inset: 0; z-index: 40; order: 0; flex: none; min-width: 0;
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: var(--ds-surface); border-bottom: 1px solid var(--ds-line);
+  }
+  .app-shell .topbar .ds-global-search.is-expanded input { flex: 1 1 auto; width: auto; min-width: 0; }
+  .app-shell .topbar .ds-global-search.is-expanded > span { left: 26px; }
+  .app-shell .topbar .ds-global-search.is-expanded .ds-search-results { left: 12px; right: 12px; top: calc(100% - 2px); }
+  .app-shell .topbar .ds-search-close { flex: 0 0 auto; min-height: 42px; padding: 0 14px; white-space: nowrap; }
+  /* Ô tìm kiếm chỉ còn kính lúp nên cả thanh đầu trang gói vào một hàng (luật ≤480px cũ cho xuống dòng để ô
+     tìm kiếm chiếm hàng 2); tên trang tự cắt "…" khi hẹp. */
+  .app-shell .workspace > .topbar { flex-wrap: nowrap; }
+  .app-shell .topbar-right { flex: 0 0 auto; gap: 4px; }
+  .app-shell .topbar-title-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .app-shell .topbar-title-row .topbar-page-title { font-size: 17px; line-height: 1.2; }
+  .app-shell .topbar-page-info { flex: 0 0 auto; }
+}
+@media (max-width: 400px) {
+  .app-shell .topbar .ds-icon-button { width: 32px; height: 32px; min-height: 32px; }
+  .app-shell .workspace > .topbar { padding-left: 8px; padding-right: 8px; gap: 6px; }
+  .app-shell .topbar .menu-toggle { width: 38px; height: 38px; min-height: 38px; padding: 0; }
+}
+
+/* Thanh lọc mẫu yêu cầu: label có margin-bottom 17px từ luật chung nên với align-items:end, nút "Đặt lại bộ lọc"
+   (không có margin) nằm thấp hơn ô chọn 17px. Bỏ margin trong thanh lọc và cho nút cao bằng ô chọn. */
+.request-menu-tools > label, .plan-filter-toolbar > label { margin-bottom: 0; }
+.request-menu-tools > .request-menu-clear { height: 42px; min-height: 42px; padding-top: 0; padding-bottom: 0; }
+
+/* Hộp thoại trong trang Người dùng: tiêu đề và nút ✕ cùng một hàng (trước đây ✕ rơi xuống dưới tiêu đề vì
+   .modal-head không có luật bố cục nào). */
+.modal-card > .modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.modal-card > .modal-head h2 { margin: 0; flex: 1 1 auto; min-width: 0; font-size: 20px; line-height: 1.3; }
+.modal-card > .modal-head .ds-icon-button { flex: 0 0 auto; }
+.work-status-note { margin: 0 0 1rem; padding: 8px 12px; border-left: 3px solid var(--ds-primary); background: var(--ds-primary-soft); border-radius: 6px; font-size: 13.5px; color: var(--ds-ink); }
+.work-status-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 1.5rem; }
+.work-status-actions-main { display: flex; gap: 8px; margin-left: auto; }
+@media (max-width: 520px) {
+  .work-status-actions { flex-direction: column-reverse; align-items: stretch; }
+  .work-status-actions > button, .work-status-actions-main { width: 100%; }
+  .work-status-actions-main > button { flex: 1 1 0; }
+}
+
+/* AI gợi ý phân loại / trọng số trong form tạo mẫu yêu cầu (admin). */
+.ai-profile-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 4px 0 12px; padding: 10px 12px; border: 1px solid var(--ds-primary-soft); border-left: 3px solid var(--ds-primary); border-radius: 8px; background: var(--ds-surface); font-size: 14px; }
+.ai-profile-hint button { min-height: 32px; padding: 4px 12px; margin-left: auto; }
+
+/* Page-level toasts of the admin pages (Quy định, Quản trị AI, Quản lý API) had no style at all, so their messages
+   ("Đã ban hành…", the exact validation error) rendered as plain text at the bottom of the page, under the modal. */
+.eas-toast-notification {
+  position: fixed;
+  top: 22px;
+  right: 20px;
+  z-index: 2100;
+  width: min(440px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border: 1px solid var(--ds-line);
+  border-left: 4px solid var(--ds-success, #11a574);
+  border-radius: 12px;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  box-shadow: 0 15px 42px rgba(16, 40, 70, 0.18);
+  line-height: 1.5;
+  animation: toast-in 0.26s cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+.eas-toast-notification.error { border-left-color: var(--ds-danger, #d7494f); }
+.eas-toast-notification.warning { border-left-color: var(--ds-warning, #d98a00); }
+.eas-toast-notification.info { border-left-color: var(--ds-primary); }
+
+/* Regulations in force that fail the AI check (published before the check existed, or written straight to the DB). */
+.reg-issues-banner {
+  margin: 0 0 var(--ds-space-4);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border: 1px solid var(--ds-danger);
+  border-left-width: 4px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-danger-soft, #fdecec);
+  color: var(--ds-ink);
+  line-height: 1.55;
+}
+.regulation-card.has-issues { border-color: var(--ds-danger); box-shadow: inset 4px 0 0 var(--ds-danger); }
+.regulation-card-footer > .reg-card-issue {
+  flex-basis: 100%;
+  margin: 0 0 var(--ds-space-1, 4px);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-danger-soft, #fdecec);
+  color: var(--ds-danger);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.reg-use-code { margin: var(--ds-space-2) 0 0; }
+
+/* Mẫu nạp nhanh quy định + quyết định giữ/bỏ điều cũ + cập nhật lớn (20/11). */
+.reg-quick { margin: 0 0 var(--ds-space-3); padding: var(--ds-space-3); border: 1px dashed var(--ds-primary); border-radius: var(--ds-radius-sm); background: var(--ds-primary-soft); }
+.reg-quick legend { padding: 0 6px; font-weight: 700; color: var(--ds-primary); }
+.reg-quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--ds-space-2) var(--ds-space-3); }
+.reg-quick-grid label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+.reg-quick-preview { margin: var(--ds-space-2) 0; padding: var(--ds-space-2) var(--ds-space-3); border-radius: var(--ds-radius-sm); background: var(--ds-surface); font-style: italic; overflow-wrap: anywhere; }
+.reg-decision { margin: var(--ds-space-2) 0 0; padding: var(--ds-space-2) var(--ds-space-3); border-radius: var(--ds-radius-sm); background: var(--ds-surface); border-left: 3px solid var(--ds-primary); font-size: 13px; line-height: 1.5; }
+.reg-decision.keep { border-left-color: var(--ds-warning); }
+.reg-decision-choice { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; }
+.reg-decision-choice label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.reg-decision-choice input { width: auto; }
+.reg-big-update { display: flex; align-items: center; gap: 8px; margin: var(--ds-space-2) 0; font-size: 13px; }
+.reg-big-update input { width: auto; }

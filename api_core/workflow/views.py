@@ -611,12 +611,24 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
         from api_core.workflow.auto_approval import ai_approval_info
 
         with connection.cursor() as cursor:
-            ai_approval = ai_approval_info(cursor, row[0], row[3])
+            ai_approval = ai_approval_info(cursor, row[0], row[3], request.actor.id)
     ai_escalation = _ai_escalation_info(row[0])
+    # Worker gọi AI (tự duyệt / chuyển luồng) trước khi đánh dấu sự kiện APPROVAL_REQUESTED đã gửi: còn sự kiện chưa
+    # gửi nghĩa là AI chưa đánh giá xong, giao diện tự làm mới thay vì bắt người dùng bấm "Làm mới hồ sơ".
+    ai_pending = False
+    if row[3] == "PENDING_APPROVAL":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT EXISTS (SELECT 1 FROM eas.outbox_event WHERE request_id = %s "
+                "AND event_type = 'APPROVAL_REQUESTED' AND state IN ('PENDING', 'PROCESSING'))",
+                [row[0]],
+            )
+            ai_pending = bool(cursor.fetchone()[0])
     return JsonResponse(
         {
             "request": {
                 "ai_auto_approval": ai_approval,
+                "ai_pending": ai_pending,
                 "ai_escalation": ai_escalation,
                 "id": row[0],
                 "code": row[1],
@@ -1416,12 +1428,64 @@ def ai_classify_view(request: HttpRequest) -> JsonResponse:
         description = str(description)
 
     from api_core.integrations.ai_service import ai_client_sync
+    from api_core.workflow import learned_types
 
     cid = correlation_id(request)
     result = ai_client_sync.classify_request(
-        title=title.strip(), description=description.strip(), correlation_id=cid
+        title=title.strip()[:500],
+        description=description.strip()[:4000],
+        correlation_id=cid,
+        learned_types=learned_types.current(),
     )
     return JsonResponse({"data": result, "correlation_id": cid}, status=200)
+
+
+def _ai_type_text(request: HttpRequest):
+    try:
+        body = parse_json_object(request)
+    except JsonBodyError as exc:
+        return None, api_error(request, str(exc), status=400)
+    text = body.get("text")
+    if not isinstance(text, str):
+        return None, api_error(request, "TEXT_REQUIRED", status=422)
+    return text, None
+
+
+@require_POST
+@require_actor()
+def ai_type_proposal_view(request: HttpRequest) -> JsonResponse:
+    """POST /api/v1/ai/request-types/proposal: AI xem nhu cầu đã có loại chưa; chưa có thì cho xem loại sẽ tạo."""
+    from api_core.workflow import ai_type_creation
+
+    text, error = _ai_type_text(request)
+    if error:
+        return error
+    try:
+        result = ai_type_creation.propose(text)
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse({"data": result, "correlation_id": correlation_id(request)})
+
+
+@require_POST
+@require_actor()
+def ai_type_create_view(request: HttpRequest) -> JsonResponse:
+    """POST /api/v1/ai/request-types: tạo loại yêu cầu mới từ nhu cầu (hoặc trả về loại đã có nếu trùng)."""
+    from api_core.workflow import ai_type_creation
+
+    if "REQUESTER" not in request.actor.roles:
+        return api_error(request, "FORBIDDEN", status=403)
+    text, error = _ai_type_text(request)
+    if error:
+        return error
+    try:
+        result = ai_type_creation.create(request.actor, text, correlation_id(request))
+    except CommandError as exc:
+        return api_error(request, exc.code, status=exc.status, fields=exc.fields)
+    return JsonResponse(
+        {"data": result, "correlation_id": correlation_id(request)},
+        status=201 if result.get("created") else 200,
+    )
 
 
 @require_POST

@@ -1,7 +1,7 @@
 """Company regulations CRUD and AI engine status (admin portal).
 
 Version numbers are assigned by the BEFORE trigger on eas.company_regulations
-(create/delete = major, edit = minor) and the AFTER trigger records history.
+(migration 27: every change = minor, "big_update" = major) and the AFTER trigger records history.
 Every change queues an AI learning job in the same transaction
 (api_core.workflow.ai_learning); the employee portal stays locked until the AI
 has learned and applied the new rules, then users get an announcement.
@@ -9,6 +9,7 @@ has learned and applied the new rules, then users get an announcement.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 from uuid import uuid4
 
@@ -187,6 +188,120 @@ def _attach_superseded(
     return items
 
 
+def next_regulation_code(codes: list[str]) -> str:
+    """Mã REG-NNN còn trống kế tiếp (tính cả mã đã gỡ). Trước đây form lấy số theo phiên bản hệ thống, nên trên CSDL
+    mới (v1.0, đã có REG-001..003) mã mặc định là REG-002: mọi lần ban hành đều bị 409 "mã đã tồn tại"."""
+    used = {str(c or "").upper() for c in codes}
+    numbers = [int(m.group(1)) for c in used if (m := re.fullmatch(r"REG-(\d+)", c))]
+    n = max(numbers, default=0) + 1
+    while f"REG-{n:03d}" in used:
+        n += 1
+    return f"REG-{n:03d}"
+
+
+def _next_code(cur) -> str:
+    cur.execute("SELECT code FROM eas.company_regulations")
+    return next_regulation_code([r[0] for r in cur.fetchall()])
+
+
+def _active_types(cur):
+    from django.conf import settings
+
+    from api_core.workflow.regulation_compiler import RequestTypeName
+
+    cur.execute(
+        "SELECT code, name, lifecycle, risk_weight FROM eas.request_type WHERE is_active"
+    )
+    types = [
+        RequestTypeName(
+            code=r[0],
+            name=r[1] or "",
+            lifecycle=(r[2] or "").strip() or None,
+            risk_weight=r[3],
+        )
+        for r in cur.fetchall()
+    ]
+    return types, (
+        settings.EAS_AI_AUTO_APPROVE_MAX_WEIGHT
+        if settings.EAS_AI_AUTO_APPROVE_ENABLED
+        else 0
+    )
+
+
+def _version_mode(cur, body: dict) -> str:
+    """Migration 27: mặc định chỉ tăng số sau dấu chấm (1.0 -> 1.1); "cập nhật lớn" mới tăng số đầu (2.0)."""
+    big = body.get("big_update") is True
+    if big:
+        cur.execute("SELECT set_config('eas.version_bump', 'major', true)")
+    return "MAJOR" if big else "MINOR"
+
+
+def _store_keep_decisions(
+    cur, request: HttpRequest, code: str, check: dict, body: dict
+) -> list[dict]:
+    """Khi văn bản mới đè lên điều của văn bản cũ: giữ điều cũ theo đề xuất của AI, trừ khi admin chọn khác
+    (body.supersede_decisions = {key: "KEEP" | "DROP"}). Lượt học bỏ qua thay thế với các cặp được GIỮ."""
+    cur.execute("SELECT to_regclass('eas.regulation_keep_decision') IS NOT NULL")
+    if not cur.fetchone()[0]:
+        return []
+    overrides = body.get("supersede_decisions")
+    overrides = overrides if isinstance(overrides, dict) else {}
+    cur.execute("DELETE FROM eas.regulation_keep_decision WHERE new_code = %s", [code])
+    decided, seen = [], set()
+    for item in check.get("supersedes") or []:
+        key = item.get("key") or ""
+        if "|" not in key or key in seen:
+            continue
+        seen.add(key)
+        admin = overrides.get(key) if overrides.get(key) in ("KEEP", "DROP") else None
+        decision = admin or item.get("recommendation") or "DROP"
+        old_code, old_sha = key.split("|", 1)
+        decided.append(
+            {"key": key, "decision": decision, "by": "ADMIN" if admin else "AI"}
+        )
+        if decision != "KEEP":
+            continue
+        cur.execute(
+            """
+            INSERT INTO eas.regulation_keep_decision(new_code, old_code, old_sha, old_text, decided_by, reason, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (new_code, old_sha) DO NOTHING
+            """,
+            [
+                code,
+                old_code,
+                old_sha,
+                ((item.get("related") or {}).get("sentence") or "")[:400],
+                "ADMIN" if admin else "AI",
+                (item.get("reason") or "")[:500],
+                request.actor.id,
+            ],
+        )
+    return decided
+
+
+def regulation_issues(item: dict[str, Any], types) -> list[dict[str, Any]]:
+    """Lỗi chặn của chính văn bản đang hiệu lực (lỗi ký tự, mâu thuẫn trong văn bản). Văn bản nạp trước khi có bước
+    kiểm tra (hoặc nhập thẳng CSDL) có thể đang mang lỗi: hiện lên thẻ để admin sửa."""
+    from api_core.workflow.regulation_validation import validate
+
+    result = validate(
+        code=item["code"],
+        title=item.get("title") or "",
+        content=item.get("content") or "",
+        types=types,
+        others=[],
+    )
+    return [
+        {
+            "kind": e["kind"],
+            "message": e["message"],
+            "article": e.get("article"),
+            "sentence": e.get("sentence"),
+        }
+        for e in result["errors"]
+    ]
+
+
 def _list_regulations() -> list[dict]:
     with connection.cursor() as cur:
         cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
@@ -194,21 +309,17 @@ def _list_regulations() -> list[dict]:
             "WHERE NOT is_deleted ORDER BY code"
         )
         items = [_serialize_regulation(r) for r in cur.fetchall()]
+        types, _max = _active_types(cur)
+        for item in items:
+            item["issues"] = regulation_issues(item, types)
         return _attach_superseded(items, _superseded(cur))
 
 
 def _content_check(cur, *, code: str, fields: dict) -> dict[str, Any]:
     """AI đọc văn bản trước khi lưu: lỗi ký tự, mâu thuẫn giữa các điều / với quy định đang hiệu lực."""
-    from api_core.workflow.regulation_compiler import RequestTypeName
     from api_core.workflow.regulation_validation import validate
 
-    cur.execute("SELECT code, name, lifecycle FROM eas.request_type WHERE is_active")
-    types = [
-        RequestTypeName(
-            code=r[0], name=r[1] or "", lifecycle=(r[2] or "").strip() or None
-        )
-        for r in cur.fetchall()
-    ]
+    types, auto_max = _active_types(cur)
     cur.execute(
         "SELECT code, title, content FROM eas.company_regulations WHERE NOT is_deleted AND code <> %s",
         [code],
@@ -222,6 +333,7 @@ def _content_check(cur, *, code: str, fields: dict) -> dict[str, Any]:
         content=fields["content"],
         types=types,
         others=others,
+        auto_max_weight=auto_max,
     )
 
 
@@ -255,9 +367,29 @@ def regulation_validate_view(request: HttpRequest) -> JsonResponse:
         return api_error(request, "VALIDATION_FAILED", status=422, fields=errors)
     code = str(body.get("code", "")).strip().upper()[:30]
     with connection.cursor() as cur:
-        return JsonResponse(
-            {"validation": _content_check(cur, code=code, fields=fields)}
-        )
+        check = _content_check(cur, code=code, fields=fields)
+        if body.get("creating") is True and code:
+            cur.execute(
+                "SELECT title FROM eas.company_regulations WHERE code = %s AND NOT is_deleted",
+                [code],
+            )
+            taken = cur.fetchone()
+            if taken:
+                free = _next_code(cur)
+                check = {
+                    **check,
+                    "ok": False,
+                    "suggested_code": free,
+                    "errors": [
+                        {
+                            "severity": "ERROR",
+                            "kind": "CODE_EXISTS",
+                            "message": f"Mã {code} đã được dùng cho quy định «{taken[0]}». Đổi sang mã còn trống, ví dụ {free}.",
+                        },
+                        *check["errors"],
+                    ],
+                }
+        return JsonResponse({"validation": check})
 
 
 def _rejection_row(r) -> dict[str, Any]:
@@ -369,10 +501,19 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
     """GET list (+ AI state) / POST create (major version, AI relearns)."""
     if request.method == "GET":
         regulations = cached("regulations", _list_regulations)
+        with connection.cursor() as cur:
+            next_code = _next_code(cur)
+            # Mẫu nạp nhanh: tên loại đúng như bộ biên dịch quy định nhận ra.
+            cur.execute(
+                "SELECT code, name FROM eas.request_type WHERE is_active ORDER BY name"
+            )
+            request_types = [{"code": r[0], "name": r[1]} for r in cur.fetchall()]
         return JsonResponse(
             {
                 "regulations": regulations,
                 "total_count": len(regulations),
+                "next_code": next_code,
+                "request_types": request_types,
                 "ai_state": ai_engine_state(),
             }
         )
@@ -401,10 +542,17 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
             [code],
         )
         if cur.fetchone():
-            return api_error(request, "REGULATION_CODE_EXISTS", status=409)
+            free = _next_code(cur)
+            return api_error(
+                request,
+                "REGULATION_CODE_EXISTS",
+                status=409,
+                fields={"code": [f"Mã {code} đã tồn tại; mã còn trống: {free}"]},
+            )
         check = _content_check(cur, code=code, fields=fields)
         if not check["ok"]:
             return _invalid_regulation(request, check)
+        version_type = _version_mode(cur, body)
         # Mã là UNIQUE kể cả khi đã gỡ (xóa mềm): ban hành lại một mã từng bị gỡ / bị trả lại thì dùng lại dòng đó.
         cur.execute(
             "SELECT id::text FROM eas.company_regulations WHERE code = %s AND is_deleted FOR UPDATE",
@@ -458,6 +606,7 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
             regulation=regulation,
             reason=f"Ban hành {code}",
         )
+        decisions = _store_keep_decisions(cur, request, code, check, body)
         enqueue_learning(
             cur,
             reason=f"Ban hành {code}: {fields['title']}",
@@ -471,9 +620,10 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
             "message": f"Đã ban hành quy định {code} (phiên bản {version}). AI đang học quy định mới; cổng nhân viên tạm khoá tới khi áp dụng xong.",
             "regulation": regulation,
             "new_version": version,
-            "version_type": "MAJOR",
+            "version_type": version_type,
             "maintenance_active": True,
             "warnings": check["warnings"],
+            "supersede_decisions": decisions,
         },
         status=201,
     )
@@ -541,6 +691,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
         current = _serialize_regulation(row)
 
         if request.method == "DELETE":
+            version_type = _version_mode(cur, body if isinstance(body, dict) else {})
             cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
                 f"""
                 UPDATE eas.company_regulations SET is_deleted = true, updated_by = %s
@@ -563,7 +714,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
                 {
                     "message": f"Đã bãi bỏ quy định (phiên bản {version}). AI đang học lại; cổng nhân viên tạm khoá tới khi áp dụng xong.",
                     "new_version": version,
-                    "version_type": "MAJOR",
+                    "version_type": version_type,
                     "maintenance_active": True,
                 }
             )
@@ -583,6 +734,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
         check = _content_check(cur, code=current["code"], fields=fields)
         if not check["ok"]:
             return _invalid_regulation(request, check)
+        version_type = _version_mode(cur, body)
         cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
             f"""
             UPDATE eas.company_regulations SET title = %s, category = %s, content = %s, updated_by = %s
@@ -608,6 +760,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
             regulation=regulation,
             reason=summary,
         )
+        decisions = _store_keep_decisions(cur, request, current["code"], check, body)
         enqueue_learning(cur, reason=summary, requested_by=request.actor.id)
         _resolve_rejections(cur, request, current["code"])
 
@@ -617,7 +770,8 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
             "message": f"Đã cập nhật quy định (phiên bản {version}). AI đang học lại; cổng nhân viên tạm khoá tới khi áp dụng xong.",
             "regulation": regulation,
             "new_version": version,
-            "version_type": "MINOR",
+            "version_type": version_type,
+            "supersede_decisions": decisions,
             "maintenance_active": True,
             "warnings": check["warnings"],
         }

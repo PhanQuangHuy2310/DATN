@@ -231,7 +231,100 @@ def try_auto_approve(request_id: str, correlation_id: str) -> dict[str, Any] | N
             request_id,
         )
         return None
+    _notify_supervisors(request_id, context, correlation_id)
     return result.body
+
+
+SUPERVISOR_LEVELS = 2
+
+
+def _supervisors(
+    cursor, requester_id: str, levels: int = SUPERVISOR_LEVELS
+) -> list[str]:
+    """Quản lý trực tiếp và quản lý của quản lý (theo app_user.manager_id), bỏ người không còn hoạt động."""
+    found: list[str] = []
+    current = requester_id
+    for _ in range(levels):
+        cursor.execute(
+            """
+            SELECT m.id::text, m.is_active
+            FROM eas.app_user u JOIN eas.app_user m ON m.id = u.manager_id
+            WHERE u.id = %s
+            """,
+            [current],
+        )
+        row = cursor.fetchone()
+        if (
+            not row
+            or row[0] in found
+            or row[0] in (requester_id, settings.EAS_AI_SYSTEM_USER_ID)
+        ):
+            break
+        if row[1]:
+            found.append(row[0])
+        current = row[0]
+    return found
+
+
+def _notify_supervisors(
+    request_id: str, context: dict[str, Any], correlation_id: str
+) -> None:
+    """AI tự duyệt xong thì báo cho 2 cấp quản lý phía trên người gửi để họ kiểm tra (và thu hồi nếu không hợp lệ).
+
+    Không chặn việc duyệt: lỗi ở đây chỉ ghi log. Người nhận được thêm quyền xem hồ sơ (participant), vì worker chỉ
+    gửi thông báo cho người đọc được hồ sơ.
+    """
+    try:
+        with transaction.atomic(), connection.cursor() as cursor:
+            recipients = _supervisors(cursor, context["requester_id"]) or [
+                context["assignee_id"]
+            ]
+            recipients = [
+                r for r in recipients if r and r != settings.EAS_AI_SYSTEM_USER_ID
+            ]
+            if not recipients:
+                return
+            cursor.execute(
+                """
+                SELECT r.code, COALESCE(rt.name, rt.code)
+                FROM eas.request r JOIN eas.request_type rt ON rt.id = r.type_id WHERE r.id = %s
+                """,
+                [request_id],
+            )
+            code, type_name = cursor.fetchone()
+            for user_id in recipients:
+                cursor.execute(
+                    """
+                    INSERT INTO eas.request_participant(request_id,user_id,joined_as)
+                    VALUES (%s,%s,'APPROVER') ON CONFLICT (request_id, user_id) DO NOTHING
+                    """,
+                    [request_id, user_id],
+                )
+            label = (
+                f"AI đã tự duyệt {code} ({type_name}) của {context['requester_name']}. "
+                "Vui lòng kiểm tra; trong 24 giờ có thể thu hồi nếu không hợp lệ"
+            )
+            cursor.execute(
+                SQL_INSERT_OUTBOX_EVENT,
+                [
+                    request_id,
+                    "AI_AUTO_APPROVED",
+                    Jsonb(
+                        {
+                            "request_id": request_id,
+                            "recipient_ids": recipients,
+                            "label": label[:300],
+                        }
+                    ),
+                    f"request:{request_id}:step:{context['step_id']}:ai-approved",
+                ],
+            )
+    except Exception:  # thông báo là phụ, không được làm hỏng quyết định đã ghi
+        logger.warning(
+            "AI auto-approve supervisor notice failed: request=%s",
+            request_id,
+            exc_info=True,
+        )
 
 
 def _apply_feedback_memory(
@@ -341,17 +434,59 @@ def _latest_ai_decision(cursor, request_id: str) -> datetime | None:
     return row[1]
 
 
-def ai_approval_info(cursor, request_id: str, status: str) -> dict[str, Any] | None:
-    """Request-detail block: when the AI decided and until when it can be revoked."""
+def may_revoke(
+    cursor, *, actor_id: str, requester_id: str, department_id, type_id
+) -> bool:
+    """Ai được thu hồi duyệt tự động của AI (trong 24 giờ): quản lý cấp 1 hoặc cấp 2 của người gửi (cũng là người
+    nhận thông báo AI_AUTO_APPROVED), hoặc người duyệt hợp lệ của loại / phòng ban như trước. Người gửi thì không."""
+    if not actor_id or actor_id == requester_id:
+        return False
+    if actor_id in _supervisors(cursor, requester_id):
+        return True
+    return _is_actor_valid_for_role(
+        cursor,
+        actor_id=actor_id,
+        role="APPROVER",
+        department_id=department_id,
+        type_id=type_id,
+    )
+
+
+def ai_approval_info(
+    cursor, request_id: str, status: str, actor_id: str | None = None
+) -> dict[str, Any] | None:
+    """Request-detail block: when the AI decided, until when it can be revoked, and whether the viewer may."""
     decided_at = _latest_ai_decision(cursor, request_id)
     if decided_at is None:
         return None
     until = decided_at + REVOKE_WINDOW
-    return {
+    revocable = status == "COMPLETED" and datetime.now(timezone.utc) < until
+    info = {
         "decided_at": decided_at.isoformat(),
         "revocable_until": until.isoformat(),
-        "revocable": status == "COMPLETED" and datetime.now(timezone.utc) < until,
+        "revocable": revocable,
     }
+    if actor_id:
+        cursor.execute(
+            """
+            SELECT r.requester_id::text, v.department_id::text, r.type_id::text
+            FROM eas.request r JOIN eas.request_revision v ON v.id = r.current_revision_id WHERE r.id = %s
+            """,
+            [request_id],
+        )
+        row = cursor.fetchone()
+        info["can_revoke"] = bool(
+            revocable
+            and row
+            and may_revoke(
+                cursor,
+                actor_id=actor_id,
+                requester_id=row[0],
+                department_id=row[1],
+                type_id=row[2],
+            )
+        )
+    return info
 
 
 def _validate_revoke_input(body: dict[str, Any]) -> tuple[str, int]:
@@ -492,10 +627,10 @@ def revoke_ai_auto_approval(
             or datetime.now(timezone.utc) >= decided_at + REVOKE_WINDOW
         ):
             raise CommandError("AI_APPROVAL_NOT_REVOCABLE", status=409)
-        if actor.id == requester_id or not _is_actor_valid_for_role(
+        if not may_revoke(
             cursor,
             actor_id=actor.id,
-            role="APPROVER",
+            requester_id=requester_id,
             department_id=department_id,
             type_id=type_id,
         ):

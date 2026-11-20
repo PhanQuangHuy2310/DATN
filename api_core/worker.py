@@ -141,6 +141,13 @@ def _recipients(cursor, item: OutboxItem) -> list[tuple[str, str]]:
         )
         recipient = item.payload.get("recipient_id")
         return [(str(recipient), label)] if recipient else []
+    if item.event_type == "AI_AUTO_APPROVED":
+        # AI tự duyệt: báo 2 cấp quản lý phía trên người gửi để kiểm tra / thu hồi trong 24 giờ.
+        label = str(
+            item.payload.get("label")
+            or "AI đã tự duyệt một yêu cầu của nhân viên cấp dưới, vui lòng kiểm tra"
+        )
+        return [(str(r), label) for r in item.payload.get("recipient_ids") or [] if r]
     if item.event_type == "APPROVAL_REQUESTED":
         cursor.execute(
             "SELECT assignee_id::text FROM eas.approval_step WHERE id=%s",

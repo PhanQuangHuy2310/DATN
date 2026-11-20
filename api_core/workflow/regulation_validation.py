@@ -27,7 +27,12 @@ from api_core.workflow.regulation_compiler import (
     sentences,
     skip_reason,
 )
-from api_core.workflow.regulation_precedence import overlaps, relation
+from api_core.workflow.regulation_precedence import (
+    overlaps,
+    recommend,
+    relation,
+    sentence_sha,
+)
 
 ERROR = "ERROR"
 WARNING = "WARNING"
@@ -131,12 +136,35 @@ def clauses(
     return out
 
 
+def _money(value: float) -> str:
+    return f"{int(value):,}".replace(",", ".")
+
+
+def _range_text(
+    label: str, lo: float | None, hi: float | None, fmt=_money, unit: str = ""
+) -> str | None:
+    if lo is None and hi is None:
+        return None
+    if lo is not None and hi is not None:
+        return f"{label} trên {fmt(lo)}{unit} đến {fmt(hi)}{unit}"
+    return (
+        f"{label} > {fmt(lo)}{unit}" if lo is not None else f"{label} ≤ {fmt(hi)}{unit}"
+    )
+
+
 def _cond_text(rule: dict[str, Any]) -> str:
-    parts = []
-    if rule.get("amount_gt") is not None:
-        parts.append(f"số tiền > {int(rule['amount_gt']):,}".replace(",", "."))
-    if rule.get("days_gt") is not None:
-        parts.append(f"số ngày > {rule['days_gt']}")
+    parts = [
+        _range_text("số tiền", rule.get("amount_gt"), rule.get("amount_lte")),
+        _range_text("số ngày", rule.get("days_gt"), rule.get("days_lte"), fmt=str),
+        _range_text(
+            "mức", rule.get("percent_gt"), rule.get("percent_lte"), fmt=str, unit="%"
+        ),
+    ]
+    parts = [p for p in parts if p]
+    if rule.get("retro_days_gt") is not None:
+        parts.append(f"ngày đã quá {rule['retro_days_gt']} ngày")
+    if rule.get("location_contains"):
+        parts.append(f"tại {rule['location_contains']}")
     if rule.get("due_within_hours"):
         parts.append(f"đang giữ việc đến hạn trong {rule['due_within_hours']} giờ")
     if rule.get("repeat_count_gte"):
@@ -144,6 +172,47 @@ def _cond_text(rule: dict[str, Any]) -> str:
     if rule.get("split_suspect"):
         parts.append("nghi chia nhỏ hồ sơ")
     return ", ".join(parts) or "mọi hồ sơ"
+
+
+_BOUNDS = (
+    ("amount_gt", "amount_lte", "số tiền", _money, ""),
+    ("days_gt", "days_lte", "số ngày", str, ""),
+    ("percent_gt", "percent_lte", "mức", str, "%"),
+)
+
+
+def _overlap_text(allow: dict[str, Any], deny: dict[str, Any]) -> str:
+    """Vùng hồ sơ thỏa cả hai luật, ví dụ "số tiền trên 3.000.000 đến 4.999.999"."""
+    parts = []
+    for lo_key, hi_key, label, fmt, unit in _BOUNDS:
+        los = [r[lo_key] for r in (allow, deny) if r.get(lo_key) is not None]
+        his = [r[hi_key] for r in (allow, deny) if r.get(hi_key) is not None]
+        text = _range_text(
+            label,
+            max(los) if los else None,
+            min(his) if his else None,
+            fmt=fmt,
+            unit=unit,
+        )
+        if text:
+            parts.append(text)
+    return ", ".join(parts) or "mọi hồ sơ của loại này"
+
+
+def _fix_hint(allow: dict[str, Any], deny: dict[str, Any]) -> str:
+    """Gợi ý sửa cụ thể khi hai điều chỉ chồng nhau ở một ngưỡng (">3tr người duyệt" và "<5tr AI duyệt")."""
+    for lo_key, hi_key, label, fmt, unit in _BOUNDS:
+        if (
+            deny.get(lo_key) is not None
+            and allow.get(hi_key) is not None
+            and allow[hi_key] > deny[lo_key]
+        ):
+            edge = fmt(deny[lo_key]) + unit
+            return (
+                f' Nếu ý là AI tự duyệt phần còn lại, sửa điều cho AI tự duyệt thành "{label} không quá {edge}"; '
+                f"nếu ý là AI tự duyệt tới {fmt(allow[hi_key])}{unit}, sửa ngưỡng của điều bắt duyệt thủ công."
+            )
+    return " Sửa lại cho hai điều không chồng nhau, hoặc bỏ một điều."
 
 
 def _same_scope(a: dict[str, Any], b: dict[str, Any]) -> bool:
@@ -166,6 +235,7 @@ def validate(
     content: str,
     types: list[RequestTypeName],
     others: list[dict[str, Any]] | None = None,
+    auto_max_weight: int | None = None,
 ) -> dict[str, Any]:
     """Kiểm tra một văn bản (thêm mới hoặc sửa) so với chính nó và các quy định khác đang hiệu lực.
 
@@ -240,22 +310,58 @@ def validate(
                                 tail = " (chỉ với loại này; điều cũ vẫn áp cho các loại khác)"
                             else:
                                 tail = ""
-                            supersedes.append(
-                                _issue(
-                                    INFO,
-                                    "SUPERSEDES",
-                                    f"Sẽ thay thế {_where(b, code)} ở {kind}: {_cond_text(ra)} thay cho {_cond_text(rb)}"
-                                    + tail
-                                    + ". Khi AI áp dụng xong, phần bị thay của điều cũ hết hiệu lực vĩnh viễn.",
-                                    sentence=a["sentence"],
-                                    article=a["article"],
-                                    related={
-                                        "code": b["code"],
-                                        "article": b["article"],
-                                        "sentence": b["sentence"][:400],
-                                    },
+                            # AI đánh giá nên GIỮ hay BỎ điều cũ; admin đổi được khi ban hành (supersede_decisions).
+                            decision, why = recommend(ra, rb)
+                            if decision == "KEEP":
+                                text = (
+                                    f"Chồng với {_where(b, code)} ở {kind}: {_cond_text(ra)} và {_cond_text(rb)}. "
+                                    "AI đề xuất GIỮ điều cũ (không thay thế)."
                                 )
+                            else:
+                                text = (
+                                    f"Sẽ thay thế {_where(b, code)} ở {kind}: {_cond_text(ra)} thay cho "
+                                    f"{_cond_text(rb)}{tail}. Khi AI áp dụng xong, phần bị thay của điều cũ hết hiệu "
+                                    "lực vĩnh viễn."
+                                )
+                            item = _issue(
+                                INFO,
+                                "SUPERSEDES",
+                                text,
+                                sentence=a["sentence"],
+                                article=a["article"],
+                                related={
+                                    "code": b["code"],
+                                    "article": b["article"],
+                                    "sentence": b["sentence"][:400],
+                                },
                             )
+                            item.update(
+                                recommendation=decision,
+                                reason=why,
+                                key=f"{b['code']}|{sentence_sha(b['sentence'][:500])}",
+                            )
+                            supersedes.append(item)
+                            if (
+                                decision == "DROP"
+                                and ra.get("auto_approve") is True
+                                and rb.get("auto_approve") is False
+                            ):
+                                warnings.append(
+                                    _issue(
+                                        WARNING,
+                                        "RELAXES",
+                                        f"Điều này NỚI LỎNG kiểm soát ở {kind}: hồ sơ có {_overlap_text(ra, rb)} trước "
+                                        f"đây bắt người duyệt theo {_where(b, code)}, sau khi áp dụng AI được tự duyệt. "
+                                        "Kiểm tra lại nếu đây không phải ý định.",
+                                        sentence=a["sentence"],
+                                        article=a["article"],
+                                        related={
+                                            "code": b["code"],
+                                            "article": b["article"],
+                                            "sentence": b["sentence"][:400],
+                                        },
+                                    )
+                                )
                         continue
                     if not overlaps(ra, rb):
                         continue  # cùng văn bản nhưng không chồng (vd. "trên 5 ngày" và "không quá 5 ngày")
@@ -275,9 +381,10 @@ def validate(
                                 ERROR,
                                 "CONTRADICTION",
                                 f"Mâu thuẫn ở {kind}: {_where(allow_c, code)} cho AI tự duyệt ({_cond_text(allow)}), "
-                                f"nhưng {_where(deny_c, code)} bắt duyệt thủ công ({_cond_text(deny)}). Hồ sơ thỏa cả "
-                                "hai điều kiện sẽ luôn bị duyệt thủ công, nên điều cho phép tự duyệt không có tác dụng. "
-                                "Sửa lại cho hai điều không chồng nhau, hoặc bỏ một điều.",
+                                f"nhưng {_where(deny_c, code)} bắt duyệt thủ công ({_cond_text(deny)}). Hai điều chồng "
+                                f"nhau ở hồ sơ có {_overlap_text(allow, deny)}: không rõ người hay AI duyệt nhóm này "
+                                "(nếu để nguyên, hệ thống sẽ bắt người duyệt)."
+                                + _fix_hint(allow, deny),
                                 sentence=a["sentence"],
                                 article=a["article"],
                                 related={
@@ -287,6 +394,7 @@ def validate(
                                 },
                             )
                         )
+    warnings += _auto_without_effect(mine, types, auto_max_weight)
     rules = [r for c in mine for r in c["rules"]]
     if (
         content.strip()
@@ -308,6 +416,49 @@ def validate(
         "supersedes": supersedes,
         "rules": len(rules),
     }
+
+
+def _auto_without_effect(
+    mine: list[dict[str, Any]],
+    types: list[RequestTypeName],
+    auto_max_weight: int | None,
+) -> list[dict[str, Any]]:
+    """Điều "cho AI tự duyệt" ở loại mà AI không bao giờ tự duyệt (trọng số rủi ro vượt ngưỡng, hoặc AI tự duyệt đang
+    tắt): luật vẫn được học nhưng không đổi gì, nên báo để người soạn khỏi hiểu nhầm."""
+    if auto_max_weight is None:
+        return []
+    by_code = {t.code: t for t in types}
+    out, seen = [], set()
+    for c in mine:
+        for rule in c["rules"]:
+            t = by_code.get(rule.get("request_type") or "")
+            if (
+                not rule.get("auto_approve")
+                or t is None
+                or t.risk_weight is None
+                or t.code in seen
+            ):
+                continue
+            if t.risk_weight <= auto_max_weight:
+                continue
+            seen.add(t.code)
+            why = (
+                "AI tự duyệt đang tắt trên hệ thống"
+                if auto_max_weight <= 0
+                else f"AI chỉ tự duyệt loại có trọng số rủi ro ≤ {auto_max_weight}, loại «{t.name}» đang là "
+                f"{t.risk_weight}"
+            )
+            out.append(
+                _issue(
+                    WARNING,
+                    "AUTO_NO_EFFECT",
+                    f"Điều cho AI tự duyệt «{t.name}» sẽ không có tác dụng: {why}. Hồ sơ vẫn do người "
+                    "duyệt. Muốn AI tự duyệt thì hạ trọng số rủi ro của loại ở trang Yêu cầu & Quy trình.",
+                    sentence=c["sentence"],
+                    article=c["article"],
+                )
+            )
+    return out
 
 
 def summary_text(result: dict[str, Any], limit: int = 3) -> str:

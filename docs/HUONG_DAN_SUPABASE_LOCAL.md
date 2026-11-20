@@ -55,7 +55,7 @@ supabase status --workdir .supabase-local
 
 ```powershell
 # Ký tự đặc biệt trong mật khẩu (@ : / # ?) phải percent-encode, ví dụ @ -> %40
-$env:CLOUD_DB_URL = "postgresql://postgres.<project-ref>:<pw>@<host-session-pooler>:5432/postgres"
+$env:CLOUD_DB_URL = "postgresql://postgres.<project-ref>:<MK>@<host-session-pooler>:5432/postgres"
 
 supabase db dump --db-url $env:CLOUD_DB_URL -f .supabase-local\dumps\roles.sql  --role-only
 supabase db dump --db-url $env:CLOUD_DB_URL -f .supabase-local\dumps\schema.sql
@@ -102,9 +102,10 @@ docker exec -it $DB psql "postgresql://postgres:postgres@127.0.0.1:5432/postgres
 ```
 
 ```sql
-ALTER ROLE eas_backend_login WITH LOGIN PASSWORD '<mat-khau-local-1>';
-ALTER ROLE eas_worker_login  WITH LOGIN PASSWORD '<mat-khau-local-2>';
-ALTER ROLE eas_mock_login    WITH LOGIN PASSWORD '<mat-khau-local-3>';
+-- <MK1>, <MK2>, <MK3>: mật khẩu local bạn tự đặt cho từng role (dùng lại ở bước cấu hình .env).
+ALTER ROLE eas_backend_login WITH LOGIN PASSWORD '<MK1>';
+ALTER ROLE eas_worker_login  WITH LOGIN PASSWORD '<MK2>';
+ALTER ROLE eas_mock_login    WITH LOGIN PASSWORD '<MK3>';
 
 -- Kiểm tra bằng đúng login của API (RLS phải cho đọc):
 SET ROLE eas_backend_login;
@@ -132,9 +133,9 @@ Copy `.env` thành `.env.local-supabase` (mẫu `.env.*` đã bị gitignore) v�
 
 ```dotenv
 # Container gọi ra máy host qua host.docker.internal; Postgres local không bật TLS
-EAS_API_DATABASE_URL=postgresql://eas_backend_login:<pw1>@host.docker.internal:55322/postgres?sslmode=disable
-EAS_WORKER_DATABASE_URL=postgresql://eas_worker_login:<pw2>@host.docker.internal:55322/postgres?sslmode=disable
-EAS_MOCK_DATABASE_URL=postgresql://eas_mock_login:<pw3>@host.docker.internal:55322/postgres?sslmode=disable
+EAS_API_DATABASE_URL=postgresql://eas_backend_login:<MK1>@host.docker.internal:55322/postgres?sslmode=disable
+EAS_WORKER_DATABASE_URL=postgresql://eas_worker_login:<MK2>@host.docker.internal:55322/postgres?sslmode=disable
+EAS_MOCK_DATABASE_URL=postgresql://eas_mock_login:<MK3>@host.docker.internal:55322/postgres?sslmode=disable
 
 EAS_SUPABASE_URL=http://host.docker.internal:55321
 EAS_SUPABASE_SECRET_KEY=            # hoặc secret key local (bước 5)

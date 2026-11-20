@@ -542,7 +542,10 @@
         "tạm ứng {tien_nho} mua đồ",
         "xin tạm ứng {tien_nho}",
         "tạm ứng tiền mặt {tien_nho}",
-        "ứng {tien_nho} tiếp khách"
+        "ứng {tien_nho} tiếp khách",
+        "ứng {tien_nho} đi công tác",
+        "tạm ứng công tác phí {tien_nho}",
+        "ứng {tien_nho} mua vật tư"
       ]
     },
     "ADVANCE_MEDIUM": {
@@ -816,7 +819,10 @@
         "trả tiền hợp đồng đợt {so_ngay}",
         "chuyển khoản cho đối tác",
         "thanh toán tiền thuê văn phòng",
-        "thanh toán cho {doi_tac}"
+        "thanh toán cho {doi_tac}",
+        "chi trả hợp đồng",
+        "chi trả đợt {so_ngay} hợp đồng",
+        "chi trả công nợ đối tác"
       ]
     },
     "BUDGET_REALLOCATION": {
@@ -1073,7 +1079,11 @@
         "khóa tài khoản {ten}",
         "thu lại thẻ từ",
         "thu hồi quyền admin",
-        "khóa quyền {he_thong}"
+        "khóa quyền {he_thong}",
+        "hủy quyền truy cập",
+        "gỡ quyền {he_thong}",
+        "hủy tài khoản người nghỉ việc",
+        "thu hồi quyền thực tập sinh hết hạn"
       ]
     },
     "ACCESS_FACILITY": {
@@ -1371,7 +1381,10 @@
         "dọn kho hồ sơ",
         "sắp xếp lại chỗ ngồi",
         "nhờ làm giúp việc",
-        "xử lý công việc"
+        "xử lý công việc",
+        "nhờ cập nhật dữ liệu",
+        "cần người hỗ trợ nhập liệu",
+        "nhờ cập nhật danh mục sản phẩm"
       ]
     },
     "DATA_UAT_EXPORT": {
@@ -1421,7 +1434,11 @@
         "cải tiến giao diện",
         "đề xuất tính năng {tinh_nang}",
         "nâng cấp phần mềm nội bộ",
-        "thêm {tinh_nang}"
+        "thêm {tinh_nang}",
+        "deploy bản cập nhật",
+        "triển khai phiên bản mới",
+        "phát hành bản vá tính năng",
+        "release lên production"
       ]
     },
     "BUSINESS_TRIP": {
@@ -1466,13 +1483,19 @@
         "Đi muộn do kẹt xe, xin điều chỉnh công",
         "Sửa giờ ra về bị ghi sai",
         "Xác nhận công ngày làm việc bên ngoài",
-        "Quên chấm công ra về"
+        "Quên chấm công ra về",
+        "Xin đi muộn {so_phut} ngày {ngay}",
+        "Xin về sớm {so_phut} ngày {ngay} vì {ly_do_tre}",
+        "Đến muộn do {ly_do_tre}, xin điều chỉnh công",
+        "Báo đi trễ {so_phut} sáng {ngay}"
       ],
       "details": [
         "Hôm {ngay} em có đi làm đầy đủ nhưng quên quẹt thẻ.",
         "Máy chấm công tầng 3 bị lỗi nên không ghi nhận giờ vào.",
         "Em đi gặp khách cả ngày nên không chấm công tại văn phòng.",
-        "Đường ngập do mưa lớn nên em đến muộn 30 phút."
+        "Đường ngập do mưa lớn nên em đến muộn 30 phút.",
+        "Em xin phép đi muộn vì {ly_do_tre}, sẽ làm bù đủ giờ.",
+        "Xin phép về sớm hơn giờ quy định, công việc đã bàn giao xong."
       ],
       "short": [
         "quên chấm công",
@@ -1485,8 +1508,45 @@
         "thiếu công ngày {ngay}",
         "chấm công sai",
         "quên chấm công {ngay_ngan}",
-        "bù công"
-      ]
+        "bù công",
+        "xin đi muộn",
+        "đi muộn {so_phut}",
+        "đi muộn vì {ly_do_tre}",
+        "xin đi trễ {so_phut}",
+        "đi trễ do {ly_do_tre}",
+        "đến muộn {so_phut}",
+        "đến trễ vì {ly_do_tre}",
+        "về sớm",
+        "xin về sớm {so_phut}",
+        "về sớm vì {ly_do_tre}",
+        "xin phép về sớm",
+        "ra về sớm có việc",
+        "đi muộn về sớm",
+        "quên quẹt thẻ",
+        "quẹt thẻ không nhận",
+        "xin điều chỉnh giờ vào ca"
+      ],
+      "slots": {
+        "so_phut": [
+          "10 phút",
+          "15 phút",
+          "20 phút",
+          "30 phút",
+          "45 phút",
+          "1 tiếng",
+          "1 tiếng rưỡi"
+        ],
+        "ly_do_tre": [
+          "kẹt xe",
+          "tắc đường",
+          "trời mưa",
+          "đi khám bệnh",
+          "có việc gia đình",
+          "đưa người nhà đi viện",
+          "làm thủ tục ở ngân hàng",
+          "họp phụ huynh"
+        ]
+      }
     },
     "LEAVE": {
       "titles": [
@@ -1535,7 +1595,12 @@
         "đưa con đi tiêm",
         "đi làm giấy tờ",
         "{benh} xin nghỉ",
-        "nghỉ {ngay_ngan} vì {benh}"
+        "nghỉ {ngay_ngan} vì {benh}",
+        "vắng mặt",
+        "xin vắng mặt {ngay_ngan}",
+        "báo vắng mặt",
+        "vắng mặt có lý do",
+        "xin vắng {ngay_ngan}"
       ]
     },
     "LEAVE_SPECIAL": {
@@ -1857,7 +1922,11 @@
         "thưởng team",
         "khen thưởng {ten}",
         "thưởng nhân viên xuất sắc",
-        "thưởng dự án"
+        "thưởng dự án",
+        "tuyên dương",
+        "biểu dương {ten}",
+        "khen ngợi nhân viên",
+        "đề xuất bằng khen"
       ]
     },
     "SALARY_ADJUSTMENT": {
@@ -2074,7 +2143,10 @@
         "thỏa thuận bảo mật",
         "chia sẻ dữ liệu cho đối tác",
         "bảo mật thông tin đối tác",
-        "NDA với {doi_tac}"
+        "NDA với {doi_tac}",
+        "gửi dữ liệu cho bên thứ ba",
+        "chia sẻ file khách hàng ra ngoài",
+        "bên thứ ba xin dữ liệu"
       ]
     },
     "POLICY_ISSUANCE": {
@@ -2156,7 +2228,10 @@
         "chiến dịch marketing",
         "thuê KOL",
         "tiệc tất niên",
-        "tổ chức {su_kien}"
+        "tổ chức {su_kien}",
+        "booking KOL",
+        "thuê influencer",
+        "chi phí KOL review sản phẩm"
       ]
     },
     "SPECIAL_DISCOUNT": {

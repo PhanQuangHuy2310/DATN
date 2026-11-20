@@ -2,10 +2,19 @@ import { useState } from "react";
 import { api, notify } from "../api.js";
 import { errorText, types } from "../domain.js";
 
+const RISK_LABELS = { low: "thấp", medium: "trung bình", high: "cao", critical: "rất cao" };
+
 function riskLevel(score) {
   if (score <= 2) return "low";
   if (score <= 3) return "medium";
   return "high";
+}
+
+// Colour follows the model's label when it has one, so "2/5 (trung bình)" is never shown in the "low" colour.
+function riskTone(risk) {
+  const label = String(risk?.risk_label || "").toLowerCase();
+  if (label === "critical") return "high";
+  return ["low", "medium", "high"].includes(label) ? label : riskLevel(risk?.risk_score);
 }
 
 // Bộ phận xử lý do AI suy ra từ catalog (executor của loại yêu cầu).
@@ -24,19 +33,12 @@ const departmentLabels = {
   WAREHOUSE: "Kho vận",
 };
 
-// AI trả về mã catalog; chỉ gợi ý khi model chắc chắn và người dùng được tạo loại đó.
-function suggestedType(result, allowedTypes) {
-  const code = String(result?.predicted_request_type || "").toUpperCase();
-  if (!code || result?.fallback_used || result?.low_confidence) return null;
-  if (Array.isArray(allowedTypes) && !allowedTypes.includes(code)) return null;
-  return code;
-}
-
 function typeName(code, fallback) {
   return types[code] || fallback || code;
 }
 
-function riskPayload(type, amount, lifecycle, riskWeight) {
+/** Payload of /api/v1/ai/risk-score for the form being filled. */
+export function riskPayload(type, amount, lifecycle, riskWeight) {
   return {
     request_type: type,
     lifecycle_template: lifecycle || "A",
@@ -46,98 +48,38 @@ function riskPayload(type, amount, lifecycle, riskWeight) {
 }
 
 /**
- * Hỗ trợ nội dung và phân tích rủi ro; không thay quyết định của người duyệt.
+ * Hộp AI tự động ngay dưới ô tiêu đề: gõ tiêu đề/nội dung là AI tự phân loại, gợi ý bộ phận và tuyến duyệt,
+ * chấm rủi ro. AI không tự chuyển biểu mẫu; nếu nội dung giống loại khác, AI chỉ đưa nút gợi ý chuyển.
+ * Hỗ trợ người gửi, không thay quyết định của người duyệt.
  */
-export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSuggestType, allowedTypes }) {
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [classify, setClassify] = useState(null),
-    [risk, setRisk] = useState(null),
-    [steps, setSteps] = useState({}),
-    [suggested, setSuggested] = useState(null);
-
-  async function run() {
-    const { title = "", reason = "", amount_vnd: amount = 0 } = getValues();
-    if (!String(title).trim()) {
-      setError("Vui lòng nhập tiêu đề trước khi yêu cầu AI gợi ý.");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    setClassify(null);
-    setRisk(null);
-    setSuggested(null);
-    setSteps({ classify: "running", risk: "running" });
-    const tasks = await Promise.allSettled([
-      api("/api/v1/ai/classify", {
-        method: "POST", body: JSON.stringify({ title, description: reason }),
-      }).then((response) => {
-        setClassify(response.data);
-        setSteps((prev) => ({ ...prev, classify: response.data?.fallback_used ? "fallback" : "done" }));
-        // Only suggest here; the editor carries title and reason into the new form.
-        const mapped = suggestedType(response.data, allowedTypes);
-        setSuggested(mapped && mapped !== type ? mapped : null);
-        return response;
-      }).catch((error) => {
-        setSteps((prev) => ({ ...prev, classify: "error" }));
-        throw error;
-      }),
-      api("/api/v1/ai/risk-score", {
-        method: "POST", body: JSON.stringify(riskPayload(type, Number(amount) || 0, lifecycle, riskWeight)),
-      }).then((response) => {
-        setRisk(response.data);
-        setSteps((prev) => ({ ...prev, risk: response.data?.fallback_used ? "fallback" : "done" }));
-        return response;
-      }).catch((error) => {
-        setSteps((prev) => ({ ...prev, risk: "error" }));
-        throw error;
-      }),
-    ]);
-    const rejected = tasks.filter((item) => item.status === "rejected");
-    if (rejected.length) setError(`Một số phân tích chưa hoàn tất: ${errorText(rejected[0].reason)}`);
-    else if (tasks.some((item) => item.value?.data?.fallback_used)) setError("AI chưa phản hồi đầy đủ; một phần kết quả là dữ liệu dự phòng, không phải kết quả mô hình.");
-    else notify("AI đã hoàn thành phân loại và đánh giá rủi ro");
-    setBusy(false);
-  }
-
+export function AiAutoInsight({ insight, nameOf = typeName, onSwitch, onDismiss, onNewType }) {
+  const { status = "idle", classify, risk, suggestion, newNeed, offerNew, failed } = insight || {};
+  const unsure = Boolean(offerNew && !newNeed);
+  const label = (code, fallback) => nameOf(code, fallback);
   return (
-    <div className="ai-panel">
-      <div className="section-head">
-        <h3>Trợ lý AI</h3>
-        <button type="button" className="ai-btn" onClick={run} disabled={busy}>
-          {busy ? "AI đang xử lý…" : "Gợi ý & đánh giá rủi ro"}
-        </button>
+    <div className="ai-auto-insight wide" aria-live="polite">
+      <div className="ai-auto-head">
+        <span className="ai-auto-badge">AI tự động</span>
+        {status === "idle" && <small className="muted">Nhập tiêu đề, AI sẽ tự đánh giá loại yêu cầu, bộ phận xử lý và rủi ro.</small>}
+        {status === "running" && <small className="muted" role="status">AI đang phân tích nội dung…</small>}
+        {status !== "running" && failed && (
+          <small className="muted">AI chưa phản hồi đầy đủ; phần thiếu là dữ liệu dự phòng hoặc chưa có.</small>
+        )}
       </div>
-      {Object.keys(steps).length > 0 && (
-        <div className="ai-progress" aria-live="polite">
-          {[["classify", "Phân loại nội dung"], ["risk", "Đánh giá rủi ro"]].map(([key, title]) => (
-            <div className={`ai-progress-step ${steps[key]}`} key={key}>
-              <span aria-hidden="true">{steps[key] === "done" ? "✓" : ["error", "fallback"].includes(steps[key]) ? "!" : "◌"}</span>
-              <span>{title}</span><small>{steps[key] === "done" ? "Hoàn thành" : steps[key] === "error" ? "Không thành công" : steps[key] === "fallback" ? "Dữ liệu dự phòng" : "Đang xử lý…"}</small>
-            </div>
-          ))}
-        </div>
-      )}
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {classify && (
+      {classify && !classify.fallback_used && !classify.unclear && !newNeed && (
         <p>
-          Loại đề xuất: <strong>{typeName(classify.predicted_request_type, classify.predicted_request_name || "Yêu cầu được phân loại")}</strong> (độ
-          tin cậy{" "}
-          {Math.round((classify.confidence_request_type || 0) * 100)}%) · Bộ phận
-          xử lý: <strong>{departmentLabels[classify.predicted_department] || "Bộ phận liên quan"}</strong>
+          Loại đề xuất: <strong>{label(classify.predicted_request_type, classify.predicted_request_name)}</strong> (độ
+          tin cậy {Math.round((classify.confidence_request_type || 0) * 100)}%) · Bộ phận xử lý:{" "}
+          <strong>{departmentLabels[classify.predicted_department] || "Bộ phận liên quan"}</strong>
           {classify.alternatives?.length > 1 && (
             <>
               <br />
               <small className="muted">
-                {classify.low_confidence ? "AI chưa chắc chắn, có thể là: " : "Khả năng khác: "}
+                {unsure ? "AI chưa chắc chắn, có thể là: " : "Khả năng khác: "}
                 {classify.alternatives
                   .filter((item) => item.request_type !== classify.predicted_request_type)
                   .slice(0, 2)
-                  .map((item) => `${typeName(item.request_type, item.name)} (${Math.round(item.confidence * 100)}%)`)
+                  .map((item) => `${label(item.request_type, item.name)} (${Math.round(item.confidence * 100)}%)`)
                   .join(", ")}
               </small>
             </>
@@ -150,24 +92,47 @@ export function AiRequestAssist({ type, lifecycle, riskWeight, getValues, onSugg
           )}
         </p>
       )}
-      {suggested && onSuggestType && (
-        <p className="ai-suggest-switch">
-          AI thấy nội dung giống loại <strong>{types[suggested] || suggested}</strong> hơn.{" "}
-          <button type="button" className="secondary" onClick={() => { onSuggestType(suggested); setSuggested(null); }}>
-            Chuyển sang biểu mẫu này
-          </button>{" "}
-          <small className="muted">(tiêu đề và nội dung đã nhập được giữ nguyên)</small>
+      {classify?.unclear && (
+        <p className="muted">AI chưa hiểu nội dung này. Hãy viết rõ nhu cầu, ví dụ: «Xin nghỉ phép 2 ngày về quê».</p>
+      )}
+      {offerNew && (
+        <p className="ai-auto-new">
+          {newNeed
+            ? "AI chưa thấy loại yêu cầu nào trong hệ thống khớp với nội dung này."
+            : "AI chưa chắc loại nào ở trên đúng nhu cầu của bạn. Nếu không loại nào đúng:"}
+          {onNewType && (
+            <>
+              {" "}
+              <button type="button" className="secondary" onClick={onNewType}>
+                Tạo loại yêu cầu mới
+              </button>
+            </>
+          )}
         </p>
       )}
       {risk && (
         <p>
           Điểm rủi ro:{" "}
-          <span className={`badge badge-${riskLevel(risk.risk_score)}`}>
-            {risk.risk_score}/5 ({risk.risk_label})
+          <span className={`badge badge-${riskTone(risk)}`}>
+            {risk.risk_score}/5 ({RISK_LABELS[String(risk.risk_label || "").toLowerCase()] || risk.risk_label})
           </span>{" "}
-          · Có thể ưu tiên xem xét:{" "}
-          <strong>{risk.auto_approve_eligible ? "Có" : "Không"}</strong>
+          · Có thể ưu tiên xem xét: <strong>{risk.auto_approve_eligible ? "Có" : "Không"}</strong>
         </p>
+      )}
+      {suggestion && onSwitch && (
+        <div className="ai-auto-switch">
+          <span>
+            Nội dung giống loại <strong>{label(suggestion.code)}</strong> hơn biểu mẫu đang chọn (độ tin cậy{" "}
+            {Math.round(suggestion.confidence * 100)}%).
+          </span>
+          <button type="button" onClick={() => onSwitch(suggestion.code)}>
+            Chuyển sang «{label(suggestion.code)}»
+          </button>
+          <button type="button" className="secondary" onClick={onDismiss}>
+            Bỏ qua
+          </button>
+          <small className="muted">Tiêu đề và nội dung đã nhập được giữ nguyên.</small>
+        </div>
       )}
     </div>
   );

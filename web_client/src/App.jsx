@@ -1027,8 +1027,9 @@ function renderWorkspaceContent({
   if (editor) {
     return (
       <RequestEditor
-        key={editor.id || "new"}
+        key={editor.id || (editor.start ? `start:${editor.start.type}:${editor.start.title}` : "new")}
         initial={editor.id ? editor : undefined}
+        start={editor.id ? undefined : editor.start}
         onCancel={() => setEditor(null)}
         onDone={(id) => {
           setEditor(null);
@@ -1414,12 +1415,12 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
               </div>
             </div>
           </div>
-          {canSearch && <GlobalSearch portal={portal} onOpen={(id, item) => {
+          {canSearch && <GlobalSearch key={`${page}|${activeTitle}`} portal={portal} onOpen={(id, item) => {
             if (adminSearch) {
               // Metadata-only scope: open the operations row instead of the restricted detail.
               if (user.roles.includes("AUDITOR")) openRequest(id); else navigate("ops", item?.code || "");
             } else openRequest(id);
-          }} onNavigate={navigate} />}
+          }} onNavigate={navigate} onStartRequest={portal === "client" ? (start) => { setSelected(null); setEditor({ start }); } : undefined} />}
           <div className="topbar-right client-topbar-actions">
             <button
               type="button"

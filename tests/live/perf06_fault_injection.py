@@ -18,13 +18,7 @@ import test_report_scenarios as t
 
 
 def docker(*args: str) -> str:
-    return subprocess.run(
-        ["docker", *args],
-        capture_output=True,
-        text=True,
-        timeout=180,
-        check=False,
-    ).stdout.strip()
+    return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=180, check=False).stdout.strip()
 
 
 def wait_healthy(name: str, timeout: int = 120) -> None:

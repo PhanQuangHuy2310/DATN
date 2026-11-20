@@ -22,8 +22,8 @@ def pct(values: list[int], q: float) -> float:
 
 
 def summarize(path: str) -> dict:
-    with open(path, encoding="utf-8") as handle:
-        rows = list(csv.DictReader(handle))
+    with open(path, encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
     rows = [r for r in rows if r.get("label") and r.get("timeStamp", "").isdigit()]
     t0 = min(int(r["timeStamp"]) for r in rows)
     t1 = max(int(r["timeStamp"]) + int(r["elapsed"]) for r in rows)
@@ -79,8 +79,8 @@ def main() -> None:
         verdict = "" if v["limit_ms"] is None else ("đạt" if v["meets_limit"] else "VƯỢT") + f" {v['limit_ms']}"
         print(f"{k:22} {v['n']:6d} {v['p50']:7.0f} {v['p95']:7.0f} {v['max']:7d} {v['http_429']:5d} {v['app_errors']:5d}  {verdict}")
     if a.json:
-        with open(a.json, "w", encoding="utf-8") as handle:
-            json.dump(s, handle, ensure_ascii=False, indent=1)
+        with open(a.json, "w", encoding="utf-8") as fh:
+            json.dump(s, fh, ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":

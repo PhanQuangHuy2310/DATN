@@ -4,6 +4,7 @@ import { date, types } from "../domain.js";
 import { Badge, useResource } from "./ui.jsx";
 import { useDebounced } from "./design.jsx";
 import { formatNotificationLabel } from "./NotificationsPage.jsx";
+import { NewTypeDialog, useAiTypeSuggestions } from "./AiNewType.jsx";
 
 function useDismiss(open, setOpen) {
   const ref = useRef(null);
@@ -46,19 +47,92 @@ const QUICK_FEATURES = [
   { key: "notifications", label: "Trung tâm thông báo", hint: "Chức năng", portal: "both" },
 ];
 
+// Cỡ điện thoại: ô tìm kiếm thu về một nút kính lúp; bấm vào thì thanh tìm kiếm phủ cả thanh đầu trang.
+const COMPACT_SEARCH_QUERY = "(max-width: 640px)";
+
+function useCompactSearch() {
+  const [compact, setCompact] = useState(() => Boolean(window.matchMedia?.(COMPACT_SEARCH_QUERY).matches));
+  useEffect(() => {
+    const mq = window.matchMedia?.(COMPACT_SEARCH_QUERY);
+    if (!mq) return undefined;
+    const onChange = () => setCompact(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+  return compact;
+}
+
+const SearchIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </svg>
+);
+
 /** Searches by request code, title, requester name or quick feature title. */
-export function GlobalSearch({ portal, onOpen, onNavigate }) {
+export function GlobalSearch({ portal, onOpen, onNavigate, onStartRequest }) {
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [newTypeText, setNewTypeText] = useState("");
+  const compact = useCompactSearch();
+  const inputRef = useRef(null);
   const query = useDebounced(text.trim(), 280);
+  // "Có phải ý bạn là…": AI so nội dung gõ vào với các loại yêu cầu (chỉ ở cổng nhân viên, nơi tạo yêu cầu).
+  const aiText = useDebounced(text.trim(), 600).slice(0, 120);
+  const ai = useAiTypeSuggestions(aiText, { enabled: Boolean(onStartRequest) });
   const base = portal === "admin" ? "/api/v1/ops/requests" : "/api/v1/requests";
   const results = useResource(
     query.length >= 2
       ? `${base}?limit=8&offset=0&q=${encodeURIComponent(query)}`
       : "",
   );
-  const ref = useDismiss(open, setOpen);
+  // Trên điện thoại, "đóng" nghĩa là về hẳn trạng thái ban đầu: chỉ còn kính lúp, chữ đã gõ bị xóa.
+  const collapse = () => {
+    setOpen(false);
+    setExpanded(false);
+    setText("");
+  };
+  const dismiss = (value) => {
+    if (value) return setOpen(true);
+    if (compact && expanded) collapse();
+    else setOpen(false);
+  };
+  const ref = useDismiss(open || expanded, dismiss);
   const items = query.length >= 2 ? results.data?.items || [] : [];
+
+  useEffect(() => {
+    if (expanded) inputRef.current?.focus();
+  }, [expanded]);
+  // Chuyển trang: App.jsx gắn key theo trang nên ô tìm kiếm được tạo lại, về trạng thái ban đầu.
+
+  const newTypeDialog = newTypeText && (
+    <NewTypeDialog
+      text={newTypeText}
+      onClose={() => setNewTypeText("")}
+      onStart={(start) => {
+        setNewTypeText("");
+        onStartRequest(start);
+      }}
+    />
+  );
+
+  if (compact && !expanded) {
+    return (
+      <div className="ds-global-search is-compact" role="search">
+        {newTypeDialog}
+        <button
+          type="button"
+          className="secondary ds-icon-button ds-search-toggle"
+          aria-label="Tìm hồ sơ, chức năng"
+          title="Tìm hồ sơ, chức năng"
+          onClick={() => setExpanded(true)}
+        >
+          <SearchIcon />
+        </button>
+      </div>
+    );
+  }
 
   const matchedFeatures =
     query.length >= 2
@@ -70,13 +144,15 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
       : [];
 
   return (
-    <div className="ds-global-search" ref={ref} role="search">
+    <div className={`ds-global-search${compact ? " is-expanded" : ""}`} ref={ref} role="search">
+      {newTypeDialog}
       <label htmlFor="ds-global-search" className="sr-only">
         Tìm nhanh chức năng, tiêu đề đơn, người gửi hoặc mã hồ sơ
       </label>
       <span aria-hidden="true">⌕</span>
       <input
         id="ds-global-search"
+        ref={inputRef}
         type="search"
         role="combobox"
         aria-autocomplete="list"
@@ -92,6 +168,16 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
         }}
         onFocus={() => setOpen(true)}
       />
+      {compact && (
+        <button
+          type="button"
+          className="secondary ds-search-close"
+          aria-label="Đóng tìm kiếm"
+          onClick={collapse}
+        >
+          Đóng
+        </button>
+      )}
       {open && query.length >= 2 && (
         <ul id="ds-global-search-results" className="ds-search-results">
           {matchedFeatures.length > 0 && (
@@ -102,8 +188,7 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
               <button
                 type="button"
                 onClick={() => {
-                  setOpen(false);
-                  setText("");
+                  collapse();
                   if (onNavigate) onNavigate(feat.key);
                 }}
               >
@@ -128,8 +213,7 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
               <button
                 type="button"
                 onClick={() => {
-                  setOpen(false);
-                  setText("");
+                  collapse();
                   onOpen(item.id, item);
                 }}
               >
@@ -151,6 +235,60 @@ export function GlobalSearch({ portal, onOpen, onNavigate }) {
             <li className="muted" style={{ padding: 10 }}>
               Không tìm thấy hồ sơ hoặc chức năng phù hợp.
             </li>
+          )}
+          {onStartRequest && ai.active && (
+            <>
+              <li className="ds-search-group-header">AI gợi ý · Có phải ý bạn là</li>
+              {ai.loading && (
+                <li className="muted" style={{ padding: 10 }}>
+                  AI đang xem nhu cầu này giống loại yêu cầu nào…
+                </li>
+              )}
+              {ai.items.map((suggestion) => (
+                <li key={`ai:${suggestion.code}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      collapse();
+                      onStartRequest({ type: suggestion.code, label: suggestion.name, title: aiText });
+                    }}
+                  >
+                    <span className="ds-search-item-main">
+                      <strong>Tạo yêu cầu «{suggestion.name}»</strong>
+                      <small>
+                        Độ tin cậy {Math.round(suggestion.confidence * 100)}% · tiêu đề «{aiText}» được điền sẵn
+                      </small>
+                    </span>
+                    <span className="ds-search-badge">Tạo ↵</span>
+                  </button>
+                </li>
+              ))}
+              {!ai.loading && ai.newNeed && (
+                <li className="muted" style={{ padding: "6px 10px" }}>
+                  AI chưa thấy loại yêu cầu nào trong hệ thống khớp với «{aiText}».
+                </li>
+              )}
+              {!ai.loading && (
+                <li>
+                  <button
+                    type="button"
+                    className="ds-search-ai-new"
+                    onClick={() => {
+                      setNewTypeText(aiText);
+                      collapse();
+                    }}
+                  >
+                    <span className="ds-search-item-main">
+                      <strong>
+                        {ai.items.length ? "Không phải? " : ""}Tạo yêu cầu mới «{aiText}»
+                      </strong>
+                      <small>AI kiểm tra lại; chưa có loại phù hợp thì AI đề xuất tạo loại mới</small>
+                    </span>
+                    <span className="ds-search-badge">AI ✦</span>
+                  </button>
+                </li>
+              )}
+            </>
           )}
         </ul>
       )}

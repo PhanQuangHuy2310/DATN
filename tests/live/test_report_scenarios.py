@@ -494,7 +494,7 @@ def sec_02(o: Oracle) -> str:
     h = login(o.requester("SEC-02"))
     before = o.one("SELECT count(*) FROM eas.request")[0]
     st, _body = h.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Không có CSRF"},
-                       idem=str(uuid.uuid4()), csrf=False)
+                      idem=str(uuid.uuid4()), csrf=False)
     after = o.one("SELECT count(*) FROM eas.request")[0]
     check(st == 403 and after == before, f"HTTP {st}, số hồ sơ {before}→{after}")
     return f"POST không kèm CSRF → HTTP {st}; không sinh bản ghi mới"
@@ -506,7 +506,7 @@ def sec_03(o: Oracle) -> str:
     owner = login(email)
     raw, ct = multipart("file", "rieng_tu.pdf", PDF, "application/pdf")
     _draft_st, draft = owner.call("POST", "/api/v1/request-drafts", {"type_code": "WFH_REQ", "title": "Hồ sơ có tệp riêng tư"},
-                                  idem=str(uuid.uuid4()))
+                                 idem=str(uuid.uuid4()))
     did = rid_of(draft)
     st, att = owner.call("POST", f"/api/v1/request-drafts/{did}/attachments", raw=raw, content_type=ct)
     check(st == 201, f"tải tệp lỗi HTTP {st} {att}")
@@ -555,10 +555,9 @@ def sec_05(o: Oracle) -> str:
     [t.join() for t in threads]
     n_dec = o.one("SELECT count(*) FROM eas.approval_decision WHERE step_id=%s", step[0])[0]
     n_active = o.one("SELECT count(*) FROM eas.approval_step WHERE request_id=%s AND state='ACTIVE'", rid)[0]
-    ordered = sorted(results)
-    check(min(results) in (200, 201) and ordered[1] >= 400 and n_dec == 1 and n_active <= 1,
+    check(min(results) in (200, 201) and sorted(results)[1] >= 400 and n_dec == 1 and n_active <= 1,
           f"HTTP {results}, quyết định {n_dec}, bước ACTIVE {n_active}")
-    return f"{o.req(rid)['code']}: hai lệnh duyệt đồng thời → HTTP {ordered}; 1 quyết định, {n_active} bước ACTIVE"
+    return f"{o.req(rid)['code']}: hai lệnh duyệt đồng thời → HTTP {sorted(results)}; 1 quyết định, {n_active} bước ACTIVE"
 
 
 @case("SEC-07")
@@ -617,7 +616,8 @@ def int_06(o: Oracle) -> str:
             "    r=urllib.request.Request('http://mock-systems:8000/mock-api/v1/hr/employees',headers=h)\n"
             "    try: print(urllib.request.urlopen(r,timeout=10).status)\n"
             "    except urllib.error.HTTPError as e: print(e.code)\n")
-    out = subprocess.run(["docker", "exec", "eas-api-1", "python", "-c", code], capture_output=True, text=True, timeout=60, check=False)
+    out = subprocess.run(["docker", "exec", "eas-api-1", "python", "-c", code], capture_output=True, text=True, timeout=60,
+                         check=False)
     codes = [int(x) for x in out.stdout.split() if x.isdigit()]
     check(len(codes) == 2 and all(c in (401, 403) for c in codes), f"mã trả về {codes} {out.stderr[-200:]}")
     return f"gọi Mock Systems API không có khóa → {codes[0]}, khóa sai → {codes[1]}"

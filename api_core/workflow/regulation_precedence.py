@@ -270,6 +270,7 @@ def resolve(
     origins: dict[str, dict[str, Any]],
     *,
     current_version: str | None = None,
+    keep: set[tuple[str, str]] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Áp luật "mới thắng" cho các luật đã biên dịch (description = câu gốc, source_code = mã văn bản).
 
@@ -309,6 +310,8 @@ def resolve(
             how = relation(winner, rule)
             if how is None:
                 continue
+            if keep and (code_of(winner), sha) in keep:
+                continue  # admin / AI quyết giữ điều cũ khi nạp văn bản mới (eas.regulation_keep_decision)
             entry = {
                 "old_code": code_of(rule),
                 "old_rule": rule["id"],
@@ -399,3 +402,74 @@ def describe(entry: dict[str, Any], type_names: dict[str, str] | None = None) ->
         f"{entry.get('new_code', '?')} thay thế {entry['old_code']} ở {kind}: “{entry.get('new_text', '')[:140]}” "
         f"thay cho “{entry['old_text'][:140]}”{tail}"
     )
+
+
+def recommend(new: dict[str, Any], old: dict[str, Any]) -> tuple[str, str]:
+    """Đề xuất của AI khi luật mới thay luật cũ: ("DROP", lý do) bỏ / thu hẹp điều cũ, ("KEEP", lý do) giữ điều cũ.
+
+    Giữ điều cũ khi luật mới CHO AI tự duyệt mà điều cũ BẮT duyệt thủ công vì một điều kiện điều mới không nói tới
+    (nghi chia nhỏ, giữ việc đến hạn, lần lặp, địa điểm, chiều khác như số ngày khi điều mới nói số tiền): bỏ điều cũ
+    sẽ mất một chốt kiểm soát mà người soạn có thể không định bỏ. Các trường hợp còn lại (siết chặt hơn, đổi ngưỡng,
+    cùng chiều) thì văn bản mới nhất thắng.
+    """
+    loosens = new.get("auto_approve") is True and old.get("auto_approve") is False
+    if loosens:
+        extra = [k for k in OTHER_KEYS if _present(old, k)]
+        # Khoá đi kèm không cần nhắc riêng: tổng tiền chia nhỏ (đi với nghi chia nhỏ), khung thời gian (đi với lần lặp).
+        extra = [
+            k
+            for k in extra
+            if not (k == "split_total_gt" and "split_suspect" in extra)
+            and not (k == "repeat_window" and "repeat_count_gte" in extra)
+        ]
+        if extra:
+            return "KEEP", (
+                "Nên giữ điều cũ: điều cũ bắt duyệt thủ công khi "
+                + ", ".join(_KEY_TEXT.get(k, k) for k in extra)
+                + ", điều mới không nói tới nên không nên tự gỡ chốt kiểm soát này."
+            )
+        old_loc = (old.get("location_contains") or "").lower()
+        if old_loc and old_loc != (new.get("location_contains") or "").lower():
+            return (
+                "KEEP",
+                f"Nên giữ điều cũ: điều cũ kiểm soát riêng địa điểm «{old_loc}», điều mới không nói tới.",
+            )
+        if not _dims(old) <= _dims(new):
+            missing = ", ".join(
+                _DIM_TEXT.get(d, d) for d in sorted(_dims(old) - _dims(new))
+            )
+            return (
+                "KEEP",
+                f"Nên giữ điều cũ: điều cũ kiểm soát theo {missing}, điều mới chỉ nói về điều kiện khác.",
+            )
+        return "DROP", (
+            "Bỏ phần chồng của điều cũ: văn bản mới nới lỏng đúng điều kiện đó (cùng chiều số tiền / số ngày) "
+            "nên là ý định thay đổi; kiểm tra lại cảnh báo nới lỏng."
+        )
+    if new.get("auto_approve") is False and old.get("auto_approve") is True:
+        return (
+            "DROP",
+            "Bỏ phần chồng của điều cũ: văn bản mới siết chặt hơn (bắt duyệt thủ công).",
+        )
+    if _threshold_change(new, old):
+        return "DROP", "Bỏ điều cũ: văn bản mới đổi ngưỡng của cùng một điều kiện."
+    return (
+        "DROP",
+        "Bỏ phần chồng của điều cũ: văn bản mới nhất thắng trong vùng chồng nhau.",
+    )
+
+
+_KEY_TEXT = {
+    "due_within_hours": "đang giữ việc đến hạn",
+    "require_no_handover": "chưa bàn giao",
+    "repeat_count_gte": "lặp lại nhiều lần",
+    "repeat_window": "trong khung thời gian",
+    "split_suspect": "nghi chia nhỏ hồ sơ",
+    "split_total_gt": "tổng tiền chia nhỏ",
+}
+_DIM_TEXT = {
+    "amount": "số tiền",
+    "days": "số ngày",
+    "percent": "phần trăm",
+    "retro": "ngày đã quá",
+}

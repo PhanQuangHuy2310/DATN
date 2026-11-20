@@ -3,6 +3,23 @@
 Phiên sau đọc file này để làm tiếp. Mỗi mục xong: test → commit riêng → push `origin/dat`.
 
 ## Đã xong
+- [x] **20/11 — Nạp quy định đợt 3 (migration 27, đã chạy cả local và Supabase chung):** AI đề xuất giữ/bỏ điều cũ (lưu eas.regulation_keep_decision, lượt học tôn trọng); mẫu nạp nhanh (41 tổ hợp biên dịch đúng); đánh số v1.x (cập nhật lớn mới tăng số đầu), local đưa về v1.0; thông báo chỉ hiện bản sau lần đăng nhập trước. Thử thật đủ kịch bản người dùng. Đã chạy 27 trên Supabase chung 20/11 (có đồng ý, chạy thử rồi chạy thật).
+- [x] **19/11 — Bộ phân loại câu ngắn đời thường + Gemini hết hạn mức:** 2 bộ test băm trước (`request_eval_everyday*.json`); bổ sung đi muộn/về sớm/vắng mặt…; C cố định 5 (C=20 tự tin quá mức); bộ 2 kín 84,9% → 88,2%, 3 câu người dùng báo đúng. Gemini 429 → mọi chỗ có dự phòng (test giả lập). Còn yếu: 11 câu bộ 2 (thẻ ra vào vs tài khoản, chiết khấu vs mua sắm, "work from home"…). Mô hình xếp hạng người làm thay trên local tự học thêm (`+fb1`), không commit.
+- [x] **19/11 — Nạp quy định, đợt 2 (theo ảnh nhóm):** mã mặc định là mã REG còn trống do máy chủ tính (CSDL mới v1.0 từng gợi ý REG-002 trùng → 409 mọi lần); "AI kiểm tra trước" báo trùng mã + nút dùng mã trống; quy định đang hiệu lực có lỗi (nạp trước 18/11) được tô đỏ + banner. Thử thật: ban hành luôn 3 văn bản lỗi trong ảnh → 422, không lưu. Nhóm cần pull + rebuild api/worker/web/web-admin.
+- [x] **19/11 — Kiểm thử nạp quy định** (nhóm báo "không nạp được", ">3tr người duyệt <5tr AI duyệt" xung đột và AI tự xử lý):
+  - Sửa biên dịch viết tắt (`>`/`<`/`≥`/`≤`, "người duyệt", "AI duyệt", câu hai vế); câu "duyệt" + số chưa hiểu thì báo, không bỏ qua.
+  - Báo mâu thuẫn ghi vùng chồng + cách sửa; bấm Ban hành bản lỗi báo đúng lỗi và cuộn tới lỗi; CSS cho thông báo 3 trang quản trị.
+  - Cảnh báo mới: NỚI LỎNG kiểm soát (văn bản mới gỡ điều bắt duyệt cũ) và AI DUYỆT KHÔNG CÓ TÁC DỤNG (trọng số loại > ngưỡng).
+  - Giữ quy ước 18/11: mâu thuẫn trong cùng văn bản bị chặn; văn bản mới thắng văn bản cũ (bộ test băm 12/12).
+  - Local: thử ban hành QD-THU-CK rồi gỡ; nó đã loại trừ vĩnh viễn REG-002 Điều 3 cho chiết khấu ≤ 15% (chỉ local). Còn 2 đơn thử EAS-2026-000502/503 đang chờ duyệt.
+- [x] **19/11 — Một AI tự động khi tạo yêu cầu; "Có phải ý bạn là…"; AI tạo loại yêu cầu mới; loại mới được học ngay** (người dùng yêu cầu: gộp 2 khối AI, không tự chuyển trang, xử lý hết mục "!" / "chưa học"):
+  - Hộp "AI tự động" dưới ô tiêu đề (loại, bộ phận, tuyến, rủi ro); chỉ gợi ý chuyển, không tự chuyển (thay cho tự chuyển ngày 16/11).
+  - Ô tìm kiếm header + "Tìm nhanh biểu mẫu": "Có phải ý bạn là…" + "Tạo yêu cầu mới"; AI tạo loại (B/C, ≤ 3/người/ngày, admin được báo); người 2 thấy ngay.
+  - `ai_service/type_memory.py`: nhận loại mới qua tên + tiêu đề hồ sơ đã gửi, nhận ra nhu cầu ngoài danh mục.
+  - `type_onboarding.py`: loại A mới có bản nâng B/C; bad case loại gần nhất mở rộng sang loại mới.
+  - Form admin: ô "AI gợi ý" mẫu/trọng số.
+  - Còn yếu: từ đồng nghĩa không chung chữ cần hồ sơ mẫu; nhu cầu mới trùng chữ loại cũ chỉ được báo "chưa chắc".
+  - CSDL local còn loại thử `AI_9EFAD2ED` "Đăng ký suất ăn trưa ở căng tin" (tạo lúc kiểm thử, chỉ ở local).
 - [x] **19/11 — Cho AI học hết các trường hợp** (người dùng chọn: mọi kiểu điều kiện, mọi tình huống thay thế, huấn luyện thêm mô hình, ca oái oăm; quy định cũ bị thay thì bỏ vĩnh viễn). Mỗi bộ test băm trước khi làm:
   - Trình biên dịch quy định v3: 40 câu 9/40 → 40/40, thay thế 12/12, kiểm thử thật SP 6/6 (`regulation_v3_report.md`).
   - Ca oái oăm `tests/test_edge_cases.py`: tìm và sửa 6 lỗi an toàn của trình biên dịch (mất ngưỡng "50tr", "-5 triệu" → chặn mọi đơn; phủ định; khoảng rỗng; % > 100; ngày ngược; câu không dấu).

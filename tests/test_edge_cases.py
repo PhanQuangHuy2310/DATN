@@ -244,6 +244,16 @@ class CompilerSafetyTests(unittest.TestCase):
         self.assertEqual(compiled(text), [])
         self.assertIn("không dấu", self.skip(text))
 
+    def test_floor_without_area_word_is_a_location(self):
+        # Trước đây "tầng 10" bị bỏ qua và luật thành "chặn mọi đơn đặt phòng họp" (tìm ra khi soạn quy định mẫu 19/11).
+        rule = compiled("Yêu cầu Đặt phòng họp tầng 10 bắt buộc duyệt thủ công.")[0]
+        self.assertEqual((rule["request_type"], rule["location_contains"]), ("ROOM_BOOKING", "tầng 10"))
+
+    def test_orphan_number_does_not_become_block_all(self):
+        text = "Yêu cầu Mượn xe công vụ loại 16 chỗ bắt buộc duyệt thủ công."
+        self.assertEqual(compiled(text), [])
+        self.assertIn("con số", self.skip(text))
+
 
 if __name__ == "__main__":
     unittest.main()

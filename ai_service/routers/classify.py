@@ -23,9 +23,11 @@ import joblib
 import numpy as np
 
 try:
+    import type_memory as tm
     from config import get_settings
     from nlp_text import ADVANCE_TIERS, normalize_text, refine_advance_tier
 except (ImportError, AttributeError):
+    from ai_service import type_memory as tm
     from ai_service.config import get_settings
     from ai_service.nlp_text import ADVANCE_TIERS, normalize_text, refine_advance_tier
 
@@ -71,6 +73,20 @@ def get_nlp_model():
 # ---------------------------------------------------------------------------
 
 
+class LearnedType(BaseModel):
+    """Loại yêu cầu tạo sau khi huấn luyện (admin hoặc AI tạo); lõi nghiệp vụ gửi kèm, cùng các ví dụ đã có."""
+
+    code: str = Field(..., min_length=1, max_length=40)
+    name: str = Field(..., min_length=1, max_length=200)
+    description: str = Field("", max_length=2000)
+    category: str = Field("", max_length=40)
+    category_label: str = Field("", max_length=120)
+    department: str = Field("", max_length=40)
+    lifecycle: str = Field("B", pattern="^[ABC]$")
+    approval_route: str = Field("", max_length=400)
+    examples: list[str] = Field(default_factory=list, max_length=50)
+
+
 class ClassifyRequestInput(BaseModel):
     title: str = Field(
         ...,
@@ -82,12 +98,16 @@ class ClassifyRequestInput(BaseModel):
         examples=["Màn hình cũ bị sọc hình, cần mua màn hình mới để làm việc đồ họa."],
         description="Nội dung chi tiết",
     )
+    learned_types: list[LearnedType] = Field(
+        default_factory=list, max_length=300, description="Loại mới chưa có trong mô hình (bộ nhớ loại mới)"
+    )
 
 
 class ClassifyAlternative(BaseModel):
     request_type: str
     name: str
     confidence: float
+    source: str = "model"  # "learned": loại mới nhận ra nhờ bộ nhớ loại mới
 
 
 class ClassifyRequestResult(BaseModel):
@@ -118,6 +138,10 @@ class ClassifyRequestResult(BaseModel):
     fallback_used: bool = Field(
         False, description="True khi model chưa sẵn sàng và dùng quy tắc từ khóa"
     )
+    source: str = Field("model", description="model | learned (loại mới nhận từ bộ nhớ loại mới)")
+    novel: bool = Field(False, description="AI đánh giá nhu cầu này chưa có loại phù hợp trong danh mục")
+    unclear: bool = Field(False, description="Nội dung không có từ nào mô hình hiểu (chuỗi vô nghĩa)")
+    vocab_support: float | None = Field(None, description="Tỉ lệ từ nội dung khớp từ vựng của các loại được đoán")
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +191,7 @@ def _aggregate(probs: np.ndarray, classes, catalog: dict, field: str) -> dict:
     return totals
 
 
-def predict(model, labels: dict, text: str) -> ClassifyRequestResult:
+def predict(model, labels: dict, text: str, learned: list | None = None) -> ClassifyRequestResult:
     catalog = labels["catalog"]
     classes = [str(c) for c in model.classes_]
     probs = model.predict_proba([normalize_text(text)])[0]
@@ -196,8 +220,12 @@ def predict(model, labels: dict, text: str) -> ClassifyRequestResult:
         )
         for i in order[:3]
     ]
-    route = info.get("approval_route") or "Quy trình phê duyệt tiêu chuẩn"
-    return ClassifyRequestResult(
+    route = tm.pretty_route(info.get("approval_route") or "Quy trình phê duyệt tiêu chuẩn")
+    vocab = tm.vocab_for(model)
+    support = vocab.support(text, [a.request_type for a in alternatives])
+    unclear = vocab.known_words(text) == 0
+    novel = not unclear and tm.is_novel(confidence, support)
+    base = ClassifyRequestResult(
         predicted_request_type=code,
         predicted_request_name=info["name"],
         predicted_category=info["category"],
@@ -208,10 +236,48 @@ def predict(model, labels: dict, text: str) -> ClassifyRequestResult:
         confidence_category=round(by_category[info["category"]], 4),
         confidence_department=round(by_dept[info["department"]], 4),
         confidence_template=round(by_template[info["lifecycle"]], 4),
-        low_confidence=confidence < LOW_CONFIDENCE,
+        low_confidence=confidence < LOW_CONFIDENCE or novel or unclear,
         alternatives=alternatives,
         workflow_suggestion=f"{info['name']}: {route}",
+        novel=novel,
+        unclear=unclear,
+        vocab_support=None if support is None else round(support, 3),
     )
+    return merge_learned(base, text, [t for t in (learned or []) if t.code not in catalog])
+
+
+def merge_learned(base: ClassifyRequestResult, text: str, learned: list) -> ClassifyRequestResult:
+    """Đưa loại mới (bộ nhớ loại mới) vào kết quả: thành loại đề xuất nếu khớp rõ, hoặc vào danh sách khả năng."""
+    if not learned or base.unclear:
+        return base
+    matches = tm.match_learned(text, [t.model_dump() for t in learned])
+    scored = [(t, tm.learned_confidence(s)) for t, s in matches if s >= tm.LEARNED_MIN]
+    if not scored:
+        return base
+    extra = [ClassifyAlternative(request_type=t["code"], name=t["name"], confidence=round(c, 4), source="learned")
+             for t, c in scored]
+    top, conf = scored[0]
+    if (conf >= tm.LEARNED_SURE and conf > base.confidence_request_type) or (
+        base.novel and conf >= tm.LEARNED_WHEN_NOVEL
+    ):
+        route = tm.pretty_route(top.get("approval_route") or "Quy trình phê duyệt tiêu chuẩn")
+        alternatives = sorted([*extra, *base.alternatives], key=lambda a: -a.confidence)[:3]
+        return base.model_copy(update={
+            "predicted_request_type": top["code"],
+            "predicted_request_name": top["name"],
+            "predicted_category": top.get("category") or base.predicted_category,
+            "predicted_category_label": top.get("category_label") or base.predicted_category_label,
+            "predicted_department": top.get("department") or base.predicted_department,
+            "predicted_template": top.get("lifecycle") or base.predicted_template,
+            "confidence_request_type": round(conf, 4),
+            "low_confidence": conf < LOW_CONFIDENCE,
+            "alternatives": alternatives,
+            "workflow_suggestion": f"{top['name']}: {route}",
+            "source": "learned",
+            "novel": False,
+        })
+    alternatives = sorted([*base.alternatives, *extra], key=lambda a: -a.confidence)[:3]
+    return base.model_copy(update={"alternatives": alternatives})
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +301,7 @@ def classify_request(body: ClassifyRequestInput):
     model, labels = get_nlp_model()
     if model is not None:
         try:
-            return predict(model, labels, full_text)
+            return predict(model, labels, full_text, body.learned_types)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Lỗi suy luận NLP: {e}")
 
