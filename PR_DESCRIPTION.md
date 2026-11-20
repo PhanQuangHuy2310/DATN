@@ -244,6 +244,19 @@ Không có migration mới.
 
   Sau khi thử, local đã được dọn và đưa về v1.0.
 
+### Chạy được ngay sau khi pull (20/11)
+
+- `supabase/seed.sql` (tạo 17/11) thiếu migration 23–27, nên DB local tạo mới bằng `supabase start` / `supabase db reset` lỗi ngay khi đăng nhập (thiếu `app_user.previous_login_at`, bảng bad case, phản hồi AI…). Nay migration 23–27 được nối nguyên văn vào cuối seed.
+- Đã thử trên Postgres 17 của Supabase (DB trống):
+  - seed chạy sạch, chạy lại lần 2 cũng sạch;
+  - lược đồ `eas` khớp 100% với DB đã chạy đủ migration (chỉ khác thứ tự liệt kê role trong policy);
+  - có 12 bad case, phiên bản v1.0.
+- Ai dùng Supabase chung thì không phải làm gì: migration 23–27 đã chạy trên DB chung.
+- Đã gộp PR #16 của Huy (`main`).
+- Sau khi gộp:
+  - 859 test Django, 93 test giao diện, lint/format/build/bundle/secret/docs đều đạt;
+  - test live: bad case 5/5, nạp quy định 15/15.
+
 ## Số đo trung thực của bộ phân loại lý do thu hồi
 
 Có 3 bộ test, mỗi bộ được băm trước khi huấn luyện phiên bản tương ứng. Bộ 3 gồm câu oái oăm: không dấu, viết tắt, phủ định, nhắc tên loại đơn nhưng không phải bad case của loại đó.
