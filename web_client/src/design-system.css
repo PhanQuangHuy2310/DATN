@@ -5319,3 +5319,30 @@ output.success, output.error { display: block; margin-top: 14px; line-height: 1.
 .reg-decision-choice input { width: auto; }
 .reg-big-update { display: flex; align-items: center; gap: 8px; margin: var(--ds-space-2) 0; font-size: 13px; }
 .reg-big-update input { width: auto; }
+
+/* Nhập file quy định + lịch sử thay đổi (so sánh từng bản) */
+.reg-import input[type="file"] { display: none !important; }
+.reg-import { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); margin: 0 0 var(--ds-space-3); }
+.reg-import-hint { flex: 1 1 220px; font-size: 0.85rem; color: var(--ds-muted); }
+.btn-link { background: none; border: 0; padding: 0; color: var(--ds-primary); text-decoration: underline; cursor: pointer; font: inherit; font-size: 0.9rem; }
+.btn-reg-history { margin-right: var(--ds-space-2); }
+.reg-history-modal { max-width: 920px; width: 100%; }
+.reg-history-filters { display: flex; flex-wrap: wrap; gap: var(--ds-space-2); margin-bottom: var(--ds-space-3); }
+.reg-history-filters > * { flex: 1 1 200px; }
+.reg-history-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--ds-space-2); }
+.reg-history-item { border: 1px solid var(--ds-line); border-radius: var(--ds-radius-sm); overflow: hidden; }
+.reg-history-item.action-DELETE_MAJOR { border-left: 3px solid var(--ds-danger); }
+.reg-history-item.action-CREATE { border-left: 3px solid var(--ds-success); }
+.reg-history-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); width: 100%; padding: var(--ds-space-2) var(--ds-space-3); background: none; border: 0; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.reg-history-head .timeline-time { margin-left: auto; font-size: 0.8rem; opacity: 0.75; }
+.reg-history-action { font-size: 0.8rem; font-weight: 600; }
+.reg-history-title { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.reg-history-gone { font-size: 0.75rem; padding: 1px 6px; border-radius: 999px; color: var(--ds-danger); background: var(--ds-danger-soft); }
+.reg-history-body { padding: 0 var(--ds-space-3) var(--ds-space-3); }
+.reg-history-note { font-size: 0.85rem; opacity: 0.85; }
+.reg-history-note.error { color: var(--ds-danger); opacity: 1; }
+.reg-diff { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.85rem; margin: 0; padding: var(--ds-space-2); border-radius: var(--ds-radius-sm); background: var(--ds-surface-2, rgba(127, 127, 127, 0.08)); }
+.reg-diff.del-all, .reg-diff-del { color: var(--ds-danger); background: var(--ds-danger-soft); text-decoration: line-through; }
+.reg-diff-add { color: var(--ds-success); background: var(--ds-success-soft); }
+.reg-diff-same { opacity: 0.8; }
+.reg-history-head:hover, .reg-history-head:focus-visible, .reg-history-head[aria-expanded="true"] { background: var(--ds-primary-soft); color: inherit; box-shadow: none; transform: none; }

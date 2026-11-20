@@ -6,6 +6,8 @@ import { errorText } from "../domain.js";
 import { PageHeader } from "./design.jsx";
 import { freeCode } from "../regulationCode.js";
 import RegulationQuickBuilder from "./RegulationQuickBuilder.jsx";
+import RegulationImport from "./RegulationImport.jsx";
+import RegulationHistory from "./RegulationHistory.jsx";
 import AiLearningPanel from "./AiLearningPanel.jsx";
 import { RegulationCheckList, RejectedRegulations, SupersededNotes } from "./RegulationCheck.jsx";
 
@@ -44,6 +46,8 @@ function RegulationsManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingRegulation, setEditingRegulation] = useState(null);
   const [viewingRegulation, setViewingRegulation] = useState(null);
+  // Lịch sử thay đổi mọi quy định (kể cả đã gỡ): null = đóng, "" = tất cả, "QD-.." = lọc theo mã.
+  const [historyCode, setHistoryCode] = useState(null);
   const [deletingRegulation, setDeletingRegulation] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -128,8 +132,14 @@ function RegulationsManagementPage() {
     setCheck(reg.issues?.length ? { errors: reg.issues, warnings: [] } : null);
   };
 
-  const runCheck = async () => {
-    if (!formTitle.trim() || !formContent.trim()) {
+  const runCheck = async (override = {}) => {
+    const form = {
+      code: override.code ?? formCode,
+      title: override.title ?? formTitle,
+      category: override.category ?? formCategory,
+      content: override.content ?? formContent,
+    };
+    if (!form.title.trim() || !form.content.trim()) {
       showToast("Nhập tiêu đề và nội dung trước khi để AI kiểm tra", "warning");
       return;
     }
@@ -139,10 +149,10 @@ function RegulationsManagementPage() {
         method: "POST",
         silent: true,
         body: JSON.stringify({
-          code: formCode.trim(),
-          title: formTitle.trim(),
-          category: formCategory,
-          content: formContent.trim(),
+          code: form.code.trim(),
+          title: form.title.trim(),
+          category: form.category,
+          content: form.content.trim(),
           creating: !editingRegulation,
         }),
       });
@@ -157,6 +167,24 @@ function RegulationsManagementPage() {
     } finally {
       setChecking(false);
     }
+  };
+
+  // File viết sẵn: đổ vào form (mã chỉ đổi khi đang thêm mới) rồi để AI kiểm tra luôn, không chờ admin bấm.
+  const applyImport = (imported, fileName) => {
+    const next = {
+      code: !editingRegulation && imported.code ? imported.code : formCode,
+      title: imported.title || formTitle || fileName.replace(/\.[^.]+$/, ""),
+      category: CATEGORIES.includes(imported.category) && imported.category !== "Tất cả" ? imported.category : formCategory,
+      content: imported.content,
+    };
+    setFormCode(next.code);
+    setFormTitle(next.title);
+    setFormCategory(next.category);
+    setFormContent(next.content);
+    setDecisions({});
+    setCheck(null);
+    showToast(`Đã nạp ${imported.articles || "các"} điều khoản từ «${fileName}»; AI đang kiểm tra...`, "info");
+    void runCheck(next);
   };
 
   // 422 REGULATION_INVALID: giữ form mở và hiện danh sách lỗi để sửa tại chỗ.
@@ -411,6 +439,9 @@ function RegulationsManagementPage() {
           </div>
         </div>
 
+        <button type="button" className="btn-secondary btn-reg-history" onClick={() => setHistoryCode("")}>
+          Lịch sử thay đổi
+        </button>
         {canCreate && (
           <button type="button" className="btn-primary btn-add-regulation" onClick={openCreateModal}>
             <span>+</span> Thêm quy định mới
@@ -598,6 +629,7 @@ function RegulationsManagementPage() {
                 />
               </div>
 
+              <RegulationImport apiBase={apiBase} onImported={applyImport} onError={(msg) => showToast(msg, "error")} />
               <RegulationQuickBuilder types={requestTypes} content={formContent} onAppend={appendClause} />
 
               <div className="form-group">
@@ -635,7 +667,7 @@ function RegulationsManagementPage() {
               )}
 
               <div className="eas-modal-actions">
-                <button type="button" className="btn-secondary" onClick={runCheck} disabled={checking || submitting}>
+                <button type="button" className="btn-secondary" onClick={() => runCheck()} disabled={checking || submitting}>
                   {checking ? "AI đang đọc văn bản..." : "AI kiểm tra trước"}
                 </button>
                 <button
@@ -714,6 +746,7 @@ function RegulationsManagementPage() {
                 />
               </div>
 
+              <RegulationImport apiBase={apiBase} onImported={applyImport} onError={(msg) => showToast(msg, "error")} />
               <RegulationQuickBuilder types={requestTypes} content={formContent} onAppend={appendClause} />
 
               <div className="form-group">
@@ -749,7 +782,7 @@ function RegulationsManagementPage() {
               </label>
 
               <div className="eas-modal-actions">
-                <button type="button" className="btn-secondary" onClick={runCheck} disabled={checking || submitting}>
+                <button type="button" className="btn-secondary" onClick={() => runCheck()} disabled={checking || submitting}>
                   {checking ? "AI đang đọc văn bản..." : "AI kiểm tra trước"}
                 </button>
                 <button
@@ -851,7 +884,12 @@ function RegulationsManagementPage() {
 
               {viewingRegulation.history && viewingRegulation.history.length > 0 && (
                 <div className="regulation-history-section">
-                  <h4>Lịch sử thay đổi điều khoản này ({viewingRegulation.history.length} bản ghi):</h4>
+                  <h4>
+                    Lịch sử thay đổi điều khoản này ({viewingRegulation.history.length} bản ghi){" "}
+                    <button type="button" className="btn-link" onClick={() => setHistoryCode(viewingRegulation.code)}>
+                      Xem từng bản đã đổi gì
+                    </button>
+                  </h4>
                   <div className="history-timeline">
                     {viewingRegulation.history.map((h, idx) => (
                       <div key={h.id || idx} className="history-timeline-item">
@@ -883,6 +921,9 @@ function RegulationsManagementPage() {
             </div>
           </div>
         </div>
+      )}
+      {historyCode !== null && (
+        <RegulationHistory apiBase={apiBase} initialCode={historyCode} onClose={() => setHistoryCode(null)} />
       )}
       <AiLearningPanel canUpdate={canUpdate} />
           {toast && (
