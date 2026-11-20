@@ -21,6 +21,7 @@ from .org_users_rbac import (
     users_management_list,
 )
 from .overview import system_diagnostics, system_overview
+from .regulation_import import regulation_import_view
 from .regulations_ai import (
     ai_engine_test_view,
     ai_feedback_learn_view,
@@ -36,6 +37,7 @@ from .regulations_ai import (
     process_profile_assess_view,
     public_ai_status_view,
     regulation_detail_update_delete,
+    regulation_history_view,
     regulation_impact_view,
     regulation_rejection_dismiss,
     regulation_rejections_list,
@@ -119,6 +121,16 @@ urlpatterns = [
         "regulations/validate",
         regulation_validate_view,
         name="admin-regulation-validate",
+    ),
+    path(
+        "regulations/import",
+        regulation_import_view,
+        name="admin-regulation-import",
+    ),
+    path(
+        "regulations/history",
+        regulation_history_view,
+        name="admin-regulation-history",
     ),
     path(
         "regulations/rejections",

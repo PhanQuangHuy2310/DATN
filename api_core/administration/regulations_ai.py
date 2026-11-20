@@ -749,10 +749,18 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
             ],
         )
         regulation = _serialize_regulation(cur.fetchone())
-        summary = (
-            str(body.get("change_summary", "")).strip()[:500]
-            or f"Cập nhật {current['code']}: {fields['title']}"
-        )
+        typed = str(body.get("change_summary", "")).strip()[:500]
+        summary = typed or f"Cập nhật {current['code']}: {fields['title']}"
+        if typed:
+            # Lịch sử thay đổi hiện đúng mô tả admin nhập (trigger chỉ ghi câu chung "Cập nhật quy định ...").
+            cur.execute(
+                """
+                UPDATE eas.regulation_versions SET change_summary = %s
+                WHERE id = (SELECT id FROM eas.regulation_versions WHERE regulation_id = %s
+                            ORDER BY created_at DESC LIMIT 1)
+                """,
+                [typed, reg_id],
+            )
         _audit(
             cur,
             request,
@@ -1546,3 +1554,73 @@ def bad_case_decide_view(request: HttpRequest, case_id, decision: str) -> JsonRe
             fields={field or "body": [message or str(exc)]},
         )
     return JsonResponse(result)
+
+
+HISTORY_LIMIT = 300
+
+
+@require_actor("OPS_ADMIN", "POLICY_ADMIN", "AUDITOR")
+def regulation_history_view(request: HttpRequest) -> JsonResponse:
+    """GET /api/v1/admin/regulations/history?code=&q=: dòng thời gian mọi lần thêm / sửa / gỡ.
+
+    Gồm cả quy định đã gỡ; mỗi bản kèm nội dung bản liền trước của cùng quy định để so sánh.
+    """
+    if request.method != "GET":
+        return api_error(request, "METHOD_NOT_ALLOWED", status=405)
+    code = str(request.GET.get("code", "")).strip().upper()[:30]
+    query = str(request.GET.get("q", "")).strip()[:100]
+    with connection.cursor() as cur:
+        cur.execute(
+            """
+            SELECT * FROM (
+              SELECT v.id::text, v.regulation_id::text, r.code, v.version_string, v.action_type,
+                     v.title, v.content, v.change_summary, v.created_by, v.created_at,
+                     LAG(v.content) OVER w AS previous_content,
+                     LAG(v.title) OVER w AS previous_title,
+                     COALESCE(r.is_deleted, true) AS regulation_deleted
+              FROM eas.regulation_versions v
+              LEFT JOIN eas.company_regulations r ON r.id = v.regulation_id
+              WINDOW w AS (PARTITION BY COALESCE(v.regulation_id::text, v.id::text)
+                           ORDER BY v.created_at, v.id)
+            ) h
+            WHERE (%s = '' OR h.code = %s)
+              AND (%s = '' OR h.title ILIKE %s OR h.content ILIKE %s OR h.code ILIKE %s)
+            ORDER BY h.created_at DESC, h.id DESC
+            LIMIT %s
+            """,
+            [
+                code,
+                code,
+                query,
+                f"%{query}%",
+                f"%{query}%",
+                f"%{query}%",
+                HISTORY_LIMIT,
+            ],
+        )
+        keys = (
+            "id",
+            "regulation_id",
+            "code",
+            "version_string",
+            "action_type",
+            "title",
+            "content",
+            "change_summary",
+            "created_by",
+            "created_at",
+            "previous_content",
+            "previous_title",
+            "regulation_deleted",
+        )
+        items = [dict(zip(keys, row)) for row in cur.fetchall()]
+        cur.execute(
+            "SELECT DISTINCT r.code FROM eas.regulation_versions v "
+            "JOIN eas.company_regulations r ON r.id = v.regulation_id ORDER BY r.code"
+        )
+        codes = [r[0] for r in cur.fetchall()]
+    for item in items:
+        item["created_at"] = _iso(item["created_at"])
+    return JsonResponse(
+        {"items": items, "codes": codes, "limit": HISTORY_LIMIT, "count": len(items)}
+    )
