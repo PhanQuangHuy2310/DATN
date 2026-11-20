@@ -19405,3 +19405,949 @@ BEGIN
   END IF;
 END
 $$;
+
+
+-- =============================================================================
+-- Migration 23–27 (18–20/11): nối vào seed để `supabase start` / `supabase db reset` có đủ lược đồ
+-- như Supabase chung (bad case, phản hồi AI, quy định bị trả lại, giữ/bỏ điều cũ, lần đăng nhập).
+-- Nguồn: database/migrations/23..27 (nội dung giữ nguyên).
+-- =============================================================================
+
+-- ---- 23_ai_bad_case_escalation.sql ----
+-- 23: AI suy luận tình huống xấu: nâng luồng TỪNG HỒ SƠ A -> B/C, lùi hạn SLA có kiểm soát,
+--     và lưu đề xuất xử lý của AI (quản lý xác nhận).
+--
+-- Bối cảnh (đặc tả nhóm 18/11/2026): chỉ luồng A có AI tự duyệt. Khi một hồ sơ A dính tình huống xấu
+-- (vd. xin nghỉ khi đang giữ việc mai đến hạn), hệ thống phải chuyển CHÍNH hồ sơ đó sang luồng B
+-- (quản lý duyệt -> bộ phận chuyên môn xử lý) hoặc C (+ nghiệm thu độc lập), mà không đổi luồng của
+-- cả loại yêu cầu và không đổi 58 loại (mô hình phân loại giữ nguyên nhãn).
+--
+--   1. config_release.escalation: bản cấu hình "nâng cấp" của một loại A, vòng đời B hoặc C.
+--      Không bao giờ là bản đang dùng (active) của loại; chỉ được gắn vào revision khi AI nâng luồng.
+--   2. guard_release: cho phép bản nâng cấp có vòng đời CAO HƠN vòng đời của loại.
+--   3. guard_active_release: bản nâng cấp không được làm bản đang dùng.
+--   4. guard_request: kiểm tra trạng thái theo vòng đời của REVISION hiện tại (hồ sơ đã nâng lên B
+--      được vào READY_FOR_EXECUTION dù loại là A). Hồ sơ chưa nâng giữ nguyên hành vi cũ.
+--   5. guard_sla: hạn SLA chỉ được LÙI về sau, khi backend đặt cờ eas.sla_extend_stage_id cho đúng
+--      giai đoạn đó, giai đoạn chưa đóng và chưa vi phạm (hướng xử lý "lùi hạn" do quản lý xác nhận).
+--   6. Bản nâng cấp B và C cho 9 loại A (tuyến duyệt gốc + bộ phận chuyên môn xử lý; C thêm cấp duyệt
+--      và nghiệm thu bởi quản lý trực tiếp).
+--   7. eas.ai_remediation: đề xuất xử lý gốc rễ của AI và quyết định của quản lý (append + đổi trạng thái).
+--
+-- Chạy được nhiều lần (idempotent). Rollback: database/migrations/rollback/23_ai_bad_case_escalation_rollback.sql
+
+BEGIN;
+SELECT eas.lock_security(true);
+
+-- ==== 1. Cột đánh dấu bản nâng cấp ===========================================================
+ALTER TABLE eas.config_release ADD COLUMN IF NOT EXISTS escalation boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN eas.config_release.escalation IS
+  'Bản cấu hình nâng cấp (B/C) của loại luồng A, chỉ gắn vào hồ sơ bị AI nâng luồng; không bao giờ là bản đang dùng.';
+CREATE INDEX IF NOT EXISTS config_release_escalation
+  ON eas.config_release(type_id, lifecycle) WHERE escalation AND state = 'PUBLISHED';
+
+-- ==== 2. guard_release ===========================================================================
+CREATE OR REPLACE FUNCTION eas.guard_release() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'eas'
+    AS $$
+DECLARE lc char(1); j jsonb; r jsonb; defaults integer; cnt integer; h numeric;
+BEGIN
+ IF TG_OP IN ('UPDATE','DELETE') AND OLD.state='PUBLISHED' THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Published release is immutable';
+ END IF;
+ IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+ IF TG_OP='UPDATE' AND (NEW.id<>OLD.id OR NEW.type_id<>OLD.type_id OR NEW.version<>OLD.version OR NEW.created_by<>OLD.created_by OR NEW.created_at<>OLD.created_at) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Release identity is immutable';
+ END IF;
+ SELECT lifecycle INTO lc FROM eas.request_type WHERE id=NEW.type_id;
+ -- 23: bản nâng cấp (escalation) được phép có vòng đời CAO HƠN vòng đời của loại.
+ IF FOUND AND lc<>NEW.lifecycle AND NOT (NEW.escalation AND NEW.lifecycle > lc) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Release lifecycle differs from type';
+ END IF;
+ IF NEW.state='PUBLISHED' THEN
+  FOREACH j IN ARRAY ARRAY[NEW.form_schema,NEW.route_rules,NEW.actor_bindings,NEW.sla_profile] LOOP
+   IF j->'schema_version' IS DISTINCT FROM '1'::jsonb THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Published JSON requires schema_version 1'; END IF;
+  END LOOP;
+  IF NEW.form_schema->>'type' IS DISTINCT FROM 'object' OR NEW.form_schema->'additionalProperties' IS DISTINCT FROM 'false'::jsonb
+     OR jsonb_typeof(NEW.form_schema->'properties') IS DISTINCT FROM 'object'
+     OR jsonb_typeof(NEW.form_schema->'required') IS DISTINCT FROM 'array'
+     OR jsonb_typeof(NEW.actor_bindings->'departments') IS DISTINCT FROM 'object'
+     OR jsonb_typeof(NEW.route_rules->'rules') IS DISTINCT FROM 'array' THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Published configuration shape invalid';
+  END IF;
+  defaults:=0;
+  FOR r IN SELECT value FROM jsonb_array_elements(NEW.route_rules->'rules') LOOP
+   IF coalesce(r->>'id','')='' OR jsonb_typeof(r->'approvers') IS DISTINCT FROM 'array' THEN
+    RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Route id/approvers missing';
+   END IF;
+   cnt:=jsonb_array_length(r->'approvers');
+   IF cnt NOT BETWEEN 1 AND 5 THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Route requires 1..5 approvers'; END IF;
+   IF EXISTS(SELECT 1 FROM jsonb_array_elements_text(r->'approvers') v WHERE v NOT IN ('CISO', 'CTO', 'DIRECTOR', 'DIRECT_MANAGER', 'FINANCE', 'HR_MANAGER', 'IT_MANAGER', 'LEGAL', 'MARKETING_MANAGER', 'OPERATIONS_MANAGER', 'PROCUREMENT_MANAGER', 'PROJECT_MANAGER', 'SECURITY', 'WAREHOUSE_MANAGER')) THEN
+    RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Unknown approver resolver';
+   END IF;
+   IF r->'default'='true'::jsonb THEN defaults:=defaults+1;
+    IF r ? 'when' OR r ? 'priority' THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Default rule has no condition/priority'; END IF;
+   ELSE
+    IF jsonb_typeof(r->'priority') IS DISTINCT FROM 'number' OR (r->>'priority')::numeric<>trunc((r->>'priority')::numeric)
+       OR jsonb_typeof(r->'when') IS DISTINCT FROM 'object' OR r->'when'='{}'::jsonb THEN
+     RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Conditional rule requires integer priority and condition';
+    END IF;
+    IF EXISTS(SELECT 1 FROM jsonb_each(r->'when') v WHERE v.key NOT IN ('amount_gt','amount_gte','days_gt','app_code_in') OR (v.key IN ('amount_gt','amount_gte','days_gt') AND jsonb_typeof(v.value)<>'number') OR (v.key='app_code_in' AND (jsonb_typeof(v.value)<>'array' OR jsonb_array_length(v.value)=0))) THEN
+     RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Unknown condition/operator';
+    END IF;
+   END IF;
+  END LOOP;
+  IF defaults<>1 OR (NEW.route_rules->'rules'->-1->'default') IS DISTINCT FROM 'true'::jsonb THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Exactly one final default rule required';
+  END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(NEW.route_rules->'rules') AS routes(item) GROUP BY item->>'id' HAVING count(*)>1)
+   OR EXISTS(SELECT 1 FROM jsonb_array_elements(NEW.route_rules->'rules') AS routes(item) WHERE item ? 'priority' GROUP BY item->>'priority' HAVING count(*)>1) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Duplicate route id or priority';
+  END IF;
+  IF NEW.sla_profile->>'clock' IS DISTINCT FROM 'CALENDAR_UTC' OR NEW.sla_profile->'reminder_fraction' IS DISTINCT FROM '0.5'::jsonb THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Unsupported SLA clock/reminder';
+  END IF;
+  FOREACH j IN ARRAY ARRAY[NEW.sla_profile->'approval_hours',NEW.sla_profile->'execution_hours',NEW.sla_profile->'acceptance_hours'] LOOP
+   IF j IS NOT NULL AND j<>'null'::jsonb THEN
+    IF jsonb_typeof(j)<>'number' THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='SLA hours must be numeric'; END IF;
+    h:=j::text::numeric;
+    IF h<=0 OR h>720 THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='SLA hours out of range'; END IF;
+   END IF;
+  END LOOP;
+  IF jsonb_typeof(NEW.sla_profile->'approval_hours') IS DISTINCT FROM 'number'
+   OR (NEW.lifecycle='A' AND (NEW.sla_profile->'execution_hours' IS DISTINCT FROM 'null'::jsonb OR NEW.sla_profile->'acceptance_hours' IS DISTINCT FROM 'null'::jsonb OR NEW.route_rules->'executor' IS DISTINCT FROM 'null'::jsonb OR NEW.route_rules->'acceptor' IS DISTINCT FROM 'null'::jsonb))
+   OR (NEW.lifecycle='B' AND (jsonb_typeof(NEW.sla_profile->'execution_hours') IS DISTINCT FROM 'number' OR NEW.sla_profile->'acceptance_hours' IS DISTINCT FROM 'null'::jsonb OR COALESCE(NEW.route_rules->>'executor','') NOT IN ('EXECUTOR_ADMIN', 'EXECUTOR_ASSET', 'EXECUTOR_FACILITY', 'EXECUTOR_FINANCE', 'EXECUTOR_HR', 'EXECUTOR_IT', 'EXECUTOR_LEGAL', 'EXECUTOR_MARKETING', 'EXECUTOR_PROCUREMENT', 'EXECUTOR_TECH', 'EXECUTOR_WAREHOUSE') OR NEW.route_rules->'acceptor' IS DISTINCT FROM 'null'::jsonb))
+   OR (NEW.lifecycle='C' AND (jsonb_typeof(NEW.sla_profile->'execution_hours') IS DISTINCT FROM 'number' OR jsonb_typeof(NEW.sla_profile->'acceptance_hours') IS DISTINCT FROM 'number' OR COALESCE(NEW.route_rules->>'executor','') NOT IN ('EXECUTOR_ADMIN', 'EXECUTOR_ASSET', 'EXECUTOR_FACILITY', 'EXECUTOR_FINANCE', 'EXECUTOR_HR', 'EXECUTOR_IT', 'EXECUTOR_LEGAL', 'EXECUTOR_MARKETING', 'EXECUTOR_PROCUREMENT', 'EXECUTOR_TECH', 'EXECUTOR_WAREHOUSE') OR COALESCE(NEW.route_rules->>'acceptor','') NOT IN ('CTO', 'DIRECT_MANAGER', 'LEGAL', 'PROJECT_MANAGER', 'REQUESTER'))) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Lifecycle/SLA/resolver mismatch';
+  END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+ALTER FUNCTION eas.guard_release() OWNER TO eas_migration;
+
+-- ==== 3. guard_active_release =====================================================================
+CREATE OR REPLACE FUNCTION eas.guard_active_release() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+ IF TG_OP='UPDATE' AND (NEW.id<>OLD.id OR NEW.code<>OLD.code) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Request type identity immutable';
+ END IF;
+ IF NEW.active_release_id IS NOT NULL AND NOT EXISTS(
+   SELECT 1 FROM eas.config_release
+   WHERE id=NEW.active_release_id AND type_id=NEW.id AND state='PUBLISHED' AND NOT escalation) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Active release must be a published non-escalation release for this type';
+ END IF;
+ RETURN NEW;
+END;
+$$;
+ALTER FUNCTION eas.guard_active_release() OWNER TO eas_migration;
+
+-- ==== 4. guard_request: vòng đời theo revision hiện tại ==========================================
+CREATE OR REPLACE FUNCTION eas.guard_request() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'eas'
+    AS $$
+DECLARE origin_owner uuid; lc char(1); rlc char(1); tcode varchar(30); allowed boolean;
+        ai_revoke boolean := false; preempt boolean := false;
+BEGIN
+ IF TG_OP='DELETE' THEN PERFORM eas.assert_privacy_delete(OLD.id); RETURN OLD; END IF;
+ IF TG_OP='UPDATE' THEN
+  IF current_user='eas_privacy' AND NEW.current_revision_id IS NULL
+    AND (to_jsonb(NEW)-'current_revision_id')=(to_jsonb(OLD)-'current_revision_id') THEN
+   PERFORM eas.assert_privacy_delete(OLD.id); RETURN NEW;
+  END IF;
+  IF ROW(NEW.id,NEW.code,NEW.requester_id,NEW.type_id,NEW.origin_request_id,NEW.created_at) IS DISTINCT FROM ROW(OLD.id,OLD.code,OLD.requester_id,OLD.type_id,OLD.origin_request_id,OLD.created_at) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Request identity/origin immutable';
+  END IF;
+  ai_revoke := OLD.status='COMPLETED' AND NEW.status='NEEDS_INFO' AND eas.ai_revocable(OLD.id);
+  -- Thu hồi ưu tiên (migration 17): chỉ khi backend đặt cờ cho đúng đơn này.
+  preempt := NEW.status='REJECTED'
+    AND OLD.status IN ('READY_FOR_EXECUTION','IN_PROGRESS','COMPLETED')
+    AND coalesce(current_setting('eas.preempt_request_id', true), '') = OLD.id::text;
+  IF OLD.status IN ('COMPLETED','REJECTED','CANCELLED') AND NEW IS DISTINCT FROM OLD AND NOT ai_revoke AND NOT preempt THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Terminal request cannot be reopened or edited';
+  END IF;
+  IF NEW IS DISTINCT FROM OLD AND (NEW.lock_version<>OLD.lock_version+1 OR NEW.updated_at<OLD.updated_at) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Request command requires version increment exactly once and monotonic updated_at';
+  END IF;
+  IF NEW.status<>OLD.status THEN
+   allowed:=(OLD.status IN ('DRAFT','NEEDS_INFO') AND NEW.status IN ('PENDING_APPROVAL','CANCELLED'))
+     OR (OLD.status='PENDING_APPROVAL' AND NEW.status IN ('NEEDS_INFO','REJECTED','CANCELLED','COMPLETED','READY_FOR_EXECUTION'))
+     OR (OLD.status='READY_FOR_EXECUTION' AND NEW.status='IN_PROGRESS')
+     OR (OLD.status='IN_PROGRESS' AND NEW.status IN ('READY_FOR_EXECUTION','WAITING_FOR_ACCEPTANCE','COMPLETED'))
+     OR (OLD.status='WAITING_FOR_ACCEPTANCE' AND NEW.status IN ('READY_FOR_EXECUTION','COMPLETED'))
+     OR ai_revoke OR preempt;
+   IF NOT allowed THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Request transition not allowed'; END IF;
+  END IF;
+ END IF;
+ IF NEW.origin_request_id IS NOT NULL THEN
+  SELECT requester_id INTO origin_owner FROM eas.request WHERE id=NEW.origin_request_id;
+  IF FOUND AND origin_owner<>NEW.requester_id THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Origin request must have same owner'; END IF;
+ END IF;
+ SELECT lifecycle, code INTO lc, tcode FROM eas.request_type WHERE id=NEW.type_id;
+ -- 23: hồ sơ được AI nâng luồng mang vòng đời của bản cấu hình gắn với revision hiện tại.
+ IF NEW.current_revision_id IS NOT NULL THEN
+  SELECT c.lifecycle INTO rlc FROM eas.request_revision v JOIN eas.config_release c ON c.id=v.release_id
+  WHERE v.id=NEW.current_revision_id;
+  IF rlc IS NOT NULL THEN lc := rlc; END IF;
+ END IF;
+ IF tcode IS NOT NULL AND ((tcode IN ('LEAVE','ACCESS') AND NEW.draft_amount_vnd IS NOT NULL) OR (lc='A' AND NEW.status IN ('READY_FOR_EXECUTION','IN_PROGRESS','WAITING_FOR_ACCEPTANCE')) OR (lc='B' AND NEW.status='WAITING_FOR_ACCEPTANCE')) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Request lifecycle/amount mismatch';
+ END IF;
+ IF NEW.status NOT IN ('DRAFT','CANCELLED') AND NEW.current_revision_id IS NULL THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Submitted request requires current revision';
+ END IF;
+ RETURN NEW;
+END $$;
+ALTER FUNCTION eas.guard_request() OWNER TO eas_migration;
+
+-- ==== 5. guard_sla: lùi hạn có kiểm soát =======================================================
+CREATE OR REPLACE FUNCTION eas.guard_sla() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'eas'
+    AS $$
+DECLARE old_instance uuid; new_instance uuid; old_closure text; extend boolean;
+BEGIN
+ -- 23: chỉ LÙI hạn, chỉ khi backend đặt cờ cho đúng giai đoạn này, giai đoạn chưa đóng/chưa vi phạm.
+ extend := coalesce(current_setting('eas.sla_extend_stage_id', true), '') = OLD.id::text
+   AND NEW.due_at > OLD.due_at AND OLD.closed_at IS NULL AND OLD.breached_at IS NULL;
+ IF ROW(NEW.id,NEW.request_id,NEW.kind,NEW.approval_step_id,NEW.started_at) IS DISTINCT FROM ROW(OLD.id,OLD.request_id,OLD.kind,OLD.approval_step_id,OLD.started_at)
+  OR (NEW.due_at IS DISTINCT FROM OLD.due_at AND NOT extend)
+  OR (OLD.closed_at IS NOT NULL AND NEW IS DISTINCT FROM OLD)
+  OR (OLD.breached_at IS NOT NULL AND NEW.breached_at IS DISTINCT FROM OLD.breached_at) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='SLA identity/deadline/closed history immutable';
+ END IF;
+ IF NEW.attempt_id IS DISTINCT FROM OLD.attempt_id THEN
+  SELECT instance_id,closure_kind INTO old_instance,old_closure FROM eas.execution_attempt WHERE id=OLD.attempt_id;
+  SELECT instance_id INTO new_instance FROM eas.execution_attempt WHERE id=NEW.attempt_id;
+  IF NEW.kind<>'EXECUTION' OR old_instance IS DISTINCT FROM new_instance OR old_closure IS DISTINCT FROM 'REASSIGNED' THEN
+   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='SLA target can change only for reassigned execution in same instance';
+  END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+ALTER FUNCTION eas.guard_sla() OWNER TO eas_migration;
+
+-- ==== 6. Bản nâng cấp B và C cho 9 loại luồng A ================================================
+DO $esc$
+DECLARE
+  -- loại -> (bộ phận xử lý, cấp duyệt thêm ở B, cấp duyệt thêm ở C)
+  plan constant jsonb := '{
+    "LEAVE":                 ["EXECUTOR_HR",       [],          ["HR_MANAGER"]],
+    "LEAVE_SPECIAL":         ["EXECUTOR_HR",       [],          ["HR_MANAGER"]],
+    "ATTENDANCE_ADJUSTMENT": ["EXECUTOR_HR",       [],          ["HR_MANAGER"]],
+    "WFH_REQ":               ["EXECUTOR_HR",       [],          ["HR_MANAGER"]],
+    "EXPENSE_CLAIM":         ["EXECUTOR_FINANCE",  ["FINANCE"], ["FINANCE", "DIRECTOR"]],
+    "REFUND_COMPENSATION":   ["EXECUTOR_FINANCE",  ["FINANCE"], ["FINANCE", "DIRECTOR"]],
+    "SPECIAL_DISCOUNT":      ["EXECUTOR_FINANCE",  ["FINANCE"], ["FINANCE", "DIRECTOR"]],
+    "ROOM_BOOKING":          ["EXECUTOR_FACILITY", [],          []],
+    "VISITOR_SECURITY_PASS": ["EXECUTOR_ADMIN",    [],          ["SECURITY"]]
+  }';
+  author uuid;
+  t record;
+  lc text;
+  extra jsonb;
+  new_rules jsonb;
+  route jsonb;
+  sla jsonb;
+  rule jsonb;
+  approvers jsonb;
+  a text;
+BEGIN
+  SELECT u.id INTO author FROM eas.app_user u WHERE u.account_type = 'ADMIN' AND u.is_active
+  ORDER BY u.created_at LIMIT 1;
+  FOR t IN
+    SELECT rt.id AS type_id, rt.code, cr.*
+    FROM eas.request_type rt JOIN eas.config_release cr ON cr.id = rt.active_release_id
+    WHERE rt.code IN (SELECT jsonb_object_keys(plan)) AND rt.lifecycle = 'A' AND cr.lifecycle = 'A'
+  LOOP
+    FOREACH lc IN ARRAY ARRAY['B', 'C'] LOOP
+      CONTINUE WHEN EXISTS (
+        SELECT 1 FROM eas.config_release e
+        WHERE e.type_id = t.type_id AND e.escalation AND e.lifecycle = lc AND e.state = 'PUBLISHED');
+      extra := plan->t.code->(CASE WHEN lc = 'B' THEN 1 ELSE 2 END);
+      new_rules := '[]'::jsonb;
+      FOR rule IN SELECT value FROM jsonb_array_elements(t.route_rules->'rules') LOOP
+        approvers := rule->'approvers';
+        FOR a IN SELECT jsonb_array_elements_text(extra) LOOP
+          IF NOT approvers ? a AND jsonb_array_length(approvers) < 5 THEN
+            approvers := approvers || to_jsonb(a);
+          END IF;
+        END LOOP;
+        new_rules := new_rules || jsonb_build_array(jsonb_set(rule, '{approvers}', approvers));
+      END LOOP;
+      route := jsonb_build_object(
+        'schema_version', 1,
+        'rules', new_rules,
+        'executor', plan->t.code->>0,
+        'acceptor', CASE WHEN lc = 'C' THEN to_jsonb('DIRECT_MANAGER'::text) ELSE 'null'::jsonb END);
+      sla := t.sla_profile
+        || jsonb_build_object('execution_hours', 24)
+        || jsonb_build_object('acceptance_hours', CASE WHEN lc = 'C' THEN to_jsonb(24) ELSE 'null'::jsonb END);
+      INSERT INTO eas.config_release(
+        type_id, version, state, lifecycle, form_schema, route_rules, actor_bindings, sla_profile,
+        created_by, published_by, published_at, content_sha256, escalation)
+      VALUES (
+        t.type_id, (SELECT max(version) + 1 FROM eas.config_release WHERE type_id = t.type_id),
+        'PUBLISHED', lc, t.form_schema, route, t.actor_bindings, sla,
+        coalesce(author, t.created_by), coalesce(author, t.created_by), statement_timestamp(),
+        encode(sha256(convert_to(jsonb_build_object(
+          'form_schema', t.form_schema, 'route_rules', route, 'actor_bindings', t.actor_bindings,
+          'sla_profile', sla, 'lifecycle', lc, 'escalation', true)::text, 'UTF8')), 'hex'),
+        true);
+    END LOOP;
+  END LOOP;
+END
+$esc$;
+
+-- ==== 7. Đề xuất xử lý của AI ==================================================================
+CREATE TABLE IF NOT EXISTS eas.ai_remediation (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL REFERENCES eas.request(id) ON DELETE CASCADE,
+  case_code varchar(60) NOT NULL CHECK (case_code ~ '^[A-Z][A-Z0-9_]{2,59}$'),
+  state varchar(12) NOT NULL DEFAULT 'PROPOSED'
+    CHECK (state IN ('PROPOSED', 'CONFIRMED', 'DISMISSED', 'FAILED')),
+  proposal jsonb NOT NULL CHECK (jsonb_typeof(proposal) = 'object'),
+  model_version varchar(60) NOT NULL,
+  chosen jsonb,
+  result jsonb,
+  proposed_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+  decided_by uuid REFERENCES eas.app_user(id) ON DELETE RESTRICT,
+  decided_at timestamptz,
+  CHECK ((state = 'PROPOSED') = (decided_at IS NULL))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ai_remediation_open
+  ON eas.ai_remediation(request_id, case_code) WHERE state = 'PROPOSED';
+CREATE INDEX IF NOT EXISTS ai_remediation_request ON eas.ai_remediation(request_id, proposed_at DESC);
+COMMENT ON TABLE eas.ai_remediation IS
+  'Hướng xử lý gốc rễ AI đề xuất cho hồ sơ dính tình huống xấu; quản lý xác nhận hoặc bỏ qua. Không xóa, chỉ đổi trạng thái một lần.';
+
+CREATE OR REPLACE FUNCTION eas.guard_ai_remediation() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'eas'
+    AS $$
+BEGIN
+ IF TG_OP = 'DELETE' THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='AI remediation history is append-only';
+ END IF;
+ IF OLD.state <> 'PROPOSED' THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='Decided AI remediation is immutable';
+ END IF;
+ IF ROW(NEW.id, NEW.request_id, NEW.case_code, NEW.proposal, NEW.model_version, NEW.proposed_at)
+    IS DISTINCT FROM ROW(OLD.id, OLD.request_id, OLD.case_code, OLD.proposal, OLD.model_version, OLD.proposed_at) THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='AI proposal is immutable';
+ END IF;
+ RETURN NEW;
+END $$;
+ALTER FUNCTION eas.guard_ai_remediation() OWNER TO eas_migration;
+REVOKE EXECUTE ON FUNCTION eas.guard_ai_remediation() FROM PUBLIC;
+DROP TRIGGER IF EXISTS ai_remediation_guard ON eas.ai_remediation;
+CREATE TRIGGER ai_remediation_guard BEFORE UPDATE OR DELETE ON eas.ai_remediation
+  FOR EACH ROW EXECUTE FUNCTION eas.guard_ai_remediation();
+
+REVOKE ALL ON eas.ai_remediation FROM PUBLIC;
+GRANT SELECT, INSERT, UPDATE ON eas.ai_remediation TO eas_api, eas_worker;
+GRANT SELECT ON eas.ai_remediation TO eas_backup;
+ALTER TABLE eas.ai_remediation ENABLE ROW LEVEL SECURITY;
+DO $pol$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='eas' AND tablename='ai_remediation' AND policyname='backend_read') THEN
+    CREATE POLICY backend_read ON eas.ai_remediation FOR SELECT TO eas_api, eas_worker USING (true);
+    CREATE POLICY backend_insert ON eas.ai_remediation FOR INSERT TO eas_api, eas_worker WITH CHECK (state = 'PROPOSED');
+    CREATE POLICY backend_decide ON eas.ai_remediation FOR UPDATE TO eas_api, eas_worker
+      USING (state = 'PROPOSED') WITH CHECK (state IN ('CONFIRMED', 'DISMISSED', 'FAILED'));
+    CREATE POLICY backup_read ON eas.ai_remediation FOR SELECT TO eas_backup USING (true);
+  END IF;
+END
+$pol$;
+
+UPDATE eas.security_epoch SET version = version + 1, updated_at = statement_timestamp() WHERE id = 1;
+
+-- ==== Kiểm tra =================================================================================
+DO $check$
+DECLARE n integer;
+BEGIN
+  SELECT count(*) INTO n FROM eas.config_release WHERE escalation AND state = 'PUBLISHED';
+  IF n < 18 THEN RAISE EXCEPTION '23: expected 18 escalation releases, found %', n; END IF;
+  IF EXISTS (SELECT 1 FROM eas.request_type rt JOIN eas.config_release cr ON cr.id = rt.active_release_id
+             WHERE cr.escalation) THEN
+    RAISE EXCEPTION '23: an escalation release became active';
+  END IF;
+END
+$check$;
+
+COMMIT;
+
+-- Xem lại (chỉ đọc)
+SELECT rt.code, cr.lifecycle, cr.version, cr.route_rules->>'executor' AS executor,
+       cr.route_rules->>'acceptor' AS acceptor
+FROM eas.config_release cr JOIN eas.request_type rt ON rt.id = cr.type_id
+WHERE cr.escalation ORDER BY rt.code, cr.lifecycle;
+
+
+-- ---- 24_ai_feedback_learning.sql ----
+-- 24: Vòng phản hồi để AI "sai tối đa 1 lần".
+--
+--   1. eas.ai_feedback: mỗi lần con người sửa quyết định của AI (thu hồi tự duyệt, đánh dấu chuyển luồng
+--      nhầm, chọn ứng viên khác ứng viên AI xếp đầu, bỏ qua đề xuất xử lý) kèm tín hiệu lúc đó. Bảng là bộ
+--      nhớ ca (dùng ngay ở quyết định kế tiếp, không cần huấn luyện lại) và là dữ liệu cho học dồn định kỳ.
+--      Chỉ thêm; được phép đánh dấu retired_at (admin ngưng dùng một ca) và used_in_training.
+--   2. eas.regulation_clause_review: câu quy định có tín hiệu kiểm soát nhưng trình biên dịch không hiểu
+--      (điều kiện ngoài schema) được đưa lên hàng chờ của admin kèm cách hiểu do Gemini đề xuất; luật admin
+--      duyệt được ghép vào bộ luật ở lần học kế tiếp.
+--
+-- Chạy được nhiều lần. Rollback: database/migrations/rollback/24_ai_feedback_learning_rollback.sql
+
+BEGIN;
+SELECT eas.lock_security(true);
+
+CREATE TABLE IF NOT EXISTS eas.ai_feedback (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind varchar(30) NOT NULL CHECK (kind IN (
+    'AUTO_APPROVE_REVOKED', 'ESCALATION_UNNECESSARY', 'RANKING_OVERRIDDEN', 'REMEDIATION_DISMISSED')),
+  request_id uuid NOT NULL REFERENCES eas.request(id) ON DELETE CASCADE,
+  type_code varchar(30) NOT NULL,
+  subject_id uuid REFERENCES eas.app_user(id) ON DELETE SET NULL,
+  actor_id uuid NOT NULL REFERENCES eas.app_user(id) ON DELETE RESTRICT,
+  case_codes text[] NOT NULL DEFAULT '{}',
+  ai_decision jsonb NOT NULL CHECK (jsonb_typeof(ai_decision) = 'object'),
+  human_decision jsonb NOT NULL CHECK (jsonb_typeof(human_decision) = 'object'),
+  reason varchar(500),
+  signals jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(signals) = 'object'),
+  created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+  retired_at timestamptz,
+  retired_by uuid REFERENCES eas.app_user(id) ON DELETE RESTRICT,
+  used_in_training varchar(60)
+);
+CREATE INDEX IF NOT EXISTS ai_feedback_memory
+  ON eas.ai_feedback(kind, type_code, subject_id) WHERE retired_at IS NULL;
+CREATE INDEX IF NOT EXISTS ai_feedback_request ON eas.ai_feedback(request_id);
+COMMENT ON TABLE eas.ai_feedback IS
+  'Con người sửa quyết định của AI: bộ nhớ ca (dùng ngay) và dữ liệu học dồn. Chỉ thêm; chỉ được đánh dấu retired_at/used_in_training.';
+
+CREATE OR REPLACE FUNCTION eas.guard_ai_feedback() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'eas'
+    AS $$
+BEGIN
+ IF TG_OP = 'DELETE' THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='AI feedback is append-only';
+ END IF;
+ IF (to_jsonb(NEW) - ARRAY['retired_at','retired_by','used_in_training'])
+    IS DISTINCT FROM (to_jsonb(OLD) - ARRAY['retired_at','retired_by','used_in_training'])
+    OR (OLD.retired_at IS NOT NULL AND NEW.retired_at IS DISTINCT FROM OLD.retired_at) THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='AI feedback is immutable';
+ END IF;
+ RETURN NEW;
+END $$;
+ALTER FUNCTION eas.guard_ai_feedback() OWNER TO eas_migration;
+REVOKE EXECUTE ON FUNCTION eas.guard_ai_feedback() FROM PUBLIC;
+DROP TRIGGER IF EXISTS ai_feedback_guard ON eas.ai_feedback;
+CREATE TRIGGER ai_feedback_guard BEFORE UPDATE OR DELETE ON eas.ai_feedback
+  FOR EACH ROW EXECUTE FUNCTION eas.guard_ai_feedback();
+
+CREATE TABLE IF NOT EXISTS eas.regulation_clause_review (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  regulation_code varchar(30) NOT NULL,
+  sentence text NOT NULL CHECK (length(btrim(sentence)) BETWEEN 5 AND 2000),
+  sentence_sha256 char(64) NOT NULL,
+  reason varchar(200) NOT NULL,
+  suggestion jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(suggestion) = 'object'),
+  state varchar(10) NOT NULL DEFAULT 'PENDING' CHECK (state IN ('PENDING', 'APPROVED', 'REJECTED')),
+  approved_rules jsonb CHECK (approved_rules IS NULL OR jsonb_typeof(approved_rules) = 'array'),
+  decided_by uuid REFERENCES eas.app_user(id) ON DELETE RESTRICT,
+  decided_at timestamptz,
+  note varchar(500),
+  created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+  UNIQUE (regulation_code, sentence_sha256),
+  CHECK ((state = 'PENDING') = (decided_at IS NULL)),
+  CHECK (state <> 'APPROVED' OR approved_rules IS NOT NULL)
+);
+COMMENT ON TABLE eas.regulation_clause_review IS
+  'Câu quy định AI chưa tự hiểu được: chờ admin duyệt cách hiểu (Gemini đề xuất); luật đã duyệt được ghép vào bộ luật khi AI học lại.';
+
+DO $grants$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['ai_feedback', 'regulation_clause_review'] LOOP
+    EXECUTE format('REVOKE ALL ON eas.%I FROM PUBLIC', t);
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE ON eas.%I TO eas_api, eas_worker', t);
+    EXECUTE format('GRANT SELECT ON eas.%I TO eas_backup', t);
+    EXECUTE format('ALTER TABLE eas.%I ENABLE ROW LEVEL SECURITY', t);
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='eas' AND tablename=t AND policyname='backend_read') THEN
+      EXECUTE format('CREATE POLICY backend_read ON eas.%I FOR SELECT TO eas_api, eas_worker USING (true)', t);
+      EXECUTE format('CREATE POLICY backend_insert ON eas.%I FOR INSERT TO eas_api, eas_worker WITH CHECK (true)', t);
+      EXECUTE format('CREATE POLICY backend_update ON eas.%I FOR UPDATE TO eas_api, eas_worker USING (true) WITH CHECK (true)', t);
+      EXECUTE format('CREATE POLICY backup_read ON eas.%I FOR SELECT TO eas_backup USING (true)', t);
+    END IF;
+  END LOOP;
+END
+$grants$;
+
+UPDATE eas.security_epoch SET version = version + 1, updated_at = statement_timestamp() WHERE id = 1;
+COMMIT;
+
+SELECT to_regclass('eas.ai_feedback') AS feedback, to_regclass('eas.regulation_clause_review') AS clause_review;
+
+
+-- ---- 25_bad_case_learning.sql ----
+-- 25: Bảng bad case trong CSDL và học bad case mới từ lý do người duyệt thu hồi hồ sơ AI đã tự duyệt.
+--
+--   1. eas.bad_case: danh mục tình huống xấu mà AI dùng để KHÔNG tự duyệt và chuyển hồ sơ A sang B/C.
+--      - BUILTIN: 12 tình huống có sẵn (bộ phát hiện viết trong ai_service/bad_cases.py), seed bên dưới;
+--        admin chỉ được ngưng (RETIRED) hoặc bật lại.
+--      - RULE: bad case AI học được từ lý do thu hồi, có điều kiện đo được (condition, tập đặc trưng cố định).
+--      - SCOPE: mở rộng một bad case có sẵn sang loại đơn khác (base_code).
+--      rationale = vì sao đó là bad case (tác hại), hiện cho người duyệt khi AI chuyển hồ sơ.
+--      evaluation = AI tự đánh giá "đủ thường xuyên để thành bad case chưa" (từng tiêu chí, lý do thiếu,
+--      câu hỏi cho admin). Trạng thái: CANDIDATE (chờ admin) -> ACTIVE (AI tự kích hoạt khi đủ, hoặc admin
+--      duyệt) / REJECTED (admin không tạo; mở lại thành CANDIDATE khi có thêm nhiều ca); ACTIVE <-> RETIRED.
+--   2. eas.bad_case_evidence: mỗi lý do thu hồi kèm kết luận của AI (khớp bad case có sẵn / kiểu mới / lý do
+--      riêng của hồ sơ), đặc trưng của hồ sơ lúc đó và ứng viên được ghép vào. Chỉ thêm.
+--
+-- Cần migration 24 (eas.ai_feedback). Chạy được nhiều lần.
+-- Rollback: database/migrations/rollback/25_bad_case_learning_rollback.sql
+
+BEGIN;
+SELECT eas.lock_security(true);
+
+CREATE TABLE IF NOT EXISTS eas.bad_case (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code varchar(60) NOT NULL UNIQUE CHECK (code ~ '^BC_[A-Z0-9_]{2,57}$'),
+  title varchar(200) NOT NULL CHECK (length(btrim(title)) >= 3),
+  rationale varchar(2000) NOT NULL CHECK (length(btrim(rationale)) >= 5),
+  condition_text varchar(1000),
+  request_types text[] NOT NULL CHECK (cardinality(request_types) BETWEEN 1 AND 60),
+  detector varchar(10) NOT NULL CHECK (detector IN ('BUILTIN', 'RULE', 'SCOPE')),
+  base_code varchar(60) REFERENCES eas.bad_case(code) ON DELETE RESTRICT,
+  condition jsonb CHECK (condition IS NULL OR jsonb_typeof(condition) = 'object'),
+  verdict varchar(15) CHECK (verdict IN ('EXISTING_SCOPE', 'NEW_PATTERN', 'ONE_OFF')),
+  feature varchar(40),
+  risk smallint NOT NULL DEFAULT 3 CHECK (risk BETWEEN 1 AND 5),
+  escalate_to char(1) NOT NULL DEFAULT 'B' CHECK (escalate_to IN ('B', 'C')),
+  source varchar(10) NOT NULL CHECK (source IN ('CATALOG', 'AI', 'ADMIN')),
+  state varchar(10) NOT NULL CHECK (state IN ('CANDIDATE', 'ACTIVE', 'REJECTED', 'RETIRED')),
+  evaluation jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(evaluation) = 'object'),
+  activated_by varchar(10) CHECK (activated_by IN ('CATALOG', 'AI', 'ADMIN')),
+  activated_at timestamptz,
+  decided_by uuid REFERENCES eas.app_user(id) ON DELETE RESTRICT,
+  decided_at timestamptz,
+  note varchar(500),
+  created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+  updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+  CHECK (detector <> 'BUILTIN' OR source = 'CATALOG'),
+  CHECK (detector <> 'SCOPE' OR base_code IS NOT NULL),
+  CHECK (state <> 'ACTIVE' OR detector <> 'RULE' OR condition IS NOT NULL),
+  CHECK (state NOT IN ('ACTIVE', 'RETIRED') OR activated_at IS NOT NULL)
+);
+CREATE INDEX IF NOT EXISTS bad_case_state ON eas.bad_case(state, detector);
+COMMENT ON TABLE eas.bad_case IS
+  'Danh mục bad case AI dùng để chặn tự duyệt và chuyển A -> B/C: 12 bad case có sẵn + bad case học từ lý do thu hồi.';
+COMMENT ON COLUMN eas.bad_case.rationale IS 'Vì sao là bad case (tác hại); hiện cho người duyệt khi AI chuyển hồ sơ.';
+COMMENT ON COLUMN eas.bad_case.evaluation IS 'AI tự đánh giá đủ/chưa đủ để thành bad case: tiêu chí, lý do thiếu, câu hỏi cho admin.';
+
+CREATE TABLE IF NOT EXISTS eas.bad_case_evidence (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  feedback_id uuid UNIQUE REFERENCES eas.ai_feedback(id) ON DELETE CASCADE,
+  request_id uuid NOT NULL REFERENCES eas.request(id) ON DELETE CASCADE,
+  bad_case_id uuid REFERENCES eas.bad_case(id) ON DELETE RESTRICT,
+  type_code varchar(30) NOT NULL,
+  requester_id uuid REFERENCES eas.app_user(id) ON DELETE SET NULL,
+  approver_id uuid NOT NULL REFERENCES eas.app_user(id) ON DELETE RESTRICT,
+  reason varchar(2000) NOT NULL CHECK (length(btrim(reason)) >= 5),
+  verdict varchar(15) NOT NULL CHECK (verdict IN ('EXISTING', 'EXISTING_SCOPE', 'NEW_PATTERN', 'ONE_OFF')),
+  confidence numeric(4, 3) CHECK (confidence BETWEEN 0 AND 1),
+  feature varchar(40),
+  feature_values jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(feature_values) = 'object'),
+  analysis jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(analysis) = 'object'),
+  created_at timestamptz NOT NULL DEFAULT statement_timestamp()
+);
+CREATE INDEX IF NOT EXISTS bad_case_evidence_case ON eas.bad_case_evidence(bad_case_id, created_at);
+COMMENT ON TABLE eas.bad_case_evidence IS
+  'Lý do người duyệt thu hồi tự duyệt + kết luận của AI (khớp bad case có sẵn / kiểu mới / lý do riêng). Chỉ thêm.';
+
+CREATE OR REPLACE FUNCTION eas.guard_bad_case() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'eas'
+    AS $$
+BEGIN
+ IF TG_OP = 'DELETE' THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='bad cases are never deleted; retire or reject them';
+ END IF;
+ IF NEW.code IS DISTINCT FROM OLD.code OR NEW.detector IS DISTINCT FROM OLD.detector
+    OR NEW.source IS DISTINCT FROM OLD.source OR NEW.base_code IS DISTINCT FROM OLD.base_code THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='bad case identity is immutable';
+ END IF;
+ IF OLD.detector = 'BUILTIN'
+    AND (to_jsonb(NEW) - ARRAY['state','note','decided_by','decided_at','updated_at','evaluation'])
+    IS DISTINCT FROM (to_jsonb(OLD) - ARRAY['state','note','decided_by','decided_at','updated_at','evaluation']) THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='built-in bad cases can only be retired or re-enabled';
+ END IF;
+ IF NEW.state IS DISTINCT FROM OLD.state AND NOT (
+      (OLD.state = 'CANDIDATE' AND NEW.state IN ('ACTIVE', 'REJECTED'))
+   OR (OLD.state = 'REJECTED' AND NEW.state = 'CANDIDATE')
+   OR (OLD.state = 'ACTIVE' AND NEW.state = 'RETIRED')
+   OR (OLD.state = 'RETIRED' AND NEW.state = 'ACTIVE')) THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE=format('bad case state %s -> %s not allowed', OLD.state, NEW.state);
+ END IF;
+ IF OLD.state IN ('ACTIVE', 'RETIRED') AND OLD.detector = 'RULE'
+    AND NEW.condition IS DISTINCT FROM OLD.condition THEN
+  RAISE EXCEPTION USING ERRCODE='23514',
+    MESSAGE='condition of an activated bad case is immutable; retire it and learn a new one';
+ END IF;
+ NEW.updated_at := statement_timestamp();
+ RETURN NEW;
+END $$;
+ALTER FUNCTION eas.guard_bad_case() OWNER TO eas_migration;
+REVOKE EXECUTE ON FUNCTION eas.guard_bad_case() FROM PUBLIC;
+DROP TRIGGER IF EXISTS bad_case_guard ON eas.bad_case;
+CREATE TRIGGER bad_case_guard BEFORE UPDATE OR DELETE ON eas.bad_case
+  FOR EACH ROW EXECUTE FUNCTION eas.guard_bad_case();
+
+CREATE OR REPLACE FUNCTION eas.guard_bad_case_evidence() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'eas'
+    AS $$
+BEGIN
+ RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='bad case evidence is append-only';
+END $$;
+ALTER FUNCTION eas.guard_bad_case_evidence() OWNER TO eas_migration;
+REVOKE EXECUTE ON FUNCTION eas.guard_bad_case_evidence() FROM PUBLIC;
+DROP TRIGGER IF EXISTS bad_case_evidence_guard ON eas.bad_case_evidence;
+CREATE TRIGGER bad_case_evidence_guard BEFORE UPDATE OR DELETE ON eas.bad_case_evidence
+  FOR EACH ROW EXECUTE FUNCTION eas.guard_bad_case_evidence();
+
+-- 12 bad case có sẵn (ai_service/data/bad_case_catalog.json, phiên bản bad-case-catalog-1).
+INSERT INTO eas.bad_case(code, title, rationale, condition_text, request_types, risk, escalate_to,
+                         detector, source, state, activated_by, activated_at)
+SELECT v.code, v.title, v.rationale, v.condition_text, v.request_types, v.risk, v.escalate_to,
+       'BUILTIN', 'CATALOG', 'ACTIVE', 'CATALOG', statement_timestamp()
+FROM (VALUES
+  ('BC_DEADLINE_CONFLICT', 'Xin nghỉ/về sớm khi đang giữ việc đến hạn, chưa bàn giao',
+   'Việc đến hạn bị bỏ dở, trễ cam kết với khách hàng/phòng khác.',
+   'Người gửi giữ ít nhất 1 việc (bước duyệt, lượt thực hiện, nghiệm thu) đến hạn trong 24 giờ hoặc trong thời gian nghỉ, và đơn chưa có người nhận bàn giao.',
+   ARRAY['LEAVE','LEAVE_SPECIAL','ATTENDANCE_ADJUSTMENT']::text[], 5, 'B'),
+  ('BC_HANDOVER_OVERLOADED', 'Người nhận bàn giao đang quá tải hoặc cũng vắng',
+   'Bàn giao trên giấy: người nhận không thể làm thay, việc vẫn trễ.',
+   'Người được chỉ định nhận bàn giao có từ 3 việc đến hạn trong thời gian nghỉ, hoặc chính họ có lịch nghỉ/công tác đã duyệt trùng ngày.',
+   ARRAY['LEAVE','LEAVE_SPECIAL']::text[], 4, 'B'),
+  ('BC_TEAM_ABSENCE_PEAK', 'Phòng đã vắng nhiều người trùng ngày',
+   'Phòng thiếu người trực, dịch vụ nội bộ gián đoạn.',
+   'Tỉ lệ thành viên khác trong phòng đã có lịch nghỉ/công tác đã duyệt trùng ngày từ 40% trở lên.',
+   ARRAY['LEAVE','LEAVE_SPECIAL']::text[], 4, 'B'),
+  ('BC_REPEATED_EXEMPTION', 'Điều chỉnh chấm công lặp lại có hệ thống',
+   'Lạm dụng ngưỡng miễn trừ để hợp thức hóa đi muộn/về sớm.',
+   'Đây là lần điều chỉnh chấm công thứ 4 trở lên trong 30 ngày.',
+   ARRAY['ATTENDANCE_ADJUSTMENT']::text[], 3, 'B'),
+  ('BC_WFH_FREQUENT', 'Làm việc từ xa dày đặc trong tháng',
+   'WFH trở thành mặc định, né chấm công và họp trực tiếp.',
+   'Đây là đơn WFH thứ 8 trở lên trong tháng dương lịch.',
+   ARRAY['WFH_REQ']::text[], 3, 'B'),
+  ('BC_SPLIT_AMOUNT_EVASION', 'Chia nhỏ đề xuất tài chính để né ngưỡng',
+   'Lách cấp duyệt cao (Kế toán trưởng, Giám đốc) bằng nhiều hồ sơ nhỏ.',
+   'Từ 2 hồ sơ tài chính trong 7 ngày, tổng vượt ngưỡng trong khi hồ sơ này dưới ngưỡng.',
+   ARRAY['EXPENSE_CLAIM','REFUND_COMPENSATION','ADVANCE_SMALL','ADVANCE_MEDIUM','ADVANCE_LARGE','REIMBURSEMENT','SALARY_ADVANCE']::text[], 5, 'C'),
+  ('BC_DUPLICATE_INVOICE', 'Số hóa đơn đã được dùng ở hồ sơ khác',
+   'Thanh toán hai lần cho một chứng từ.',
+   'Số hóa đơn (invoice_number) đã xuất hiện ở hồ sơ thanh toán khác chưa bị hủy/từ chối trong 180 ngày.',
+   ARRAY['EXPENSE_CLAIM','REIMBURSEMENT']::text[], 5, 'C'),
+  ('BC_REFUND_FREQUENT', 'Hoàn tiền/đền bù dồn dập',
+   'Rò rỉ tiền qua nhiều khoản hoàn nhỏ.',
+   'Đây là hồ sơ hoàn tiền thứ 3 trở lên của người gửi trong 7 ngày.',
+   ARRAY['REFUND_COMPENSATION']::text[], 4, 'B'),
+  ('BC_DISCOUNT_REPEAT_CUSTOMER', 'Chiết khấu lặp lại cho cùng khách hàng',
+   'Cộng dồn chiết khấu vượt biên lợi nhuận cho một khách.',
+   'Đã có hồ sơ chiết khấu khác cho cùng tên khách hàng trong 7 ngày.',
+   ARRAY['SPECIAL_DISCOUNT']::text[], 4, 'B'),
+  ('BC_REQUESTER_ABSENT_ON_EVENT', 'Người đón khách/chủ trì họp vắng đúng ngày',
+   'Khách vào toà nhà không có người tiếp; phòng bị giữ vô ích.',
+   'Người gửi có lịch nghỉ/công tác đã duyệt hoặc đơn nghỉ đang chờ trùng ngày khách đến/ngày họp.',
+   ARRAY['VISITOR_SECURITY_PASS','ROOM_BOOKING']::text[], 4, 'B'),
+  ('BC_AI_REVOKED_HISTORY', 'Quyết định tự duyệt của AI cho người này từng bị thu hồi',
+   'Người gửi đã từng lợi dụng tự duyệt; tiếp tục tự duyệt là lặp lại rủi ro.',
+   'Có từ 2 lần quản lý thu hồi quyết định tự duyệt của AI trên hồ sơ của người gửi trong 90 ngày.',
+   ARRAY['*']::text[], 3, 'B'),
+  ('BC_OFF_HOURS_BULK', 'Gửi hàng loạt ngoài giờ hành chính',
+   'Lợi dụng lúc vắng người kiểm soát để AI tự duyệt.',
+   'Từ 3 hồ sơ của người gửi trong 7 ngày được gửi ngoài 08:00-17:30 thứ Hai-thứ Sáu hoặc ngày lễ, kể cả hồ sơ này.',
+   ARRAY['EXPENSE_CLAIM','REFUND_COMPENSATION','ATTENDANCE_ADJUSTMENT','SPECIAL_DISCOUNT']::text[], 3, 'B')
+) AS v(code, title, rationale, condition_text, request_types, risk, escalate_to)
+ON CONFLICT (code) DO NOTHING;
+
+DO $grants$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['bad_case', 'bad_case_evidence'] LOOP
+    EXECUTE format('REVOKE ALL ON eas.%I FROM PUBLIC', t);
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE ON eas.%I TO eas_api, eas_worker', t);
+    EXECUTE format('GRANT SELECT ON eas.%I TO eas_backup', t);
+    EXECUTE format('ALTER TABLE eas.%I ENABLE ROW LEVEL SECURITY', t);
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='eas' AND tablename=t AND policyname='backend_read') THEN
+      EXECUTE format('CREATE POLICY backend_read ON eas.%I FOR SELECT TO eas_api, eas_worker USING (true)', t);
+      EXECUTE format('CREATE POLICY backend_insert ON eas.%I FOR INSERT TO eas_api, eas_worker WITH CHECK (true)', t);
+      EXECUTE format('CREATE POLICY backend_update ON eas.%I FOR UPDATE TO eas_api, eas_worker USING (true) WITH CHECK (true)', t);
+      EXECUTE format('CREATE POLICY backup_read ON eas.%I FOR SELECT TO eas_backup USING (true)', t);
+    END IF;
+  END LOOP;
+END
+$grants$;
+
+UPDATE eas.security_epoch SET version = version + 1, updated_at = statement_timestamp() WHERE id = 1;
+COMMIT;
+
+SELECT state, detector, count(*) FROM eas.bad_case GROUP BY 1, 2 ORDER BY 1, 2;
+
+
+-- ---- 26_regulation_rejection.sql ----
+-- 26: Quy định bị trả lại (yêu cầu trưởng nhóm 18/11).
+--
+-- Khi văn bản quy định mới có lỗi (lỗi ký tự, mâu thuẫn giữa các điều) hoặc AI học thất bại sau mọi lần thử:
+--   - HIỆU LỰC quay về bản AI đã áp dụng gần nhất: cả văn bản hiển thị (eas.company_regulations được khôi phục, có
+--     phiên bản mới ghi "khôi phục") lẫn bộ luật AI. Người dùng không còn thấy văn bản khác với quy định đang áp.
+--   - Bản bị trả lại được lưu ở bảng này, kèm DANH SÁCH LỖI chỉ rõ từng câu/điều, để admin sửa rồi nạp lại.
+--     Admin nhận thông báo lỗi (eas.system_announcement, audience ADMIN).
+-- Trạng thái: OPEN (chờ admin sửa) -> RESOLVED (admin đã nạp lại mã đó) / DISMISSED (admin bỏ qua, có ghi chú).
+--
+-- Chạy được nhiều lần. Rollback: database/migrations/rollback/26_regulation_rejection_rollback.sql
+
+BEGIN;
+SELECT eas.lock_security(true);
+
+CREATE TABLE IF NOT EXISTS eas.regulation_rejection (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id uuid REFERENCES eas.ai_learning_job(id) ON DELETE SET NULL,
+  regulation_code text NOT NULL CHECK (length(btrim(regulation_code)) BETWEEN 1 AND 30),
+  action varchar(10) NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'DELETE')),
+  cause varchar(12) NOT NULL CHECK (cause IN ('VALIDATION', 'TECHNICAL')),
+  rejected_title text,
+  rejected_content text,
+  rejected_version text,
+  restored_version text,
+  errors jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(errors) = 'array'),
+  warnings jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(warnings) = 'array'),
+  message text NOT NULL CHECK (length(btrim(message)) BETWEEN 5 AND 4000),
+  state varchar(10) NOT NULL DEFAULT 'OPEN' CHECK (state IN ('OPEN', 'RESOLVED', 'DISMISSED')),
+  resolved_by uuid REFERENCES eas.app_user(id) ON DELETE RESTRICT,
+  resolved_at timestamptz,
+  note varchar(500),
+  created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+  CHECK ((state = 'OPEN') = (resolved_at IS NULL))
+);
+CREATE INDEX IF NOT EXISTS regulation_rejection_open ON eas.regulation_rejection(regulation_code) WHERE state = 'OPEN';
+COMMENT ON TABLE eas.regulation_rejection IS
+  'Quy định bị trả lại: hiệu lực đã quay về bản cũ; lưu bản bị trả lại + danh sách lỗi từng câu để admin sửa và nạp lại.';
+
+CREATE OR REPLACE FUNCTION eas.guard_regulation_rejection() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog', 'eas'
+    AS $$
+BEGIN
+ IF TG_OP = 'DELETE' THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='regulation rejections are kept for audit';
+ END IF;
+ IF (to_jsonb(NEW) - ARRAY['state','resolved_by','resolved_at','note'])
+    IS DISTINCT FROM (to_jsonb(OLD) - ARRAY['state','resolved_by','resolved_at','note'])
+    OR OLD.state <> 'OPEN' THEN
+  RAISE EXCEPTION USING ERRCODE='23514', MESSAGE='only an OPEN rejection can be resolved or dismissed';
+ END IF;
+ RETURN NEW;
+END $$;
+ALTER FUNCTION eas.guard_regulation_rejection() OWNER TO eas_migration;
+REVOKE EXECUTE ON FUNCTION eas.guard_regulation_rejection() FROM PUBLIC;
+DROP TRIGGER IF EXISTS regulation_rejection_guard ON eas.regulation_rejection;
+CREATE TRIGGER regulation_rejection_guard BEFORE UPDATE OR DELETE ON eas.regulation_rejection
+  FOR EACH ROW EXECUTE FUNCTION eas.guard_regulation_rejection();
+
+REVOKE ALL ON eas.regulation_rejection FROM PUBLIC;
+GRANT SELECT, INSERT, UPDATE ON eas.regulation_rejection TO eas_api, eas_worker;
+GRANT SELECT ON eas.regulation_rejection TO eas_backup;
+ALTER TABLE eas.regulation_rejection ENABLE ROW LEVEL SECURITY;
+DO $pol$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='eas' AND tablename='regulation_rejection'
+                 AND policyname='backend_read') THEN
+    CREATE POLICY backend_read ON eas.regulation_rejection FOR SELECT TO eas_api, eas_worker USING (true);
+    CREATE POLICY backend_insert ON eas.regulation_rejection FOR INSERT TO eas_api, eas_worker WITH CHECK (true);
+    CREATE POLICY backend_update ON eas.regulation_rejection FOR UPDATE TO eas_api, eas_worker
+      USING (true) WITH CHECK (true);
+    CREATE POLICY backup_read ON eas.regulation_rejection FOR SELECT TO eas_backup USING (true);
+  END IF;
+END
+$pol$;
+
+UPDATE eas.security_epoch SET version = version + 1, updated_at = statement_timestamp() WHERE id = 1;
+COMMIT;
+
+SELECT to_regclass('eas.regulation_rejection') AS regulation_rejection;
+
+
+-- ---- 27_regulation_versioning_keep_login.sql ----
+-- 27: Nạp quy định — đánh số phiên bản mới, quyết định giữ/bỏ điều cũ, thông báo một lần kể từ lần đăng nhập trước.
+--     (yêu cầu người dùng 20/11)
+--
+-- 1. Đánh số: mọi thay đổi quy định (thêm, sửa, gỡ) chỉ tăng số sau dấu chấm (1.0 -> 1.1 -> 1.2 ...). Chỉ "cập nhật
+--    lớn" mới tăng số đầu (2.0): API đặt  SET LOCAL eas.version_bump = 'major'  trong giao dịch trước khi ghi.
+--    eas.version_bump = 'none' (chỉ dùng trong migration) ghi mà không tăng số và không thêm lịch sử.
+-- 2. Đưa hệ thống về v1.0: các quy định đang hiệu lực mang phiên bản 1.0; lịch sử phiên bản cũ vẫn giữ để tra cứu.
+-- 3. eas.regulation_keep_decision: khi văn bản mới đè lên điều của văn bản cũ, AI đề xuất giữ hay bỏ điều cũ, admin có
+--    thể đổi; cặp (văn bản mới, câu cũ) được GIỮ thì lượt học không thay thế câu cũ đó.
+-- 4. app_user.last_login_at / previous_login_at: thông báo quy định chỉ hiện các bản tạo sau lần đăng nhập trước, mỗi
+--    bản một lần.
+--
+-- Chạy được nhiều lần. Rollback: database/migrations/rollback/27_regulation_versioning_keep_login_rollback.sql
+
+BEGIN;
+SELECT eas.lock_security(true);
+
+-- 1. Đánh số phiên bản -------------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION eas.fn_before_regulation_versioning()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_cur_major INT;
+    v_cur_minor INT;
+    v_mode TEXT := COALESCE(current_setting('eas.version_bump', true), '');
+BEGIN
+    IF v_mode = 'none' THEN
+        RETURN NEW;
+    END IF;
+    SELECT COALESCE(global_major_version, 1), COALESCE(global_minor_version, 0)
+    INTO v_cur_major, v_cur_minor
+    FROM eas.ai_system_state
+    WHERE id = 1;
+
+    IF TG_OP = 'UPDATE'
+       AND NOT (COALESCE(OLD.is_deleted, false) = false AND COALESCE(NEW.is_deleted, false) = true)
+       AND NEW.content IS NOT DISTINCT FROM OLD.content
+       AND NEW.title IS NOT DISTINCT FROM OLD.title
+       AND NEW.category IS NOT DISTINCT FROM OLD.category
+       AND COALESCE(OLD.is_deleted, false) = COALESCE(NEW.is_deleted, false) THEN
+        RETURN NEW;  -- không đổi nội dung: không cấp số mới
+    END IF;
+
+    IF v_mode = 'major' THEN
+        v_cur_major := v_cur_major + 1;
+        v_cur_minor := 0;
+    ELSE
+        v_cur_minor := v_cur_minor + 1;
+    END IF;
+    NEW.major_version := v_cur_major;
+    NEW.minor_version := v_cur_minor;
+    NEW.version_string := v_cur_major || '.' || v_cur_minor;
+    NEW.updated_at := now();
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION eas.fn_after_regulation_versioning()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'pg_catalog', 'eas'
+AS $function$
+DECLARE
+  v_action text; v_summary text; v_major int; v_minor int; v_ver text; v_reg uuid; v_title text; v_content text;
+  v_mode text := COALESCE(current_setting('eas.version_bump', true), '');
+BEGIN
+  IF v_mode = 'none' THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    v_action := 'CREATE'; v_reg := NEW.id; v_title := NEW.title; v_content := NEW.content;
+    v_major := NEW.major_version; v_minor := NEW.minor_version; v_ver := NEW.version_string;
+    v_summary := 'Thêm mới quy định "' || NEW.title || '"';
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF COALESCE(OLD.is_deleted, false) = false AND COALESCE(NEW.is_deleted, false) = true THEN
+      v_action := 'DELETE_MAJOR';
+      v_summary := 'Gỡ bỏ quy định "' || NEW.title || '"';
+    ELSIF NEW.version_string IS DISTINCT FROM OLD.version_string THEN
+      v_action := 'UPDATE_MINOR';
+      v_summary := 'Cập nhật quy định "' || NEW.title || '"';
+    ELSE
+      RETURN NEW;
+    END IF;
+    v_reg := NEW.id; v_title := NEW.title; v_content := NEW.content;
+    v_major := NEW.major_version; v_minor := NEW.minor_version; v_ver := NEW.version_string;
+  ELSE
+    SELECT COALESCE(global_major_version, 1), COALESCE(global_minor_version, 0) INTO v_major, v_minor
+      FROM eas.ai_system_state WHERE id = 1;
+    IF v_mode = 'major' THEN v_major := v_major + 1; v_minor := 0; ELSE v_minor := v_minor + 1; END IF;
+    v_ver := v_major || '.' || v_minor;
+    v_action := 'DELETE_MAJOR'; v_reg := NULL; v_title := OLD.title; v_content := OLD.content;
+    v_summary := 'Gỡ bỏ quy định "' || OLD.title || '"';
+  END IF;
+
+  INSERT INTO eas.regulation_versions (regulation_id, version_string, major_version, minor_version,
+                                       action_type, title, content, change_summary, created_by)
+  VALUES (v_reg, v_ver, v_major, v_minor, v_action, v_title, v_content, v_summary,
+          COALESCE(CASE WHEN TG_OP = 'DELETE' THEN OLD.updated_by ELSE NEW.updated_by END, 'Admin'));
+
+  -- Chỉ cấp số phiên bản mới; việc học/khoá/thông báo do eas.ai_learning_job đảm nhận.
+  UPDATE eas.ai_system_state
+  SET global_major_version = v_major, global_minor_version = v_minor,
+      target_regulation_version = v_ver, updated_at = now()
+  WHERE id = 1;
+  RETURN COALESCE(NEW, OLD);
+END
+$function$;
+
+-- 2. Đưa về v1.0 (chỉ làm một lần: đánh dấu bằng bảng 3 chưa tồn tại) ------------------------------------------
+DO $reset$
+BEGIN
+  IF to_regclass('eas.regulation_keep_decision') IS NULL THEN
+    PERFORM set_config('eas.version_bump', 'none', true);
+    UPDATE eas.company_regulations SET version_string = '1.0', major_version = 1, minor_version = 0
+      WHERE NOT is_deleted;
+    UPDATE eas.ai_system_state
+      SET global_major_version = 1, global_minor_version = 0,
+          active_regulation_version = '1.0', target_regulation_version = '1.0',
+          applied_policy = CASE WHEN applied_policy IS NULL THEN NULL
+                                ELSE jsonb_set(applied_policy, '{version}', '"v1.0"') END,
+          updated_at = now()
+      WHERE id = 1;
+    PERFORM set_config('eas.version_bump', '', true);
+  END IF;
+END
+$reset$;
+
+-- 3. Quyết định giữ / bỏ điều cũ ---------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS eas.regulation_keep_decision (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  new_code text NOT NULL CHECK (length(btrim(new_code)) BETWEEN 1 AND 30),
+  old_code text NOT NULL CHECK (length(btrim(old_code)) BETWEEN 1 AND 30),
+  old_sha char(64) NOT NULL CHECK (old_sha ~ '^[0-9a-f]{64}$'),
+  old_text text,
+  decided_by varchar(5) NOT NULL CHECK (decided_by IN ('AI', 'ADMIN')),
+  reason text,
+  created_by uuid REFERENCES eas.app_user(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (new_code, old_sha)
+);
+REVOKE ALL ON eas.regulation_keep_decision FROM PUBLIC;
+GRANT SELECT, INSERT, DELETE ON eas.regulation_keep_decision TO eas_api;
+GRANT SELECT ON eas.regulation_keep_decision TO eas_worker, eas_backup;
+ALTER TABLE eas.regulation_keep_decision ENABLE ROW LEVEL SECURITY;
+DO $pol$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='eas' AND tablename='regulation_keep_decision'
+                 AND policyname='backend_read') THEN
+    CREATE POLICY backend_read ON eas.regulation_keep_decision FOR SELECT TO eas_api, eas_worker USING (true);
+    CREATE POLICY backend_insert ON eas.regulation_keep_decision FOR INSERT TO eas_api WITH CHECK (true);
+    CREATE POLICY backend_delete ON eas.regulation_keep_decision FOR DELETE TO eas_api USING (true);
+    CREATE POLICY backup_read ON eas.regulation_keep_decision FOR SELECT TO eas_backup USING (true);
+  END IF;
+END
+$pol$;
+
+-- 4. Lần đăng nhập ------------------------------------------------------------------------------------------------
+ALTER TABLE eas.app_user ADD COLUMN IF NOT EXISTS last_login_at timestamptz;
+ALTER TABLE eas.app_user ADD COLUMN IF NOT EXISTS previous_login_at timestamptz;
+
+UPDATE eas.security_epoch SET version = version + 1, updated_at = statement_timestamp() WHERE id = 1;
+COMMIT;
+
+SELECT to_regclass('eas.regulation_keep_decision') AS regulation_keep_decision,
+       (SELECT global_major_version || '.' || global_minor_version FROM eas.ai_system_state WHERE id = 1) AS version;
+
