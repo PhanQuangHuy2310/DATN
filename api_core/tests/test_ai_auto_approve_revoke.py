@@ -76,6 +76,8 @@ class RevokeAiAutoApprovalTests(SimpleTestCase):
                 side_effect=lambda **kw: kw["operation"](cursor),
             ),
             patch("api_core.workflow.auto_approval._append_request_audit") as audit,
+            # Quyền của quản lý cấp 1/2 có test riêng (test_ai_auto_approve_notice); ở đây xét người duyệt hợp lệ.
+            patch("api_core.workflow.auto_approval._supervisors", return_value=[]),
         ):
             result = revoke_ai_auto_approval(
                 actor=actor or self.approver,

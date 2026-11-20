@@ -433,17 +433,59 @@ def _latest_ai_decision(cursor, request_id: str) -> datetime | None:
     return row[1]
 
 
-def ai_approval_info(cursor, request_id: str, status: str) -> dict[str, Any] | None:
-    """Request-detail block: when the AI decided and until when it can be revoked."""
+def may_revoke(
+    cursor, *, actor_id: str, requester_id: str, department_id, type_id
+) -> bool:
+    """Ai được thu hồi duyệt tự động của AI (trong 24 giờ): quản lý cấp 1 hoặc cấp 2 của người gửi (cũng là người
+    nhận thông báo AI_AUTO_APPROVED), hoặc người duyệt hợp lệ của loại / phòng ban như trước. Người gửi thì không."""
+    if not actor_id or actor_id == requester_id:
+        return False
+    if actor_id in _supervisors(cursor, requester_id):
+        return True
+    return _is_actor_valid_for_role(
+        cursor,
+        actor_id=actor_id,
+        role="APPROVER",
+        department_id=department_id,
+        type_id=type_id,
+    )
+
+
+def ai_approval_info(
+    cursor, request_id: str, status: str, actor_id: str | None = None
+) -> dict[str, Any] | None:
+    """Request-detail block: when the AI decided, until when it can be revoked, and whether the viewer may."""
     decided_at = _latest_ai_decision(cursor, request_id)
     if decided_at is None:
         return None
     until = decided_at + REVOKE_WINDOW
-    return {
+    revocable = status == "COMPLETED" and datetime.now(timezone.utc) < until
+    info = {
         "decided_at": decided_at.isoformat(),
         "revocable_until": until.isoformat(),
-        "revocable": status == "COMPLETED" and datetime.now(timezone.utc) < until,
+        "revocable": revocable,
     }
+    if actor_id:
+        cursor.execute(
+            """
+            SELECT r.requester_id::text, v.department_id::text, r.type_id::text
+            FROM eas.request r JOIN eas.request_revision v ON v.id = r.current_revision_id WHERE r.id = %s
+            """,
+            [request_id],
+        )
+        row = cursor.fetchone()
+        info["can_revoke"] = bool(
+            revocable
+            and row
+            and may_revoke(
+                cursor,
+                actor_id=actor_id,
+                requester_id=row[0],
+                department_id=row[1],
+                type_id=row[2],
+            )
+        )
+    return info
 
 
 def _validate_revoke_input(body: dict[str, Any]) -> tuple[str, int]:
@@ -584,10 +626,10 @@ def revoke_ai_auto_approval(
             or datetime.now(timezone.utc) >= decided_at + REVOKE_WINDOW
         ):
             raise CommandError("AI_APPROVAL_NOT_REVOCABLE", status=409)
-        if actor.id == requester_id or not _is_actor_valid_for_role(
+        if not may_revoke(
             cursor,
             actor_id=actor.id,
-            role="APPROVER",
+            requester_id=requester_id,
             department_id=department_id,
             type_id=type_id,
         ):

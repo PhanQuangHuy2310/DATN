@@ -611,7 +611,7 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
         from api_core.workflow.auto_approval import ai_approval_info
 
         with connection.cursor() as cursor:
-            ai_approval = ai_approval_info(cursor, row[0], row[3])
+            ai_approval = ai_approval_info(cursor, row[0], row[3], request.actor.id)
     ai_escalation = _ai_escalation_info(row[0])
     return JsonResponse(
         {

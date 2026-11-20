@@ -438,8 +438,10 @@ export function permissions(user, r) {
     accept: granted.has("ACCEPTOR") && r.status === "WAITING_FOR_ACCEPTANCE" &&
       r.workflow?.lifecycle === "C" && r.workflow?.acceptor_id === user.id &&
       attempt?.state === "SUBMITTED" && !isExecutor,
-    revokeAi: granted.has("APPROVER") && !own && r.status === "COMPLETED" &&
+    // Máy chủ tính can_revoke: quản lý cấp 1 / cấp 2 của người gửi hoặc người duyệt hợp lệ (trong 24 giờ).
+    revokeAi: !own && r.status === "COMPLETED" &&
       Boolean(r.ai_auto_approval?.revocable) &&
+      ("can_revoke" in (r.ai_auto_approval || {}) ? Boolean(r.ai_auto_approval.can_revoke) : granted.has("APPROVER")) &&
       Date.now() < Date.parse(r.ai_auto_approval?.revocable_until || 0),
   };
 }

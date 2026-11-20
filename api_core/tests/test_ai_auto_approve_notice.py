@@ -112,3 +112,35 @@ class WorkerRecipientsTests(SimpleTestCase):
 
     def test_ai_account_is_never_a_recipient_downstream(self):
         self.assertTrue(settings.EAS_AI_SYSTEM_USER_ID)
+
+
+REVOKE_CHAIN = {
+    REQUESTER: (MANAGER, True),
+    MANAGER: (DIRECTOR, True),
+    DIRECTOR: (CEO, True),
+}
+
+
+class RevokeRightTests(SimpleTestCase):
+    """Cấp trên hoặc cấp trên nữa của người gửi được thu hồi trong 24 giờ (20/11)."""
+
+    def _may(self, actor, approver=False):
+        with patch.object(aa, "_is_actor_valid_for_role", return_value=approver):
+            return aa.may_revoke(
+                _cursor(REVOKE_CHAIN),
+                actor_id=actor,
+                requester_id=REQUESTER,
+                department_id="d",
+                type_id="t",
+            )
+
+    def test_direct_manager_and_the_next_level_may_revoke(self):
+        self.assertTrue(self._may(MANAGER))
+        self.assertTrue(self._may(DIRECTOR))
+
+    def test_three_levels_up_only_as_a_valid_approver(self):
+        self.assertFalse(self._may(CEO))
+        self.assertTrue(self._may(CEO, approver=True))
+
+    def test_requester_never_revokes_own_request(self):
+        self.assertFalse(self._may(REQUESTER, approver=True))
