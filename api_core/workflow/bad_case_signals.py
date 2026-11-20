@@ -112,12 +112,19 @@ SQL_SIGNALS = f"""
              AND (w.due_at AT TIME ZONE %(tz)s)::date BETWEEN me.d_start AND me.d_end)
     ),
     hist AS (
-      SELECT r2.id, t2.code, r2.status, v2.amount_vnd, v2.submitted_at
+      SELECT r2.id, t2.code, r2.status, v2.amount_vnd,
+             coalesce(v0.first_submitted_at, v2.submitted_at) AS submitted_at
       FROM eas.request r2
       JOIN eas.request_type t2 ON t2.id = r2.type_id
       JOIN eas.request_revision v2 ON v2.id = r2.current_revision_id
+      JOIN LATERAL (
+        SELECT min(vr.submitted_at) AS first_submitted_at
+        FROM eas.request_revision vr
+        WHERE vr.request_id = r2.id
+      ) v0 ON true
       JOIN me ON r2.requester_id = me.requester_id
-      WHERE v2.submitted_at <= me.t0 AND v2.submitted_at > me.t0 - interval '90 days'
+      WHERE coalesce(v0.first_submitted_at, v2.submitted_at) <= me.t0
+        AND coalesce(v0.first_submitted_at, v2.submitted_at) > me.t0 - interval '90 days'
     ),
     absences AS (
       -- vắng mặt: lịch nghỉ/công tác đã duyệt + đơn nghỉ/công tác trong EAS chưa bị từ chối/hủy

@@ -98,7 +98,8 @@ def memory(
         return []
     cursor.execute(
         """
-        SELECT f.id::text, r.code, f.case_codes, f.reason, f.human_decision, u.display_name, f.created_at
+        SELECT f.id::text, f.request_id::text, r.code, f.case_codes, f.reason,
+               f.human_decision, u.display_name, f.created_at
         FROM eas.ai_feedback f
         JOIN eas.request r ON r.id = f.request_id
         LEFT JOIN eas.app_user u ON u.id = f.actor_id
@@ -111,6 +112,7 @@ def memory(
     )
     keys = (
         "id",
+        "request_id",
         "request_code",
         "case_codes",
         "reason",
@@ -137,22 +139,28 @@ def apply_to_verdict(
     type_code: str,
     requester_id: str | None,
     lifecycle: str,
+    exclude_request_id: str | None = None,
 ) -> dict[str, Any]:
     """Điều chỉnh quyết định của AI theo bộ nhớ ca. Trả về verdict mới + 'learned' (mô tả điều chỉnh).
 
     - Đã từng bị thu hồi tự duyệt (cùng người, cùng loại): không tự duyệt nữa; với luồng A thì chuyển sang
-      B như một tình huống xấu đã học (LEARNED_REVOKE).
+      B như một tình huống xấu đã học (LEARNED_REVOKE). Bỏ qua phản hồi của chính hồ sơ đang xét
+      (exclude_request_id) để hồ sơ vừa bị thu hồi không tự nâng luồng theo chính nó.
     - Quản lý đã xác nhận chuyển luồng nhầm cho đúng các tình huống xấu này (cùng người, cùng loại) và không
       có điều khoản quy định nào yêu cầu: bỏ chuyển luồng, giữ luồng hiện tại với người duyệt thủ công.
     """
     out = dict(verdict)
     learned: list[dict[str, Any]] = []
-    revoked = memory(
-        cursor,
-        kind="AUTO_APPROVE_REVOKED",
-        type_code=type_code,
-        subject_id=requester_id,
-    )
+    revoked = [
+        r
+        for r in memory(
+            cursor,
+            kind="AUTO_APPROVE_REVOKED",
+            type_code=type_code,
+            subject_id=requester_id,
+        )
+        if not exclude_request_id or r.get("request_id") != exclude_request_id
+    ]
     if revoked and (
         out.get("decision") == "auto_approve" or not out.get("escalate_to")
     ):
@@ -179,12 +187,16 @@ def apply_to_verdict(
         bad = {c.get("code") for c in causes if c.get("source") == "BAD_CASE"}
         regulation = [c for c in causes if c.get("source") in ("REGULATION", "LEARNED")]
         if bad and not regulation:
-            overruled = memory(
-                cursor,
-                kind="ESCALATION_UNNECESSARY",
-                type_code=type_code,
-                subject_id=requester_id,
-            )
+            overruled = [
+                r
+                for r in memory(
+                    cursor,
+                    kind="ESCALATION_UNNECESSARY",
+                    type_code=type_code,
+                    subject_id=requester_id,
+                )
+                if not exclude_request_id or r.get("request_id") != exclude_request_id
+            ]
             covered = (
                 set().union(*(set(r["case_codes"] or []) for r in overruled))
                 if overruled

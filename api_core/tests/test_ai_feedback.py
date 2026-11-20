@@ -11,6 +11,7 @@ from api_core.workflow.regulation_compiler import RequestTypeName, skip_reason
 REVOKED = [
     {
         "id": "f1",
+        "request_id": "req-1",
         "request_code": "EAS-1",
         "case_codes": [],
         "reason": "Trùng họp",
@@ -22,6 +23,7 @@ REVOKED = [
 OVERRULED = [
     {
         "id": "f2",
+        "request_id": "req-2",
         "request_code": "EAS-2",
         "case_codes": ["BC_WFH_FREQUENT"],
         "reason": "Làm tại khách hàng",
@@ -43,7 +45,9 @@ def fake_memory(revoked=(), overruled=()):
 
 
 class MemoryTests(SimpleTestCase):
-    def apply(self, verdict, revoked=(), overruled=(), lifecycle="A"):
+    def apply(
+        self, verdict, revoked=(), overruled=(), lifecycle="A", exclude_request_id=None
+    ):
         with patch.object(
             ai_feedback, "memory", side_effect=fake_memory(revoked, overruled)
         ):
@@ -53,6 +57,7 @@ class MemoryTests(SimpleTestCase):
                 type_code="WFH_REQ",
                 requester_id="u1",
                 lifecycle=lifecycle,
+                exclude_request_id=exclude_request_id,
             )
 
     def test_no_memory_keeps_the_decision(self):
@@ -66,6 +71,18 @@ class MemoryTests(SimpleTestCase):
         self.assertEqual(out["escalate_to"], "B")
         self.assertEqual(out["escalation_causes"][-1]["code"], "LEARNED_REVOKE")
         self.assertIn("EAS-1", out["learned"][0]["text"])
+
+    def test_revoked_request_does_not_self_escalate_from_its_own_feedback(self):
+        same = self.apply(
+            {"decision": "auto_approve"}, revoked=REVOKED, exclude_request_id="req-1"
+        )
+        self.assertIsNone(same.get("escalate_to"))
+        self.assertEqual(same["learned"], [])
+        nxt = self.apply(
+            {"decision": "auto_approve"}, revoked=REVOKED, exclude_request_id="req-99"
+        )
+        self.assertEqual(nxt["escalate_to"], "B")
+        self.assertEqual(nxt["escalation_causes"][-1]["code"], "LEARNED_REVOKE")
 
     def test_overruled_bad_case_is_not_escalated_again(self):
         verdict = {
