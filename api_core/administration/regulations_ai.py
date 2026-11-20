@@ -1126,7 +1126,7 @@ def process_profile_assess_view(request: HttpRequest) -> JsonResponse:
     )
     if isinstance(result, JsonResponse):
         return result
-    return JsonResponse(result)
+    return JsonResponse(dict(result))
 
 
 # ---------------------------------------------------------------------------

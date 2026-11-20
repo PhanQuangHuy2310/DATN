@@ -43,26 +43,20 @@ MAX_WORK_ITEMS = 50
 LOCAL_TZ = "Asia/Ho_Chi_Minh"
 
 # Một ngày trong biểu mẫu (YYYY-MM-DD) hết hạn lúc 17:30 giờ Việt Nam.
-_PAYLOAD_DUE = """
-  CASE WHEN coalesce(v.payload->>'due_date', v.payload->>'end_date') ~ '^\\d{4}-\\d{2}-\\d{2}'
-       THEN (left(coalesce(v.payload->>'due_date', v.payload->>'end_date'), 10)::date
-             + time '17:30') AT TIME ZONE %(tz)s END
-"""
-
-SQL_SIGNALS = f"""
+SQL_SIGNALS = """
     WITH me AS (
       SELECT r.id, r.requester_id, rt.code AS type_code, r.type_id, v.payload,
              coalesce(v.submitted_at, now()) AS t0, u.department_id,
-             CASE WHEN coalesce(v.payload->>'start_date', v.payload->>'date') ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+             CASE WHEN coalesce(v.payload->>'start_date', v.payload->>'date') ~ '^\\d{4}-\\d{2}-\\d{2}'
                   THEN left(coalesce(v.payload->>'start_date', v.payload->>'date'), 10)::date END AS d_start,
              CASE WHEN coalesce(v.payload->>'end_date', v.payload->>'start_date', v.payload->>'date')
-                       ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+                       ~ '^\\d{4}-\\d{2}-\\d{2}'
                   THEN left(coalesce(v.payload->>'end_date', v.payload->>'start_date',
                                      v.payload->>'date'), 10)::date END AS d_end,
-             CASE WHEN coalesce(v.payload->>'visit_date', v.payload->>'booking_date') ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+             CASE WHEN coalesce(v.payload->>'visit_date', v.payload->>'booking_date') ~ '^\\d{4}-\\d{2}-\\d{2}'
                   THEN left(coalesce(v.payload->>'visit_date', v.payload->>'booking_date'), 10)::date
              END AS d_event,
-             CASE WHEN v.payload->>'handover_user_id' ~ '^[0-9a-fA-F-]{{36}}$'
+             CASE WHEN v.payload->>'handover_user_id' ~ '^[0-9a-fA-F-]{36}$'
                   THEN (v.payload->>'handover_user_id')::uuid END AS handover_id,
              upper(regexp_replace(coalesce(v.payload->>'invoice_number', ''), '\\s', '', 'g')) AS invoice_no,
              lower(btrim(coalesce(v.payload->>'customer_name', ''))) AS customer
@@ -76,7 +70,11 @@ SQL_SIGNALS = f"""
       -- việc đang giữ: bước duyệt ACTIVE, lượt thực hiện chưa đóng, nghiệm thu đang chờ
       SELECT st.request_id, st.kind, rq.type_id AS item_type, v.department_id AS item_dept,
              rq.requester_id AS item_requester,
-             least(st.due_at, coalesce({_PAYLOAD_DUE}, st.due_at)) AS due_at
+             least(st.due_at, coalesce(
+               CASE WHEN coalesce(v.payload->>'due_date', v.payload->>'end_date') ~ '^\\d{4}-\\d{2}-\\d{2}'
+                    THEN (left(coalesce(v.payload->>'due_date', v.payload->>'end_date'), 10)::date
+                          + time '17:30') AT TIME ZONE %(tz)s END,
+               st.due_at)) AS due_at
       FROM eas.sla_stage st
       JOIN me ON true
       LEFT JOIN eas.approval_step s ON s.id = st.approval_step_id
@@ -134,7 +132,7 @@ SQL_SIGNALS = f"""
       WHERE upper(x.approval_status) = 'APPROVED'
       UNION ALL
       SELECT r3.requester_id, left(v3.payload->>'start_date', 10)::date,
-             left(CASE WHEN v3.payload->>'end_date' ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+             left(CASE WHEN v3.payload->>'end_date' ~ '^\\d{4}-\\d{2}-\\d{2}'
                        THEN v3.payload->>'end_date' ELSE v3.payload->>'start_date' END, 10)::date
       FROM eas.request r3
       JOIN eas.request_type t3 ON t3.id = r3.type_id
@@ -142,14 +140,18 @@ SQL_SIGNALS = f"""
       JOIN me ON r3.id <> me.id
       WHERE t3.code IN ('LEAVE', 'LEAVE_SPECIAL', 'BUSINESS_TRIP')
         AND r3.status <> ALL(%(excluded)s)
-        AND v3.payload->>'start_date' ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}'
+        AND v3.payload->>'start_date' ~ '^\\d{4}-\\d{2}-\\d{2}'
     ),
     team AS (
       SELECT m.id FROM eas.app_user m JOIN me ON m.department_id = me.department_id
       WHERE m.is_active AND m.id <> me.requester_id AND NOT m.is_system_account
     ),
     handover_work AS (
-      SELECT least(st.due_at, coalesce({_PAYLOAD_DUE}, st.due_at)) AS due_at
+      SELECT least(st.due_at, coalesce(
+               CASE WHEN coalesce(v.payload->>'due_date', v.payload->>'end_date') ~ '^\\d{4}-\\d{2}-\\d{2}'
+                    THEN (left(coalesce(v.payload->>'due_date', v.payload->>'end_date'), 10)::date
+                          + time '17:30') AT TIME ZONE %(tz)s END,
+               st.due_at)) AS due_at
       FROM eas.sla_stage st
       JOIN me ON me.handover_id IS NOT NULL
       LEFT JOIN eas.approval_step s ON s.id = st.approval_step_id
@@ -161,9 +163,9 @@ SQL_SIGNALS = f"""
              OR (st.kind = 'EXECUTION' AND a.closed_at IS NULL AND a.executor_id = me.handover_id))
     )
     SELECT
-      (SELECT coalesce(array_agg(h ORDER BY h), '{{}}')
+      (SELECT coalesce(array_agg(h ORDER BY h), '{}')
          FROM (SELECT round(extract(epoch FROM (w.due_at - me.t0)) / 3600.0, 1)::float8 AS h
-                 FROM work w, me ORDER BY w.due_at LIMIT {MAX_WORK_ITEMS}) x),
+                 FROM work w, me ORDER BY w.due_at LIMIT %(max_work_items)s) x),
       (SELECT count(*) FROM work w, me
         WHERE me.d_start IS NOT NULL
           AND (w.due_at AT TIME ZONE %(tz)s)::date BETWEEN me.d_start AND me.d_end),
@@ -333,13 +335,14 @@ def _policy_features(request_id: str) -> dict:
 
 def load_signals(request_id: str) -> dict[str, Any]:
     with connection.cursor() as cursor:
-        cursor.execute(
+        cursor.execute(  # NOSONAR python:S2077 - static parameterized SQL query
             SQL_SIGNALS,
             {
                 "request_id": request_id,
                 "finance": list(FINANCE_TYPES),
                 "excluded": list(EXCLUDED_STATUSES),
                 "tz": LOCAL_TZ,
+                "max_work_items": MAX_WORK_ITEMS,
             },
         )
         row = cursor.fetchone()

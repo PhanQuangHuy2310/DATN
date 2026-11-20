@@ -74,13 +74,15 @@ function Login({ onLogin, portal = "client", aiStatus }) {
       emailRef.current.value = remembered.email;
     }
     if (remembered.remember) {
-      readBrowserCredential().then((saved) => {
-        if (!alive || !saved || !emailRef.current || !passwordRef.current) return;
-        const typed = emailRef.current.value;
-        if (typed && typed.toLowerCase() !== String(saved.email).toLowerCase()) return;
-        emailRef.current.value = saved.email;
-        if (!passwordRef.current.value) passwordRef.current.value = saved.password;
-      });
+      readBrowserCredential()
+        .then((saved) => {
+          if (!alive || !saved || !emailRef.current || !passwordRef.current) return;
+          const typed = emailRef.current.value;
+          if (typed && typed.toLowerCase() !== String(saved.email).toLowerCase()) return;
+          emailRef.current.value = saved.email;
+          if (!passwordRef.current.value) passwordRef.current.value = saved.password;
+        })
+        .catch(() => {});
     }
     return () => {
       alive = false;
