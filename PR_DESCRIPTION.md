@@ -217,6 +217,33 @@ Kiểm chứng:
 
   Sau khi thử, dữ liệu thử đã được xóa và local đưa về v1.0.
 
+### Nạp quy định, đợt 4: nhập file viết sẵn, ban hành không kiểm tra trước, lịch sử thay đổi (20/11)
+
+Không có migration mới.
+
+- **Nhập file:** nút "Nhập từ file (.txt, .md, .docx)" trong form thêm/sửa, kèm "Tải file mẫu".
+  - Dòng đầu là tiêu đề; các dòng `Mã:` và `Danh mục:` là tùy chọn; mỗi điều một dòng.
+  - Máy chủ (`POST /api/v1/admin/regulations/import`) xác định loại file bằng magic bytes, không theo đuôi tên. Nhận ZIP có `word/document.xml`, hoặc văn bản UTF-8/UTF-16. Từ chối PDF, `.doc` cũ và file nhị phân đổi đuôi.
+  - Giới hạn 2 MB, chặn zip bomb. Chỉ trích chữ, **không lưu file**.
+  - Văn bản được đổ vào form và **AI kiểm tra ngay**, không chờ admin bấm.
+- **Ban hành mà không bấm "AI kiểm tra trước":** máy chủ vẫn chạy cùng bước kiểm tra.
+  - Lỗi ký tự hoặc mâu thuẫn: trả 422 kèm danh sách lỗi, không lưu, không tăng phiên bản.
+  - Trùng mã: trả 409 kèm mã còn trống.
+  - Đè lên điều cũ: giữ hay bỏ lấy theo đề xuất của AI và được ghi lại (`decided_by=AI`).
+- **Lịch sử thay đổi:** nút "Lịch sử thay đổi" (và liên kết trong cửa sổ xem quy định) mở dòng thời gian mọi lần thêm, sửa, gỡ, kể cả quy định đã gỡ (`GET /api/v1/admin/regulations/history`).
+  - Lọc theo mã, tìm theo nội dung.
+  - Mỗi bản so sánh từng dòng với bản trước.
+  - Mô tả thay đổi admin nhập khi sửa nay được ghi vào lịch sử (trước đây chỉ vào nhật ký audit).
+- **Thử thật trên local: 15/15 kịch bản đạt.** Gồm:
+  - nhập .txt và .docx; PDF đổi đuôi bị từ chối;
+  - ban hành thẳng văn bản hợp lệ (v1.0 → v1.1, AI học xong);
+  - ban hành thẳng văn bản lỗi ký tự, mâu thuẫn, trùng mã;
+  - giữ/bỏ theo AI khi không kiểm tra trước;
+  - lịch sử thêm → sửa → gỡ có so sánh và tìm kiếm;
+  - nhân viên bị chặn (403).
+
+  Sau khi thử, local đã được dọn và đưa về v1.0.
+
 ## Số đo trung thực của bộ phân loại lý do thu hồi
 
 Có 3 bộ test, mỗi bộ được băm trước khi huấn luyện phiên bản tương ứng. Bộ 3 gồm câu oái oăm: không dấu, viết tắt, phủ định, nhắc tên loại đơn nhưng không phải bad case của loại đó.
