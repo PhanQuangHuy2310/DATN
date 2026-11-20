@@ -346,6 +346,7 @@ def create(actor: Actor, text: str, correlation_id: str) -> dict[str, Any]:
             reason=f"AI tạo loại yêu cầu mới «{p['name']}» theo nhu cầu người dùng nêu",
             correlation_id=correlation_id,
         )
+        actor_name = actor.display_name or actor.email
         cursor.execute(
             """
             INSERT INTO eas.system_announcement(audience, kind, version, title, summary, changes, guidance)
@@ -353,16 +354,20 @@ def create(actor: Actor, text: str, correlation_id: str) -> dict[str, Any]:
             """,
             [
                 code,
-                f"AI đã tạo loại yêu cầu mới «{p['name']}»",
+                f"{actor_name} đã tạo mẫu yêu cầu mới «{p['name']}»",
                 (
-                    f"Từ nhu cầu «{text[:120]}» của {actor.display_name or actor.email}. Quy trình mẫu {p['lifecycle']}: "
+                    f"Người tạo: {actor_name} ({actor.email}) · Từ nhu cầu «{text[:120]}» · Quy trình mẫu {p['lifecycle']}: "
                     f"{p['route_summary']}."
                 ),
                 Jsonb(
                     [
                         {
                             "kind": "REQUEST_TYPE_CREATED",
-                            "title": f"{p['name']} (nhóm {p['group_name']}, mã {code})",
+                            "title": f"{p['name']} (nhóm {p['group_name']}, mã {code}) — Người tạo: {actor_name}",
+                            "type_code": code,
+                            "type_name": p["name"],
+                            "created_by_name": actor_name,
+                            "created_by_email": actor.email,
                         }
                     ]
                 ),

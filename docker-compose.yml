@@ -283,7 +283,8 @@ services:
       # Chỉ bind localhost để debug; client ngoài gọi AI qua api_core, không qua gateway.
       - "127.0.0.1:8001:8001"
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET to a shared random key for Django and AI}
       - EAS_MOCK_API_URL=http://mock-systems:8000/mock-api/v1
       - EAS_MOCK_API_SECRET=${EAS_MOCK_API_SECRET:?Set EAS_MOCK_API_SECRET to a random key shared with mock_systems}

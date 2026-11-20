@@ -17,7 +17,7 @@ import {PersonalOverviewStats, PeriodChooser} from "./components/DashboardOvervi
 import ClientRequests from "./components/ClientRequests.jsx";
 import Notifications from "./components/NotificationsPage.jsx";
 import Profile from "./components/ProfilePage.jsx";
-import { SystemUpdateDialog, SystemUpdateHistory } from "./components/SystemUpdates.jsx";
+import { NAVIGATE_TEMPLATE_EVENT, SystemUpdateDialog, SystemUpdateHistory } from "./components/SystemUpdates.jsx";
 import AdminScreen, { AdminScreensContext } from "./components/AdminScreen.jsx";
 import { ApiBaseContext, WORKSPACE_API } from "./apiBase.js";
 import ClientRequestsHub from "./components/ClientRequestsHub.jsx";
@@ -1107,7 +1107,7 @@ function renderWorkspaceContent({
       return <AdminScreen name="RolePermissionMatrixPage" />;
     case "request-catalog":
     case "requests_workflows":
-      return <AdminScreen name="RequestWorkflowsPage" />;
+      return <AdminScreen name="RequestWorkflowsPage" key={searchText} initialQuery={searchText} />;
     case "org-chart":
       return <AdminScreen name="OrgChart" navigate={navigate} portal={portal} user={user} />;
     case "api-admin":
@@ -1145,7 +1145,7 @@ function renderWorkspaceContent({
     case "notifications":
       return (
         <>
-          <SystemUpdateHistory />
+          <SystemUpdateHistory onOpenTemplate={(code) => navigate("request-catalog", code)} />
           <Notifications onOpen={portal === "admin" && !canOpenAsAdmin ? undefined : setSelected} />
         </>
       );
@@ -1303,6 +1303,14 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [menuOpen]);
+  useEffect(() => {
+    const onNavigateTemplate = (event) => {
+      const code = event?.detail?.code;
+      if (code) navigate("request-catalog", code);
+    };
+    window.addEventListener(NAVIGATE_TEMPLATE_EVENT, onNavigateTemplate);
+    return () => window.removeEventListener(NAVIGATE_TEMPLATE_EVENT, onNavigateTemplate);
+  });
   function toggleCollapsed() {
     setCollapsed((value) => { writeFlag("eas.sidebarCollapsed", !value); return !value; });
   }
@@ -1454,7 +1462,12 @@ function Workspace({ user, onLogout, portal = "client", theme = "light", toggleT
                 {user.working_status.label}
               </span>
             )}
-            <NotificationBell onOpen={portal === "admin" && !user.roles.includes("AUDITOR") ? () => navigate("notifications") : openRequest} onViewAll={() => navigate("notifications")} />
+            <NotificationBell
+              portal={portal}
+              onOpen={portal === "admin" && !user.roles.includes("AUDITOR") ? () => navigate("notifications") : openRequest}
+              onOpenTemplate={(code) => navigate("request-catalog", code)}
+              onViewAll={() => navigate("notifications")}
+            />
             {(() => {
               const identity = <>
                 <span className="client-avatar">{user.display_name?.slice(0, 1) || "U"}</span>

@@ -154,22 +154,35 @@ def extract(
 ) -> dict[str, Any]:
     import google.generativeai as genai
 
-    genai.configure(api_key=api_key, transport="rest")
-    model = genai.GenerativeModel(model_name)
-    started = time.perf_counter()
-    response = model.generate_content(
-        build_prompt(clause, types),
-        generation_config=genai.GenerationConfig(
-            temperature=0, max_output_tokens=4096, response_mime_type="application/json"
-        ),
-        request_options={"timeout": timeout},
-    )
+    try:
+        from gemini_key_pool import execute_with_key_rotation
+    except ImportError:
+        from ai_service.gemini_key_pool import execute_with_key_rotation
+
+    prompt = build_prompt(clause, types)
+
+    def _invoke(current_key: str) -> tuple[Any, float]:
+        genai.configure(api_key=current_key, transport="rest")
+        model = genai.GenerativeModel(model_name)
+        started = time.perf_counter()
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                temperature=0,
+                max_output_tokens=4096,
+                response_mime_type="application/json",
+            ),
+            request_options={"timeout": timeout},
+        )
+        return response, round((time.perf_counter() - started) * 1000, 1)
+
+    response, latency_ms = execute_with_key_rotation(_invoke, api_key=api_key)
     usage = getattr(response, "usage_metadata", None)
     out = validate(json.loads(response.text), clause, types)
     out.update(
         engine=ENGINE_VERSION,
         model=model_name,
-        latency_ms=round((time.perf_counter() - started) * 1000, 1),
+        latency_ms=latency_ms,
         tokens=getattr(usage, "total_token_count", None) if usage else None,
     )
     return out

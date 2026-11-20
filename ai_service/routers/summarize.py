@@ -225,19 +225,27 @@ def summarize_request(body: SummarizeRequest):
     try:
         import google.generativeai as genai
 
-        # REST + a deadline under the API's 10 s AI timeout: gRPC could hang.
-        genai.configure(api_key=settings.gemini_api_key, transport="rest")
-        model = genai.GenerativeModel(settings.gemini_model)
+        try:
+            from gemini_key_pool import execute_with_key_rotation
+        except ImportError:
+            from ai_service.gemini_key_pool import execute_with_key_rotation
+
         prompt = build_summarize_prompt(body)
 
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
-                temperature=0.3,
-                max_output_tokens=512,
-            ),
-            request_options={"timeout": 8},
-        )
+        def _invoke(current_key: str) -> Any:
+            # REST + a deadline under the API's 10 s AI timeout: gRPC could hang.
+            genai.configure(api_key=current_key, transport="rest")
+            model = genai.GenerativeModel(settings.gemini_model)
+            return model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    temperature=0.3,
+                    max_output_tokens=512,
+                ),
+                request_options={"timeout": 8},
+            )
+
+        response = execute_with_key_rotation(_invoke, api_key=settings.gemini_api_key)
 
         raw = response.text.strip()
         if raw.startswith("```"):

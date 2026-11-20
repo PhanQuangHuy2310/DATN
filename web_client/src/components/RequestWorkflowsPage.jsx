@@ -39,13 +39,13 @@ const CATEGORY_META = {
   },
 };
 
-export default function RequestWorkflowsPage() {
+export default function RequestWorkflowsPage({ initialQuery = "" }) {
   const apiBase = useApiBase();
   const { canUpdate } = usePermission("requests_workflows");
   const [categories, setCategories] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [mockApis, setMockApis] = useState([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialQuery || "");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [toast, setToast] = useState(null);
 
@@ -69,9 +69,17 @@ export default function RequestWorkflowsPage() {
         api(`${apiBase}/request-templates`),
         api(`${apiBase}/mock-apis`),
       ]);
+      const loadedTemplates = tplRes.items || [];
       setCategories(catRes.items || []);
-      setTemplates(tplRes.items || []);
+      setTemplates(loadedTemplates);
       setMockApis(apiRes.items || []);
+      if (initialQuery) {
+        const q = initialQuery.trim().toLowerCase();
+        const matched = loadedTemplates.find((t) => String(t.code || "").toLowerCase() === q);
+        if (matched) {
+          setViewingWorkflow(matched);
+        }
+      }
     } catch (err) {
       showToast("Lỗi tải dữ liệu: " + errorText(err), "error");
     }
@@ -199,11 +207,14 @@ export default function RequestWorkflowsPage() {
   // Filtered templates list
   const filteredTemplates = useMemo(() => {
     return templates.filter((tpl) => {
+      const q = search.toLowerCase();
       const matchSearch =
         !search ||
-        (tpl.name && tpl.name.toLowerCase().includes(search.toLowerCase())) ||
-        (tpl.code && tpl.code.toLowerCase().includes(search.toLowerCase())) ||
-        (tpl.request_type && tpl.request_type.toLowerCase().includes(search.toLowerCase()));
+        (tpl.name && tpl.name.toLowerCase().includes(q)) ||
+        (tpl.code && tpl.code.toLowerCase().includes(q)) ||
+        (tpl.request_type && tpl.request_type.toLowerCase().includes(q)) ||
+        (tpl.created_by_name && tpl.created_by_name.toLowerCase().includes(q)) ||
+        (tpl.created_by_email && tpl.created_by_email.toLowerCase().includes(q));
       const matchCat = categoryFilter === "ALL" || tpl.category_code === categoryFilter;
       return matchSearch && matchCat;
     });
@@ -421,6 +432,27 @@ export default function RequestWorkflowsPage() {
                               <code className="rw-code-badge">{tpl.code}</code>
                               <span className="rw-type-pill">{tpl.request_type || "Chung"}</span>
                             </span>
+                            {(tpl.is_ai_dynamic || String(tpl.code || "").startsWith("AI_")) && (
+                              <span
+                                className="rw-creator-badge"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  marginTop: "4px",
+                                  padding: "2px 8px",
+                                  borderRadius: "999px",
+                                  fontSize: "12px",
+                                  fontWeight: 600,
+                                  background: "rgba(37, 99, 235, 0.1)",
+                                  color: "#1d4ed8",
+                                  width: "fit-content",
+                                }}
+                              >
+                                ✦ AI Dynamic · Người tạo: {tpl.created_by_name || "Người dùng"}
+                                {tpl.created_by_email ? ` (${tpl.created_by_email})` : ""}
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -770,6 +802,35 @@ export default function RequestWorkflowsPage() {
               {viewingWorkflow.api_name && <span>API: <strong>{viewingWorkflow.api_name}</strong></span>}
             </div>
 
+            {(viewingWorkflow.created_by_name ||
+              viewingWorkflow.is_ai_dynamic ||
+              String(viewingWorkflow.code || "").startsWith("AI_")) && (
+              <div
+                className="rw-creator-detail-box"
+                style={{
+                  marginTop: "12px",
+                  padding: "12px 14px",
+                  borderRadius: "8px",
+                  background: "rgba(37, 99, 235, 0.07)",
+                  border: "1px solid rgba(37, 99, 235, 0.22)",
+                  fontSize: "13.5px",
+                }}
+              >
+                <div>
+                  <strong>Người tạo mẫu yêu cầu mới:</strong>{" "}
+                  <span>
+                    {viewingWorkflow.created_by_name || "Người dùng"}
+                    {viewingWorkflow.created_by_email ? ` (${viewingWorkflow.created_by_email})` : ""}
+                  </span>
+                </div>
+                {viewingWorkflow.description && (
+                  <div style={{ marginTop: "4px" }}>
+                    <strong>Mô tả / Nhu cầu gốc:</strong> <span>{viewingWorkflow.description}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <h4 style={{ margin: "20px 0 10px" }}>Các bước xử lý tuần tự:</h4>
             <div className="rw-detail-steps-list">
               {(viewingWorkflow.workflow_steps || []).map((step, idx) => (
@@ -787,6 +848,19 @@ export default function RequestWorkflowsPage() {
             </div>
 
             <div className="rw-modal-footer">
+              {canUpdate && (
+                <button
+                  type="button"
+                  className="rw-btn-primary"
+                  onClick={() => {
+                    const target = viewingWorkflow;
+                    setViewingWorkflow(null);
+                    setEditingTemplate({ ...target });
+                  }}
+                >
+                  Chỉnh sửa mẫu yêu cầu
+                </button>
+              )}
               <button
                 type="button"
                 className="secondary"
