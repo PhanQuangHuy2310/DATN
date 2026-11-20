@@ -27,7 +27,12 @@ from api_core.workflow.regulation_compiler import (
     sentences,
     skip_reason,
 )
-from api_core.workflow.regulation_precedence import overlaps, relation
+from api_core.workflow.regulation_precedence import (
+    overlaps,
+    recommend,
+    relation,
+    sentence_sha,
+)
 
 ERROR = "ERROR"
 WARNING = "WARNING"
@@ -305,24 +310,40 @@ def validate(
                                 tail = " (chỉ với loại này; điều cũ vẫn áp cho các loại khác)"
                             else:
                                 tail = ""
-                            supersedes.append(
-                                _issue(
-                                    INFO,
-                                    "SUPERSEDES",
-                                    f"Sẽ thay thế {_where(b, code)} ở {kind}: {_cond_text(ra)} thay cho {_cond_text(rb)}"
-                                    + tail
-                                    + ". Khi AI áp dụng xong, phần bị thay của điều cũ hết hiệu lực vĩnh viễn.",
-                                    sentence=a["sentence"],
-                                    article=a["article"],
-                                    related={
-                                        "code": b["code"],
-                                        "article": b["article"],
-                                        "sentence": b["sentence"][:400],
-                                    },
+                            # AI đánh giá nên GIỮ hay BỎ điều cũ; admin đổi được khi ban hành (supersede_decisions).
+                            decision, why = recommend(ra, rb)
+                            if decision == "KEEP":
+                                text = (
+                                    f"Chồng với {_where(b, code)} ở {kind}: {_cond_text(ra)} và {_cond_text(rb)}. "
+                                    "AI đề xuất GIỮ điều cũ (không thay thế)."
                                 )
+                            else:
+                                text = (
+                                    f"Sẽ thay thế {_where(b, code)} ở {kind}: {_cond_text(ra)} thay cho "
+                                    f"{_cond_text(rb)}{tail}. Khi AI áp dụng xong, phần bị thay của điều cũ hết hiệu "
+                                    "lực vĩnh viễn."
+                                )
+                            item = _issue(
+                                INFO,
+                                "SUPERSEDES",
+                                text,
+                                sentence=a["sentence"],
+                                article=a["article"],
+                                related={
+                                    "code": b["code"],
+                                    "article": b["article"],
+                                    "sentence": b["sentence"][:400],
+                                },
                             )
+                            item.update(
+                                recommendation=decision,
+                                reason=why,
+                                key=f"{b['code']}|{sentence_sha(b['sentence'][:500])}",
+                            )
+                            supersedes.append(item)
                             if (
-                                ra.get("auto_approve") is True
+                                decision == "DROP"
+                                and ra.get("auto_approve") is True
                                 and rb.get("auto_approve") is False
                             ):
                                 warnings.append(

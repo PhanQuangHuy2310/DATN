@@ -1,7 +1,7 @@
 """Company regulations CRUD and AI engine status (admin portal).
 
 Version numbers are assigned by the BEFORE trigger on eas.company_regulations
-(create/delete = major, edit = minor) and the AFTER trigger records history.
+(migration 27: every change = minor, "big_update" = major) and the AFTER trigger records history.
 Every change queues an AI learning job in the same transaction
 (api_core.workflow.ai_learning); the employee portal stays locked until the AI
 has learned and applied the new rules, then users get an announcement.
@@ -228,6 +228,57 @@ def _active_types(cur):
     )
 
 
+def _version_mode(cur, body: dict) -> str:
+    """Migration 27: mặc định chỉ tăng số sau dấu chấm (1.0 -> 1.1); "cập nhật lớn" mới tăng số đầu (2.0)."""
+    big = body.get("big_update") is True
+    if big:
+        cur.execute("SELECT set_config('eas.version_bump', 'major', true)")
+    return "MAJOR" if big else "MINOR"
+
+
+def _store_keep_decisions(
+    cur, request: HttpRequest, code: str, check: dict, body: dict
+) -> list[dict]:
+    """Khi văn bản mới đè lên điều của văn bản cũ: giữ điều cũ theo đề xuất của AI, trừ khi admin chọn khác
+    (body.supersede_decisions = {key: "KEEP" | "DROP"}). Lượt học bỏ qua thay thế với các cặp được GIỮ."""
+    cur.execute("SELECT to_regclass('eas.regulation_keep_decision') IS NOT NULL")
+    if not cur.fetchone()[0]:
+        return []
+    overrides = body.get("supersede_decisions")
+    overrides = overrides if isinstance(overrides, dict) else {}
+    cur.execute("DELETE FROM eas.regulation_keep_decision WHERE new_code = %s", [code])
+    decided, seen = [], set()
+    for item in check.get("supersedes") or []:
+        key = item.get("key") or ""
+        if "|" not in key or key in seen:
+            continue
+        seen.add(key)
+        admin = overrides.get(key) if overrides.get(key) in ("KEEP", "DROP") else None
+        decision = admin or item.get("recommendation") or "DROP"
+        old_code, old_sha = key.split("|", 1)
+        decided.append(
+            {"key": key, "decision": decision, "by": "ADMIN" if admin else "AI"}
+        )
+        if decision != "KEEP":
+            continue
+        cur.execute(
+            """
+            INSERT INTO eas.regulation_keep_decision(new_code, old_code, old_sha, old_text, decided_by, reason, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (new_code, old_sha) DO NOTHING
+            """,
+            [
+                code,
+                old_code,
+                old_sha,
+                ((item.get("related") or {}).get("sentence") or "")[:400],
+                "ADMIN" if admin else "AI",
+                (item.get("reason") or "")[:500],
+                request.actor.id,
+            ],
+        )
+    return decided
+
+
 def regulation_issues(item: dict[str, Any], types) -> list[dict[str, Any]]:
     """Lỗi chặn của chính văn bản đang hiệu lực (lỗi ký tự, mâu thuẫn trong văn bản). Văn bản nạp trước khi có bước
     kiểm tra (hoặc nhập thẳng CSDL) có thể đang mang lỗi: hiện lên thẻ để admin sửa."""
@@ -452,11 +503,17 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
         regulations = cached("regulations", _list_regulations)
         with connection.cursor() as cur:
             next_code = _next_code(cur)
+            # Mẫu nạp nhanh: tên loại đúng như bộ biên dịch quy định nhận ra.
+            cur.execute(
+                "SELECT code, name FROM eas.request_type WHERE is_active ORDER BY name"
+            )
+            request_types = [{"code": r[0], "name": r[1]} for r in cur.fetchall()]
         return JsonResponse(
             {
                 "regulations": regulations,
                 "total_count": len(regulations),
                 "next_code": next_code,
+                "request_types": request_types,
                 "ai_state": ai_engine_state(),
             }
         )
@@ -495,6 +552,7 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
         check = _content_check(cur, code=code, fields=fields)
         if not check["ok"]:
             return _invalid_regulation(request, check)
+        version_type = _version_mode(cur, body)
         # Mã là UNIQUE kể cả khi đã gỡ (xóa mềm): ban hành lại một mã từng bị gỡ / bị trả lại thì dùng lại dòng đó.
         cur.execute(
             "SELECT id::text FROM eas.company_regulations WHERE code = %s AND is_deleted FOR UPDATE",
@@ -548,6 +606,7 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
             regulation=regulation,
             reason=f"Ban hành {code}",
         )
+        decisions = _store_keep_decisions(cur, request, code, check, body)
         enqueue_learning(
             cur,
             reason=f"Ban hành {code}: {fields['title']}",
@@ -561,9 +620,10 @@ def regulations_list_create(request: HttpRequest) -> JsonResponse:
             "message": f"Đã ban hành quy định {code} (phiên bản {version}). AI đang học quy định mới; cổng nhân viên tạm khoá tới khi áp dụng xong.",
             "regulation": regulation,
             "new_version": version,
-            "version_type": "MAJOR",
+            "version_type": version_type,
             "maintenance_active": True,
             "warnings": check["warnings"],
+            "supersede_decisions": decisions,
         },
         status=201,
     )
@@ -631,6 +691,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
         current = _serialize_regulation(row)
 
         if request.method == "DELETE":
+            version_type = _version_mode(cur, body if isinstance(body, dict) else {})
             cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
                 f"""
                 UPDATE eas.company_regulations SET is_deleted = true, updated_by = %s
@@ -653,7 +714,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
                 {
                     "message": f"Đã bãi bỏ quy định (phiên bản {version}). AI đang học lại; cổng nhân viên tạm khoá tới khi áp dụng xong.",
                     "new_version": version,
-                    "version_type": "MAJOR",
+                    "version_type": version_type,
                     "maintenance_active": True,
                 }
             )
@@ -673,6 +734,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
         check = _content_check(cur, code=current["code"], fields=fields)
         if not check["ok"]:
             return _invalid_regulation(request, check)
+        version_type = _version_mode(cur, body)
         cur.execute(  # NOSONAR python:S2077 - REGULATION_COLUMNS is a constant
             f"""
             UPDATE eas.company_regulations SET title = %s, category = %s, content = %s, updated_by = %s
@@ -698,6 +760,7 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
             regulation=regulation,
             reason=summary,
         )
+        decisions = _store_keep_decisions(cur, request, current["code"], check, body)
         enqueue_learning(cur, reason=summary, requested_by=request.actor.id)
         _resolve_rejections(cur, request, current["code"])
 
@@ -707,7 +770,8 @@ def regulation_detail_update_delete(request: HttpRequest, reg_id: str) -> JsonRe
             "message": f"Đã cập nhật quy định (phiên bản {version}). AI đang học lại; cổng nhân viên tạm khoá tới khi áp dụng xong.",
             "regulation": regulation,
             "new_version": version,
-            "version_type": "MINOR",
+            "version_type": version_type,
+            "supersede_decisions": decisions,
             "maintenance_active": True,
             "warnings": check["warnings"],
         }

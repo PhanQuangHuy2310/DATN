@@ -1088,6 +1088,22 @@ def _suggest_rules(sentence: str, types: list[RequestTypeName]) -> dict[str, Any
     }
 
 
+def _keep_decisions() -> set[tuple[str, str]]:
+    """Cặp (văn bản mới, câu cũ) được giữ khi nạp (migration 27): lượt học không thay thế câu cũ đó."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT to_regclass('eas.regulation_keep_decision') IS NOT NULL"
+            )
+            if not cursor.fetchone()[0]:
+                return set()
+            cursor.execute("SELECT new_code, old_sha FROM eas.regulation_keep_decision")
+            return {(r[0], r[1]) for r in cursor.fetchall()}
+    except DatabaseError:
+        logger.warning("keep decisions unavailable", exc_info=True)
+        return set()
+
+
 def clause_review_cycle(
     regulations: list[dict[str, Any]], types: list[RequestTypeName]
 ) -> list[dict[str, Any]]:
@@ -1187,7 +1203,8 @@ def process_job(job: dict[str, Any], owner: str) -> str:
             _tag(r) for r in reviewed if r["id"] not in seen_reviewed
         ]
         origins = (previous["policy"] or {}).get("origins") or {}
-        kept, superseded = precedence.resolve(regulation_rules, origins)
+        keep = _keep_decisions()
+        kept, superseded = precedence.resolve(regulation_rules, origins, keep=keep)
         policy = {
             "version": f"v{version}",
             "rules": manual + kept,
@@ -1284,18 +1301,30 @@ def list_announcements(
         if not _jobs_table_ready(cursor):
             return []
         cursor.execute(
-            """
+            "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'eas' "
+            "AND table_name = 'app_user' AND column_name = 'previous_login_at')"
+        )
+        # Migration 27: bản chưa đọc chỉ gồm thông báo tạo SAU lần đăng nhập trước; lần đăng nhập sau thì các bản cũ
+        # hơn tự hết hiện, nên mỗi bản chỉ hiện trong một lần đăng nhập. Chưa chạy 27 thì giữ cửa sổ 30 ngày như cũ.
+        since = (
+            "COALESCE(u.previous_login_at, u.last_login_at, statement_timestamp())"
+            if cursor.fetchone()[0] and unread_only
+            else "u.created_at - interval '30 days'"
+        )
+        cursor.execute(  # NOSONAR python:S2077 - `since` is one of two constant SQL fragments
+            f"""
             SELECT a.id::text, a.kind, a.version, a.title, a.summary, a.changes, a.guidance,
                    a.created_at, r.read_at
             FROM eas.system_announcement a
-            LEFT JOIN eas.announcement_receipt r ON r.announcement_id = a.id AND r.user_id = %s
+            JOIN eas.app_user u ON u.id = %s
+            LEFT JOIN eas.announcement_receipt r ON r.announcement_id = a.id AND r.user_id = u.id
             WHERE a.audience = ANY(%s)
-              AND a.created_at >= (SELECT created_at FROM eas.app_user WHERE id = %s) - interval '30 days'
+              AND a.created_at > {since}
               AND (NOT %s OR r.read_at IS NULL)
             ORDER BY a.created_at DESC
             LIMIT %s
             """,
-            [actor.id, audience, actor.id, unread_only, limit],
+            [actor.id, audience, unread_only, limit],
         )
         rows = cursor.fetchall()
     return [

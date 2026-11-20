@@ -131,3 +131,80 @@ class ValidateCodeTests(SimpleTestCase):
         }
         res = self._post(body, ("Quy định phân loại",))
         self.assertTrue(res.json()["validation"]["ok"])
+
+
+class VersionAndKeepTests(SimpleTestCase):
+    """Migration 27: chỉ "cập nhật lớn" mới tăng số đầu; quyết định giữ/bỏ điều cũ được lưu theo AI hoặc admin."""
+
+    def test_big_update_sets_the_major_bump_for_the_transaction(self):
+        cur = MagicMock()
+        self.assertEqual(ra._version_mode(cur, {}), "MINOR")
+        cur.execute.assert_not_called()
+        self.assertEqual(ra._version_mode(cur, {"big_update": True}), "MAJOR")
+        self.assertIn("eas.version_bump", cur.execute.call_args.args[0])
+
+    def test_keep_decisions_follow_ai_unless_admin_overrides(self):
+        cur = MagicMock()
+        cur.fetchone.return_value = (True,)
+        check = {
+            "supersedes": [
+                {
+                    "key": "QD-CU|" + "a" * 64,
+                    "recommendation": "KEEP",
+                    "reason": "giữ chốt chia nhỏ",
+                    "related": {"sentence": "câu cũ 1"},
+                },
+                {
+                    "key": "QD-CU|" + "b" * 64,
+                    "recommendation": "DROP",
+                    "reason": "đổi ngưỡng",
+                    "related": {},
+                },
+                {
+                    "key": "QD-CU|" + "c" * 64,
+                    "recommendation": "KEEP",
+                    "reason": "x",
+                    "related": {},
+                },
+            ]
+        }
+        request = SimpleNamespace(actor=_actor("POLICY_ADMIN"))
+        decided = ra._store_keep_decisions(
+            cur,
+            request,
+            "QD-MOI",
+            check,
+            {
+                "supersede_decisions": {
+                    "QD-CU|" + "b" * 64: "KEEP",
+                    "QD-CU|" + "c" * 64: "DROP",
+                }
+            },
+        )
+        self.assertEqual(
+            [(d["decision"], d["by"]) for d in decided],
+            [("KEEP", "AI"), ("KEEP", "ADMIN"), ("DROP", "ADMIN")],
+        )
+        inserts = [
+            c.args[1]
+            for c in cur.execute.call_args_list
+            if "INSERT INTO eas.regulation_keep_decision" in c.args[0]
+        ]
+        self.assertEqual(
+            [(i[2], i[4]) for i in inserts], [("a" * 64, "AI"), ("b" * 64, "ADMIN")]
+        )
+
+
+class AnnouncementSinceLoginTests(SimpleTestCase):
+    def test_unread_announcements_start_after_the_previous_login(self):
+        from api_core.workflow import ai_learning
+
+        cur = MagicMock()
+        cur.fetchone.side_effect = [(True,), (True,)]
+        cur.fetchall.return_value = []
+        conn = MagicMock()
+        conn.cursor.return_value.__enter__.return_value = cur
+        with patch.object(ai_learning, "connection", conn):
+            ai_learning.list_announcements(_actor("REQUESTER"), unread_only=True)
+        sql = cur.execute.call_args_list[-1].args[0]
+        self.assertIn("previous_login_at", sql)
