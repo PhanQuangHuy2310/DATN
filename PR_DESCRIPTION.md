@@ -198,6 +198,25 @@ Kiểm chứng:
   - Test: `tests/test_gemini_outage.py`, `api_core/tests/test_ai_learning_gemini_outage.py`.
 - **Form "Tạo mẫu yêu cầu mới" của admin:** ô "AI gợi ý" hiện ngay cả khi form còn trống, kèm hướng dẫn nhập tên mẫu.
 
+### Nạp quy định, đợt 3: giữ/bỏ điều cũ, mẫu nạp nhanh, đánh số v1.x, thông báo một lần (20/11) — migration 27
+
+**Migration 27 mới chạy trên CSDL local, CHƯA chạy trên Supabase chung** (cần nhóm đồng ý). Rollback có sẵn.
+
+- **AI đánh giá giữ hay bỏ điều cũ:** khi văn bản mới đè lên điều của văn bản cũ, kết quả "AI kiểm tra trước" ghi đề xuất **GIỮ** hoặc **BỎ** kèm lý do, và admin chọn lại được.
+  - **Giữ** khi luật mới cho AI tự duyệt mà điều cũ bắt duyệt vì một điều kiện điều mới không nói tới (nghi chia nhỏ, giữ việc đến hạn, lần lặp, địa điểm, chiều khác).
+  - **Bỏ** khi văn bản mới siết chặt hơn, đổi ngưỡng, hoặc cùng chiều.
+  - Quyết định được lưu vào `eas.regulation_keep_decision`; lượt học bỏ qua thay thế với các cặp được giữ. Hàm thay thế thuần vẫn đạt bộ test băm: v3 40/40, thay thế 12/12.
+- **Mẫu nạp nhanh:** chọn loại yêu cầu, điều kiện (số tiền / số ngày / % / số lần trong tháng / mọi hồ sơ), ngưỡng và cách duyệt; hệ thống viết sẵn điều khoản và gợi ý tiêu đề. Cả 41 tổ hợp đều được biên dịch đúng ý.
+- **Đánh số:** mọi thay đổi (thêm, sửa, gỡ) chỉ tăng số sau dấu chấm (v1.0 → v1.1…). Chỉ khi tích "Cập nhật lớn" mới tăng số đầu. Hệ thống đã đưa về **v1.0**.
+- **Thông báo quy định một lần:** chỉ hiện các bản tạo sau lần đăng nhập trước (`app_user.previous_login_at`).
+- **Thử thật trên local:**
+  - văn bản lỗi ký tự bị chặn (422) và không tăng phiên bản;
+  - v1.1 → v1.5, rồi "Cập nhật lớn" lên v2.0;
+  - AI đề xuất GIỮ điều "chia nhỏ hóa đơn" của QC05; sau khi học, điều đó vẫn còn nguyên;
+  - thông báo: X đăng nhập sau v1.2 thấy v1.3, v1.4, v1.5; Y đăng nhập sau v1.4 chỉ thấy v1.5; lần đăng nhập sau đó không thấy lại.
+
+  Sau khi thử, dữ liệu thử đã được xóa và local đưa về v1.0.
+
 ## Số đo trung thực của bộ phân loại lý do thu hồi
 
 Có 3 bộ test, mỗi bộ được băm trước khi huấn luyện phiên bản tương ứng. Bộ 3 gồm câu oái oăm: không dấu, viết tắt, phủ định, nhắc tên loại đơn nhưng không phải bad case của loại đó.
