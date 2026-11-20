@@ -613,10 +613,22 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
         with connection.cursor() as cursor:
             ai_approval = ai_approval_info(cursor, row[0], row[3], request.actor.id)
     ai_escalation = _ai_escalation_info(row[0])
+    # Worker gọi AI (tự duyệt / chuyển luồng) trước khi đánh dấu sự kiện APPROVAL_REQUESTED đã gửi: còn sự kiện chưa
+    # gửi nghĩa là AI chưa đánh giá xong, giao diện tự làm mới thay vì bắt người dùng bấm "Làm mới hồ sơ".
+    ai_pending = False
+    if row[3] == "PENDING_APPROVAL":
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT EXISTS (SELECT 1 FROM eas.outbox_event WHERE request_id = %s "
+                "AND event_type = 'APPROVAL_REQUESTED' AND state IN ('PENDING', 'PROCESSING'))",
+                [row[0]],
+            )
+            ai_pending = bool(cursor.fetchone()[0])
     return JsonResponse(
         {
             "request": {
                 "ai_auto_approval": ai_approval,
+                "ai_pending": ai_pending,
                 "ai_escalation": ai_escalation,
                 "id": row[0],
                 "code": row[1],
