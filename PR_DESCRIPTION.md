@@ -200,7 +200,7 @@ Kiểm chứng:
 
 ### Nạp quy định, đợt 3: giữ/bỏ điều cũ, mẫu nạp nhanh, đánh số v1.x, thông báo một lần (20/11) — migration 27
 
-**Migration 27 mới chạy trên CSDL local, CHƯA chạy trên Supabase chung** (cần nhóm đồng ý). Rollback có sẵn.
+**Migration 27 đã chạy trên Supabase chung ngày 20/11** (người dùng đồng ý; chạy thử trong giao dịch rồi hoàn tác trước, sau đó chạy thật: bảng mới có RLS + 4 chính sách, 3 quy định ở v1.0). Merge **không cần chạy thêm SQL**. Rollback: `database/migrations/rollback/27_...`.
 
 - **AI đánh giá giữ hay bỏ điều cũ:** khi văn bản mới đè lên điều của văn bản cũ, kết quả "AI kiểm tra trước" ghi đề xuất **GIỮ** hoặc **BỎ** kèm lý do, và admin chọn lại được.
   - **Giữ** khi luật mới cho AI tự duyệt mà điều cũ bắt duyệt vì một điều kiện điều mới không nói tới (nghi chia nhỏ, giữ việc đến hạn, lần lặp, địa điểm, chiều khác).
