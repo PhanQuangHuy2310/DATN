@@ -17,6 +17,12 @@ const ACTION_TEXT = {
 };
 
 const KIND_TEXT = { APPROVAL: "Bước duyệt", EXECUTION: "Việc thực hiện", ACCEPTANCE: "Nghiệm thu" };
+const ABSENCE_REMEDIATION_CASES = new Set([
+  "BC_DEADLINE_CONFLICT",
+  "BC_HANDOVER_OVERLOADED",
+  "BC_TEAM_ABSENCE_PEAK",
+  "BC_REQUESTER_ABSENT_ON_EVENT",
+]);
 
 export function EscalationBanner({ escalation, requestId, onChanged }) {
   const [note, setNote] = useState("");
@@ -186,6 +192,9 @@ export function RemediationPanel({ requestId, onDone }) {
   const open = (plan?.proposals || []).filter((p) => p.state === "PROPOSED");
   if (!plan || !open.length) return null;
   const proposal = open[0];
+  const hasItems = (plan.items || []).length > 0;
+  const isAbsenceCase = ABSENCE_REMEDIATION_CASES.has(proposal.case_code);
+  if (!hasItems && !isAbsenceCase) return null;
   const selected = Object.values(choices).filter(Boolean);
 
   async function confirm() {
@@ -226,11 +235,16 @@ export function RemediationPanel({ requestId, onDone }) {
     <section className="ai-remedy" aria-label="Đề xuất xử lý của AI">
       <h2>AI đề xuất cách xử lý công việc đang dở</h2>
       <p className="muted">
-        {proposal.proposal?.message} Người xin nghỉ vắng từ {date(plan.absence.start)} đến trước{" "}
-        {date(plan.absence.end)}. Bạn xác nhận, hệ thống thực hiện dưới quyền của bạn và ghi nhật ký
-        “AI đề xuất – quản lý xác nhận”.
+        {proposal.proposal?.message}
+        {isAbsenceCase && plan.absence?.start && plan.absence?.end && (
+          <>
+            {" "}
+            Người xin nghỉ vắng từ {date(plan.absence.start)} đến trước {date(plan.absence.end)}.
+          </>
+        )}{" "}
+        Bạn xác nhận, hệ thống thực hiện dưới quyền của bạn và ghi nhật ký “AI đề xuất – quản lý xác nhận”.
       </p>
-      {plan.items.length === 0 ? (
+      {!hasItems ? (
         <p className="muted">Hiện không còn việc đến hạn cần xử lý.</p>
       ) : (
         <ol className="ai-remedy-items">
@@ -245,9 +259,11 @@ export function RemediationPanel({ requestId, onDone }) {
         </ol>
       )}
       <div className="ai-remedy-actions">
-        <button type="button" onClick={confirm} disabled={busy || !selected.length}>
-          Xác nhận {selected.length} thao tác
-        </button>
+        {hasItems && (
+          <button type="button" onClick={confirm} disabled={busy || !selected.length}>
+            Xác nhận {selected.length} thao tác
+          </button>
+        )}
         <button type="button" className="secondary" onClick={dismiss} disabled={busy}>
           Bỏ qua đề xuất
         </button>

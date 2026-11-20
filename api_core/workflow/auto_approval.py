@@ -341,6 +341,7 @@ def _apply_feedback_memory(
                 type_code=context["type_code"],
                 requester_id=context.get("requester_id"),
                 lifecycle=context["lifecycle"],
+                exclude_request_id=request_id,
             )
     except Exception:
         logger.warning(
