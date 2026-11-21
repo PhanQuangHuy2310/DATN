@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { permissions, statuses } from "../src/domain.js";
+import { canMarkEscalationWrong, permissions, statuses } from "../src/domain.js";
 const me = { id: "me", roles: ["REQUESTER", "APPROVER", "EXECUTOR", "ACCEPTOR"] };
 const activeApproval = { requester_id: "requester", status:"PENDING_APPROVAL", approval_steps: [{state:"ACTIVE",assignee_id:"me"}] };
 const executionReady = { requester_id:"requester", approval_steps: [{state:"APPROVED",assignee_id:"approver"}], workflow:{ lifecycle:"C",acceptor_id:"acceptor",attempt:{executor_id:"me",state:"READY"}}, status:"READY_FOR_EXECUTION"};
@@ -55,4 +55,43 @@ test("revoke AI approval button shows only within 24h for a non-requester approv
   assert.equal(permissions(me, aiDone(soon, false)).revokeAi, false);
   assert.equal(permissions({ ...me, id: "requester" }, aiDone(soon)).revokeAi, false);
   assert.equal(permissions({ id: "x", roles: ["REQUESTER"] }, aiDone(soon)).revokeAi, false);
+});
+
+test("AI chuyển nhầm button follows per-request role: hidden for requester, shown only for reviewer of that request", () => {
+  const u1 = { id: "u1", roles: ["REQUESTER", "APPROVER"] };
+  const escalated = { from_lifecycle: "A", to_lifecycle: "B", causes: [], can_mark_unnecessary: true };
+
+  // Vòng đời 1: u1 là người gửi yêu cầu -> không hiện nút dù AI trả về hoặc trong approval_steps có gì
+  const lifecycle1 = {
+    requester_id: "u1",
+    approval_steps: [{ state: "ACTIVE", assignee_id: "u1" }],
+    ai_escalation: escalated,
+  };
+  assert.equal(canMarkEscalationWrong(u1, lifecycle1), false);
+
+  // Vòng đời 2: cùng u1 nhưng là người kiểm duyệt của yêu cầu do u2 gửi -> hiện nút
+  const lifecycle2 = {
+    requester_id: "u2",
+    approval_steps: [{ state: "ACTIVE", assignee_id: "u1" }],
+    ai_escalation: escalated,
+  };
+  assert.equal(canMarkEscalationWrong(u1, lifecycle2), true);
+
+  // Đã đánh dấu rồi -> không hiện nút nữa
+  assert.equal(
+    canMarkEscalationWrong(u1, { ...lifecycle2, ai_escalation: { ...escalated, already_marked: true } }),
+    false,
+  );
+
+  // Không phải người kiểm duyệt -> không hiện nút
+  assert.equal(
+    canMarkEscalationWrong({ id: "u3", roles: ["APPROVER"] }, {
+      ...lifecycle2,
+      ai_escalation: { ...escalated, can_mark_unnecessary: false },
+    }),
+    false,
+  );
+
+  // Không có banner AI chuyển quy trình -> false
+  assert.equal(canMarkEscalationWrong(u1, { requester_id: "u2" }), false);
 });

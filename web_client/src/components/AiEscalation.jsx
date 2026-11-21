@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
-import { date } from "../domain.js";
-import { command } from "./ui.jsx";
+import { date, errorText } from "../domain.js";
+import { Modal, command } from "./ui.jsx";
 
 const LIFECYCLE = {
   A: "A (chỉ phê duyệt)",
@@ -24,24 +24,108 @@ const ABSENCE_REMEDIATION_CASES = new Set([
   "BC_REQUESTER_ABSENT_ON_EVENT",
 ]);
 
-export function EscalationBanner({ escalation, requestId, onChanged }) {
-  const [note, setNote] = useState("");
-  if (!escalation) return null;
+const REASON_PLACEHOLDER = "Nhập lý do chi tiết (từ 5 đến 500 ký tự)…";
 
-  async function markWrong() {
-    const reason = window.prompt("Vì sao AI chuyển quy trình nhầm? (AI sẽ nhớ cho người này, loại đơn này)");
-    if (!reason || reason.trim().length < 5) return;
+function ReasonModal({
+  title,
+  description,
+  label,
+  placeholder,
+  submitLabel,
+  onClose,
+  onSubmit,
+}) {
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const trimmed = reason.trim();
+    if (trimmed.length < 5) {
+      setError("Vui lòng nhập lý do ít nhất 5 ký tự.");
+      return;
+    }
+    setBusy(true);
+    setError("");
     try {
-      await api(`/api/v1/requests/${requestId}/ai-feedback/escalation`, {
-        method: "POST",
-        body: JSON.stringify({ reason }),
-      });
-      setNote("Đã ghi nhận: lần sau AI không chuyển quy trình cho trường hợp tương tự của người này.");
-      onChanged?.();
+      await onSubmit(trimmed);
+      onClose();
     } catch (err) {
-      setNote(err?.message || "Chỉ người duyệt hồ sơ này mới đánh dấu được.");
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
     }
   }
+
+  function handleClose() {
+    if (!busy) onClose();
+  }
+
+  return (
+    <Modal title={title} onClose={handleClose}>
+      <form onSubmit={handleSubmit}>
+        <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, display: "grid", gap: "12px" }}>
+          {description && <p className="muted" style={{ margin: 0 }}>{description}</p>}
+          <label>
+            {label}
+            <textarea
+              ref={inputRef}
+              name="reason"
+              rows={4}
+              minLength={5}
+              maxLength={500}
+              required
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={placeholder}
+            />
+          </label>
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
+          <div className="form-actions">
+            <button type="button" className="secondary" onClick={onClose} disabled={busy}>
+              Hủy
+            </button>
+            <button type="submit" disabled={busy}>
+              {busy ? "Đang xử lý…" : submitLabel}
+            </button>
+          </div>
+        </fieldset>
+      </form>
+    </Modal>
+  );
+}
+
+export function EscalationBanner({ escalation, requestId, canMarkWrong = false, onChanged }) {
+  const [note, setNote] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  if (!escalation) return null;
+
+  const showMarkWrong = Boolean(requestId && canMarkWrong && !escalation.already_marked && !note);
+  const statusNote =
+    note ||
+    (escalation.already_marked
+      ? "Đã ghi nhận phản hồi: AI chuyển quy trình nhầm cho hồ sơ này."
+      : "");
+
+  async function submitWrong(reason) {
+    await api(`/api/v1/requests/${requestId}/ai-feedback/escalation`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    setNote("Đã ghi nhận: lần sau AI không chuyển quy trình cho trường hợp tương tự của người này.");
+    onChanged?.();
+  }
+
   return (
     <section className="ai-escalation" aria-label="AI chuyển quy trình">
       <div className="ai-escalation-head">
@@ -75,13 +159,28 @@ export function EscalationBanner({ escalation, requestId, onChanged }) {
           ))}
         </ul>
       )}
-      {requestId && (
+      {showMarkWrong && (
         <div className="ai-escalation-learn">
-          <button type="button" className="secondary" onClick={markWrong}>
+          <button type="button" className="secondary" onClick={() => setModalOpen(true)}>
             AI chuyển nhầm
           </button>
-          {note && <span className="muted"> {note}</span>}
         </div>
+      )}
+      {statusNote && (
+        <p className="muted ai-escalation-learn" role={note ? "status" : undefined}>
+          {statusNote}
+        </p>
+      )}
+      {modalOpen && (
+        <ReasonModal
+          title="Phản hồi AI chuyển quy trình nhầm"
+          description="Vì sao AI chuyển quy trình nhầm? (AI sẽ nhớ cho người này, loại đơn này)"
+          label="Lý do AI chuyển quy trình nhầm"
+          placeholder={REASON_PLACEHOLDER}
+          submitLabel="Gửi phản hồi"
+          onClose={() => setModalOpen(false)}
+          onSubmit={submitWrong}
+        />
       )}
     </section>
   );
@@ -163,6 +262,7 @@ export function RemediationPanel({ requestId, onDone }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [version, setVersion] = useState(0);
+  const [dismissModalOpen, setDismissModalOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -215,9 +315,7 @@ export function RemediationPanel({ requestId, onDone }) {
     }
   }
 
-  async function dismiss() {
-    const reason = window.prompt("Lý do bỏ qua đề xuất của AI (ít nhất 5 ký tự):");
-    if (!reason || reason.trim().length < 5) return;
+  async function submitDismiss(reason) {
     setBusy(true);
     try {
       await api(`/api/v1/requests/${requestId}/ai-remediation/${proposal.id}/dismiss`, {
@@ -264,11 +362,27 @@ export function RemediationPanel({ requestId, onDone }) {
             Xác nhận {selected.length} thao tác
           </button>
         )}
-        <button type="button" className="secondary" onClick={dismiss} disabled={busy}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setDismissModalOpen(true)}
+          disabled={busy}
+        >
           Bỏ qua đề xuất
         </button>
       </div>
       {message && <p role="status">{message}</p>}
+      {dismissModalOpen && (
+        <ReasonModal
+          title="Bỏ qua đề xuất xử lý của AI"
+          description="Hệ thống sẽ đóng đề xuất này và ghi nhận lý do bỏ qua vào nhật ký."
+          label="Lý do bỏ qua đề xuất"
+          placeholder={REASON_PLACEHOLDER}
+          submitLabel="Xác nhận bỏ qua"
+          onClose={() => setDismissModalOpen(false)}
+          onSubmit={submitDismiss}
+        />
+      )}
     </section>
   );
 }
