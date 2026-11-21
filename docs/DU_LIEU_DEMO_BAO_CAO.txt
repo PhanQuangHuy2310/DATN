@@ -1,0 +1,118 @@
+================================================================================
+BỘ DỮ LIỆU DEMO BÁO CÁO HỘI ĐỒNG — HỆ THỐNG PHÊ DUYỆT DOANH NGHIỆP (EAS)
+(Đã kiểm thử trực tiếp trên hệ thống chạy Docker + Supabase local + Gemini AI)
+================================================================================
+
+THÔNG TIN ĐĂNG NHẬP CHUNG:
+- Cổng Nhân viên: http://127.0.0.1:8082
+- Cổng Quản trị  : http://127.0.0.1:8081
+- Mật khẩu chung : Password@123456
+- Tài khoản Admin: admin@eas.com
+
+
+--------------------------------------------------------------------------------
+PHẦN 1: 3 YÊU CẦU DYNAMIC (CHƯA CÓ TRONG DANH MỤC) TƯƠNG ỨNG 3 MỨC A, B, C
+--------------------------------------------------------------------------------
+Ghi chú thuyết trình cho Hội đồng:
+- Tại Cổng Quản trị (:8081 -> Yêu cầu & Quy trình -> Tạo mẫu yêu cầu mới), hộp
+  "AiProfileHint" đánh giá và gợi ý đúng cả 3 phân loại A, B, C.
+- Tại Cổng Nhân viên (:8082 -> Tạo yêu cầu mới -> Gõ nhu cầu vào ô tìm kiếm),
+  AI vẫn đánh giá 3 mức A/B/C nhưng lớp an toàn chủ động nâng mẫu A thành B
+  ("không bao giờ A: chưa ai rà soát thì không tự duyệt"). Khi mẫu C được tạo,
+  hệ thống giữ nguyên Mẫu C (phê duyệt + thực hiện + nghiệm thu độc lập).
+
+1) MỨC A (Rủi ro 1/5 - độ tin cậy trùng loại cũ 0.23 -> Loại mới):
+   - Tên / Nhu cầu nhập:
+     Đăng ký nghỉ bù làm việc cuối tuần
+   - Kết quả tại Admin AiProfileHint (:8081): Phân loại A | Trọng số rủi ro 1/5
+   - Kết quả tại Nhân viên NewTypeDialog (:8082): Mẫu B (chốt chặn an toàn)
+
+2) MỨC B (Rủi ro 2/5 - độ tin cậy trùng loại cũ 0.62 -> Loại mới):
+   - Tên / Nhu cầu nhập:
+     Đăng ký tham gia giải chạy bộ nội bộ
+   - Kết quả tại Admin AiProfileHint (:8081): Phân loại B | Trọng số rủi ro 2/5
+   - Kết quả tại Nhân viên NewTypeDialog (:8082): Mẫu B (Phê duyệt + Bộ phận thực hiện)
+
+3) MỨC C (Rủi ro 1/5 - độ tin cậy trùng loại cũ 0.16 -> Loại mới):
+   - Tên / Nhu cầu nhập:
+     Yêu cầu mở rộng băng thông đường truyền mạng văn phòng chi nhánh
+   - Kết quả tại Admin AiProfileHint (:8081): Phân loại C | Trọng số rủi ro 1/5
+   - Kết quả tại Nhân viên NewTypeDialog (:8082): Mẫu C (Phê duyệt + Thực hiện + Nghiệm thu)
+
+* Lưu ý thêm khi demo tại :8082:
+  Sau khi user tạo mẫu mới ở :8082, đăng nhập admin@eas.com ở :8081 sẽ thấy ngay
+  Chuông thông báo / Popup báo rõ tên người dùng vừa tạo mẫu yêu cầu mới, bấm vào
+  sẽ mở thẳng chi tiết mẫu đó trong "Yêu cầu & Quy trình".
+
+
+--------------------------------------------------------------------------------
+PHẦN 2: BỘ QUY ĐỊNH MỚI XUNG ĐỘT VỚI QUY ĐỊNH HIỆN TẠI (REG-002)
+--------------------------------------------------------------------------------
+Đăng nhập Cổng Quản trị (:8081) -> admin@eas.com -> Quy định -> Thêm quy định mới:
+
+- Mã quy định : REG-DEMO-2026
+- Tên quy định: Quy định siết chặt hạn mức chi phí, WFH và chấm công (2026)
+- Danh mục    : Quy trình & Tài chính
+- Nội dung (copy nguyên văn):
+Điều 1: Yêu cầu loại "Thanh toán chi phí" có số tiền từ 3.000.000 VNĐ trở lên: bắt buộc người duyệt xét thủ công, chuyển sang quy trình C (nghiệm thu độc lập) và mức rủi ro tối thiểu 4/5.
+Điều 2: Yêu cầu loại "Làm việc từ xa (WFH)" từ 2 ngày trở lên: bắt buộc người duyệt xét thủ công, không tự động duyệt (chuyển sang quy trình B, mức rủi ro tối thiểu 4/5).
+Điều 3: Yêu cầu loại "Điều chỉnh chấm công": bắt buộc người duyệt xét thủ công, không áp dụng AI tự động duyệt (mức rủi ro tối thiểu 4/5).
+
+XUNG ĐỘT HỘI ĐỒNG SẼ THẤY NGAY KHI AI PHÂN TÍCH:
+- Xung đột trực tiếp với quy định cũ [REG-002] ("Quy định phân loại và hạn mức
+  phê duyệt yêu cầu A, B, C"), vì REG-002 cho phép loại A tự duyệt và chỉ áp dụng
+  quy trình C cho ngân sách từ 50.000.000 VNĐ trở lên.
+
+BẢNG SO SÁNH TRƯỚC VÀ SAU KHI NẠP REG-DEMO-2026:
+1. EXPENSE_CLAIM (Thanh toán chi phí):
+   - TRƯỚC: Luồng A, rủi ro 3/5 (chỉ lên C khi >= 50.000.000 VNĐ theo REG-002).
+   - SAU  : Chuyển sang Luồng C, rủi ro tối thiểu 4/5 khi số tiền >= 3.000.000 VNĐ
+            (bắt buộc duyệt thủ công + nghiệm thu độc lập).
+
+2. WFH_REQ (Làm việc từ xa - WFH):
+   - TRƯỚC: Luồng A, rủi ro 1/5 (AI tự động phê duyệt ngay).
+   - SAU  : Nâng lên Luồng B, rủi ro tối thiểu 4/5 khi thời lượng >= 2 ngày
+            (bắt buộc quản lý duyệt thủ công).
+
+3. ATTENDANCE_ADJUSTMENT (Điều chỉnh chấm công):
+   - TRƯỚC: Luồng A, rủi ro 1/5 (AI tự động phê duyệt ngay).
+   - SAU  : Nâng lên Luồng B, rủi ro tối thiểu 4/5 (tắt hoàn toàn AI tự duyệt,
+            bắt buộc người duyệt xét thủ công).
+
+
+--------------------------------------------------------------------------------
+PHẦN 3: KỊCH BẢN BAD-CASE CÓ ĐỦ 2 HƯỚNG XỬ LÝ (LÙI DEADLINE / BÀN GIAO)
+--------------------------------------------------------------------------------
+1. Tài khoản người gửi đơn:
+   - Email    : uyen.lam@eas.com (Lâm Thị Uyên)
+   - Mật khẩu : Password@123456
+   - Bối cảnh : Tài khoản này đang giữ sẵn 7 bước phê duyệt đến hạn trong CSDL.
+
+2. Thao tác tạo đơn loại A trên Cổng Nhân viên (:8082):
+   - Chọn loại yêu cầu: Nghỉ phép (LEAVE - thuộc Phân loại A)
+   - Tiêu đề : Xin nghỉ phép giải quyết việc gia đình
+   - Lý do   : Có việc gia đình đột xuất cần nghỉ 2 ngày.
+   - Từ ngày / Đến ngày: Chọn ngày mai đến ngày kia (hoặc hôm nay + 2 ngày).
+   - Người nhận bàn giao (handover_user_id): ĐỂ TRỐNG (không chọn).
+   - Bấm Gửi yêu cầu.
+
+3. Kết quả AI phát hiện Bad-case (hiển thị trên Tab "Đánh giá AI"):
+   - Mã bad-case  : BC_DEADLINE_CONFLICT
+                    ("Xin nghỉ/về sớm khi đang giữ việc đến hạn, chưa bàn giao")
+   - Mức rủi ro   : Tăng lên 5/5
+   - Quyết định AI: Chặn tự động duyệt -> Nâng luồng từ A sang B (Chờ phê duyệt)
+
+4. Thao tác 2 hướng xử lý (đăng nhập tài khoản Quản lý trực tiếp của Uyên):
+   - Email Quản lý: cuong.dinh@eas.com (Đinh Văn Cường)
+   - Mật khẩu     : Password@123456
+   - Mở hồ sơ Nghỉ phép vừa tạo của Lâm Thị Uyên -> Tại hộp "Hướng xử lý
+     khuyến nghị" có đủ 2 hướng xử lý để demo cho hội đồng:
+     + Hướng 1 — Lùi deadline (POSTPONE_DEADLINE):
+       Lùi hạn các công việc đang giữ sang sau ngày nhân viên đi làm lại.
+     + Hướng 2 — Bàn giao cho người khác phù hợp (REASSIGN_WORK):
+       AI tự động gợi ý danh sách đồng nghiệp cùng phạm vi quyền phù hợp nhất
+       để quản lý chọn chuyển giao việc đang giữ.
+
+================================================================================
+CHÚC BẠN BẢO VỆ THÀNH CÔNG TỐT ĐẸP!
+================================================================================
