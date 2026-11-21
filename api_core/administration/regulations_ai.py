@@ -86,7 +86,11 @@ def ai_engine_state() -> dict[str, Any]:
         return {"sync_status": "NOT_CONFIGURED", "client_maintenance_lock": False}
     lock = get_ai_maintenance_state()
     step = int(row[7] or 4)
-    has_gemini_key = bool(os.getenv("GEMINI_API_KEY", "").strip())
+    has_gemini_key = bool(
+        os.getenv("GEMINI_API_KEY", "").strip()
+        or os.getenv("GEMINI_API_KEYS", "").strip()
+        or os.getenv("GEMINI_API_KEY_1", "").strip()
+    )
     raw_provider = str(row[0] or "").strip()
     if not has_gemini_key and (not raw_provider or "gemini" in raw_provider.lower()):
         provider_name = (
@@ -1126,7 +1130,7 @@ def process_profile_assess_view(request: HttpRequest) -> JsonResponse:
     )
     if isinstance(result, JsonResponse):
         return result
-    return JsonResponse(result)
+    return JsonResponse(dict(result))
 
 
 # ---------------------------------------------------------------------------

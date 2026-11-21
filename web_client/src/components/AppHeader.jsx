@@ -5,6 +5,7 @@ import { Badge, useResource } from "./ui.jsx";
 import { useDebounced } from "./design.jsx";
 import { formatNotificationLabel } from "./NotificationsPage.jsx";
 import { NewTypeDialog, useAiTypeSuggestions } from "./AiNewType.jsx";
+import { openTemplateInCatalog, parseDynamicTypeAnnouncement } from "./SystemUpdates.jsx";
 
 function useDismiss(open, setOpen) {
   const ref = useRef(null);
@@ -296,11 +297,19 @@ export function GlobalSearch({ portal, onOpen, onNavigate, onStartRequest }) {
   );
 }
 
-export function NotificationBell({ onOpen, onViewAll }) {
+export function NotificationBell({ portal, onOpen, onOpenTemplate, onViewAll }) {
   const [open, setOpen] = useState(false);
   const feed = useResource("/api/v1/notifications?limit=6&offset=0");
+  const announcements = useResource(portal === "admin" ? "/api/v1/announcements" : "");
   const ref = useDismiss(open, setOpen);
-  const unread = Number(feed.data?.unread_count) || 0;
+  const dynamicAnnouncements = (announcements.data?.items || []).filter(
+    (a) => a.kind === "REQUEST_TYPE_CREATED",
+  );
+  const unreadAnnouncements = dynamicAnnouncements.filter((a) => !a.read_at).length;
+  const unread = (Number(feed.data?.unread_count) || 0) + unreadAnnouncements;
+  const feedItems = feed.data?.items || [];
+  const hasAnyItem = dynamicAnnouncements.length > 0 || feedItems.length > 0;
+
   async function openItem(item) {
     setOpen(false);
     if (!item.read_at) {
@@ -312,6 +321,24 @@ export function NotificationBell({ onOpen, onViewAll }) {
     }
     if (item.request_id) onOpen(item.request_id);
   }
+
+  async function openAnnouncement(a, dyn) {
+    setOpen(false);
+    if (!a.read_at) {
+      await api(`/api/v1/announcements/${a.id}/read`, {
+        method: "POST",
+        body: "{}",
+        silent: true,
+      }).catch(() => {});
+      announcements.reload();
+    }
+    if (dyn?.typeCode) {
+      openTemplateInCatalog(dyn.typeCode, onOpenTemplate);
+    } else {
+      onViewAll();
+    }
+  }
+
   return (
     <div
       className="client-notifications-anchor"
@@ -321,7 +348,15 @@ export function NotificationBell({ onOpen, onViewAll }) {
       <button
         type="button"
         className="secondary ds-icon-button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() =>
+          setOpen((v) => {
+            if (!v) {
+              feed.reload?.();
+              if (portal === "admin") announcements.reload?.();
+            }
+            return !v;
+          })
+        }
         aria-expanded={open}
         aria-label={unread ? `Thông báo, ${unread} chưa đọc` : "Thông báo"}
         title="Thông báo"
@@ -347,7 +382,25 @@ export function NotificationBell({ onOpen, onViewAll }) {
             <small className="muted">{unread} chưa đọc</small>
           </div>
           <ul>
-            {(feed.data?.items || []).map((item) => (
+            {dynamicAnnouncements.slice(0, 6).map((a) => {
+              const dyn = parseDynamicTypeAnnouncement(a);
+              return (
+                <li key={`ann:${a.id}`} className={a.read_at ? "" : "is-unread"}>
+                  <button type="button" onClick={() => openAnnouncement(a, dyn)}>
+                    <span>
+                      <strong>{dyn?.createdByName || "Người dùng"}</strong> đã tạo mẫu yêu cầu mới «
+                      {dyn?.typeName || a.title}» ({dyn?.typeCode || a.version})
+                    </span>
+                    <small className="muted">
+                      Người tạo: {dyn?.createdByName || "Người dùng"}
+                      {dyn?.createdByEmail ? ` (${dyn.createdByEmail})` : ""} · Bấm để xem mẫu → ·{" "}
+                      {date(a.created_at)}
+                    </small>
+                  </button>
+                </li>
+              );
+            })}
+            {feedItems.map((item) => (
               <li key={item.id} className={item.read_at ? "" : "is-unread"}>
                 <button type="button" onClick={() => openItem(item)}>
                   <span>{formatNotificationLabel(item.label)}</span>
@@ -356,7 +409,7 @@ export function NotificationBell({ onOpen, onViewAll }) {
               </li>
             ))}
           </ul>
-          {!feed.data?.items?.length && (
+          {!hasAnyItem && (
             <p className="muted">Chưa có thông báo nào.</p>
           )}
           <button

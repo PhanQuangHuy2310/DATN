@@ -612,7 +612,9 @@ def request_detail(request: HttpRequest, request_id: str) -> JsonResponse:
 
         with connection.cursor() as cursor:
             ai_approval = ai_approval_info(cursor, row[0], row[3], request.actor.id)
-    ai_escalation = _ai_escalation_info(row[0])
+    ai_escalation = _ai_escalation_info(
+        row[0], actor_id=request.actor.id, requester_id=row[5]
+    )
     # Worker gọi AI (tự duyệt / chuyển luồng) trước khi đánh dấu sự kiện APPROVAL_REQUESTED đã gửi: còn sự kiện chưa
     # gửi nghĩa là AI chưa đánh giá xong, giao diện tự làm mới thay vì bắt người dùng bấm "Làm mới hồ sơ".
     ai_pending = False
@@ -778,8 +780,16 @@ def delegation_revoke_view(request: HttpRequest, delegation_id) -> JsonResponse:
     return JsonResponse({**result, "correlation_id": correlation_id(request)})
 
 
-def _ai_escalation_info(request_id: str) -> dict[str, Any] | None:
+def _ai_escalation_info(
+    request_id: str,
+    *,
+    actor_id: str | None = None,
+    requester_id: str | None = None,
+) -> dict[str, Any] | None:
     """Lần AI nâng luồng gần nhất (A -> B/C) và số đề xuất xử lý còn chờ quản lý quyết định."""
+    from api_core.workflow import ai_feedback
+    from api_core.workflow.remediation import can_mark_escalation_unnecessary
+
     try:
         with connection.cursor() as cursor:
             cursor.execute(
@@ -802,6 +812,23 @@ def _ai_escalation_info(request_id: str) -> dict[str, Any] | None:
                     [request_id],
                 )
                 pending = int(cursor.fetchone()[0])
+            already_marked = False
+            if ai_feedback.available(cursor):
+                cursor.execute(
+                    "SELECT EXISTS (SELECT 1 FROM eas.ai_feedback "
+                    "WHERE request_id=%s AND kind='ESCALATION_UNNECESSARY')",
+                    [request_id],
+                )
+                already_marked = bool(cursor.fetchone()[0])
+            can_mark_unnecessary = False
+            if (
+                actor_id
+                and not already_marked
+                and (requester_id is None or str(actor_id) != str(requester_id))
+            ):
+                can_mark_unnecessary = can_mark_escalation_unnecessary(
+                    cursor, str(actor_id), str(request_id)
+                )
     except DatabaseError:
         return None
     return {
@@ -810,6 +837,8 @@ def _ai_escalation_info(request_id: str) -> dict[str, Any] | None:
         "causes": details.get("causes") or [],
         "occurred_at": row[1].isoformat() if row[1] else None,
         "pending_remediations": pending,
+        "already_marked": already_marked,
+        "can_mark_unnecessary": can_mark_unnecessary,
     }
 
 

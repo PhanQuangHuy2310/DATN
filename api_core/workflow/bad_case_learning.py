@@ -43,28 +43,58 @@ MAX_COVERAGE = 0.30  # điều kiện không được bắt quá 30% hồ sơ c�
 REOPEN_EXTRA = 3  # ứng viên bị admin từ chối được hỏi lại khi có thêm từng này ca mới
 LOCAL_TZ = "Asia/Ho_Chi_Minh"
 
-_START = (
-    "coalesce(v.payload->>'start_date', v.payload->>'date', v.payload->>'booking_date', "
-    "v.payload->>'work_date', v.payload->>'visit_date', v.payload->>'event_date')"
-)
-_END = f"coalesce(v.payload->>'end_date', {_START})"
-FEATURE_SELECT = f"""
-    CASE WHEN {_START} ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}' THEN left({_START}, 10)::date END AS d_start,
-    CASE WHEN {_END} ~ '^\\d{{4}}-\\d{{2}}-\\d{{2}}' THEN left({_END}, 10)::date END AS d_end,
-    CASE WHEN v.payload->>'start_time' ~ '^\\d{{1,2}}:\\d{{2}}' THEN (v.payload->>'start_time')::time
-         ELSE time '08:00' END AS t_start,
-    v.submitted_at, v.amount_vnd, r.requester_id
+SQL_REQUEST_FEATURES = """
+    WITH f AS (
+      SELECT
+        CASE WHEN coalesce(v.payload->>'start_date', v.payload->>'date', v.payload->>'booking_date', v.payload->>'work_date', v.payload->>'visit_date', v.payload->>'event_date') ~ '^\\d{4}-\\d{2}-\\d{2}'
+             THEN left(coalesce(v.payload->>'start_date', v.payload->>'date', v.payload->>'booking_date', v.payload->>'work_date', v.payload->>'visit_date', v.payload->>'event_date'), 10)::date END AS d_start,
+        CASE WHEN coalesce(v.payload->>'end_date', coalesce(v.payload->>'start_date', v.payload->>'date', v.payload->>'booking_date', v.payload->>'work_date', v.payload->>'visit_date', v.payload->>'event_date')) ~ '^\\d{4}-\\d{2}-\\d{2}'
+             THEN left(coalesce(v.payload->>'end_date', coalesce(v.payload->>'start_date', v.payload->>'date', v.payload->>'booking_date', v.payload->>'work_date', v.payload->>'visit_date', v.payload->>'event_date')), 10)::date END AS d_end,
+        CASE WHEN v.payload->>'start_time' ~ '^\\d{1,2}:\\d{2}' THEN (v.payload->>'start_time')::time
+             ELSE time '08:00' END AS t_start,
+        v.submitted_at, v.amount_vnd, r.requester_id
+      FROM eas.request r JOIN eas.request_revision v ON v.id = r.current_revision_id
+      WHERE r.id = %(request_id)s
+    )
+    SELECT
+        round((extract(epoch FROM ((d_start + t_start) AT TIME ZONE %(tz)s - submitted_at)) / 3600)::numeric, 1),
+        extract(day FROM d_start)::int,
+        extract(isodow FROM d_start)::int,
+        extract(hour FROM submitted_at AT TIME ZONE %(tz)s)::int,
+        CASE WHEN d_start IS NOT NULL THEN greatest(coalesce(d_end, d_start) - d_start + 1, 0) END,
+        amount_vnd,
+        (SELECT count(*) FROM eas.request x
+         WHERE x.requester_id = f.requester_id AND x.status = 'REJECTED'
+           AND x.updated_at > f.submitted_at - interval '30 days' AND x.updated_at <= f.submitted_at)
+    FROM f
 """
-FEATURE_PROJECT = """
-    round((extract(epoch FROM ((d_start + t_start) AT TIME ZONE %(tz)s - submitted_at)) / 3600)::numeric, 1),
-    extract(day FROM d_start)::int,
-    extract(isodow FROM d_start)::int,
-    extract(hour FROM submitted_at AT TIME ZONE %(tz)s)::int,
-    CASE WHEN d_start IS NOT NULL THEN greatest(coalesce(d_end, d_start) - d_start + 1, 0) END,
-    amount_vnd,
-    (SELECT count(*) FROM eas.request x
-     WHERE x.requester_id = f.requester_id AND x.status = 'REJECTED'
-       AND x.updated_at > f.submitted_at - interval '30 days' AND x.updated_at <= f.submitted_at)
+SQL_HISTORY_FEATURES = """
+    WITH f AS (
+      SELECT
+        CASE WHEN coalesce(v.payload->>'start_date', v.payload->>'date', v.payload->>'booking_date', v.payload->>'work_date', v.payload->>'visit_date', v.payload->>'event_date') ~ '^\\d{4}-\\d{2}-\\d{2}'
+             THEN left(coalesce(v.payload->>'start_date', v.payload->>'date', v.payload->>'booking_date', v.payload->>'work_date', v.payload->>'visit_date', v.payload->>'event_date'), 10)::date END AS d_start,
+        CASE WHEN coalesce(v.payload->>'end_date', coalesce(v.payload->>'start_date', v.payload->>'date', v.payload->>'booking_date', v.payload->>'work_date', v.payload->>'visit_date', v.payload->>'event_date')) ~ '^\\d{4}-\\d{2}-\\d{2}'
+             THEN left(coalesce(v.payload->>'end_date', coalesce(v.payload->>'start_date', v.payload->>'date', v.payload->>'booking_date', v.payload->>'work_date', v.payload->>'visit_date', v.payload->>'event_date')), 10)::date END AS d_end,
+        CASE WHEN v.payload->>'start_time' ~ '^\\d{1,2}:\\d{2}' THEN (v.payload->>'start_time')::time
+             ELSE time '08:00' END AS t_start,
+        v.submitted_at, v.amount_vnd, r.requester_id
+      FROM eas.request r
+      JOIN eas.request_type rt ON rt.id = r.type_id
+      JOIN eas.request_revision v ON v.request_id = r.id AND v.revision_no = 1
+      WHERE rt.code = %(type_code)s AND v.submitted_at > now() - make_interval(days => %(days)s)
+        AND r.status <> 'DRAFT'
+    )
+    SELECT
+        round((extract(epoch FROM ((d_start + t_start) AT TIME ZONE %(tz)s - submitted_at)) / 3600)::numeric, 1),
+        extract(day FROM d_start)::int,
+        extract(isodow FROM d_start)::int,
+        extract(hour FROM submitted_at AT TIME ZONE %(tz)s)::int,
+        CASE WHEN d_start IS NOT NULL THEN greatest(coalesce(d_end, d_start) - d_start + 1, 0) END,
+        amount_vnd,
+        (SELECT count(*) FROM eas.request x
+         WHERE x.requester_id = f.requester_id AND x.status = 'REJECTED'
+           AND x.updated_at > f.submitted_at - interval '30 days' AND x.updated_at <= f.submitted_at)
+    FROM f
 """
 FEATURE_KEYS = (
     "notice_hours",
@@ -95,15 +125,8 @@ def _row_features(row) -> dict[str, Any]:
 
 def request_features(cursor, request_id: str) -> dict[str, Any]:
     """Đặc trưng của bản đang hiệu lực của hồ sơ (số giờ báo trước, ngày/thứ bắt đầu, giờ gửi, số ngày, số tiền)."""
-    cursor.execute(
-        f"""
-        WITH f AS (
-          SELECT {FEATURE_SELECT}
-          FROM eas.request r JOIN eas.request_revision v ON v.id = r.current_revision_id
-          WHERE r.id = %(request_id)s
-        )
-        SELECT {FEATURE_PROJECT} FROM f
-        """,
+    cursor.execute(  # NOSONAR python:S2077 - static parameterized SQL query
+        SQL_REQUEST_FEATURES,
         {"request_id": request_id, "tz": LOCAL_TZ},
     )
     row = cursor.fetchone()
@@ -114,18 +137,8 @@ def history_features(
     cursor, type_code: str, days: int = WINDOW_DAYS
 ) -> list[dict[str, Any]]:
     """Đặc trưng của mọi hồ sơ cùng loại đã gửi trong N ngày (bản gửi đầu tiên), để đo độ phủ của điều kiện."""
-    cursor.execute(
-        f"""
-        WITH f AS (
-          SELECT {FEATURE_SELECT}
-          FROM eas.request r
-          JOIN eas.request_type rt ON rt.id = r.type_id
-          JOIN eas.request_revision v ON v.request_id = r.id AND v.revision_no = 1
-          WHERE rt.code = %(type_code)s AND v.submitted_at > now() - make_interval(days => %(days)s)
-            AND r.status <> 'DRAFT'
-        )
-        SELECT {FEATURE_PROJECT} FROM f
-        """,
+    cursor.execute(  # NOSONAR python:S2077 - static parameterized SQL query
+        SQL_HISTORY_FEATURES,
         {"type_code": type_code, "days": days, "tz": LOCAL_TZ},
     )
     return [_row_features(r) for r in cursor.fetchall()]

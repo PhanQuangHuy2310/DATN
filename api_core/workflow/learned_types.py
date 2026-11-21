@@ -163,5 +163,8 @@ def current() -> list[dict[str, Any]]:
 
 
 def invalidate() -> None:
+    from api_core import read_cache
+
     with _lock:
         _cache.update(at=0.0, items=None)
+    read_cache.invalidate()

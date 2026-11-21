@@ -1,0 +1,117 @@
+================================================================================
+KỊCH BẢN THUYẾT TRINH TUẦN TỰ (3 - 4 PHÚT):
+QUY TRÌNH CẬP NHẬT QUY ĐỊNH VÀ XỬ LÝ YÊU CẦU (BÁM SÁT BIỂU ĐỒ BPMN EAS)
+================================================================================
+Thời lượng dự kiến: ~3 phút 35 giây - 3 phút 50 giây (8 cảnh liên tục).
+Cấu trúc phủ đủ 4 Swimlane (Admin, Khối điều phối, Khối AI, Người dùng) & 13 Gateway BPMN.
+
+--------------------------------------------------------------------------------
+A. CHUẨN BỊ TRƯỚC KHI BẤM GIỜ THUYẾT TRÌNH
+--------------------------------------------------------------------------------
+1. Tách 2 cửa sổ / profile trình duyệt độc lập (để không xung đột cookie trên 127.0.0.1):
+   - Cửa sổ 1 (Admin Portal): http://127.0.0.1:8081 -> đăng nhập sẵn `admin@eas.com` / `Password@123456`, mở sẵn tab `Quy định`.
+   - Cửa sổ 2 (User Portal):  http://127.0.0.1:8082
+   * Lưu ý: Đăng nhập sẵn `nga.trinh@eas.com` và `thu.vo@eas.com` (Password@123456) 1 lần rồi đăng xuất TRƯỚC khi Admin ban hành quy định mới, để popup thông báo cập nhật quy định mới tự bật lên khi đăng nhập lại.
+   * Đảm bảo chưa có mã quy định `QD-DEMO-2026` và hệ thống đang ở trạng thái ĐÃ ĐỒNG BỘ 100%, không bảo trì.
+
+2. Bộ tài khoản dùng trong kịch bản (tất cả mật khẩu: Password@123456):
+   - Admin:               admin@eas.com (System Administrator)
+   - Nhân viên MKT 1:     nga.trinh@eas.com (Trịnh Thanh Nga - Quản lý: vy.pham@eas.com)
+   - Nhân viên MKT 2:     thu.vo@eas.com    (Võ Thu Thư - Quản lý: vy.pham@eas.com)
+   - Cấp duyệt (tùy tuyến thực tế hiển thị trên tab Người phê duyệt):
+     + Quản lý trực tiếp: vy.pham@eas.com   (Phạm Thảo Vy)
+     + Tài chính / CFO:   ha.bui@eas.com    (Bùi Thị Thanh Hà)
+     + Ban Giám đốc:      hung.nguyen@eas.com (Nguyễn Thế Hùng)
+   - Thực hiện Loại C:    Kiểm tra tên hiển thị trên chi tiết đơn (vd: Trịnh Thị Ngọc = ngoc.trinh@eas.com)
+   - Nghiệm thu Loại C:   Kiểm tra tên hiển thị trên chi tiết đơn (vd: Phạm Thảo Vy = vy.pham@eas.com hoặc Huỳnh Đức Phong = phong.huynh@eas.com)
+   - Thực hiện IT (Loại B): Kiểm tra tên hiển thị trên chi tiết đơn (vd: Đỗ Quang Huy = huy.do@eas.com)
+   - Tệp minh chứng upload khi thực hiện: tests\ocr_smoke\invoice_vat.png
+
+3. Chuẩn bị sẵn nội dung copy-paste cho quy định `QD-DEMO-2026`:
+   - Bản LỖI (Mâu thuẫn):
+     `Điều 1: Yêu cầu Hoàn tiền / Đền bù có giá trị trên 5 triệu đồng được phép tự động duyệt. Điều 2: Yêu cầu Hoàn tiền / Đền bù có giá trị trên 3 triệu đồng không được tự động duyệt.`
+   - Bản CHUẨN (2 điều):
+     `Điều 1: Yêu cầu Hoàn tiền / Đền bù có giá trị trên 5 triệu đồng không được tự động duyệt, bắt buộc Kế toán phê duyệt thủ công kèm nghiệm thu độc lập.`
+     `Điều 2: Yêu cầu Điều chỉnh chấm công cho ngày đã quá 7 ngày bắt buộc Trưởng bộ phận phê duyệt thủ công.`
+
+--------------------------------------------------------------------------------
+B. CHI TIẾT 8 CẢNH THUYẾT TRÌNH TUẦN TỰ
+--------------------------------------------------------------------------------
+
+=== CẢNH 1 (0:00 - 0:31 | ~31 giây): Admin nạp quy định lỗi -> Sửa chuẩn -> Ban hành ===
+* Node BPMN phủ: Admin (Nạp/cập nhật quy định nội bộ -> Chỉnh sửa quy định bị lỗi) | Khối điều phối (Kiểm tra dữ liệu -> Hợp lệ? [Không / Có] -> Lưu phiên bản, khóa đồng bộ & bật bảo trì).
+* Thao tác trên Cửa sổ 1 (Admin :8081):
+  1. Bấm `+ Thêm quy định mới`. Nhập mã `QD-DEMO-2026`, tiêu đề `Quy định hoàn tiền và chấm công 2026`.
+  2. Dán Bản LỖI (mâu thuẫn >5tr tự duyệt vs >3tr không tự duyệt).
+  3. Bấm `AI kiểm tra trước` -> chỉ vào lỗi đỏ `Mâu thuẫn`. Bấm thử `Ban hành & Huấn luyện AI` -> chỉ rõ hệ thống chặn.
+  4. Dán đè Bản CHUẨN 2 điều -> bấm `AI kiểm tra trước` (báo xanh/hợp lệ, hiểu 2 điều, thay thế phần tương ứng REG-002) -> bấm `Ban hành & Huấn luyện AI`.
+* Lời thoại:
+  "Xin chào Quý thầy cô, sau đây là phần trình bày quy trình cập nhật quy định và xử lý yêu cầu trên hệ thống EAS. Trên cổng quản trị, Admin mở mục Quy định và thử nạp quy định mới QD-DEMO-2026 với nội dung tự mâu thuẫn giữa hai mức hoàn tiền. Khối điều phối kiểm tra và nhánh Hợp lệ trả về Không: AI báo lỗi đỏ Mâu thuẫn và chặn ban hành. Admin lập tức chỉnh sửa hai điều khoản chuẩn xác: hoàn tiền trên năm triệu phải duyệt thủ công kèm nghiệm thu, và sửa công quá bảy ngày bắt buộc trưởng bộ phận duyệt. Lần kiểm tra này hợp lệ, Admin bấm ban hành và huấn luyện AI."
+
+=== CẢNH 2 (0:31 - 1:02 | ~31 giây): Khóa bảo trì live -> AI đồng bộ & kiểm thử -> Mở khóa ===
+* Node BPMN phủ: Người dùng / Điều phối (Đang bảo trì? [Có] -> Xem thông báo và chờ bảo trì) | Khối điều phối (Đọc quy định & bộ luật hiện hành -> Có lỗi nội dung? / Kiểm thử đạt? / Còn lượt thử lại? / Có thay đổi mới đang đồng bộ? -> Lưu bộ luật mới, thông báo cập nhật & mở khóa) | Khối AI (Tách điều khoản & tổng hợp bộ luật -> Áp dụng & chạy kiểm thử tự động).
+* Thao tác:
+  1. Chuyển NGAY sang Cửa sổ 2 (User :8082) và tải lại/truy cập trang đăng nhập ngay lúc AI đang chạy -> chỉ rõ overlay/trạng thái bảo trì khóa đăng nhập và hiển thị tiến độ học quy định.
+  2. Chờ ~8-12 giây để AI học xong và tự mở khóa. Chuyển lại Cửa sổ 1 (Admin :8081) -> chỉ vào badge `ĐÃ ĐỒNG BỘ 100%` và thẻ `QD-DEMO-2026` hiển thị thay thế 1 phần `REG-002`.
+* Lời thoại:
+  "Hệ thống lập tức lưu phiên bản mới, bật khóa bảo trì và đồng bộ sang khối AI. Bên cổng nhân viên, nhánh Đang bảo trì trả về Có, chặn đăng nhập và hiển thị tiến độ học quy định theo thời gian thực. Trong lúc này, khối AI tách điều khoản, tổng hợp bộ luật và tự chạy kiểm thử: nếu lỗi nội dung hay kiểm thử thất bại sau các lượt thử lại có đếm lùi, hệ thống sẽ tự khôi phục bản cũ và báo Admin; nếu có thay đổi mới sẽ tự học lại. Sau vài giây kiểm thử đạt, hệ thống lưu bộ luật mới, thông báo cập nhật và mở khóa đồng bộ 100 phần trăm."
+
+=== CẢNH 3 (1:02 - 1:30 | ~28 giây): Popup cập nhật -> Validate form -> Tự duyệt Loại A ===
+* Node BPMN phủ: Đang bảo trì? [Không] | Tạo hồ sơ -> Kiểm tra hồ sơ [Gửi hợp lệ? Không -> Bổ sung | Có] -> Đối chiếu quy định -> Cần nâng? [Không] -> Đủ điều kiện AI tự duyệt A? [Có -> AI tự động phê duyệt trước] -> Loại quy trình? [A] -> Hoàn thành.
+* Thao tác trên Cửa sổ 2 (User :8082):
+  1. Đăng nhập `nga.trinh@eas.com` -> đón popup `Hệ thống đã cập nhật quy định`, bấm `Đã hiểu`.
+  2. Bấm Tạo yêu cầu -> `Hoàn tiền / Đền bù` -> để trống bấm `Gửi phê duyệt` để thấy trình duyệt/UI chặn gửi thiếu thông tin.
+  3. Điền hợp lệ dưới ngưỡng 5 triệu (`1.500.000 VNĐ`) và gửi -> chỉ vào trạng thái `Đã hoàn thành` do `EAS AI (tự động duyệt)` theo Quy trình A.
+* Lời thoại:
+  "Khi hệ thống mở khóa, nhân viên Trịnh Thanh Nga đăng nhập lại, đón thông báo cập nhật quy định mới và xác nhận đã hiểu. Vào biểu mẫu Hoàn tiền và Đền bù, nếu bỏ trống trường bắt buộc thì nhánh Gửi hợp lệ trả về Không và giao diện chặn ngay tại chỗ. Sau khi điền đủ thông tin cho khoản hoàn tiền một triệu rưỡi dưới ngưỡng quy định, hồ sơ hợp lệ đi qua khâu đánh giá rủi ro: không cần nâng luồng và đủ điều kiện Loại A, nên AI tự động phê duyệt trước và hoàn thành ngay."
+
+=== CẢNH 4 (1:30 - 1:55 | ~25 giây): Điều 2 Quên chấm công >7 ngày -> A duyệt thủ công -> Hoàn thành ===
+* Node BPMN phủ: Đủ điều kiện AI tự duyệt A? [Không] -> Người có thẩm quyền phê duyệt hồ sơ -> Quyết định? [Duyệt] -> Còn bước duyệt? [Không] -> Loại quy trình? [A] -> Hoàn thành (không qua thực hiện).
+* Thao tác trên Cửa sổ 2 (User :8082):
+  1. Vẫn là `nga.trinh@eas.com`: Tạo yêu cầu `Quên chấm công`, chọn ngày quá 7 ngày (ví dụ 10 ngày trước hôm nay) -> Gửi -> chỉ rõ AI KHÔNG tự duyệt (trạng thái `Chờ phê duyệt`, Loại A, trích dẫn Điều 2).
+  2. Đăng xuất -> đăng nhập `vy.pham@eas.com` -> mở đơn tại `Việc được giao > Phê duyệt` -> bấm `Phê duyệt` -> chỉ rõ đơn chuyển thẳng `Đã hoàn thành`.
+* Lời thoại:
+  "Tiếp theo, Trịnh Thanh Nga gửi một yêu cầu Quên chấm công hồi tố cho ngày đã quá mười ngày. Đối chiếu Điều hai của quy định mới, khối AI xác định không đủ điều kiện tự duyệt Loại A nên giao về cho quản lý trực tiếp Phạm Thảo Vy kiểm tra. Khi quản lý bấm phê duyệt và không còn bước duyệt kế tiếp, hệ thống xét nhánh Loại quy trình là A, nên lưu kết quả và khép kín trạng thái hoàn thành ngay mà không qua khâu thực hiện."
+
+=== CẢNH 5 (1:55 - 2:21 | ~26 giây): Hoàn tiền 6 triệu -> Nâng A -> C -> Yêu cầu bổ sung & gửi lại ===
+* Node BPMN phủ: Cần nâng A -> B/C? [Có] -> Nâng mức kiểm soát và định tuyến duyệt -> Người có thẩm quyền phê duyệt -> Quyết định? [Yêu cầu bổ sung] -> Bổ sung thông tin và gửi lại hồ sơ -> Kiểm tra lại hồ sơ.
+* Thao tác trên Cửa sổ 2 (User :8082):
+  1. Đăng nhập `nga.trinh@eas.com` -> gửi `Hoàn tiền / Đền bù` `6.000.000 VNĐ` -> chỉ vào banner AI nâng `A -> C` trích dẫn `QD-DEMO-2026` và tuyến duyệt 3 cấp.
+  2. Đăng nhập cấp duyệt 1 (`vy.pham@eas.com`) -> bấm `Yêu cầu bổ sung` ("Cần bổ sung mã vận đơn đối soát").
+  3. Đăng nhập lại `nga.trinh@eas.com` -> bấm `Chỉnh sửa / bổ sung`, điền thêm mã vận đơn và `Gửi lại phê duyệt`.
+* Lời thoại:
+  "Ở kịch bản thứ ba, Nga gửi yêu cầu Hoàn tiền sáu triệu đồng, vượt ngưỡng năm triệu tại Điều một. Khối AI lập tức kích hoạt nhánh Cần nâng A sang C, nâng mức kiểm soát và định tuyến duyệt ba cấp kèm trích dẫn rõ quy định QD-DEMO-2026. Tại bước duyệt đầu tiên, quản lý Phạm Thảo Vy bấm Yêu cầu bổ sung, đẩy hồ sơ quay về cho người gửi để giải trình mã vận đơn và gửi lại đúng theo vòng lặp bổ sung thông tin."
+
+=== CẢNH 6 (2:21 - 2:51 | ~30 giây): Duyệt đa cấp -> Thực hiện C -> Nghiệm thu làm lại -> Hoàn thành ===
+* Node BPMN phủ: Vòng lặp Còn bước duyệt? [Có -> Không] -> Quy trình? [C] -> Người thực hiện -> Người nghiệm thu -> Chấp nhận? [Không - làm lại -> Có] -> Lưu kết quả và thông báo hoàn thành.
+* Thao tác trên Cửa sổ 2 (User :8082):
+  1. Đăng nhập lần lượt cấp 1 (`vy.pham@eas.com`), cấp 2 (`ha.bui@eas.com`), cấp 3 (`hung.nguyen@eas.com`) bấm `Phê duyệt`.
+  2. Đăng nhập người thực hiện hiển thị trên tuyến (vd: `ngoc.trinh@eas.com`) -> `Nhận công việc` -> `Nộp kết quả thực hiện` kèm tệp `invoice_vat.png` lần 1.
+  3. Đăng nhập người nghiệm thu hiển thị trên tuyến -> bấm `Yêu cầu làm lại` ("Cần bổ sung chữ ký đối soát").
+  4. Người thực hiện nộp lại lần 2 -> Người nghiệm thu bấm `Chấp nhận nghiệm thu` -> xác nhận `Đã hoàn thành`.
+* Lời thoại:
+  "Sau khi Nga bổ sung và gửi lại, hồ sơ đi lần lượt qua hết vòng lặp Còn bước duyệt từ cấp một đến Tài chính và Ban Giám đốc. Hết bước duyệt và thuộc quy trình C, hệ thống giao cho kế toán thực hiện nhận việc, tải hóa đơn VAT và nộp kết quả. Sang bước nghiệm thu độc lập, người nghiệm thu kiểm tra và bấm Yêu cầu làm lại để chứng minh nhánh rẽ Chấp nhận là Không. Kế toán tiếp tục nộp lại chứng từ hoàn chỉnh, người nghiệm thu bấm Chấp nhận và hồ sơ chính thức hoàn thành."
+
+=== CẢNH 7 (2:51 - 3:13 | ~22 giây): Quy trình B (Yêu cầu hỗ trợ IT) -> Hoàn thành không qua nghiệm thu ===
+* Node BPMN phủ: Duyệt 1 cấp -> Còn bước duyệt? [Không] -> Loại quy trình? [B/C] -> Thực hiện nộp kết quả -> Quy trình? [B] -> Lưu kết quả và thông báo hoàn thành (bỏ qua nghiệm thu).
+* Thao tác trên Cửa sổ 2 (User :8082):
+  1. Đăng nhập `thu.vo@eas.com` (đón popup `Đã hiểu` nếu chưa xác nhận) -> tạo `Yêu cầu hỗ trợ IT` (Loại B) -> Gửi.
+  2. Quản lý `vy.pham@eas.com` bấm `Phê duyệt`.
+  3. Kỹ thuật viên IT được giao (vd `huy.do@eas.com`) nhận việc -> nộp kết quả kèm tệp -> chỉ rõ hồ sơ hoàn thành ngay không có bước nghiệm thu.
+* Lời thoại:
+  "Để đối chiếu nhanh quy trình B, nhân viên Võ Thu Thư gửi một yêu cầu Hỗ trợ IT. Sau khi quản lý phê duyệt ở bước duy nhất, công việc được chuyển sang kỹ thuật viên IT để cấu hình và nộp kết quả thực hiện. Tại cổng rẽ nhánh loại quy trình B hay C, vì đây là quy trình B không cần nghiệm thu, hồ sơ lập tức lưu kết quả và hoàn thành."
+
+=== CẢNH 8 (3:13 - 3:37 | ~24 giây): Nhánh Từ chối & Tổng kết ===
+* Node BPMN phủ: Quyết định? [Từ chối] -> End Event `Yêu cầu bị từ chối`.
+* Thao tác trên Cửa sổ 2 (User :8082):
+  1. Đăng nhập `thu.vo@eas.com` -> gửi `Hoàn tiền / Đền bù` `6.000.000 VNĐ` -> AI nâng `A -> C`.
+  2. Đăng nhập `vy.pham@eas.com` -> bấm `Từ chối` kèm lý do -> chỉ rõ trạng thái `Bị từ chối` kết thúc luồng.
+* Lời thoại:
+  "Cuối cùng là nhánh từ chối yêu cầu. Võ Thu Thư gửi đơn hoàn tiền sáu triệu đồng và cũng được AI nâng lên quy trình C. Khi cấp duyệt đầu tiên bấm Từ chối kèm lý do không đủ chứng từ, luồng rẽ thẳng về trạng thái yêu cầu bị từ chối và kết thúc. Như vậy toàn bộ bốn tuyến vai trò và mười ba cổng rẽ nhánh trên biểu đồ BPMN đều vận hành chuẩn xác trên hệ thống EAS. Xin cảm ơn Quý thầy cô đã theo dõi."
+
+--------------------------------------------------------------------------------
+C. GHI CHÚ NGHIỆP VỤ QUAN TRỌNG KHI TRẢ LỜI HỎI ĐÁP
+--------------------------------------------------------------------------------
+- Nếu dùng loại đơn `Làm việc từ xa (WFH)` để test điều kiện "kéo dài trên 2 ngày": trên biểu mẫu hiện tại của WFH chỉ có 1 trường chọn `Ngày` đơn lẻ (chưa có `Số ngày` hoặc `Từ ngày - Đến ngày`), nên không sinh thông số số ngày > 2 cho AI kiểm tra. Loại `Điều chỉnh chấm công` (`Quên chấm công`) với trường `Ngày làm việc` đã được kiểm chứng hoạt động đầy đủ với quy tắc hồi tố quá N ngày.
+- Trong thực tế, nếu vừa xóa `QD-DEMO-2026` trước đó, nên kiểm tra danh sách Quy định chỉ còn `REG-001`, `REG-002`, `REG-003` và trạng thái `ĐÃ ĐỒNG BỘ 100%` trước khi bắt đầu Cảnh 1.
+================================================================================

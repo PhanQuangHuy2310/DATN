@@ -1319,7 +1319,7 @@ def list_announcements(
             JOIN eas.app_user u ON u.id = %s
             LEFT JOIN eas.announcement_receipt r ON r.announcement_id = a.id AND r.user_id = u.id
             WHERE a.audience = ANY(%s)
-              AND a.created_at > {since}
+              AND (a.kind = 'REQUEST_TYPE_CREATED' OR a.created_at > {since})
               AND (NOT %s OR r.read_at IS NULL)
             ORDER BY a.created_at DESC
             LIMIT %s

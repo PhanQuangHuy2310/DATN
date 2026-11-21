@@ -1,12 +1,22 @@
 """Vòng phản hồi: bộ nhớ ca sửa quyết định của AI đúng phạm vi, luật admin duyệt được kiểm tra."""
 
-from unittest.mock import patch
+from datetime import datetime, timezone
+from typing import ClassVar
+from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 from django.test import SimpleTestCase
 
+from api_core.authn.models import Actor
 from api_core.workflow import ai_feedback
 from api_core.workflow.ai_learning import validate_review_rules
 from api_core.workflow.regulation_compiler import RequestTypeName, skip_reason
+from api_core.workflow.remediation import (
+    can_mark_escalation_unnecessary,
+    mark_escalation_unnecessary,
+)
+from api_core.workflow.service import CommandError
+from api_core.workflow.views import _ai_escalation_info
 
 REVOKED = [
     {
@@ -173,3 +183,129 @@ class SkipReasonTests(SimpleTestCase):
             )
         )
         self.assertIsNone(skip_reason("Phòng họp giao ban sáng thứ Hai.", list(TYPES)))
+
+
+def _actor(user_id: str, roles=("REQUESTER", "APPROVER")) -> Actor:
+    return Actor(
+        id=user_id,
+        email="user@eas.com",
+        display_name="Nhân sự 1",
+        department_id=str(uuid4()),
+        auth_version=1,
+        roles=frozenset(roles),
+        must_change_password=False,
+    )
+
+
+class _DummyCursorContext:
+    def __init__(self, cursor):
+        self._cursor = cursor
+
+    def __enter__(self):
+        return self._cursor
+
+    def __exit__(self, *_exc):
+        return False
+
+
+class EscalationFeedbackPermissionTests(SimpleTestCase):
+    databases: ClassVar[set[str]] = {"default"}
+
+    def test_can_mark_escalation_unnecessary_checks_non_requester_and_non_superseded_step(
+        self,
+    ):
+        cursor = MagicMock()
+        cursor.fetchone.return_value = (True,)
+        actor_id = str(uuid4())
+        request_id = str(uuid4())
+
+        self.assertFalse(can_mark_escalation_unnecessary(cursor, "", request_id))
+        cursor.execute.assert_not_called()
+
+        self.assertTrue(can_mark_escalation_unnecessary(cursor, actor_id, request_id))
+        sql, params = cursor.execute.call_args[0]
+        self.assertIn("i.state <> 'SUPERSEDED'", sql)
+        self.assertIn("r.requester_id <> %s", sql)
+        self.assertIn("s.assignee_id = %s", sql)
+        self.assertEqual(params, [request_id, actor_id, actor_id])
+
+    def test_ai_escalation_info_is_per_request_for_same_user_across_two_lifecycles(
+        self,
+    ):
+        user_1 = str(uuid4())
+        user_2 = str(uuid4())
+        req_1 = str(uuid4())
+        req_2 = str(uuid4())
+        occurred = datetime(2026, 11, 21, 10, 0, tzinfo=timezone.utc)
+        details = {"from_lifecycle": "A", "to_lifecycle": "B", "causes": []}
+
+        def run_info(
+            req_id, actor_id, requester_id, reviewer_allowed, already_marked=False
+        ):
+            cursor = MagicMock()
+            cursor.fetchone.side_effect = [
+                (details, occurred),
+                (True,),
+                (1,),
+                (already_marked,),
+            ]
+            mock_conn = MagicMock()
+            mock_conn.cursor.return_value = _DummyCursorContext(cursor)
+            with (
+                patch("api_core.workflow.views.connection", mock_conn),
+                patch("api_core.workflow.ai_feedback.available", return_value=True),
+                patch(
+                    "api_core.workflow.remediation.can_mark_escalation_unnecessary",
+                    return_value=reviewer_allowed,
+                ) as checker,
+            ):
+                info = _ai_escalation_info(
+                    req_id, actor_id=actor_id, requester_id=requester_id
+                )
+            return info, checker
+
+        # Vòng đời 1: user_1 là người gửi yêu cầu -> không bao giờ hiện nút, kể cả giữ quyền APPROVER
+        info1, checker1 = run_info(req_1, user_1, user_1, reviewer_allowed=True)
+        self.assertFalse(info1["can_mark_unnecessary"])
+        checker1.assert_not_called()
+
+        # Vòng đời 2: cùng user_1 nhưng ở hồ sơ khác (requester=user_2) nơi user_1 là người kiểm duyệt -> hiện nút
+        info2, checker2 = run_info(req_2, user_1, user_2, reviewer_allowed=True)
+        self.assertTrue(info2["can_mark_unnecessary"])
+        checker2.assert_called_once()
+
+        # Cùng user_1 ở hồ sơ khác nhưng đã đánh dấu rồi -> ẩn nút
+        info3, checker3 = run_info(
+            req_2, user_1, user_2, reviewer_allowed=True, already_marked=True
+        )
+        self.assertFalse(info3["can_mark_unnecessary"])
+        checker3.assert_not_called()
+
+        # Người không phải người kiểm duyệt -> ẩn nút
+        info4, _ = run_info(req_2, str(uuid4()), user_2, reviewer_allowed=False)
+        self.assertFalse(info4["can_mark_unnecessary"])
+
+    def test_mark_escalation_unnecessary_forbids_requester_even_with_ops_admin_role(
+        self,
+    ):
+        user_1 = str(uuid4())
+        req_1 = str(uuid4())
+        cursor = MagicMock()
+        cursor.fetchone.return_value = (False,)
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = _DummyCursorContext(cursor)
+
+        with (
+            patch("django.db.transaction.atomic"),
+            patch("api_core.workflow.remediation.connection", mock_conn),
+            self.assertRaises(CommandError) as raised,
+        ):
+            mark_escalation_unnecessary(
+                actor=_actor(user_1, roles=("REQUESTER", "APPROVER", "OPS_ADMIN")),
+                request_id=req_1,
+                reason="Lý do hợp lệ ít nhất 5 ký tự",
+                correlation_id="corr-1",
+            )
+
+        self.assertEqual(raised.exception.status, 403)
+        self.assertEqual(raised.exception.code, "FORBIDDEN")

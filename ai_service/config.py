@@ -34,8 +34,9 @@ _AI_ENV_PATH = _AI_SERVICE_DIR.parent / ".env"
 class Settings(BaseSettings):
     # Host/port come from the uvicorn command line (Dockerfile, start_ai_local.cmd).
 
-    # --- Gemini ---
+    # --- Gemini (hỗ trợ 1 hoặc nhiều key để tự động xoay vòng / failover) ---
     gemini_api_key: str = ""
+    gemini_api_keys: str = ""
     # Google retires old versions (gemini-1.5-flash now 404s). Flash-Lite
     # answers in ~2 s; full Flash / flash-latest take > 25 s and would always
     # hit the API's 10 s AI timeout. Override with GEMINI_MODEL.
@@ -79,6 +80,21 @@ class Settings(BaseSettings):
 
     def model_post_init(self, context: object, /) -> None:
         import os
+
+        try:
+            from gemini_key_pool import resolve_keys
+        except ImportError:
+            from ai_service.gemini_key_pool import resolve_keys
+
+        explicit_empty = (
+            "GEMINI_API_KEY" in os.environ
+            and not os.environ.get("GEMINI_API_KEY", "").strip()
+            and not os.environ.get("GEMINI_API_KEYS", "").strip()
+        )
+        if not explicit_empty:
+            merged_keys = resolve_keys([self.gemini_api_key, self.gemini_api_keys])
+            if merged_keys:
+                self.gemini_api_key = ",".join(merged_keys)
 
         env = (
             os.getenv("EAS_ENV", os.getenv("ENVIRONMENT", "development"))

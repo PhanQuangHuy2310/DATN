@@ -6,6 +6,7 @@ POST /ai/regulation-llm/analyze
   - Output: quy tắc nguyên tử, xung đột với quy định cũ, đề xuất phân loại luồng A/B/C và trọng số (chờ duyệt)
 Không gọi được Gemini thì dùng mô hình nội bộ process_profile.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -100,3 +101,14 @@ async def clause_rules(body: ClauseIn) -> dict[str, Any]:
         )
     except Exception as exc:  # noqa: BLE001
         return {"rules": [], "rejected": [], "error": type(exc).__name__}
+
+
+@router.get("/key-pool-status")
+async def key_pool_status() -> dict[str, Any]:
+    """Trả về trạng thái pool các Gemini API key (đã che ký tự bí mật) phục vụ giám sát xoay vòng key."""
+    try:
+        from gemini_key_pool import get_pool_status
+    except ImportError:
+        from ai_service.gemini_key_pool import get_pool_status
+    settings = get_settings()
+    return get_pool_status(settings.gemini_api_key)

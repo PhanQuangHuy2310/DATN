@@ -8,6 +8,7 @@ import { requestActionPayload } from "../actionPayload.js";
 import { useEffect, useRef, useState } from "react";
 import { api, API_BASE } from "../api.js";
 import {
+  canMarkEscalationWrong,
   date,
   fields,
   fieldLabels,
@@ -671,8 +672,13 @@ export default function RequestDetail({
                 AI đang đánh giá hồ sơ (tự duyệt hoặc chuyển cho người duyệt)… trang sẽ tự cập nhật.
               </p>
             )}
-            <EscalationBanner escalation={r.ai_escalation} requestId={id} onChanged={resource.reload} />
-            {r.ai_escalation?.pending_remediations > 0 && (
+            <EscalationBanner
+              escalation={r.ai_escalation}
+              requestId={id}
+              canMarkWrong={canMarkEscalationWrong(user, r)}
+              onChanged={resource.reload}
+            />
+            {r.ai_escalation?.pending_remediations > 0 && user.id !== r.requester_id && (
               <RemediationPanel requestId={id} onDone={resource.reload} />
             )}
             <PageTabs

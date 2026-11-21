@@ -348,8 +348,10 @@ async def ocr_with_gemini_vision(
     def _call_gemini() -> tuple[str, float]:
         import google.generativeai as genai
 
-        genai.configure(api_key=settings.gemini_api_key, transport="rest")
-        model = genai.GenerativeModel(settings.gemini_model)
+        try:
+            from gemini_key_pool import execute_with_key_rotation
+        except ImportError:
+            from ai_service.gemini_key_pool import execute_with_key_rotation
 
         b64 = base64.b64encode(image_bytes).decode()
         prompt = (
@@ -357,14 +359,20 @@ async def ocr_with_gemini_vision(
             "trả về text thuần (không format markdown). "
             "Giữ nguyên số tiền, ngày tháng và các mã số."
         )
-        response = model.generate_content(
-            [
-                {"mime_type": mime_type, "data": b64},
-                prompt,
-            ],
-            request_options={"timeout": 20},
-        )
-        return response.text, 0.75  # Gemini không trả confidence nên hardcode 0.75
+
+        def _invoke(current_key: str) -> tuple[str, float]:
+            genai.configure(api_key=current_key, transport="rest")
+            model = genai.GenerativeModel(settings.gemini_model)
+            response = model.generate_content(
+                [
+                    {"mime_type": mime_type, "data": b64},
+                    prompt,
+                ],
+                request_options={"timeout": 20},
+            )
+            return response.text, 0.75  # Gemini không trả confidence nên hardcode 0.75
+
+        return execute_with_key_rotation(_invoke, api_key=settings.gemini_api_key)
 
     try:
         return await asyncio.to_thread(_call_gemini)

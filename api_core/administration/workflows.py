@@ -67,9 +67,11 @@ RESOLVER_LABELS = {
 TYPE_SELECT_SQL = """
     SELECT rt.id::text, rt.code, rt.name, rt.category, rt.lifecycle, rt.is_active,
            rt.risk_weight, rt.approval_level, rt.description,
-           cr.version, cr.form_schema, cr.route_rules, cr.sla_profile, cr.published_at
+           cr.version, cr.form_schema, cr.route_rules, cr.sla_profile, cr.published_at,
+           u.display_name, u.email
     FROM eas.request_type rt
     LEFT JOIN eas.config_release cr ON cr.id = rt.active_release_id
+    LEFT JOIN eas.app_user u ON u.id = cr.created_by
 """
 TYPE_SQL = TYPE_SELECT_SQL
 TYPE_SQL_BY_ID = (
@@ -160,7 +162,9 @@ def _serialize_type(row, labels: dict[str, str]) -> dict:
         routes,
         sla,
         published,
-    ) = row
+    ) = row[:14]
+    created_by_name = row[14] if len(row) > 14 else None
+    created_by_email = row[15] if len(row) > 15 else None
     steps = _lifecycle_steps(lifecycle, _default_approvers(routes), sla)
     return {
         "id": tid,
@@ -185,6 +189,9 @@ def _serialize_type(row, labels: dict[str, str]) -> dict:
         "api_source_system": None,
         "is_api_enabled": False,
         "is_active": bool(active),
+        "is_ai_dynamic": bool(str(code or "").startswith("AI_")),
+        "created_by_name": created_by_name,
+        "created_by_email": created_by_email,
         "updated_at": published.isoformat() if published else None,
     }
 

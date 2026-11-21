@@ -487,9 +487,10 @@ main h1[tabindex="-1"]:focus { outline: none; }
 .resource-refresh { font-size: 12px; color: var(--ds-muted); margin-bottom: var(--ds-space-2); }
 
 /* Dialogs */
-dialog { width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 32px); overflow-y: auto; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-lg); padding: var(--ds-space-5); box-shadow: var(--ds-shadow-pop); }
+dialog { margin: auto; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 32px); overflow-y: auto; background: var(--ds-surface, #ffffff); color: var(--ds-ink, #172033); border: 1px solid var(--ds-line); border-radius: var(--ds-radius-lg); padding: var(--ds-space-5); box-shadow: var(--ds-shadow-pop); }
 dialog[open] { animation: ds-pop var(--ds-motion); }
 dialog::backdrop { background: rgba(15, 23, 42, .45); }
+dialog .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: var(--ds-space-4); }
 @keyframes ds-pop { from { opacity: 0; transform: translateY(6px) scale(.99); } to { opacity: 1; transform: none; } }
 .ds-confirm .form-actions { margin-top: var(--ds-space-3); }
 .ds-confirm-cancel { margin-top: var(--ds-space-2); width: 100%; }

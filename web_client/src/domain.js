@@ -446,6 +446,17 @@ export function permissions(user, r) {
   };
 }
 
+/** Chỉ người kiểm duyệt được giao của hồ sơ này mới thấy nút "AI chuyển nhầm"; người gửi chỉ đọc. */
+export function canMarkEscalationWrong(user, r) {
+  if (!user?.id || !r?.ai_escalation) return false;
+  if (r.requester_id === user.id) return false;
+  if (r.ai_escalation.already_marked) return false;
+  if ("can_mark_unnecessary" in r.ai_escalation) {
+    return Boolean(r.ai_escalation.can_mark_unnecessary);
+  }
+  return Boolean(r.approval_steps?.some((s) => s.assignee_id === user.id));
+}
+
 export const date = (v) => (v ? new Date(v).toLocaleString("vi-VN") : "—");
 
 const FIELD_REASON_LABELS = {
@@ -630,6 +641,10 @@ const ERROR_MESSAGES = {
   VALIDATION_FAILED: "Một số thông tin trên biểu mẫu chưa hợp lệ",
   LIFECYCLE_RELEASE_REQUIRED: "Chưa thể chuyển nhóm: nhóm mới chưa có quy trình đã công bố. Hãy công bố quy trình cho nhóm đó trước.",
   VALIDATION_STALE: "Cấu hình quy chế vừa thay đổi. Vui lòng kiểm tra lại trước khi thực hiện.",
+  FEEDBACK_REASON_REQUIRED: "Vui lòng nhập lý do chi tiết (từ 5 đến 500 ký tự).",
+  FEEDBACK_ALREADY_RECORDED: "Hồ sơ này đã được ghi nhận phản hồi AI chuyển quy trình nhầm trước đó.",
+  REQUEST_NOT_ESCALATED: "Hồ sơ này chưa từng được AI chuyển quy trình.",
+  AI_FEEDBACK_NOT_INSTALLED: "Tính năng ghi nhận phản hồi AI hiện đang tạm ngưng.",
 };
 
 export function errorText(e) {

@@ -131,20 +131,63 @@ def _window(payload: dict[str, Any]) -> tuple[datetime, datetime]:
     )
 
 
-def _authorize_manager(cursor, actor: Actor, request_id: str) -> None:
-    """Quản lý được giao duyệt hồ sơ này (bất kỳ bước nào của phiên hiện tại) hoặc OPS_ADMIN."""
+def can_mark_escalation_unnecessary(cursor, actor_id: str, request_id: str) -> bool:
+    """Chỉ người kiểm duyệt được gán ở phiên quy trình hiện tại (chưa bị thay thế) mới đánh dấu chuyển nhầm được; người gửi yêu cầu luôn bị chặn."""
+    if not actor_id:
+        return False
     cursor.execute(
         """
         SELECT EXISTS (
-          SELECT 1 FROM eas.approval_step s
+          SELECT 1
+          FROM eas.approval_step s
           JOIN eas.workflow_instance i ON i.id = s.instance_id
           JOIN eas.request r ON r.current_revision_id = i.revision_id
-          WHERE r.id = %s AND s.assignee_id = %s)
-        OR EXISTS (
-          SELECT 1 FROM eas.role_membership rm WHERE rm.user_id = %s AND rm.role = 'OPS_ADMIN'
-            AND rm.scope_kind = 'GLOBAL' AND rm.revoked_at IS NULL)
+          WHERE r.id = %s
+            AND i.state <> 'SUPERSEDED'
+            AND r.requester_id <> %s
+            AND s.assignee_id = %s
+        )
         """,
-        [request_id, actor.id, actor.id],
+        [request_id, actor_id, actor_id],
+    )
+    return bool(cursor.fetchone()[0])
+
+
+def _authorize_escalation_reviewer(cursor, actor: Actor, request_id: str) -> None:
+    if not can_mark_escalation_unnecessary(cursor, actor.id, request_id):
+        raise CommandError("FORBIDDEN", status=403)
+
+
+def _authorize_manager(cursor, actor: Actor, request_id: str) -> None:
+    """Quản lý được giao duyệt hồ sơ này (phiên hiện tại chưa bị thay thế) hoặc OPS_ADMIN (không phải người gửi)."""
+    cursor.execute(
+        """
+        SELECT EXISTS (
+          SELECT 1
+          FROM eas.request r
+          WHERE r.id = %s
+            AND r.requester_id <> %s
+            AND (
+              EXISTS (
+                SELECT 1
+                FROM eas.approval_step s
+                JOIN eas.workflow_instance i ON i.id = s.instance_id
+                WHERE i.revision_id = r.current_revision_id
+                  AND i.state <> 'SUPERSEDED'
+                  AND s.assignee_id = %s
+              )
+              OR EXISTS (
+                SELECT 1
+                FROM eas.role_membership rm
+                WHERE rm.user_id = %s
+                  AND rm.role = 'OPS_ADMIN'
+                  AND rm.scope_kind = 'GLOBAL'
+                  AND rm.revoked_at IS NULL
+              )
+            )
+        )
+        """,
+        [request_id, actor.id, actor.id, actor.id],
     )
     if not cursor.fetchone()[0]:
         raise CommandError("FORBIDDEN", status=403)
@@ -666,7 +709,7 @@ def mark_escalation_unnecessary(
 
     with transaction.atomic(), connection.cursor() as cursor:
         cursor.execute(SQL_LOCK_SECURITY)
-        _authorize_manager(cursor, actor, request_id)
+        _authorize_escalation_reviewer(cursor, actor, request_id)
         if not ai_feedback.available(cursor):
             raise CommandError("AI_FEEDBACK_NOT_INSTALLED", status=503)
         cursor.execute(
